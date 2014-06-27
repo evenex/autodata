@@ -324,6 +324,8 @@ class Allocator (T)
 shared static this ()
 	{/*...}*/
 		core.memory.GC.disable ();
+// BUG we get InvalidMemoryOperationError due to non-gshared Allocators when GC tries to collect. from the Phobos reference:
+// An invalid memory operation error occurs in circumstances when the garbage collector has detected an operation it cannot reliably handle. The default D GC is not re-entrant, so this can happen due to allocations done from within finalizers called during a garbage collection cycle.
 	}
 
 unittest

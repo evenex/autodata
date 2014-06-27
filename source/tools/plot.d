@@ -228,5 +228,3 @@ unittest
 		import std.datetime: seconds;
 		core.thread.Thread.sleep (1.seconds);
 	}
-
-void main(){}

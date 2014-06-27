@@ -21,11 +21,6 @@ private {/*library}*/
 				{/*...}*/
 					import core.thread;
 					import dchip.all;
-					static if (0) debug {/*}*/
-						import std.stdio;
-						stderr.writeln (tid_string~": "~function_call_to_string!("cp"~op) (args));
-						stderr.flush;
-					}
 					mixin (`return cp`~op~` (args);`);
 				}
 		}

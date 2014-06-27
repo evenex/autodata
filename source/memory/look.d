@@ -34,12 +34,12 @@ struct Look (Type, Index...)
 				private {/*contract}*/
 					static assert (allSatisfy!(under_4, Numbers));
 					alias Numbers = Filter!(is_numerical_param, Index);
-					template under_4 (n) {const bool under_4 = n < 4;}
+					template under_4 (uint n) {enum under_4 = n < 4;}
 				}
 			}
 		}
 
-		public: alias get this; // TODO might look into making this a mixin for guaranteed control over aliasing
+		public: alias get this;
 		@property {/*get}*/
 			Type get ()
 				in {/*...}*/
@@ -55,7 +55,7 @@ struct Look (Type, Index...)
 
 							case Source.passive:
 								static if (is_indexed) mixin(q{
-									return passive }~ indices ~ q{;
+									return passive } ~ indices ~ q{;
 								});
 								else return *passive;
 
@@ -167,7 +167,6 @@ struct Look (Type, Index...)
 		}
 	}
 
-static if (0) // BUG compiler aliasing error
 unittest
 	{/*...}*/
 		mixin(report_test!`look`);
@@ -177,6 +176,7 @@ unittest
 		static assert (is (Look!int.Active == int delegate()));
 		static assert (is (Look!int.Passive == int*));
 
+		pragma (msg, Look!(int, 1).Active);
 		static assert (is (Look!(int, 1).Active == int delegate(ushort)));
 		static assert (is (Look!(int, 1).Passive == int[]));
 
