@@ -10,7 +10,7 @@
 		"dchip"  		: "~master",
 	},
 	"libs": ["ftgl", "freetype_gl", "scid-dmd"],
-	"importPaths": ["/usr/local/include/d"],
+	"importPaths": ["/usr/local/include/d", "./source/"],
 	"targetType": "executable",
 	"buildRequirements": ["disallowDeprecations"],
 	"buildOptions": ["debugInfoC", "alwaysStackFrame"],

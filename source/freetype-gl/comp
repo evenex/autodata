@@ -1,0 +1,1 @@
+gcc -shared -Wl,-soname,libfreetype_gl.so -o libfreetype_gl.so *.o
