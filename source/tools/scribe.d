@@ -206,13 +206,10 @@ class Scribe
 					alias received_before = receiveTimeout;
 
 					display.access_rendering_context 
-						((){texture_atlas_upload (atlas); return true;});
-
-					if (not (received_before (1.seconds, ((bool){}))))
-						assert (null, "scribe failed to connect to display");
+						((){texture_atlas_upload (atlas);});
 
 					this.display = display;
-						display.on_stop ((){reset;});
+						display.on_stop (&reset);
 				}
 		}
 		public {/*☀/~}*/

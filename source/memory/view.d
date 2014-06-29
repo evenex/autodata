@@ -26,8 +26,8 @@ Filter and Reduce are unimplemented, as it is currently unclear how to compute t
 	View.
 */
 
-private alias Index = size_t;
-public alias View = IdentityView;
+alias Index = size_t;
+alias View = IdentityView;
 
 public:
 public {/*identity}*/
@@ -82,7 +82,6 @@ public {/*identity}*/
 						this.generator = generator;
 						this.access_range (start, end);
 					}
-				@disable this ();
 			}
 			public {/*=}*/
 				void opAssign (U)(U that)
@@ -98,7 +97,7 @@ public {/*identity}*/
 					T delegate(Index) functor;
 				}
 				Source source;
-				enum Source {array, functor, generator}
+				enum Source {none, array, functor, generator}
 			}
 			private {/*access}*/
 				T opAccess (Index i)
@@ -113,6 +112,9 @@ public {/*identity}*/
 
 								case Source.generator:
 									return generator (i);
+								
+								case Source.none:
+									assert (0, `view is unavailable`);
 							}
 					}
 			}
@@ -158,6 +160,11 @@ public {/*map}*/
 					}
 			}
 			mixin ViewFunctor;
+		}
+	/* the identity map = convenience function for forwarding indices */
+	auto identity (size_t that)
+		{/*...}*/
+			return that;
 		}
 }
 public {/*zip}*/

@@ -1,11 +1,82 @@
 import std.stdio;
 import std.range;
+import std.conv;
 
 import math;
 import utils;
-import memory.view;
 
-public {/*world}*/
+import memory.view;
+import memory.look;
+import memory.resource;
+
+import services.display;
+import services.physics;
+
+import tools.image;
+
+/*
+ As a matter of policy, all public methods at this level should deal exclusively in Views, not hard data. Either Fields or Looks are ok.
+*/
+
+public {/*entity}*/
+	struct Entity 
+		{/*...}*/
+			public:
+			public @property {/*}*/
+				auto id ()
+					{/*...}*/
+						return _id;
+					}
+				auto name ()
+					{/*...}*/
+						return metadata[id].name;
+					}
+				mixin(is_member_become_member);
+			}
+			private:
+			private {/*data}*/
+				mixin TypeUniqueId; 
+				Id _id;
+			}
+			private __gshared {/*metadata}*/
+				struct Metadata
+					{/*...}*/
+						string name;
+						Representation representation;
+					}
+				Metadata[Id] metadata;
+			}
+			private static {/*code generation}*/
+				string is_member_become_member ()
+					{/*...}*/
+						import std.traits;
+						string code;
+
+						foreach (T; EnumMembers!Representation)
+							static if (T.text != `none`)
+								code ~= q{
+									bool is_} ~T.text~ q{ () }`{`q{
+										return metadata[id].representation & Representation.} ~T.text~ q{? true: false;
+									}`}`q{
+									void become_} ~T.text~ q{ () }`{`q{
+										metadata[id].representation |= Representation.} ~T.text~ q{;
+									}`}`q{
+								};
+
+						return code;
+					}
+			}
+		}
+	enum Representation
+		{/*...}*/
+			none		= 2^^0,
+			visual 		= 2^^1,
+			physical 	= 2^^2,
+			material 	= 2^^3,
+			floor	 	= 2^^4,
+		}
+}
+public {/*world (main model manager)}*/
 	struct World
 		{/*...}*/
 			import std.datetime;
@@ -38,97 +109,242 @@ public {/*world}*/
 			return world.clock;
 		}
 }
-public {/*floor}*/
-	struct Floor
+public {/*models/aspects}*/
+	class Visual
 		{/*...}*/
-			View!vec _area = [];
-			Material _material;
-
-			/*
-				physical aspect - 0 elevation, 0 height,
-				collides for the sake of the camera capture
-				and for footsteps and friction
-				so to find the effect on your traction you would say
-				"hey what floor am i standing on?"
-				and then get the material properties from that floor
-				to determine traction effects
-
-				visual aspect - tile its texture over its area
-					so set tex coords scaling with the actual area
-					instead of with the texture
-				unless we want to tile
-					one unit for each tile in the strip
-					like for a sidewalk
-			*/
-
-			auto material (Material m)
+			struct Aspect
 				{/*...}*/
-					_material = m;
-
-					return this;
+					public {/*ctor}*/
+						this (T)(T entity)
+							{/*...}*/
+					// TODO generic "change of representation" method, calling on entity extracts id and fetches aspect from model
+							}
+					}
+					public {/*command}*/
+						auto geometry (View!vec verts)
+							{/*...}*/
+								_geometry = verts;
+								return this;
+							}
+						auto texture (TextureId id, MapView!(Index, vec) coords = (&identity).view (0,4).map_view (&full_texture))
+							in  {/*...}*/
+								assert (_type & (Type.none | Type.texture));
+							}
+							body {/*...}*/
+								_texture = Texture (id, coords);
+								_type = Type.texture;
+								return this;
+							}
+						auto color (Color color)
+							in {/*...}*/
+								assert (_type & (Type.none | Type.drawing));
+							}
+							body {/*...}*/
+								_drawing.color = color;
+								_type = Type.drawing;
+								return this;
+							}
+						auto mode (GeometryMode mode)
+							in  {/*...}*/
+								assert (_type & (Type.none | Type.drawing));
+							}
+							body {/*...}*/
+								_drawing.mode = mode;
+								_type = Type.drawing;
+								return this;
+							}
+					}
+					public {/*substruct}*/
+						struct Texture
+							{/*...}*/
+								TextureId id;
+								MapView!(Index, vec) coords;
+							}
+						struct Drawing
+							{/*...}*/
+								Color color;
+								GeometryMode mode;
+							}
+					}
+					public {/*properties}*/
+						auto texture ()
+							in {/*...}*/
+								assert (_type & (Type.none | Type.texture));
+							}
+							body {/*...}*/
+								return _texture;
+							}
+						auto drawing ()
+							in {/*...}*/
+								assert (_type & (Type.none | Type.drawing));
+							}
+							body {/*...}*/
+								return _drawing;
+							}
+					}
+					private {/*data}*/
+						View!vec _geometry;
+						union {/*...}*/
+							Texture _texture;
+							Drawing _drawing;
+						}
+						Type _type; enum Type {none = 0x1, drawing = 0x2, texture = 0x4}
+					}
 				}
+			static {/*toolkit}*/
+				auto full_texture (Index i)
+					{/*...}*/
+						return square.translate (0.5.vec)[i];
+					}
+			}
 		}
-	auto floor (R)(R geometry)
-		if (is_geometric!R)
+	class Physical
 		{/*...}*/
-			auto TEMP = geometry.array;
-			Floor f;
-			f._area = TEMP.view;
-
-			return f;
+			public {/*aspects}*/
+				struct Body
+					{/*...}*/
+						View!vec geometry;
+						vec position;
+						vec velocity;
+						vec heading;
+						double mass;
+						double damping;
+						double elevation;
+						double height;
+					}
+			}
+			public {/*services}*/
+				Physics physics;
+			}
+			private {/*resources}*/
+				Allocator!Body bodies;
+				Allocator!vec geometry;
+			}
+			static {/*toolkit}*/
+			}
 		}
-	auto floor_strip (R)(R geometry)
-		if (is_geometric!R)
+	class Material
 		{/*...}*/
-			auto TEMP = geometry.array;
-			Floor f;
-			f._area = TEMP.view;
+			struct Substance 
+				{/*...}*/
+					public {/*ctor}*/
+						this (double a)
+							{/*...}*/
+								
+							}
+						this (T)(T entity, Material material)
+							{/*...}*/
+								// TODO generic "change of representation" method, calling on entity extracts id and fetches aspect from model
+							}
+					}
+					float density;
+					float strength;
+				}
+			static {/*toolkit}*/
+			}
+		}
+	class Floor
+		{/*...}*/
+			struct Surface
+				{/*...}*/
+					View!vec _area = [];
+					Material.Substance _material;
 
-			return f;
+					/*
+						physical aspect - 0 elevation, 0 height,
+						collides for the sake of the camera capture
+						and for footsteps and friction
+						so to find the effect on your traction you would say
+						"hey what floor am i standing on?"
+						and then get the material properties from that floor
+						to determine traction effects
+					*/
+
+					public {/*command}*/
+						auto material (Material.Substance m)
+							{/*...}*/
+								_material = m;
+
+								return this;
+							}
+					}
+				}
+			static {/*toolkit}*/
+			}
+		}
+}
+public {/*catalogs}*/
+	enum materials
+		{/*...}*/
+			 concrete = Material.Substance (0),
+			 pavement = Material.Substance (1)
+		}
+}
+public {/*entity ctors}*/
+	public {/*floor}*/
+		auto floor (R)(R geometry)
+			if (is_geometric!R)
+			{/*...}*/
+				auto TEMP = geometry.array;
+				Floor.Surface f;
+				f._area = TEMP.view;
+
+				return f;
+			}
+		auto floor_strip (R)(R geometry)
+			if (is_geometric!R)
+			{/*...}*/
+				auto TEMP = geometry.array;
+				Floor.Surface f;
+				f._area = TEMP.view;
+
+				return f;
+			}
+	}
+}
+public {/*overloads for performing a strip-tile uv-wrapping over a quad-strip}*/
+	auto uv_strip_tile (R)(R geometry)
+		if (is_geometric!R)
+		in {/*...}*/
+			assert (geometry.length % 2 == 0);
+		}
+		body {/*...}*/
+			ℕ (geometry.length)
+				.map!(uv_strip_tile!Index);
+		}
+	auto uv_strip_tile (View!vec geometry)
+		{/*...}*/
+			return (&identity).view (0, geometry.length).map_view (&uv_strip_tile!Index);
+		}
+	auto uv_strip_tile (T)(T i)
+		if (is (T == Index))
+		{/*...}*/
+			return vec(i/2, i%2);
 		}
 }
 
-struct Entity 
+void main ()
 	{/*...}*/
-		mixin TypeUniqueId; 
-		Id id;
-	}
-
-struct Material
-	{/*...}*/
-		enum {/*...}*/
-			 concrete = Material (0),
-			 pavement = Material (1)
-		}
-		uint data;
-	}
-
-struct Visual
-	{/*...}*/
-		int tex_id = 0;
-		@property texture (string texstr)
-			{/*...}*/
-				return this;
-			}
-	}
-auto visual (T)(T entity)
-	{/*...}*/
-		return Visual ();
-	}
-
-void umain ()
-	{/*...}*/
+		scope gfx = new Display;
+		gfx.start; scope (exit) gfx.stop;
+		///////////////////////////////////////
+		auto concrete_texture = Image (`/home/vlad/tcr/art/concrete.tga`).upload_to (gfx);
+		auto sidewalk_texture = Image (`/home/vlad/tcr/art/sidewalk.tga`).upload_to (gfx);
+		auto asphalt_texture = Image (`/home/vlad/tcr/art/asphalt.tga`).upload_to (gfx);
+		///////////////////////////////////////
 		time_is (23,59);
 		// STATIC ENVIRONMENT
 		auto yard = floor (only (0.vec, vec(-100, 0), vec(-100, 500), vec(0, 500)))
-			.material (Material.concrete);
+			.material (materials.concrete);
 		auto driveway = floor (only (vec(20, 0), vec(-100, 0), vec(-100, -10), vec(20, -10)))
-			.material (Material.pavement);
+			.material (materials.pavement);
 		auto parking_lot = floor (only (vec (-100, -10), vec(-100, -60), vec(10, -60), vec(10, -10)))
-			.material (Material.pavement);
+			.material (materials.pavement);
 		auto sidewalk = floor_strip (only (vec(0,0)))
-			.material (Material.concrete) // material should be static global returning Material??
-			.visual.texture (`sidewalk.tga`); // .visual converts the sidewalk from Material to Visual via Id
+			.material (materials.concrete);
+			//sidewalk.visual.texture (sidewalk_texture, uv_strip_tile (sidewalk.physical.geometry)); 
+			// TODO .visual converts the sidewalk from Material to Visual via Id, if its constructed
+			// if not, i dunno, we construct one i guess
 	/*
 		auto bay = water ([XXX])
 			.depth (20.meters)

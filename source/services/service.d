@@ -139,7 +139,7 @@ abstract class Service
 								}
 								emit (this.base_info, "→ "~T.stringof~" {"~msg~"}");
 							}
-						static if (is (T == Stop) || is (T == bool))
+						static if (is (T == Stop) || is (T == bool)) // TODO bool => anything of size 1.. maybe even reject bool outright or warn on its use?
 							(cast()thread).prioritySend (message);
 						else (cast()thread).send (message);
 					}

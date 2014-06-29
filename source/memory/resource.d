@@ -244,7 +244,9 @@ class Allocator (T)
 				Allocator allocator;
 				invariant (){/*...}*/
 					if (allocator !is null && id != Id.init)
-						assert (length <= allocator.allocated[id].capacity);
+						assert (length <= allocator.allocated[id].capacity,
+							`length ` ~ length.text ~ ` exceeded capacity ` ~ allocator.allocated[id].capacity.text
+						);
 				}
 			}
 

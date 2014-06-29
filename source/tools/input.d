@@ -128,12 +128,9 @@ final class Input
 							glfwSetKeyCallback (window, &key_callback);
 							glfwSetMouseButtonCallback (window, &button_callback);
 							glfwSetCursorPosCallback (window, &pointer_callback);
-							return true;
 						}
 					);
-					with (std.concurrency) with (utils)
-						if (not (receiveTimeout (1.seconds, (bool _){})))
-							assert (0, `input failed to connect to display`);
+
 					key_map.lookup[`base`] = [Key.esc: main_escape_function];
 					mouse_map.lookup[`base`] = [Mouse.left: (bool _){}];
 				}

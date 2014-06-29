@@ -17,6 +17,7 @@ import services.scheduler;
 import memory.buffer;
 
 
+// REFACTOR this file is kind of a mess. Glyph shouldn't be here, and everything below Display:Service is irrelevant to the API
 alias TextureId = GLuint;
 enum GeometryMode: GLenum 
 	{/*...}*/
@@ -38,6 +39,47 @@ struct Glyph
 		@("pixel") float advance;
 	}
 
+public {/*openGL}*/
+	struct gl
+		{/*...}*/
+			import std.string;
+			static auto ref opDispatch (string name, Args...) (Args args)
+				{/*...}*/
+					debug scope (exit) check_GL_error!name (args);
+					static if (name == "GetUniformLocation")
+						mixin ("return gl"~name~" (args[0], toStringz (args[1]));");
+					else mixin ("return gl"~name~" (args);");
+				}
+			static void check_GL_error (string name, Args...) (Args args)
+				{/*...}*/
+					GLenum error;
+					while ((error = glGetError ()) != GL_NO_ERROR)
+						{/*...}*/
+							string error_msg;
+							final switch (error)
+								{/*...}*/
+									case GL_INVALID_ENUM:
+										error_msg = "GL_INVALID_ENUM";
+										break;
+									case GL_INVALID_VALUE:
+										error_msg = "GL_INVALID_VALUE";
+										break;
+									case GL_INVALID_OPERATION:
+										error_msg = "GL_INVALID_OPERATION";
+										break;
+									case GL_INVALID_FRAMEBUFFER_OPERATION:
+										error_msg = "GL_INVALID_FRAMEBUFFER_OPERATION";
+										break;
+									case GL_OUT_OF_MEMORY:
+										error_msg = "GL_OUT_OF_MEMORY";
+										break;
+								}
+							throw new Exception ("OpenGL error " ~to!string (error)~": "~error_msg~"\n"
+								"	using gl"~function_call_to_string!name (args));
+						}
+				}
+		}
+}
 public {/*coordinate transformations}*/
 	public {/*from}*/
 		auto from_draw_space (T)(T geometry) pure nothrow
@@ -129,6 +171,8 @@ public {/*coordinate transformations}*/
 	}
 }
 
+struct AccessConfirmation {}
+
 final class Display: Service
 	{/*...}*/
 		private {/*imports}*/
@@ -178,32 +222,16 @@ final class Display: Service
 					buffer.writer_swap ();
 					send (true);
 				}
-			GLuint upload_texture (T) (shared T bitmap, GLuint texture_id = uint.max)
-				{/*...}*/
-					GLsizei height = bitmap.height;
-					GLvoid* data = bitmap.data;
-					GLenum format = Upload.Format.rgba;
-					GLsizei width = bitmap.width;
-
-					Upload upload 
-						= {/*...}*/
-							height: height,
-							width: width,
-							data: data,
-							format: format,
-							texture_id: texture_id,
-						};
-					send (upload);
-					receive ((GLuint tex_id) => upload.texture_id = tex_id);
-					return upload.texture_id;
-				}
-			void access_rendering_context (T)(T request)
+			void access_rendering_context (T)(T request, Duration time_allowed = 1.seconds)
 				if (isCallable!T)
 				in {/*...}*/
+					static assert (ParameterTypeTuple!T.length == 0);
+					static assert (is (ReturnType!T == void));
 					assert (this.is_running, "attempted to access rendering context while Display offline");
 				}
 				body {/*...}*/
-					send (std.concurrency.thisTid, cast(shared) std.functional.toDelegate (request));
+					send (cast(shared)std.functional.toDelegate (request));
+					assert (received_before (time_allowed, (AccessConfirmation _){}));
 				}
 		}
 		public {/*coordinates}*/
@@ -328,35 +356,14 @@ final class Display: Service
 								`vertices and texture coords not 1-to-1`
 							);
 						}
-					void upload_texture (Upload upload)
+					void access_rendering_context (shared void delegate() request)
 						{/*...}*/
-							if (upload.exists)
-								gl.BindTexture (GL_TEXTURE_2D, upload.texture_id);
-							else {/*generate texture_id}*/
-								gl.GenTextures (1, &(upload.texture_id));
-								gl.BindTexture (GL_TEXTURE_2D, upload.texture_id);
-								gl.TexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-								gl.TexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-								gl.TexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-								gl.TexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-								gl.PixelStorei (GL_UNPACK_ALIGNMENT, 1); // XXX this may need to be controlled
-							}
-							gl.TexImage2D (/*upload texture)*/
-								GL_TEXTURE_2D, 0, upload.format,
-								upload.width, upload.height,
-								0, upload.format, GL_UNSIGNED_BYTE,
-								cast(GLvoid*)upload.data
-							);
-							reply (upload.texture_id);
-						}
-					void access_rendering_context (Tid requestor, shared bool delegate() request)
-						{/*...}*/
-							std.concurrency.send (requestor, request ());
+							request ();
+							reply (AccessConfirmation ());
 						}
 						
 					receive (
 						&render, 
-						&upload_texture, 
 						&access_rendering_context,
 						auto_sync!(animation, (){/*...})*/
 							buffer.writer_swap ();
@@ -640,69 +647,6 @@ private {/*orders}*/
 						this.length = length;
 					}
 			}
-		}
-}
-private {/*uploads}*/
-	struct Upload
-		{/*...}*/
-			GLuint texture_id = uint.max;
-			GLsizei width;
-			GLsizei height;
-			shared GLvoid* data;
-			GLenum format;
-			enum Format: GLenum
-				{/*...}*/
-					rgba = GL_RGBA,
-					bgra = GL_BGRA,
-					gray = GL_ALPHA
-				}
-			@property bool exists () 
-				{/*...}*/
-					if (texture_id == uint.max)
-						return false;
-					else return true;
-				}
-		}
-}
-private {/*openGL}*/
-	struct gl
-		{/*...}*/
-			import std.string;
-			static auto ref opDispatch (string name, Args...) (Args args)
-				{/*...}*/
-					debug scope (exit) check_GL_error!name (args);
-					static if (name == "GetUniformLocation")
-						mixin ("return gl"~name~" (args[0], toStringz (args[1]));");
-					else mixin ("return gl"~name~" (args);");
-				}
-			static void check_GL_error (string name, Args...) (Args args)
-				{/*...}*/
-					GLenum error;
-					while ((error = glGetError ()) != GL_NO_ERROR)
-						{/*...}*/
-							string error_msg;
-							final switch (error)
-								{/*...}*/
-									case GL_INVALID_ENUM:
-										error_msg = "GL_INVALID_ENUM";
-										break;
-									case GL_INVALID_VALUE:
-										error_msg = "GL_INVALID_VALUE";
-										break;
-									case GL_INVALID_OPERATION:
-										error_msg = "GL_INVALID_OPERATION";
-										break;
-									case GL_INVALID_FRAMEBUFFER_OPERATION:
-										error_msg = "GL_INVALID_FRAMEBUFFER_OPERATION";
-										break;
-									case GL_OUT_OF_MEMORY:
-										error_msg = "GL_OUT_OF_MEMORY";
-										break;
-								}
-							throw new Exception ("OpenGL error " ~to!string (error)~": "~error_msg~"\n"
-								"	using gl"~function_call_to_string!name (args));
-						}
-				}
 		}
 }
 

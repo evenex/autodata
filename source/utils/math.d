@@ -11,26 +11,16 @@ public {/*constants}*/
 }
 public {/*arithmetic}*/
 	/* get an array of natural numbers from 0 to max-1 */
-	auto ℕ (uint max) ()
+	auto ℕ (uint max)()
 		{/*↓}*/
 			return ℕ (max);
 		}
-	auto ℕ (T)(T max)
-		{/*↓}*/
-			return ℕ (cast(T)0, max);
-		}
-	/* get an array of natural numbers from min to max-1 */
-	auto ℕ (uint min, uint max) ()
-		{/*↓}*/
-			return ℕ (min, max);
-		}
-	auto ℕ (T)(T min, T max)
+	auto ℕ (T)(T count)
 		if (isIntegral!T)
-		in {/*...}*/
-			assert (max >= min, `max >= min`);
-		}
-		body {/*...}*/
-			return sequence!((i,n) => i[0]+n)(min).take (max-min);
+		{/*...}*/
+			return sequence!((i,n) => i[0]+n)(0)
+				.map!(n => cast(T)n)
+				.take (count.to!size_t);
 		}
 	/* compute the product of a sequence */
 	auto Π (T)(T sequence)
