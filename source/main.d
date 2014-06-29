@@ -76,7 +76,7 @@ public {/*entity}*/
 			floor	 	= 2^^4,
 		}
 }
-public {/*world (main model manager)}*/
+public {/*world}*/
 	struct World
 		{/*...}*/
 			import std.datetime;
@@ -112,85 +112,87 @@ public {/*world (main model manager)}*/
 public {/*models/aspects}*/
 	class Visual
 		{/*...}*/
-			struct Aspect
-				{/*...}*/
-					public {/*ctor}*/
-						this (T)(T entity)
-							{/*...}*/
-					// TODO generic "change of representation" method, calling on entity extracts id and fetches aspect from model
-							}
-					}
-					public {/*command}*/
-						auto geometry (View!vec verts)
-							{/*...}*/
-								_geometry = verts;
-								return this;
-							}
-						auto texture (TextureId id, MapView!(Index, vec) coords = (&identity).view (0,4).map_view (&full_texture))
-							in  {/*...}*/
-								assert (_type & (Type.none | Type.texture));
-							}
-							body {/*...}*/
-								_texture = Texture (id, coords);
-								_type = Type.texture;
-								return this;
-							}
-						auto color (Color color)
-							in {/*...}*/
-								assert (_type & (Type.none | Type.drawing));
-							}
-							body {/*...}*/
-								_drawing.color = color;
-								_type = Type.drawing;
-								return this;
-							}
-						auto mode (GeometryMode mode)
-							in  {/*...}*/
-								assert (_type & (Type.none | Type.drawing));
-							}
-							body {/*...}*/
-								_drawing.mode = mode;
-								_type = Type.drawing;
-								return this;
-							}
-					}
-					public {/*substruct}*/
-						struct Texture
-							{/*...}*/
-								TextureId id;
-								MapView!(Index, vec) coords;
-							}
-						struct Drawing
-							{/*...}*/
-								Color color;
-								GeometryMode mode;
-							}
-					}
-					public {/*properties}*/
-						auto texture ()
-							in {/*...}*/
-								assert (_type & (Type.none | Type.texture));
-							}
-							body {/*...}*/
-								return _texture;
-							}
-						auto drawing ()
-							in {/*...}*/
-								assert (_type & (Type.none | Type.drawing));
-							}
-							body {/*...}*/
-								return _drawing;
-							}
-					}
-					private {/*data}*/
-						View!vec _geometry;
-						union {/*...}*/
-							Texture _texture;
-							Drawing _drawing;
+			public {/*aspects}*/
+				struct Aspect
+					{/*...}*/
+						public {/*ctor}*/
+							this (T)(T entity)
+								{/*...}*/
+						// TODO generic "change of representation" method, calling on entity extracts id and fetches aspect from model
+								}
 						}
-						Type _type; enum Type {none = 0x1, drawing = 0x2, texture = 0x4}
+						public {/*command}*/
+							auto geometry (View!vec verts)
+								{/*...}*/
+									_geometry = verts;
+									return this;
+								}
+							auto texture (TextureId id, MapView!(Index, vec) coords = (&identity).view (0,4).map_view (&full_texture)) // XXX instead manage zips and maps internally, because (0,4) will crash you with anything but quads
+								in  {/*...}*/
+									assert (_type & (Type.none | Type.texture));
+								}
+								body {/*...}*/
+									_texture = Texture (id, coords);
+									_type = Type.texture;
+									return this;
+								}
+							auto color (Color color)
+								in {/*...}*/
+									assert (_type & (Type.none | Type.drawing));
+								}
+								body {/*...}*/
+									_drawing.color = color;
+									_type = Type.drawing;
+									return this;
+								}
+							auto mode (GeometryMode mode)
+								in  {/*...}*/
+									assert (_type & (Type.none | Type.drawing));
+								}
+								body {/*...}*/
+									_drawing.mode = mode;
+									_type = Type.drawing;
+									return this;
+								}
+						}
+						public {/*substruct}*/
+							struct Texture
+								{/*...}*/
+									TextureId id;
+									MapView!(Index, vec) coords;
+								}
+							struct Drawing
+								{/*...}*/
+									Color color;
+									GeometryMode mode;
+								}
+						}
+						public {/*properties}*/
+							auto texture ()
+								in {/*...}*/
+									assert (_type & (Type.none | Type.texture));
+								}
+								body {/*...}*/
+									return _texture;
+								}
+							auto drawing ()
+								in {/*...}*/
+									assert (_type & (Type.none | Type.drawing));
+								}
+								body {/*...}*/
+									return _drawing;
+								}
+						}
+						private {/*data}*/
+							View!vec _geometry;
+							union {/*...}*/
+								Texture _texture;
+								Drawing _drawing;
+							}
+							Type _type; enum Type {none = 0x1, drawing = 0x2, texture = 0x4}
+						}
 					}
-				}
+			}
 			static {/*toolkit}*/
 				auto full_texture (Index i)
 					{/*...}*/
@@ -200,6 +202,12 @@ public {/*models/aspects}*/
 		}
 	class Physical
 		{/*...}*/
+			this (Physics physics)
+				{/*...}*/
+					bodies = new Allocator!Body;
+					geometry = new Allocator!vec;
+					this.physics = physics;
+				}
 			public {/*aspects}*/
 				struct Body
 					{/*...}*/
