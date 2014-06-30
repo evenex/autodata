@@ -6,9 +6,10 @@ import std.range;
 import std.algorithm;
 
 import derelict.opengl3.gl3;
-
 import services.display;
-import memory.resource;
+
+import resource.allocator;
+
 import utils;
 import math;
 
@@ -44,7 +45,7 @@ struct Image
 	{/*...}*/
 		Allocator!Pixel memory;
 
-		Allocator!Pixel.Resource data;
+		Resource!Pixel data;
 		uint height;
 		uint width;
 		Format format; enum Format {rgba = GL_RGBA, bgra = GL_BGRA, gray = GL_ALPHA}
@@ -91,7 +92,7 @@ struct Image
 							this.height = header.height;
 							this.format = Format.rgba; // TEMP until if/when i need more TGA modes
 
-							data = memory.allocate (width*height);
+							data = memory.allocate (width*height, 0);
 							file.stream_tga (data);
 
 							if (header.origin_bottom_left)
@@ -131,7 +132,7 @@ struct Image
 			}
 	}
 
-private void stream_tga (ref File file, ref Allocator!Pixel.Resource destination) //TODO enforce depth, alignment, and 2^ dimension
+private void stream_tga (ref File file, ref Resource!Pixel destination) //TODO enforce depth, alignment, and 2^ dimension
 	{/*...}*/
 		Pixel[1] pixel;
 

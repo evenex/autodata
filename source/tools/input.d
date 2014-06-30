@@ -5,7 +5,7 @@ import std.exception;
 import utils;
 import math;
 import services.display;
-import memory.buffer;
+import resource.buffer;
 import derelict.glfw3.glfw3;
 
 final class Input

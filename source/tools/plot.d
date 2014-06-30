@@ -4,11 +4,15 @@ import std.traits;
 import std.typecons;
 import std.algorithm;
 import std.range;
-import memory.resource;
-import memory.view;
+
+import resource.allocator;
+import resource.view;
+
 import utils;
 import math;
+
 import services.display;
+
 import tools.scribe;
 
 struct Plot

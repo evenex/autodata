@@ -9,6 +9,13 @@ public {/*constants}*/
 	alias π = PI;
 	alias e = E;
 }
+public {/*logic}*/
+	bool reflexively_equal (T,U)(T a, U b)
+		if (__traits(compiles, a < b))
+		{/*...}*/
+			return not (a < b || b < a);
+		}
+}
 public {/*arithmetic}*/
 	/* get an array of natural numbers from 0 to max-1 */
 	auto ℕ (uint max)()

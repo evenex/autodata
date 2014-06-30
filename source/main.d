@@ -5,9 +5,10 @@ import std.conv;
 import math;
 import utils;
 
-import memory.view;
-import memory.look;
-import memory.resource;
+import resource.view;
+import resource.look;
+import resource.allocator;
+import resource.directory;
 
 import services.display;
 import services.physics;
@@ -16,6 +17,14 @@ import tools.image;
 
 /*
  As a matter of policy, all public methods at this level should deal exclusively in Views, not hard data. Either Fields or Looks are ok.
+ In general it seems like it would be better to take Looks to Views instead of raw Views, because that way every fetch can yield an up-to-date view
+ even if the data has been moved.
+ so what about this supposed advantage of taking a view and having it be always up to date with the backing data?
+ 	this is only true if the data doesn't MOVE
+	if it changes in-place then it will stay up to date
+so Looks to Views keep the data up-to-date even if it moves
+while having the View stay up-to-date even as its being changed, without paying the cost of a Look observation
+so basically we pay the cost of the Look once per traversal, and pay the cost of the View for each element.
 */
 
 public {/*entity}*/
@@ -109,12 +118,23 @@ public {/*world}*/
 			return world.clock;
 		}
 }
+public {/*services}*/
+	Display display;
+	Physics physics;
+	shared static this ()
+		{/*...}*/
+			display = new Display;
+			physics = new Physics;
+		}
+}
 public {/*models/aspects}*/
-	class Visual
+	struct Visual
 		{/*...}*/
 			public {/*aspects}*/
-				struct Aspect
+				struct Object
 					{/*...}*/
+						Entity.Id id;
+						public:
 						public {/*ctor}*/
 							this (T)(T entity)
 								{/*...}*/
@@ -127,7 +147,7 @@ public {/*models/aspects}*/
 									_geometry = verts;
 									return this;
 								}
-							auto texture (TextureId id, MapView!(Index, vec) coords = (&identity).view (0,4).map_view (&full_texture)) // XXX instead manage zips and maps internally, because (0,4) will crash you with anything but quads
+							auto texture (TextureId id, View!vec coords) // XXX instead manage zips and maps internally, because (0,4) will crash you with anything but quads
 								in  {/*...}*/
 									assert (_type & (Type.none | Type.texture));
 								}
@@ -155,18 +175,6 @@ public {/*models/aspects}*/
 									return this;
 								}
 						}
-						public {/*substruct}*/
-							struct Texture
-								{/*...}*/
-									TextureId id;
-									MapView!(Index, vec) coords;
-								}
-							struct Drawing
-								{/*...}*/
-									Color color;
-									GeometryMode mode;
-								}
-						}
 						public {/*properties}*/
 							auto texture ()
 								in {/*...}*/
@@ -183,6 +191,13 @@ public {/*models/aspects}*/
 									return _drawing;
 								}
 						}
+						public {/*sorting}*/
+							int opCmp (ref const Object that) const
+								{/*...}*/
+									return compare (this.id, that.id);
+								}
+						}
+						private:
 						private {/*data}*/
 							View!vec _geometry;
 							union {/*...}*/
@@ -193,6 +208,40 @@ public {/*models/aspects}*/
 						}
 					}
 			}
+			public {/*substruct}*/
+				struct Texture
+					{/*...}*/
+						TextureId id;
+						View!vec coords;
+					}
+				struct Drawing
+					{/*...}*/
+						Color color;
+						GeometryMode mode;
+					}
+			}
+		__gshared:
+			private {/*resources}*/
+				Directory!Object objects;
+			}
+			static {/*interface}*/
+				auto update ()
+					{/*...}*/
+						foreach (ref object; objects)
+							with (Object.Type) 
+							final switch (object._type)
+								{/*...}*/
+									case drawing:
+										display.draw (object._drawing.color, object._geometry, object._drawing.mode);
+										break;
+									case texture:
+										display.draw (object._texture.id, object._geometry, object._texture.coords);
+										break;
+									case none:
+										assert (0);
+								}
+					}
+			}
 			static {/*toolkit}*/
 				auto full_texture (Index i)
 					{/*...}*/
@@ -200,17 +249,24 @@ public {/*models/aspects}*/
 					}
 			}
 		}
-	class Physical
+	auto visual (T)(T entity)
+		if (__traits(compiles, entity.id == Entity.Id.init))
 		{/*...}*/
-			this (Physics physics)
-				{/*...}*/
-					bodies = new Allocator!Body;
-					geometry = new Allocator!vec;
-					this.physics = physics;
-				}
+			if (entity.id in Visual.objects)
+				return Visual.objects.get (entity.id);
+			else return Visual.objects.add (entity.id);
+		}
+	struct Physical
+		{/*...}*/
 			public {/*aspects}*/
 				struct Body
 					{/*...}*/
+						Entity.Id id;
+						int opCmp (ref const Body that) const
+							{/*...}*/
+								return compare (this.id, that.id);
+							}
+
 						View!vec geometry;
 						vec position;
 						vec velocity;
@@ -221,15 +277,24 @@ public {/*models/aspects}*/
 						double height;
 					}
 			}
-			public {/*services}*/
-				Physics physics;
-			}
+		__gshared:
 			private {/*resources}*/
-				Allocator!Body bodies;
+				Directory!Body bodies;
 				Allocator!vec geometry;
 			}
 			static {/*toolkit}*/
 			}
+			shared static this ()
+				{/*...}*/
+					geometry = new Allocator!vec;
+				}
+		}
+	auto physical (T)(T entity)
+		if (__traits(compiles, entity.id == Entity.Id.init))
+		{/*...}*/
+			if (entity.id in Physical.bodies)
+				return Physical.bodies.get (entity.id);
+			else return Physical.bodies.add (entity.id);
 		}
 	class Material
 		{/*...}*/
@@ -310,7 +375,7 @@ public {/*entity ctors}*/
 			}
 	}
 }
-public {/*overloads for performing a strip-tile uv-wrapping over a quad-strip}*/
+public {/*overloads for performing a strip-tidle uv-wrapping over a quad-strip}*/
 	auto uv_strip_tile (R)(R geometry)
 		if (is_geometric!R)
 		in {/*...}*/

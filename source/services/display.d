@@ -14,7 +14,7 @@ import math;
 import services.service;
 import services.scheduler;
 
-import memory.buffer;
+import resource.buffer;
 
 
 // REFACTOR this file is kind of a mess. Glyph shouldn't be here, and everything below Display:Service is irrelevant to the API

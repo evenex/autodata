@@ -1,11 +1,13 @@
-module memory.buffer;
+module resource.buffer;
 
 import std.range;
 import std.traits;
 import std.typetuple;
 import std.conv: to, text;
+
 import utils;
-import memory.resource;
+
+import resource.allocator;
 
 /* Buffers
 Buffers are a mechanism for safely transferring large quantities
@@ -75,22 +77,19 @@ template DoubleBuffer (T, uint size)
 						{/*...}*/
 							auto memory = new Allocator!T (size*2);
 
-							foreach (ref buffer; (cast()this).buffer)
-								buffer = memory.allocate (size);
+							buffer[0] = cast(shared)memory.allocate (size);
+							buffer[1] = cast(shared)memory.allocate (size);
 						}
 				}
 				private:
 				private {/*data}*/
-					Resource buffer[2];
+					Resource!T buffer[2];
 					uint write = 0;
-				}
-				private {/*resources}*/
-					alias Resource = Allocator!T.Resource;
 				}
 				enum BufferTrait;
 			}
 		static assert (not (isOutputRange!(DoubleBuffer, T)));
-		static assert (isOutputRange!(shared DoubleBuffer, T));
+		//static assert (isOutputRange!(shared DoubleBuffer, T)); BUG
 	}
 
 /*
@@ -159,25 +158,23 @@ template TripleBuffer (T, uint size, uint sync_frequency = 4_000)
 				shared {/*ctor}*/
 					this ()
 						{/*...}*/
-							auto memory = new Allocator!T (size*3);
+							auto memory = new Allocator!T (size*3); // REVIEW allocator can't be manually deleted now... buffers will probably last all program, but still...
 
-							foreach (ref buffer; (cast()this).buffer)
-								buffer = memory.allocate (size);
+							buffer[0] = cast(shared)memory.allocate (size);
+							buffer[1] = cast(shared)memory.allocate (size);
+							buffer[2] = cast(shared)memory.allocate (size);
 						}
 				}
 				private:
 				private {/*data}*/
-					Resource buffer[3];
+					Resource!T buffer[3];
 					uint write = 0;
 					uint read  = 2;
-				}
-				private {/*resources}*/
-					alias Resource = Allocator!T.Resource;
 				}
 				enum BufferTrait;
 			}
 		static assert (not (isOutputRange!(TripleBuffer, T)));
-		static assert (isOutputRange!(shared TripleBuffer, T));
+	//	static assert (isOutputRange!(shared TripleBuffer, T)); BUG
 	}
 
 /*

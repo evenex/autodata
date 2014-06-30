@@ -1,4 +1,4 @@
-module memory.look;
+module resource.look;
 
 import std.stdio;
 import std.traits;

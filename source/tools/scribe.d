@@ -9,10 +9,13 @@ import std.ascii;
 import std.algorithm;
 import std.range;
 import std.array;
-import services.display;
-import memory.resource;
+
 import utils;
 import math;
+
+import resource.allocator;
+
+import services.display;
 
 struct Unicode
 	{/*...}*/
@@ -266,10 +269,8 @@ class Scribe
 					auto size = order.size;
 					if (text.empty) return;
 					
-					auto glyphs = glyph_pool.allocate (text.length);
+					auto glyphs = glyph_pool.save (text.map!(c => glyph (c, size, color)));
 					auto cards = vertex_pool.allocate (4*text.length);
-
-					glyphs[] = text.map!(c => glyph (c, size, color));
 
 					typeset (glyphs, order, cards);
 

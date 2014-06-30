@@ -239,7 +239,7 @@ abstract class Service
 		}
 		final {/*launch}*/
 			enum Stop {signal}
-			synchronized void launch ()
+			shared void launch ()
 				{/*...}*/
 					version (verbose) 
 						{/*...}*/

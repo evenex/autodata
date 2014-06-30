@@ -55,6 +55,14 @@ public {/*syntax}*/
 		{/*...}*/
 			return !value;
 		}
+	auto compare (T)(T a, T b)
+		{/*...}*/
+			if (a < b)
+				return -1;
+			else if (a == b)
+				return 0;
+			else return 1;
+		}
 }
 public {/*debug}*/
 	/* warning exception */
@@ -458,7 +466,14 @@ public {/*metaprogramming}*/
 								}
 						}
 						public {/*id token}*/
-							alias token this;
+							int opCmp (ref const Id that) const
+								{/*...}*/
+									if (this.id < that.id)
+										return -1;
+									else if (this.id == that.id)
+										return 0;
+									else return 1;
+								}
 							@property auto token () const
 								{/*...}*/
 									return id;

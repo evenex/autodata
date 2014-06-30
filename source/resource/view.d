@@ -1,4 +1,4 @@
-module memory.view;
+module resource.view;
 
 import std.stdio;
 import std.traits;
@@ -6,6 +6,8 @@ import std.typetuple;
 import std.range;
 import std.conv;
 import utils;
+
+import resource.allocator;
 
 /* Views
 Views are an opaque type-generic layer over certain types of Ranges. They bring
@@ -26,21 +28,22 @@ Filter and Reduce are unimplemented, as it is currently unclear how to compute t
 	View.
 */
 
-alias Index = size_t;
 alias View = IdentityView;
 
 public:
 public {/*identity}*/
 	/*
 	The IdentityView provides a uniformly-typed wrapper over certain types of Ranges:
-		Arrays, Generators (functions of one unsigned integer), and other Views. The details
-		of the source are hidden behind a type-erasure mechanism which allows the View's
-		type to depend only on its ElementType.
+		Arrays, Generators (functions of one unsigned integer), and Functors (objects
+		callable with one unsigned integer). The details of the source are hidden 
+		behind a type-erasure mechanism which allows the View's type to depend only on 
+		its ElementType.
 
 	IdentityViews will always attempt to minimize the length of their indirection path,
 		meaning	that if IdentityView A is constructed over IdentityView B, A will not 
 		source from B, but directly from B's source. This eliminates unnecessary 
-		indirection and improves the robustness of the pathway.
+		indirection and improves the robustness of the pathway, making IdentityViews
+		safe and efficient to use liberally.
 	*/
 	auto view (T)(ref IdentityView!T view)
 		{/*...}*/
@@ -55,7 +58,7 @@ public {/*identity}*/
 			return IdentityView!T (generator, start, end);
 		}
 	auto view (F)(ref F functor)
-		if (is_View!F && not (is_IdentityView!F))
+		if (is_Functor!F && not (is_IdentityView!F))
 		{/*...}*/
 			return IdentityView!(F.ElementType) (functor);
 		}
@@ -70,7 +73,7 @@ public {/*identity}*/
 						this.access_range (0, array.length.to!Index);
 					}
 				this (F)(ref F functor)
-					if (is_View!F)
+					if (is_Functor!F)
 					{/*...}*/
 						this.source = Source.functor;
 						this.functor = std.functional.toDelegate (&functor.opAccess);
@@ -83,7 +86,7 @@ public {/*identity}*/
 						this.access_range (start, end);
 					}
 			}
-			public {/*=}*/
+			public {/*=}*/ // REVIEW do i need this?
 				void opAssign (U)(U that)
 					{/*...}*/
 						this.__ctor (that); // XXX
@@ -362,7 +365,6 @@ private {/*functor}*/
 				Index start;
 				Index end;
 			}
-			enum ViewFunctorTrait;
 			unittest {/*...}*/
 				alias This = typeof(this);
 				mixin(report_test!(This.stringof ~ ` ViewFunctor`));
@@ -378,9 +380,15 @@ private {/*functor}*/
 				static assert (hasSlicing!This);
 			}
 		}
-	bool is_View (T)()
+	bool is_Functor (T)()
 		{/*...}*/
-			return __traits(compiles, T.ViewFunctorTrait);
+			static if (hasMember!(T, `opAccess`))
+				static if (isSomeFunction!(T.opAccess))
+					static if (is (ParameterTypeTuple!(T.opAccess) == TypeTuple!(Index)))
+						return true;
+					else return false;
+				else return false;
+			else return false;
 		}
 }
 

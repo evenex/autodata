@@ -3,9 +3,12 @@ module gui.infobox;
 import std.algorithm;
 import std.range;
 import std.variant;
-import memory.view;
+
+import resource.view;
+
 import tools.scribe;
 import tools.plot;
+
 import utils;
 import math;
 

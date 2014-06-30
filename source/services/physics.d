@@ -12,7 +12,7 @@ import math;
 
 import services.service;
 
-import memory.buffer;
+import resource.buffer;
 
 private {/*library}*/
 	struct cp
@@ -556,8 +556,9 @@ final class Physics: Service
 								cp.SpaceAddShape (space, shape_ptr[id]);
 							}
 							{/*set properties}*/
-								cp.BodySetUserData (body_ptr[id], cast(void*)id);
-								cp.ShapeSetUserData (shape_ptr[id], cast(void*)id);
+								union Cast {Body.Id id; void* ptr;}
+								cp.BodySetUserData (body_ptr[id], Cast(id).ptr);
+								cp.ShapeSetUserData (shape_ptr[id], Cast(id).ptr);
 								if (mass != float.infinity)
 									{/*...}*/
 										this.position = position;
@@ -996,12 +997,14 @@ unittest
 		import std.concurrency;
 
 		mixin (report_test!`multithreaded physics`);
-
 		static void test () {/*...}*/
+		mixin(profiler);
 			scope lP = new Physics;
 			auto P = cast(shared)lP;
 			P.initialize ();
+		profiler.checkpoint (0);
 			P.process ();
+		profiler.checkpoint (1);
 			P.terminate ();
 			try ownerTid.send (true);
 			catch (TidMissingException ex){}

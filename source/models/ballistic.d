@@ -3,9 +3,12 @@ import std.algorithm;
 import std.array;
 import std.range;
 import std.math;
+
+import resource.view;
+
 import utils; // TODO make views and looks and math public imports?
-import memory.view;
 import math;
+
 import services.physics;
 import modeling;
 
