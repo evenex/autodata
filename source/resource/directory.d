@@ -18,12 +18,10 @@ import math;
 class Directory (T, alias sorted = less_than!T)
 	if (__traits(compiles, sorted (T.init, T.init)))
 	{/*...}*/
-		debug bool initialized = false;
 		debug T* entries_ptr;
 
 		T[] entries;
 		invariant (){/*...}*/
-			assert (initialized);
 			assert (entries.ptr == entries_ptr);
 			assert (entries.isSorted!sorted,
 				`entries became unsorted: ` ~entries.text
@@ -33,7 +31,6 @@ class Directory (T, alias sorted = less_than!T)
 		this (size_t capacity)
 			{/*...}*/
 				entries.reserve (capacity);
-				debug initialized = true;
 				debug entries_ptr = entries.ptr;
 			}
 
@@ -55,16 +52,22 @@ class Directory (T, alias sorted = less_than!T)
 				}
 			int opApplyReverse (int delegate(ref T) op)
 				{/*...}*/
-					foreach (ref entry; entries.retro)
-						if (op (entry)) break;
+					int result;
 
-					return 0;
+					foreach (ref entry; entries.retro)
+						{/*...}*/
+							result = op (entry);
+
+							if (result) 
+								break;
+						}
+
+					return result;
 				}
 		}
 		public {/*mutation}*/
 			auto append (T entry)
 				in {/*...}*/
-					assert (this.initialized);
 					assert (entries.capacity);
 					assert (entries.length? sorted (entries.back, entry) : true,
 						`attempted to append element out of order`
@@ -78,7 +81,6 @@ class Directory (T, alias sorted = less_than!T)
 				}
 			auto add (T entry)
 				in {/*...}*/
-					assert (this.initialized);
 					assert (entries.capacity);
 					assert (not (this.contains (entry)),
 						`attempted to add duplicate element ` ~entry.text
@@ -107,7 +109,6 @@ class Directory (T, alias sorted = less_than!T)
 				}
 			auto remove (T entry)
 				in {/*...}*/
-					assert (this.initialized);
 					assert (this.contains (entry));
 				}
 				body {/*...}*/
@@ -116,7 +117,6 @@ class Directory (T, alias sorted = less_than!T)
 				}
 			auto remove_at (size_t index)
 				in {/*...}*/
-					assert (this.initialized);
 					assert (index < entries.length);
 				}
 				body {/*...}*/
@@ -126,17 +126,13 @@ class Directory (T, alias sorted = less_than!T)
 					--entries.length;
 				}
 			auto clear ()
-				in {/*...}*/
-					assert (this.initialized);
-				}
-				body {/*...}*/
+				{/*...}*/
 					entries.length = 0;
 				}
 		}
 		public {/*access}*/
 			ref auto get (T entry)
 				in {/*...}*/
-					assert (this.initialized);
 					assert (this.contains (entry));
 				}
 				body {/*...}*/
@@ -145,10 +141,7 @@ class Directory (T, alias sorted = less_than!T)
 		}
 		public {/*search}*/
 			auto index_of (T entry)
-				in {/*...}*/
-					assert (this.initialized);
-				}
-				body {/*...}*/
+				{/*...}*/
 					if (entries.empty)
 						return -1L;
 
@@ -159,25 +152,16 @@ class Directory (T, alias sorted = less_than!T)
 					else return entries[i].reflexively_equal (entry)? i : -1;
 				}
 			auto contains (T entry)
-				in {/*...}*/
-					assert (this.initialized);
-				}
-				body {/*...}*/
+				{/*...}*/
 					return index_of (entry) != -1;
 				}
 			auto up_to (T entry)
-				in {/*...}*/
-					assert (this.initialized);
-				}
-				body {/*...}*/
+				{/*...}*/
 					auto i = search_for (entry);
 					return entries [0..i];
 				}
 			auto after (T entry)
-				in {/*...}*/
-					assert (this.initialized);
-				}
-				body {/*...}*/
+				{/*...}*/
 					auto i = search_for (entry);
 					return i+1 < entries.length ?
 						entries[i+1..$]:
@@ -186,34 +170,22 @@ class Directory (T, alias sorted = less_than!T)
 		}
 		const @property {/*}*/
 			auto size ()
-				in {/*...}*/
-					assert (this.initialized);
-				}
-				body {/*...}*/
+				{/*...}*/
 					return entries.length;
 				}
 			auto capacity ()
-				in {/*...}*/
-					assert (this.initialized);
-				}
-				body {/*...}*/
+				{/*...}*/
 					return entries.capacity;
 				}
 			override string toString ()
-				in {/*...}*/
-					assert (this.initialized);
-				}
-				body {/*...}*/
+				{/*...}*/
 					return entries.text;
 				}
 		}
 		private:
 		private {/*search}*/
 			auto search_for (ref T entry) const
-				in {/*...}*/
-					assert (this.initialized);
-				}
-				body {/*...}*/
+				{/*...}*/
 					if (entries.empty)
 						return 0;
 
