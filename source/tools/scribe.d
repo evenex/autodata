@@ -281,6 +281,9 @@ class Scribe
 
 							display.draw (glyph.texture, geometry, tex_coords, color);
 						}
+
+					glyphs.free;
+					cards.free;
 				}
 			auto typeset (T1, T2)(ref T1 glyphs, ref Text order, ref T2 cards)
 				if (__traits(compiles, glyphs[0] == Glyph.init) && is_geometric!T2)

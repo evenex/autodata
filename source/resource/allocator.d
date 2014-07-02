@@ -6,7 +6,9 @@ import std.range;
 import std.ascii;
 import std.conv;
 import utils;
+import math;
 
+import resource.array;
 import resource.directory;
 /*
 	[RAW DATA (capacity)]
@@ -49,13 +51,14 @@ Each user of the Allocator is responsible for maintaining its own static list of
 */
 
 alias Index = size_t;
+private alias Interval = math.Interval!Index;
 // and so you have a static function indexed by entity.id that uses it to pick up a Range from an allocator and slice it
 // all i need is an up-to-date, high performance view at all times
 // up to date means against moves - so use a look sourced possibly by a pinned member function
 // also it means against in-place mutation - the look returns a view, and views take care of that automatically
 // looks are for passively up-to-date info (pulls)
 // views are for pinned, up-to-date ranges (pulls)
-class Allocator (T, Id = Index)
+struct Allocator (T, Id = Index)
 	{/*...}*/
  // TODO make it automatically extend its capacity instead of throwing an "out of memory" error.
 		public:
@@ -126,8 +129,8 @@ class Allocator (T, Id = Index)
 			void free (Id id)
 				{/*...}*/
 					auto R = fetch (id).bounds;
-					Range[] left;
-					Range[] right; 
+					Interval[] left;
+					Interval[] right; 
 
 					left = free_list.up_to (R);
 					if (left.length)
@@ -137,10 +140,13 @@ class Allocator (T, Id = Index)
 						}
 					else right = free_list.after (R);
 
+					std.stdio.stderr.writeln (`left `, left);
+					std.stdio.stderr.writeln (`right `, left);
+
 					if (right.length && left.length)
 						{/*...}*/
 							left.front.end = right.front.end;
-							free_list.remove (R);
+							free_list.remove_at (left.length);
 						}
 					else if (right.length)
 						{/*...}*/
@@ -163,13 +169,13 @@ class Allocator (T, Id = Index)
 					return pool.length;
 				}
 		}
-		public {/*ctor/dtor}*/
+		public {/*ctor}*/
 			this (uint capacity = 2^^12)
 				{/*...}*/
-					pool = new T[capacity];
-					free_list = new Directory!Range (100);
-					resources = new Directory!Resource (100);
-					free_list.append (Range (0, capacity));
+					pool = StaticArray!T (capacity);
+					free_list = List!Interval (100); // REVIEW
+					resources = Directory!(Resource, Id) (100); // REVIEW
+					free_list.append (Interval (0, capacity)); // REVIEW
 				}
 		}
 		private:
@@ -183,17 +189,15 @@ class Allocator (T, Id = Index)
 						}
 					private:
 					private {/*ctor}*/
-						this (Id id, Index start, Index capacity)
+						this (Index start, Index capacity)
 							{/*...}*/
-								this.id = id;
 								bounds.start = start;
 								bounds.end = start + capacity;
 							}
 					}
 					private {/*data}*/
-						Id id;
 						Index length;
-						Range bounds;
+						Interval bounds;
 					}
 					invariant (){/*...}*/
 						assert (length <= bounds.size);
@@ -340,6 +344,12 @@ class Allocator (T, Id = Index)
 								length = 0;
 							}
 					}
+					public {/*free}*/
+						void free ()
+							{/*...}*/
+								allocator.free (id);
+							}
+					}
 					private:
 					private {/*data}*/
 						Allocator allocator;
@@ -352,23 +362,6 @@ class Allocator (T, Id = Index)
 								this.id = id;
 							}
 					}
-				}
-			struct Range
-				{/*...}*/
-					Index start;
-					Index end;
-					@property size () const
-						{/*...}*/
-							return end-start;
-						}
-					int opCmp (ref const Range that) const
-						{/*...}*/
-							if (this.end < that.start)
-								return -1;
-							else if (this.end == that.start)
-								return 0;
-							else return 1;
-						}
 				}
 		}
 		private {/*access}*/
@@ -392,9 +385,9 @@ class Allocator (T, Id = Index)
 				}
 		}
 		private {/*data}*/
-			T[] pool;
-			Directory!Range free_list;
-			Directory!Resource resources;
+			StaticArray!T pool;
+			FreeList free_list;
+			Directory!(Resource, Id) resources;
 		}
 	}
 template Resource (T)
@@ -402,13 +395,43 @@ template Resource (T)
 		alias Resource = Allocator!T.ResourceHandle;
 	}
 
-unittest
+private struct FreeList
 	{/*...}*/
+		this (size_t memory_capacity, size_t max_entries)
+			{/*...}*/
+				
+			}
+
+		DynamicArray!Interval list;
+
+		invariant () {/*assumptions}*/
+			foreach (i, ref interval; list)
+				{/*...}*/
+					assert (interval.start < interval.end, 
+						`intervals are non-empty`
+					);
+					if (i+1 < list.length)
+						{/*...}*/
+							assert (interval.start < list[i+1].start,
+								`intervals are ordered`
+							);
+							assert (interval.end <= list[i+1].start,
+								`intervals are non-overlapping`
+							);
+						}
+				}
+		}
+
+		// TODO free -> insert|merge
+	}
+
+unittest
+	{/*ResourceHandle ops}*/
 		mixin(report_test!`allocator`);
 
-		scope alloc = new Allocator!double (10);
+		scope mem = new Allocator!double (10);
 
-		auto X = alloc.allocate (5);
+		auto X = mem.allocate (5);
 		assert (X.capacity == 5);
 		assert (X[].length == 0);
 
@@ -447,4 +470,36 @@ unittest
 		assert ((-X[]).equal ([-2.0, -2.0, -2.0]));
 
 		assertThrown!Error (X ~= 0.0.repeat (999));
+	}
+unittest//void main ()
+	{/*free_list}*/
+		import math;
+		import std.stdio;
+
+		alias Interval = const(Allocator!int.Interval);
+
+		scope mem = new Allocator!int (10);
+		assert (mem.free_list.view_entries.equal ([Interval(0,10)]));
+
+		auto a2 = mem.save (2.ℕ!int);
+		assert (mem.free_list.view_entries.equal ([Interval(2,10)]));
+
+		auto a3 = mem.save (3.ℕ!int);
+		assert (mem.free_list.view_entries.equal ([Interval(5,10)]));
+
+		auto a4 = mem.save (4.ℕ!int);
+		assert (mem.free_list.view_entries.equal ([Interval(9,10)]));
+
+		a3.free;
+		assert (mem.free_list.view_entries.equal (
+			[Interval(2,5), Interval(9,10)]
+		));
+
+		a2.free;
+		assert (mem.free_list.view_entries.equal (
+			[Interval(0,5), Interval(9,10)]
+		));
+
+		a4.free;
+		assert (mem.free_list.view_entries.equal ([Interval(0,10)]));
 	}

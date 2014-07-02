@@ -33,7 +33,7 @@ Because of the nondeterministic nature of the GC, Invalid Memory
 */
 template DoubleBuffer (T, uint size)
 	{/*...}*/
-		class DoubleBuffer
+		final class DoubleBuffer
 			{/*...}*/
 				public: 
 				shared {/*swap}*/
@@ -108,7 +108,7 @@ template TripleBuffer (T, uint size, uint sync_frequency = 4_000)
 		import core.thread: Thread, sleep;
 
 		static immutable sync_cycle = (1_000_000_000/sync_frequency).nsecs;
-		class TripleBuffer
+		final class TripleBuffer
 			{/*...}*/
 				public:
 				shared {/*swap}*/

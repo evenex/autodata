@@ -117,6 +117,7 @@ struct InfoBox
 			static immutable margin = 0.01;
 		}
 	}
+
 unittest
 	{/*...}*/
 		import std.math;
@@ -140,7 +141,7 @@ unittest
 			.decorate ((BoundingBox bounds){gfx.draw (yellow.alpha (0.5), bounds);});
 		
 		static auto X (ulong i) {return 1.0*i;}
-		static auto Y (ulong i) {return cast(double)sin ((i*0.8)^^2);} // BUG do some kind of auto type deduction in IdentityView
+		static auto Y (ulong i) {return cast(double)sin ((i*0.8)^^2);} // BUG do some kind of auto type conversion in IdentityView
 		info.add (
 			Plot ((&X).view (0,24), (&Y).view (0,24))
 				.title (`testing`)
@@ -150,7 +151,7 @@ unittest
 				.color (blue * white)
 				.using (gfx, txt),
 			square (0.5).map!(v => v*vec(1.2,1))
-		)	.align_to (Alignment.top_right)
+		)	.align_to (Alignment.top_right) // BUG don't think this is aligning right either
 			.decorate ((BoundingBox bounds){gfx.draw (blue.alpha (0.5), bounds);});
 
 		info.add (
@@ -159,7 +160,7 @@ unittest
 				` we shine like stars.`
 			) 	.color (purple * white)
 				.size (10)
-				.align_to (Alignment.center), 
+				.align_to (Alignment.center), // BUG totally not aligning correctly
 			square (0.5).map!(v => v * vec(2,1))
 		)	.align_to (Alignment.bottom_center)
 			.decorate ((BoundingBox bounds){gfx.draw (purple.alpha (0.5), bounds);});

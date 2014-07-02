@@ -282,6 +282,55 @@ public {/*debug}*/
 		static uint indent = 0;
 	}
 }
+public {/*search}*/
+	/* perform a binary search over an indexable range
+		if successful, return a pointer to the element
+		as well as the element's position.
+		otherwise, return a null pointer and the position
+		that the element would occupy were it in the range.
+	*/
+	struct BinarySearchResult (T)
+		{/*...}*/
+			T* found;
+			size_t position;
+		}
+	auto binary_search (R, T = ElementType!R)(R range, T element)
+		if (hasLength!R && __traits(compiles, range[0]))
+		{/*...}*/
+			if (range.empty)
+				return BinarySearchResult (null, 0L);
+
+			long min = 0;
+			long max = range.length;
+
+			static if (hasMember!(T, `opEquals`))
+				auto matches (ref const T that)
+					{/*...}*/
+						 return element == that;
+					}
+			else auto matches (ref const T that)
+				{/*...}*/
+					import math : reflexively_equal;
+					return element.reflexively_equal!sorted (that);
+				}
+
+			while (min < max)
+				{/*...}*/
+					auto mid = (max + min)/2;
+
+					if (matches (range[mid]))
+						return BinarySeachResult (&range[mid], mid);
+					else if (sorted (element, range[mid]))
+						max = mid - 1;
+					else if (sorted (range[mid], element))
+						min = mid + 1;
+				}
+
+			if (min < range.length && matches (range[min]))
+				return BinarySearchResult (&range[min], min);
+			else return BinarySearchResult (null, min);
+		}
+}
 public {/*containers}*/
 	template PriorityQueue (T)
 		{/*...}*/
@@ -405,6 +454,23 @@ public {/*metaprogramming}*/
 		template is_alias (T...) if (T.length == 1)
 			{/*...}*/
 				const bool is_alias = __traits(compiles, typeof (T[0]));
+			}
+		/* test if a function behaves syntactically as a comparison of some type */
+		template is_comparison_function (T, U...)
+			if (U.length == 1)
+			{/*...}*/
+				static if (isSomeFunction!(U[0]))
+					static if (is (ParametryTypeTuple!(U[0]) == TypeTuple!(T,T))
+						&& __traits(compiles, U[0](T.init, T.init)? 0:0)
+					) enum is_comparison_function = true;
+					else enum is_comparison_function = false;
+				else enum is_comparison_function = false;
+			}
+		/* test if a type is comparable using the < operator */
+		template is_comparable (T...)
+			if (T.length == 1)
+			{/*...}*/
+				enum is_comparable = __traits(compiles, T[0].init < T[0].init);
 			}
 	}
 	public {/*mixins}*/

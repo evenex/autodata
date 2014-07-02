@@ -10,10 +10,19 @@ public {/*constants}*/
 	alias e = E;
 }
 public {/*logic}*/
+	bool reflexively_equal (alias cmp, T,U)(T a, U b)
+		if (__traits(compiles, cmp (a, b)))
+		{/*...}*/
+			return not (cmp (a,b) || cmp (b,a));
+		}
 	bool reflexively_equal (T,U)(T a, U b)
 		if (__traits(compiles, a < b))
 		{/*...}*/
 			return not (a < b || b < a);
+		}
+	bool less_than (T)(const T a, const T b)
+		{/*...}*/
+			return a < b;
 		}
 }
 public {/*arithmetic}*/
@@ -109,6 +118,16 @@ public {/*analysis}*/
 			value = value > max? max: value;
 			return value;
 		}
+	/* intervals TODO */
+		struct Interval (Index)
+			{/*...}*/
+				Index start;
+				Index end;
+				@property size () const
+					{/*...}*/
+						return end - start;
+					}
+			}
 	/* tag a floating point value as only holding values between -1.0 and 1.0 */
 	struct Normalized {}
 	/* ensure that values tagged Normalized are between -1.0 and 1.0 */

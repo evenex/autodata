@@ -2,36 +2,49 @@ module resource.directory;
 
 import std.conv;
 import std.traits;
+import std.typetuple;
 import std.algorithm;
 import std.range;
+
+import resource.array;
 
 import utils;
 import math;
 
-/** 
+// TODO document sorting options
+/** Directory
 	O(log(n)) lookup.
 	O(n) insertion/removal.
 	never reallocates.
 	entries unique with respect to sorting function.
 	capable of foreach iteration.
 */
-class Directory (T, alias sorted = less_than!T)
-	if (__traits(compiles, sorted (T.init, T.init)))
-	{/*...}*/
-		debug T* entries_ptr;
 
-		T[] entries;
-		invariant (){/*...}*/
-			assert (entries.ptr == entries_ptr);
-			assert (entries.isSorted!sorted,
-				`entries became unsorted: ` ~entries.text
-			);
+struct Directory (T, Arg...)
+	if (Arg.length == 0 
+	|| (Arg.length == 1 && allSatisfy!(templateOr!(is_comparable, is_comparison_function), Arg)))
+	{/*...}*/
+		private {/*definitions}*/
+			/* Key */
+			static if (Arg.length == 0)
+				alias Key = T;
+			else static if (is_comparable!(Arg[0]))
+				alias Key = Arg[0];
+			else alias Key = T;
+
+			/* sorted */
+			static if (Arg.length == 0)
+				alias sorted = less_than!T;
+			else static if (not (is (Key == T)))
+				alias sorted = less_than!Key;
+			else static if (is_comparison_function!(Arg[0]))
+				alias sorted = Arg[0];
+			else static assert (0);
 		}
 
 		this (size_t capacity)
 			{/*...}*/
-				entries.reserve (capacity);
-				debug entries_ptr = entries.ptr;
+				entries = StaticArray!Entry (capacity);
 			}
 
 		public:
@@ -40,9 +53,9 @@ class Directory (T, alias sorted = less_than!T)
 				{/*...}*/
 					int result;
 
-					foreach (ref entry; entries)
+					foreach (ref element; entries)
 						{/*...}*/
-							result = op (entry);
+							result = op (element);
 
 							if (result) 
 								break;
@@ -54,9 +67,9 @@ class Directory (T, alias sorted = less_than!T)
 				{/*...}*/
 					int result;
 
-					foreach (ref entry; entries.retro)
+					foreach (ref element; entries.retro)
 						{/*...}*/
-							result = op (entry);
+							result = op (element);
 
 							if (result) 
 								break;
@@ -66,53 +79,62 @@ class Directory (T, alias sorted = less_than!T)
 				}
 		}
 		public {/*mutation}*/
-			auto append (T entry)
+			auto append (T element)
 				in {/*...}*/
 					assert (entries.capacity);
-					assert (entries.length? sorted (entries.back, entry) : true,
+					assert (entries.length? sorted (entries.back, element) : true,
 						`attempted to append element out of order`
 					);
-					assert (not (this.contains (entry)),
-						`attempted to add duplicate element ` ~entry.text
+					assert (not (this.contains (element)),
+						`attempted to add duplicate element ` ~element.text
 					);
 				}
 				body {/*...}*/
-					entries ~= entry;
+					entries ~= element;
 				}
-			auto add (T entry)
+			auto add (T element)
 				in {/*...}*/
 					assert (entries.capacity);
-					assert (not (this.contains (entry)),
-						`attempted to add duplicate element ` ~entry.text
+					assert (not (this.contains (element)),
+						`attempted to add duplicate element ` ~element.text~
+						` (existing: ` ~get (element).text~ `)`
 					);
 				}
 				body {/*...}*/
-					auto i = search_for (entry);
+					auto result = search_for (element);
+					assert (result[0] == before);
+					auto i = result[1];
 
 					++entries.length;
 
 					for (size_t j = entries.length-1; j > i; --j)
 						entries[j] = entries[j-1];
 
-					entries[i] = entry;
+					entries[i] = element;
 				}
 			auto add (U...)(U entries)
 				if (U.length > 1)
 				in {/*...}*/
 					foreach (u; U)
 						static assert (is (u == T));
-					assert (U.length <= this.entries.capacity);
+					assert (U.length <= this.entries.capacity,
+						`added length ` ~U.length.text~ ` exceeds capacity ` ~this.entries.capacity.text
+					);
 				}
 				body {/*...}*/
-					foreach (ref entry; entries)
-						add (entry);
+					foreach (ref element; entries)
+						add (element);
 				}
-			auto remove (T entry)
+			auto remove (T element)
 				in {/*...}*/
-					assert (this.contains (entry));
+					assert (this.contains (element),
+						`attempt to remove nonexistent element ` ~element.text~ `
+							current entries: ` ~entries.text
+						
+					);
 				}
 				body {/*...}*/
-					auto i = index_of (entry);
+					auto i = index_of (element);
 					this.remove_at (i);
 				}
 			auto remove_at (size_t index)
@@ -128,44 +150,48 @@ class Directory (T, alias sorted = less_than!T)
 			auto clear ()
 				{/*...}*/
 					entries.length = 0;
+					assert (entries.capacity);
 				}
 		}
 		public {/*access}*/
-			ref auto get (T entry)
+			ref auto get (T element)
 				in {/*...}*/
-					assert (this.contains (entry));
+					assert (this.contains (element));
 				}
 				body {/*...}*/
-					return entries[index_of(entry)];
+					return *entries.binary_search (element).found;
 				}
 		}
 		public {/*search}*/
-			auto index_of (T entry)
+			auto index_of (T element)
 				{/*...}*/
-					if (entries.empty)
-						return -1L;
+					auto entry = entries.binary_search (element);
 
-					auto i = search_for (entry);
+					if (entry.found)
+						return entry.position;
+					else return -1;
+				}
+			auto contains (T element)
+				{/*...}*/
+					return entries.binary_search (element).found;
+				}
+			auto up_to (T element)
+				{/*...}*/
+					auto result = entries.binary_search (element);
 
-					if (i == entries.length)
-						return -1;
-					else return entries[i].reflexively_equal (entry)? i : -1;
+					assert (result.found);
+
+					return entries [0..result.position];
 				}
-			auto contains (T entry)
+			auto after (T element)
 				{/*...}*/
-					return index_of (entry) != -1;
-				}
-			auto up_to (T entry)
-				{/*...}*/
-					auto i = search_for (entry);
-					return entries [0..i];
-				}
-			auto after (T entry)
-				{/*...}*/
-					auto i = search_for (entry);
-					return i+1 < entries.length ?
-						entries[i+1..$]:
-						T[].init;
+					auto result = entries.binary_search (element);
+
+					auto i = result.position;
+
+					if (result.found)
+						return entries [i+1..$];
+					else entries [i..$];
 				}
 		}
 		const @property {/*}*/
@@ -177,46 +203,71 @@ class Directory (T, alias sorted = less_than!T)
 				{/*...}*/
 					return entries.capacity;
 				}
-			override string toString ()
+			string toString ()
 				{/*...}*/
 					return entries.text;
 				}
 		}
 		private:
-		private {/*search}*/
-			auto search_for (ref T entry) const
+		private {/*data}*/
+			@property auto entries ()
 				{/*...}*/
-					if (entries.empty)
-						return 0;
-
-					long min = 0;
-					long max = entries.length;
-
-					while (min < max)
-						{/*...}*/
-							auto mid = (max + min)/2;
-							if (entries[mid].reflexively_equal (entry))
-								return mid;
-							else if (sorted (entry, entries[mid]))
-								max = mid;
-							else min = mid + 1;
-						}
-
-					return min;
+					return _entries[];
+				}
+			alias Entry = Tuple!(Key, T);
+			DynamicArray!Entry _entries;
+		}
+		debug {/*}*/
+		//version (unittest) {/*}*/ TODO
+			public auto view_entries () const
+				{/*...}*/
+					return entries[];
 				}
 		}
 	}
 
-/**
-	convenience function for sorting
-*/
-bool less_than (T)(const T a, const T b)
-	{/*...}*/
-		return a < b;
+unittest//void main ()
+	{/*search}*/
+		scope test = new Directory!(int, (int a, int b) => a < b) (5);
+
+		test.add (1,2,3,4,5);
+
+		assert (test.up_to (0).empty);
+		assert (test.up_to (1).empty);
+		assert (test.up_to (2).equal ([1]));
+		assert (test.up_to (3).equal ([1, 2]));
+		assert (test.up_to (4).equal ([1, 2, 3]));
+		assert (test.up_to (5).equal ([1, 2, 3, 4]));
+		assert (test.up_to (6).equal ([1, 2, 3, 4, 5]));
+		assert (test.after (0).equal ([1, 2, 3, 4, 5]));
+		assert (test.after (1).equal ([2, 3, 4, 5]));
+		assert (test.after (2).equal ([3, 4, 5]));
+		assert (test.after (3).equal ([4, 5]));
+		assert (test.after (4).equal ([5]));
+		assert (test.after (5).empty);
+		assert (test.after (6).empty);
+
+		test.clear;
+
+		test.add (2,4,6,8);
+		assert (test.up_to (1).empty);
+		assert (test.up_to (2).empty);
+		assert (test.up_to (3).equal ([2]));
+		assert (test.up_to (4).equal ([2]));
+		assert (test.up_to (5).equal ([2, 4]));
+		assert (test.up_to (6).equal ([2, 4]));
+		assert (test.up_to (8).equal ([2, 4, 6]));
+		assert (test.after (1).equal ([2, 4, 6, 8]));
+		assert (test.after (2).equal ([4, 6, 8]));
+		assert (test.after (3).equal ([4, 6, 8]));
+		assert (test.after (4).equal ([6, 8]));
+		assert (test.after (5).equal ([6, 8]));
+		assert (test.after (6).equal ([8]));
+		assert (test.after (8).empty);
 	}
 
 unittest
-	{/*...}*/
+	{/*add/remove}*/
 		import std.exception;
 
 		scope test = new Directory!(int, (int a, int b) => a < b) (8);

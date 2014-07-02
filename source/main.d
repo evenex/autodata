@@ -396,7 +396,7 @@ public {/*overloads for performing a strip-tidle uv-wrapping over a quad-strip}*
 		}
 }
 
-void main ()
+unittest//void main ()
 	{/*...}*/
 		scope gfx = new Display;
 		gfx.start; scope (exit) gfx.stop;
