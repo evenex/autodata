@@ -5,6 +5,7 @@ import std.range;
 import std.math;
 
 import resource.view;
+import resource.array;
 
 import utils; // TODO make views and looks and math public imports?
 import math;
@@ -393,7 +394,7 @@ class Ballistic
 		}
 		debug {/*trace}*/
 			Tracer tracer;
-			class Tracer
+			final class Tracer
 				{/*...}*/
 					private alias Id = Physics.Body.Id;
 
@@ -405,11 +406,17 @@ class Ballistic
 
 					Projectile.Id traced;
 
-					Event 	launch;
-					Event[] impacts;
-					Event[] penetrations;
-					Event 	termination;
-					vec[]	trajectory;
+					Event launch;
+					Event termination;
+
+					DynamicArray!Event 
+						impacts;
+					DynamicArray!Event 
+						penetrations;
+
+					DynamicArray!vec
+						trajectory;
+
 					struct Event
 						{/*...}*/
 							InfoBox info;
@@ -434,6 +441,11 @@ class Ballistic
 							this.gfx = gfx;
 							this.txt = txt;
 							this.cam = cam;
+
+							this.impacts = DynamicArray!Event (16);
+							this.penetrations = DynamicArray!Event (16);
+
+							this.trajectory = DynamicArray!vec (2^^10);
 						}
 					void update ()
 						{/*...}*/
@@ -443,13 +455,13 @@ class Ballistic
 							launch.info.bounds.move_to (launch.location.to_view_space (cam).from_draw_space.to_extended_space (gfx));
 							launch.info.draw;
 
-							foreach (impact; impacts)
+							foreach (ref impact; impacts)
 								{/*...}*/
 									impact.info.bounds.move_to (impact.location.to_view_space (cam).from_draw_space.to_extended_space (gfx));
 									impact.info.draw;
 								}
 
-							foreach (penetration; penetrations)
+							foreach (ref penetration; penetrations)
 								{/*...}*/
 									penetration.info.bounds.move_to (penetration.location.to_view_space (cam).from_draw_space.to_extended_space (gfx));
 									penetration.info.draw;
@@ -458,7 +470,7 @@ class Ballistic
 							termination.info.bounds.move_to (termination.location.to_view_space (cam).from_draw_space.to_extended_space (gfx));
 							termination.info.draw;
 
-							gfx.draw (white.alpha (0.2), trajectory.to_view_space (cam), GeometryMode.l_strip);
+							gfx.draw (white.alpha (0.2), trajectory[].to_view_space (cam), GeometryMode.l_strip);
 						}
 
 					public {/*event}*/
@@ -474,26 +486,20 @@ class Ballistic
 								launch.info.add (txt
 									.write (`launch speed `~projectile.velocity.norm.to!string[0..min(3,$)]~` m/s`)
 									.color (white).size (10), square
-								).decorate ((BoundingBox box)
+								).decorate ((Box box)
 									{gfx.draw (color.alpha (0.4), box.scale (1.05).from_extended_space.to_draw_space (gfx));}
 								);
 								launch.location = projectile.position - projectile.velocity.unit;
 
-								impacts.clear;
-								impacts.reserve (16);
-
-								penetrations.clear;
-								penetrations.reserve (16);
-
 								termination = Event.init;
 
-								trajectory = [projectile.position];
-								trajectory.reserve (16);
+								impacts.clear;
+								penetrations.clear;
+								trajectory.clear;
+								trajectory ~= projectile.position;
 
 								with (data)
 									xs.clear, vs.clear, ts.clear, rs.clear;
-								with (data)
-									xs.reserve (2^^12), vs.reserve (2^^12), ts.reserve (2^^12), rs.reserve (2^^12);
 							}
 						void on_flight (Projectile* projectile, vec new_position)
 							{/*...}*/
@@ -515,7 +521,7 @@ class Ballistic
 									.color (white).size (10)
 									.align_to (Alignment.center),
 									square
-								).decorate ((BoundingBox box)
+								).decorate ((Box box)
 									{gfx.draw (color.alpha (0.4), box.scale (1.05).from_extended_space.to_draw_space (gfx));} // TODO at least get rid of to_draw_space by having Display handle coords
 								);
 
@@ -536,7 +542,7 @@ class Ballistic
 									.color (white).size (10)
 									.align_to (Alignment.center),
 									square
-								).decorate ((BoundingBox box)
+								).decorate ((Box box)
 									{gfx.draw (color.alpha (0.4), box.scale (1.05).from_extended_space.to_draw_space (gfx));} // TODO at least get rid of to_draw_space by having Display handle coords
 								);
 
@@ -597,7 +603,7 @@ class Ballistic
 								termination.info = InfoBox (square (0.2).scale (vec(1.5,1)));
 								termination.info.add (plot, square)
 									.align_to (Alignment.top_center)
-									.decorate ((BoundingBox box) 
+									.decorate ((Box box) 
 										{gfx.draw (color, box.scale (1.01).from_extended_space.to_draw_space (gfx));}
 									);
 

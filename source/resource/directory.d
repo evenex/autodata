@@ -11,40 +11,58 @@ import resource.array;
 import utils;
 import math;
 
-// TODO document sorting options
 /** Directory
 	O(log(n)) lookup.
 	O(n) insertion/removal.
 	never reallocates.
 	entries unique with respect to sorting function.
 	capable of foreach iteration.
+
+	the second template parameter may either be a comparison function on T
+	or a Key type which has a < operator
 */
 
 struct Directory (T, Arg...)
 	if (Arg.length == 0 
 	|| (Arg.length == 1 && allSatisfy!(templateOr!(is_comparable, is_comparison_function), Arg)))
 	{/*...}*/
-		private {/*definitions}*/
+		public {/*definitions}*/
 			/* Key */
 			static if (Arg.length == 0)
 				alias Key = T;
-			else static if (is_comparable!(Arg[0]))
+			else static if (is_comparable!(Arg[0]) && not (is_comparison_function!(Arg[0])))
 				alias Key = Arg[0];
 			else alias Key = T;
 
-			/* sorted */
+			/* Entry */
+			static if (Arg.length == 0 || is (Key == T))
+				alias Entry = T;
+			else alias Entry = Tuple!(Key, T);
+
+			/* sorting */
 			static if (Arg.length == 0)
-				alias sorted = less_than!T;
-			else static if (not (is (Key == T)))
-				alias sorted = less_than!Key;
+				alias compare = less_than!T;
 			else static if (is_comparison_function!(Arg[0]))
-				alias sorted = Arg[0];
+				alias compare = Arg[0];
+			else static if (not (is (Key == T)))
+				static auto compare (ref const Entry a, ref const Entry b)
+					{/*...}*/
+						return a[0] < b[0];
+					}
 			else static assert (0);
+
+			/* searching */
+			auto search_for (Key key)
+				{/*...}*/
+					static if (is (Key == T))
+						return entries.binary_search!compare (key);
+					else return entries.binary_search!(compare, EqualityPolicy.reflexive) (Entry (key, T.init));
+				}
 		}
 
 		this (size_t capacity)
 			{/*...}*/
-				entries = StaticArray!Entry (capacity);
+				_entries = DynamicArray!Entry (capacity);
 			}
 
 		public:
@@ -53,9 +71,11 @@ struct Directory (T, Arg...)
 				{/*...}*/
 					int result;
 
-					foreach (ref element; entries)
+					foreach (ref entry; entries)
 						{/*...}*/
-							result = op (element);
+							static if (is (Key == T))
+								result = op (entry);
+							else result = op (entry[1]);
 
 							if (result) 
 								break;
@@ -67,9 +87,11 @@ struct Directory (T, Arg...)
 				{/*...}*/
 					int result;
 
-					foreach (ref element; entries.retro)
+					foreach (ref entry; entries.retro)
 						{/*...}*/
-							result = op (element);
+							static if (is (Key == T))
+								result = op (entry);
+							else result = op (entry[1]);
 
 							if (result) 
 								break;
@@ -79,133 +101,176 @@ struct Directory (T, Arg...)
 				}
 		}
 		public {/*mutation}*/
-			auto append (T element)
+			static if (not (is (Key == T)))
+				{/*add/append}*/
+					auto append (Key key, T entry)
+						{/*...}*/
+							append (τ(key, entry));
+						}
+					auto add (Key key, T entry)
+						{/*...}*/
+							add (τ(key, entry));
+						}
+				}
+
+			auto append (Entry entry)
 				in {/*...}*/
-					assert (entries.capacity);
-					assert (entries.length? sorted (entries.back, element) : true,
-						`attempted to append element out of order`
+					assert (_entries.capacity);
+					assert (entries.length? compare (entries.back, entry) : true,
+						`attempted to append entry out of order `
+						~entries.back.text~ ` ~ ` ~entry.text
 					);
-					assert (not (this.contains (element)),
-						`attempted to add duplicate element ` ~element.text
+					static if (is (Key == T))
+						auto exists = this.contains (entry);
+					else auto exists = this.contains (entry[0]);
+
+					assert (not (exists),
+						`attempted to add duplicate entry ` ~entry.text
 					);
 				}
 				body {/*...}*/
-					entries ~= element;
+					_entries ~= entry;
 				}
-			auto add (T element)
+
+			auto add (Entry entry)
 				in {/*...}*/
-					assert (entries.capacity);
-					assert (not (this.contains (element)),
-						`attempted to add duplicate element ` ~element.text~
-						` (existing: ` ~get (element).text~ `)`
+					assert (_entries.capacity);
+
+					static if (is (Key == T))
+						auto exists = this.contains (entry);
+					else auto exists = this.contains (entry[0]);
+
+					assert (not (exists),
+						`attempted to add duplicate entry ` ~entry.text
 					);
 				}
 				body {/*...}*/
-					auto result = search_for (element);
-					assert (result[0] == before);
-					auto i = result[1];
+					static if (is (Key == T))
+						auto result = search_for (entry);
+					else auto result = search_for (entry[0]);
 
-					++entries.length;
+					auto i = result.position;
+					
+					_entries.shift_up_from (i);
 
-					for (size_t j = entries.length-1; j > i; --j)
-						entries[j] = entries[j-1];
-
-					entries[i] = element;
+					entries[i] = entry;
 				}
+
 			auto add (U...)(U entries)
 				if (U.length > 1)
 				in {/*...}*/
 					foreach (u; U)
-						static assert (is (u == T));
-					assert (U.length <= this.entries.capacity,
-						`added length ` ~U.length.text~ ` exceeds capacity ` ~this.entries.capacity.text
+						static assert (is (u == Entry));
+					assert (U.length <= _entries.capacity,
+						`added length ` ~U.length.text~ ` exceeds capacity ` ~_entries.capacity.text
 					);
 				}
 				body {/*...}*/
-					foreach (ref element; entries)
-						add (element);
+					foreach (ref entry; entries)
+						add (entry);
 				}
-			auto remove (T element)
+
+			auto remove (Key key)
 				in {/*...}*/
-					assert (this.contains (element),
-						`attempt to remove nonexistent element ` ~element.text~ `
+					assert (this.contains (key),
+						`attempt to remove nonexistent entry ` ~key.text~ `
 							current entries: ` ~entries.text
-						
 					);
 				}
 				body {/*...}*/
-					auto i = index_of (element);
+					auto i = index_of (key);
 					this.remove_at (i);
 				}
+
 			auto remove_at (size_t index)
 				in {/*...}*/
 					assert (index < entries.length);
 				}
 				body {/*...}*/
-					for (size_t i = index; i < entries.length-1; ++i)
-						entries[i] = entries[i+1];
-						
-					--entries.length;
+					_entries.shift_down_on (index);
 				}
+
 			auto clear ()
 				{/*...}*/
-					entries.length = 0;
-					assert (entries.capacity);
+					_entries.length = 0;
+					assert (_entries.capacity);
 				}
 		}
 		public {/*access}*/
-			ref auto get (T element)
+			ref auto get (Key key)
 				in {/*...}*/
-					assert (this.contains (element));
+					assert (this.contains (key));
 				}
 				body {/*...}*/
-					return *entries.binary_search (element).found;
+					static if (is (Key == T))
+						return *search_for (key).found;
+					else return (*search_for (key).found)[1];
+				}
+			ref auto front ()
+				in {/*...}*/
+					assert (size > 0);
+				}
+				body {/*...}*/
+					return _entries[0];
+				}
+			ref auto back ()
+				in {/*...}*/
+					assert (size > 0);
+				}
+				body {/*...}*/
+					return _entries[$-1];
 				}
 		}
 		public {/*search}*/
-			auto index_of (T element)
+			auto index_of (Key key)
 				{/*...}*/
-					auto entry = entries.binary_search (element);
+					auto entry = search_for (key);
 
 					if (entry.found)
 						return entry.position;
 					else return -1;
 				}
-			auto contains (T element)
+			auto opBinaryRight (string op: `in`)(Key key)
 				{/*...}*/
-					return entries.binary_search (element).found;
+					return search_for (key).found;
 				}
-			auto up_to (T element)
+			auto contains (Key key)
 				{/*...}*/
-					auto result = entries.binary_search (element);
-
-					assert (result.found);
+					return key in this;
+				}
+			auto up_to (Key key)
+				{/*...}*/
+					auto result = search_for (key);
 
 					return entries [0..result.position];
 				}
-			auto after (T element)
+			auto after (Key key)
 				{/*...}*/
-					auto result = entries.binary_search (element);
+					auto result = search_for (key);
 
 					auto i = result.position;
 
 					if (result.found)
 						return entries [i+1..$];
-					else entries [i..$];
+					else return entries [i..$];
 				}
 		}
 		const @property {/*}*/
 			auto size ()
 				{/*...}*/
-					return entries.length;
+					return _entries.length;
 				}
 			auto capacity ()
 				{/*...}*/
-					return entries.capacity;
+					return _entries.capacity;
 				}
-			string toString ()
+			auto toString ()
 				{/*...}*/
-					return entries.text;
+					return _entries.toString;
+				}
+			auto text ()
+				{/*...}*/
+					return toString;
 				}
 		}
 		private:
@@ -214,21 +279,20 @@ struct Directory (T, Arg...)
 				{/*...}*/
 					return _entries[];
 				}
-			alias Entry = Tuple!(Key, T);
 			DynamicArray!Entry _entries;
 		}
 		debug {/*}*/
 		//version (unittest) {/*}*/ TODO
-			public auto view_entries () const
+			public auto view_entries ()
 				{/*...}*/
-					return entries[];
+					return _entries[];
 				}
 		}
 	}
 
-unittest//void main ()
+unittest
 	{/*search}*/
-		scope test = new Directory!(int, (int a, int b) => a < b) (5);
+		auto test = Directory!(int, (int a, int b) => a < b) (5);
 
 		test.add (1,2,3,4,5);
 
@@ -269,6 +333,7 @@ unittest//void main ()
 unittest
 	{/*add/remove}*/
 		import std.exception;
+		mixin(report_test!`directory add/remove`);
 
 		scope test = new Directory!(int, (int a, int b) => a < b) (8);
 		assert (test.capacity >= 8);
@@ -291,9 +356,9 @@ unittest
 
 		test.clear;
 
-		foreach (i; 0..test.capacity)
+		foreach (i; test.size..test.capacity)
 			test.add (i.to!int);
 
-		assert (test.capacity == 0);
+		assert (test.size == test.capacity);
 		assertThrown!Error (test.append (9999));
 	}

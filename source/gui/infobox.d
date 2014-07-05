@@ -5,6 +5,8 @@ import std.range;
 import std.variant;
 
 import resource.view;
+import resource.allocator;
+import resource.directory;
 
 import tools.scribe;
 import tools.plot;
@@ -14,63 +16,84 @@ import math;
 
 struct InfoBox
 	{/*...}*/
-		BoundingBox bounds;
+		Box bounds;
 		struct Element 
 			{/*...}*/
 				public:
-				BoundingBox bounds;
+				Box bounds;
 				public {/*...}*/
 					ref auto align_to (Alignment alignment)
 						{/*...}*/
 							this.alignment = alignment;
 							return this;
 						}
-					ref auto decorate (void delegate(BoundingBox) decoration)
+					ref auto decorate (void delegate(Box) decoration)
 						{/*...}*/
 							this.decoration = decoration;
 							return this;
 						}
 				}
 				private:
+				mixin TypeUniqueId;
 				private {/*data}*/
-					Algebraic!(Text, Plot, Table) payload;
-					void delegate(BoundingBox) decoration;
+					union {/*...}*/
+						Text text; 
+						Plot plot; 
+						Table table;
+					}
+					auto type = Type.none;
+					enum Type {none, text, plot, table}
+
+					void delegate(Box) decoration;
 					Alignment alignment;
 				}
 				private {/*☀}*/
-					this (T1, T2)(T1 element, T2 bounds)
+					this (T1, T2)(lazy T1 element, lazy T2 bounds)
 						if (is_geometric!T2)
 						{/*...}*/
-							this.payload = element;
+							static if (is (T1 == Text))
+								{/*...}*/
+									this.text = element;
+									type = Type.text;
+								}
+							else static if (is (T1 == Plot))
+								{/*...}*/
+									this.plot = element;
+									type = Type.plot;
+								}
+							else static if (is (T1 == Table))
+								{/*...}*/
+									this.table = element;
+									type = Type.table;
+								}
+							else static assert (0);
+
 							this.bounds = bounds.bounding_box;
 						}
 				}
-				mixin Database;
 			}
 		public:
 		public {/*interface}*/
-			InfoBox decorate (void delegate(BoundingBox) decoration)
+			ref auto decorate (void delegate(Box) decoration)
 				{/*...}*/
 					this.decoration = decoration;
 					return this;
 				}
-			auto add (T1, T2)(T1 element, T2 bounds)
+			ref auto add (T1, T2)(T1 element, T2 bounds)
 				if (is_geometric!T2)
 				{/*...}*/
 					auto id = Element.Id.create;
-					Element[id] = Element (element, bounds);
-					elements ~= Element.Proxy (id);
-					return elements.back;
+
+					elements.append (id, Element (element, bounds));
+
+					return elements.back[1];
 				}
-			void remove (Element.Proxy element)
+			void remove (Element.Id id)
 				{/*...}*/
-					Element.remove (element);
-					elements.remove (elements.countUntil (element));
+					elements.remove (id);
 				}
 			void reset ()
 				{/*...}*/
-					foreach (element; elements)
-						Element.remove (element);
 					elements.clear;
 				}
 			void draw ()
@@ -78,7 +101,7 @@ struct InfoBox
 					if (this.decoration !is null)
 						this.decoration (bounds);
 
-					foreach (element; elements)
+					foreach (ref element; elements)
 						{/*...}*/
 							const auto aligned ()
 								{/*...}*/
@@ -94,12 +117,19 @@ struct InfoBox
 								element.decoration (aligned.bounding_box);
 
 							auto draw_box = aligned.bounding_box;
-
-							element.payload.visit!(
-								(ref Text text) {text.inside (draw_box)();},
-								(ref Plot plot) {plot.inside (draw_box)();},
-								(ref Table table) {/*TODO*/}
-							);
+							
+							with (Element.Type) final switch (element.type)
+								{/*...}*/
+									case text:
+										 element.text.inside (draw_box)();
+										 break;
+									case plot: 
+										 element.plot.inside (draw_box)();
+										 break;
+									case table: 
+										break; // TODO
+									case none:
+								}
 						}
 				}
 		}
@@ -108,17 +138,19 @@ struct InfoBox
 				if (is_geometric!T)
 				{/*...}*/
 					this.bounds = bounds.bounding_box;
+					this.elements = Directory!(Element, Element.Id)(8);
 				}
 		}
 		private:
 		private {/*data}*/
-			Element.Proxy[] elements;
-			void delegate(BoundingBox) decoration;
+			Directory!(Element, Element.Id) elements;
+			void delegate(Box) decoration;
+
 			static immutable margin = 0.01;
 		}
 	}
 
-unittest
+void main ()
 	{/*...}*/
 		import std.math;
 		import services.display;
@@ -129,8 +161,8 @@ unittest
 		gfx.start; scope (exit) gfx.stop;
 		scope txt = new Scribe (gfx, [12, 10, 8]);
 
-		auto info = InfoBox (square (0.5))
-			.decorate ((BoundingBox bounds){gfx.draw (white.alpha (0.5), bounds.scale (1.05));});
+		auto info = InfoBox (square (0.5));
+		info.decorate ((Box bounds){gfx.draw (white.alpha (0.5), bounds.scale (1.05));});
 
 		info.add (
 			txt.write (`time is like a bullet from behind`)
@@ -138,10 +170,10 @@ unittest
 				.align_to (Alignment.top_left), 
 			square (0.5).map!(v => v*vec(0.8,1))
 		)	.align_to (Alignment.top_left)
-			.decorate ((BoundingBox bounds){gfx.draw (yellow.alpha (0.5), bounds);});
+			.decorate ((Box bounds){gfx.draw (yellow.alpha (0.5), bounds);});
 		
-		static auto X (ulong i) {return 1.0*i;}
-		static auto Y (ulong i) {return cast(double)sin ((i*0.8)^^2);} // BUG do some kind of auto type conversion in IdentityView
+		static double X (ulong i) {return 1.0*i;}
+		static double Y (ulong i) {return sin ((i*0.8)^^2);}
 		info.add (
 			Plot ((&X).view (0,24), (&Y).view (0,24))
 				.title (`testing`)
@@ -152,7 +184,7 @@ unittest
 				.using (gfx, txt),
 			square (0.5).map!(v => v*vec(1.2,1))
 		)	.align_to (Alignment.top_right) // BUG don't think this is aligning right either
-			.decorate ((BoundingBox bounds){gfx.draw (blue.alpha (0.5), bounds);});
+			.decorate ((Box bounds){gfx.draw (blue.alpha (0.5), bounds);});
 
 		info.add (
 			txt.write (`as the water grinds the stone,`
@@ -163,7 +195,7 @@ unittest
 				.align_to (Alignment.center), // BUG totally not aligning correctly
 			square (0.5).map!(v => v * vec(2,1))
 		)	.align_to (Alignment.bottom_center)
-			.decorate ((BoundingBox bounds){gfx.draw (purple.alpha (0.5), bounds);});
+			.decorate ((Box bounds){gfx.draw (purple.alpha (0.5), bounds);});
 
 		info.draw;
 		gfx.render;

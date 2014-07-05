@@ -286,7 +286,7 @@ public {/*models/aspects}*/
 			}
 			shared static this ()
 				{/*...}*/
-					geometry = new Allocator!vec;
+					geometry = Allocator!vec ();
 				}
 		}
 	auto physical (T)(T entity)

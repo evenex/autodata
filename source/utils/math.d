@@ -10,6 +10,7 @@ public {/*constants}*/
 	alias e = E;
 }
 public {/*logic}*/
+	/* (¬(a < b || b < a) ⇒ a = b) */
 	bool reflexively_equal (alias cmp, T,U)(T a, U b)
 		if (__traits(compiles, cmp (a, b)))
 		{/*...}*/
@@ -20,7 +21,7 @@ public {/*logic}*/
 		{/*...}*/
 			return not (a < b || b < a);
 		}
-	bool less_than (T)(const T a, const T b)
+	bool less_than (T)(inout T a, inout T b)
 		{/*...}*/
 			return a < b;
 		}
@@ -119,15 +120,35 @@ public {/*analysis}*/
 			return value;
 		}
 	/* intervals TODO */
-		struct Interval (Index)
-			{/*...}*/
-				Index start;
-				Index end;
-				@property size () const
-					{/*...}*/
-						return end - start;
-					}
-			}
+	struct Interval (Index)
+		{/*...}*/
+			Index start;
+			Index end;
+			@property size () const
+				{/*...}*/
+					return end - start;
+				}
+			@property empty () const
+				{/*...}*/
+					return not (end - start);
+				}
+		}
+	bool ends_before_end (T)(Interval!T a, Interval!T b)
+		{/*...}*/
+			return a.end < b.end;
+		}
+	bool ends_before_start (T)(Interval!T a, Interval!T b)
+		{/*...}*/
+			return a.end < b.start;
+		}
+	bool starts_before_end (T)(Interval!T a, Interval!T b)
+		{/*...}*/
+			return a.start < b.end;
+		}
+	bool starts_before_start (T)(Interval!T a, Interval!T b)
+		{/*...}*/
+			return a.start < b.start;
+		}
 	/* tag a floating point value as only holding values between -1.0 and 1.0 */
 	struct Normalized {}
 	/* ensure that values tagged Normalized are between -1.0 and 1.0 */
@@ -393,11 +414,8 @@ public {/*2D geometry}*/
 	}
 	public {/*axis-aligned bounding boxes}*/
 		/* an axis-aligned bounding box */
-		struct BoundingBox
+		struct Box
 			{/*...}*/
-				mixin ProxyRange!(proxy, range);
-				vec[] proxy;
-
 				@property {/*corners}*/
 					vec opDispatch (string op)()
 						if (op.canFind (`left`, `center`, `right`))
@@ -417,7 +435,7 @@ public {/*2D geometry}*/
 								immutable horizontal = right;
 							else static if (op.canFind (`center`))
 								immutable horizontal = center;
-							else pragma (msg, `Error: BoundingBox.`~op~` failed to compile`);
+							else pragma (msg, `Error: Box.`~op~` failed to compile`);
 
 
 							static if (op.canFind (upper.expand))
@@ -426,7 +444,7 @@ public {/*2D geometry}*/
 								immutable vertical = low;
 							else static if (op.canFind (`center`))
 								immutable vertical = center;
-							else pragma (msg, `Error: BoundingBox.`~op~` failed to compile`);
+							else pragma (msg, `Error: Box.`~op~` failed to compile`);
 
 							auto length = 0;
 							auto requested_point = 0.vec;
@@ -517,7 +535,7 @@ public {/*2D geometry}*/
 					}
 				}
 				@property {/*alignment}*/
-					vec offset_to (Alignment alignment, BoundingBox outer)
+					vec offset_to (Alignment alignment, Box outer)
 						{/*...}*/
 							const string enumerate_alignment_cases ()
 								{/*...}*/
@@ -559,28 +577,51 @@ public {/*2D geometry}*/
 						verts[] = [low_left, low_left + vec(dims.x,0), hi_right, low_left + vec(0,dims.y)];
 					}
 				auto opAssign (T)(T geometry)
-					if (is_geometric!T && not (is(T == BoundingBox)))
+					if (is_geometric!T && not (is(T == Box)))
 					{/*...}*/
 						geometry.bounding_box.verts.copy (this.verts);
 						proxy = null;
 						return this;
 					}
+				@property {/*input range}*/
+					auto popFront ()
+						{/*...}*/
+							++iterator;
+						}
+					auto front ()
+						{/*...}*/
+							auto bp = 1;
+							if (iterator > 3)
+								bp++;
+							return verts[iterator];
+						}
+					auto empty ()
+						{/*...}*/
+							if (length == 0)
+								{/*...}*/
+									iterator = 0;
+									return true;
+								}
+							else return false;
+						}
+					auto length ()
+						{/*...}*/
+							return 4 - iterator;
+						}
+				}
 
 				private {/*...}*/
-					@property auto range ()
-						{/*...}*/
-							return verts[];
-						}
-					vec[4] verts;
+				public	vec[4] verts; // TEMP
+	public				size_t iterator; // TEMP
 				}
 			}
 		/* compute the bounding box of a polygon */
 		auto bounding_box (T)(T geometry)
 			if (is_geometric!T)
 			{/*...}*/
-				static if (is (T == BoundingBox))
+				static if (is (T == Box))
 					return geometry;
-				else return BoundingBox (geometry);
+				else return Box (geometry);
 			}
 		/* enum to specify a bounding box alignment */
 		enum Alignment {/*...}*/

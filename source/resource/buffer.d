@@ -33,7 +33,7 @@ Because of the nondeterministic nature of the GC, Invalid Memory
 */
 template DoubleBuffer (T, uint size)
 	{/*...}*/
-		final class DoubleBuffer
+		final class DoubleBuffer // TODO struct
 			{/*...}*/
 				public: 
 				shared {/*swap}*/
@@ -89,7 +89,7 @@ template DoubleBuffer (T, uint size)
 				enum BufferTrait;
 			}
 		static assert (not (isOutputRange!(DoubleBuffer, T)));
-		//static assert (isOutputRange!(shared DoubleBuffer, T)); BUG
+		static assert (isOutputRange!(shared DoubleBuffer, T));
 	}
 
 /*
@@ -174,7 +174,7 @@ template TripleBuffer (T, uint size, uint sync_frequency = 4_000)
 				enum BufferTrait;
 			}
 		static assert (not (isOutputRange!(TripleBuffer, T)));
-	//	static assert (isOutputRange!(shared TripleBuffer, T)); BUG
+		static assert (isOutputRange!(shared TripleBuffer, T));
 	}
 
 /*

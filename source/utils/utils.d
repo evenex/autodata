@@ -12,7 +12,7 @@ import std.concurrency;
 import std.conv: to;
 
 // TODO Aspects = Views + Extensions
-debug = profiler;
+//debug = profiler;
 // TODO DESIGN GOALS
 /*
 	DATA AND COMPUTATION
@@ -283,10 +283,25 @@ public {/*debug}*/
 	}
 }
 public {/*search}*/
-	/* perform a binary search over an indexable range
-		if successful, return a pointer to the element
+	/* specify how elements are compared for equality
+	*/
+	enum EqualityPolicy
+		{/*...}*/
+			/*
+				default to opEquals, if it is defined.
+				otherwise, elements are tested for reflexive equality 
+			*/  
+			intrinsic, 
+			/*
+				ignore opEquals and always test for reflexive equality.
+			*/
+			reflexive
+		}
+
+	/* result of a binary search over a sorted, indexable range.
+		if successful, holds a pointer to the element
 		as well as the element's position.
-		otherwise, return a null pointer and the position
+		otherwise, holds a null pointer and the position
 		that the element would occupy were it in the range.
 	*/
 	struct BinarySearchResult (T)
@@ -294,41 +309,85 @@ public {/*search}*/
 			T* found;
 			size_t position;
 		}
+
+	/* perform a binary search which assumes the range is ordered by the < operator
+	*/
 	auto binary_search (R, T = ElementType!R)(R range, T element)
-		if (hasLength!R && __traits(compiles, range[0]))
 		{/*...}*/
-			if (range.empty)
-				return BinarySearchResult (null, 0L);
+			return range.binary_search!(less_than!T)(element);
+		}
 
-			long min = 0;
-			long max = range.length;
-
-			static if (hasMember!(T, `opEquals`))
-				auto matches (ref const T that)
-					{/*...}*/
-						 return element == that;
-					}
-			else auto matches (ref const T that)
+	/* perform a customized policy-based binary search.
+		by default, binary search compares elements with the < operator. 
+		this can be overridden by supplying a comparison function as a template parameter. 
+		the	range is assumed to be ordered according to the comparison function.
+		
+		equality checking is intrinsic by default, but can optionally be overridden as well.
+	*/
+	template binary_search (alias compare, EqualityPolicy matching = EqualityPolicy.intrinsic)
+		if (is_comparison_function!compare)
+		{/*...}*/
+			auto binary_search (R, T = ElementType!R)(R range, T element)
+				if (hasLength!R 
+				&& __traits(compiles, range[0]))
 				{/*...}*/
-					import math : reflexively_equal;
-					return element.reflexively_equal!sorted (that);
+					if (range.empty)
+						return BinarySearchResult!T (null, 0L);
+
+					long min = 0;
+					long max = range.length;
+
+					static if (hasMember!(T, `opEquals`) && matching != EqualityPolicy.reflexive)
+						auto matched (ref const T that)
+							{/*...}*/
+								 return element == that;
+							}
+					else auto matched (ref const T that)
+						{/*...}*/
+							import math : reflexively_equal;
+							return element.reflexively_equal!compare (that);
+						}
+
+					while (min < max)
+						{/*...}*/
+							alias sorted = compare;
+
+							auto mid = (max + min)/2;
+
+							if (matched (range[mid]))
+								return BinarySearchResult!T (&range[mid], mid);
+							else if (sorted (element, range[mid]))
+								max = mid;
+							else if (sorted (range[mid], element))
+								min = mid + 1;
+						}
+
+					if (min < range.length && matched (range[min]))
+						return BinarySearchResult!T (&range[min], min);
+					else return BinarySearchResult!T (null, min);
 				}
+		}
+}
+public {/*move}*/
+	/* move all elements in a range (starting at index) up by one position */
+	/* leaving an empty space at the indexed position */
+	void shift_up_from (R)(ref R range, size_t index)
+		if (hasLength!R && is_indexable!R)
+		{/*...}*/
+			++range.length;
 
-			while (min < max)
-				{/*...}*/
-					auto mid = (max + min)/2;
-
-					if (matches (range[mid]))
-						return BinarySeachResult (&range[mid], mid);
-					else if (sorted (element, range[mid]))
-						max = mid - 1;
-					else if (sorted (range[mid], element))
-						min = mid + 1;
-				}
-
-			if (min < range.length && matches (range[min]))
-				return BinarySearchResult (&range[min], min);
-			else return BinarySearchResult (null, min);
+			for (size_t i = range.length-1; i > index; --i)
+				range[i] = range[i-1];
+		}
+	/* move all elements in a range (starting at index) down one position */
+	/* overwriting the element at the indexed position */
+	void shift_down_on (R)(ref R range, size_t index)
+		if (hasLength!R && is_indexable!R)
+		{/*...}*/
+			for (auto i = index; i < range.length-1; ++i)
+				range[i] = range[i+1];
+				
+			--range.length;
 		}
 }
 public {/*containers}*/
@@ -456,14 +515,28 @@ public {/*metaprogramming}*/
 				const bool is_alias = __traits(compiles, typeof (T[0]));
 			}
 		/* test if a function behaves syntactically as a comparison of some type */
-		template is_comparison_function (T, U...)
+		template is_comparison_function (U...)
 			if (U.length == 1)
 			{/*...}*/
 				static if (isSomeFunction!(U[0]))
-					static if (is (ParametryTypeTuple!(U[0]) == TypeTuple!(T,T))
-						&& __traits(compiles, U[0](T.init, T.init)? 0:0)
-					) enum is_comparison_function = true;
-					else enum is_comparison_function = false;
+					{/*...}*/
+						alias Function = U[0];
+						alias Params = ParameterTypeTuple!(U[0]);
+
+						static if (Params.length == 2)
+							{/*...}*/
+								alias T = Params[0];
+								static if (is (T == Params[1]))
+									{/*...}*/
+										alias Return = ReturnType!Function;
+										static if (is (bool: Return) || is (Return: bool))
+											enum is_comparison_function = true;
+										else enum is_comparison_function = false;
+									}
+								else enum is_comparison_function = false;
+							}
+						else enum is_comparison_function = false;
+					}
 				else enum is_comparison_function = false;
 			}
 		/* test if a type is comparable using the < operator */
@@ -472,8 +545,56 @@ public {/*metaprogramming}*/
 			{/*...}*/
 				enum is_comparable = __traits(compiles, T[0].init < T[0].init);
 			}
+		/* test if a range is indexable */
+		template is_indexable (R)
+			{/*...}*/
+				enum is_indexable = __traits(compiles, R.init[0]);
+			}
 	}
 	public {/*mixins}*/
+		/* a unique (up to the host type) identifier */
+		mixin template TypeUniqueId (uint bit = 64)
+			{/*...}*/
+				static assert (is(typeof(this)), `mixin requires host struct`);
+
+				struct Id
+					{/*...}*/
+						public:
+						public {/*☀}*/
+							static auto create () nothrow
+								{/*...}*/
+									return typeof(this) (++generator);
+								}
+						}
+						public {/*comparison}*/
+							int opCmp (ref const Id that) const
+								{/*...}*/
+									if (this.id < that.id)
+										return -1;
+									else if (this.id == that.id)
+										return 0;
+									else return 1;
+								}
+							int opCmp (const Id that) const
+								{/*...}*/
+									return this.opCmp (that);
+								}
+						}
+						private:
+						private {/*data}*/
+							static if (bit == 64)
+								ulong id;
+							else static if (bit == 32)
+								uint id;
+							else static if (bit == 16)
+								ushort id;
+							else static if (bit == 8)
+								ubyte id;
+							else static assert (0);
+							__gshared typeof(id) generator;
+						}
+					}
+			}
 		/* applies the command pattern to a struct */
 		mixin template Command (Args...)
 			{/*...}*/
@@ -517,198 +638,47 @@ public {/*metaprogramming}*/
 				mixin(command_property_declaration);
 				mixin(command_data_declaration);
 			}
-		/* a unique (up to the host type) identifier */
-		mixin template TypeUniqueId (uint bit = 64)
+		/* forward a foreach loop to a contained range */
+		mixin template ForwardForEach (alias range)
 			{/*...}*/
 				static assert (is(typeof(this)), `mixin requires host struct`);
+				alias Applied = typeof(range[0]);
 
-				struct Id
+				int opApply (int delegate(ref Applied) op)
 					{/*...}*/
-						public:
-						public {/*☀}*/
-							static auto create () nothrow
-								{/*...}*/
-									return typeof(this) (++generator);
-								}
-						}
-						public {/*id token}*/
-							int opCmp (ref const Id that) const
-								{/*...}*/
-									if (this.id < that.id)
-										return -1;
-									else if (this.id == that.id)
-										return 0;
-									else return 1;
-								}
-							@property auto token () const
-								{/*...}*/
-									return id;
-								}
-						}
-						private:
-						private {/*data}*/
-							static if (bit == 64)
-								ulong id;
-							else static if (bit == 32)
-								uint id;
-							else static if (bit == 16)
-								ushort id;
-							else static if (bit == 8)
-								ubyte id;
-							else static assert (0);
-							__gshared typeof(id) generator;
-						}
-					}
-			}
-		/* have the host struct act as a proxy for the range returned by get_range */
-		mixin template ProxyRange (alias proxy, alias get_range)
-			{/*...}*/
-				static assert (is(typeof(this)), `mixin requires host struct`);
-				public:
-				public {/*interface}*/
-					public {/*slicing}*/
-						auto opSliceAssign (T)(T range)
-							{/*...}*/
-								if (proxy is null)
-									reload;
-								range.copy (proxy);
-							}
-						auto opSliceAssign (T)(T range, ulong i, ulong j)
-							{/*...}*/
-								if (proxy is null)
-									reload;
-								range.copy (proxy[i..j]);
-							}
-						auto opSlice ()
-							{/*...}*/
-								if (proxy is null)
-									reload;
-								return proxy[];
-							}
-						auto opSlice (ulong i, ulong j)
-							{/*...}*/
-								if (proxy is null)
-									reload;
-								return proxy[i..j];
-							}
-						auto opDollar ()
-							{/*...}*/
-								return length;
-							}
-					}
-					@property {/*input}*/
-						auto popFront ()
-							{/*...}*/
-								if (proxy is null)
-									reload;
-								proxy.popFront;
-							}
-						auto front ()
-							{/*...}*/
-								if (proxy is null)
-									reload;
-								return proxy.front; // BUG inlined code segfaults after return... proxy confirmed to be OK. big wtf
-							}
-						auto empty ()
-							{/*...}*/
-								if (proxy is null)
-									reload;
-								return proxy.empty;
-							}
-					}
-					@property {/*forward}*/
-						auto save ()
-							{/*...}*/
-								if (proxy is null)
-									reload;
-								return proxy;
-							}
-					}
-					@property {/*bidirectional}*/
-						auto back ()
-							{/*...}*/
-								if (proxy is null)
-									reload;
-								return proxy.back;
-							}
-						auto popBack ()
-							{/*...}*/
-								if (proxy is null)
-									reload;
-								proxy.popFront;
-							}
-					}
-					@property {/*finite random access}*/
-						auto length ()
-							{/*...}*/
-								if (proxy is null)
-									reload;
-								return proxy.length;
-							}
-						auto opIndex (Indices...)(Indices i)
-							{/*...}*/
-								if (proxy is null)
-									reload;
-								return proxy[i];
-							}
-					}
-				}
-				private:
-				private {/*data}*/
-					@property ref auto reload ()
-						{/*...}*/
-							proxy = get_range ();
-						}
-					@property auto ptr ()
-						{/*...}*/
-							if (proxy is null)
-								reload;
-							return proxy.ptr;
-						}
-					//ReturnType!get_range proxy; OUTSIDE BUG compiler doesn't recognize fields of host struct or something, writing to proxy writes proxys length over the first field of the host struct
-					//union {/*}*/ 
-					//	ReturnType!get_range proxy;
-					//	byte[32] reservation;
-					//};
-				}
-			}
-		/* create a global associative array of the enclosing type, keyed by an id */
-		mixin template Database (Key...)
-			if (Key.length <= 1)
-			{/*...}*/
-				static assert (is(typeof(this)), `mixin requires host struct`);
+						int result;
 
-				static if (Key.length == 1)
-					alias Id = Key[0];
-				else mixin TypeUniqueId;
-
-				private __gshared typeof(this)[Id] database;
-
-				static ref auto opIndex (Id i)
-					{/*...}*/
-						return database[i];
-					}
-				static void opIndexAssign (typeof(this) record, Id i)
-					{/*...}*/
-						database[i] = record;
-					}
-				static void remove (T)(T record)
-					if (is (T == Id) || is (T == Proxy))
-					{/*...}*/
-						static if (is (T == Id))
-							database.remove (record);
-						else database.remove (record.id);
-					}
-
-				struct Proxy
-					{/*...}*/
-						public:
-						alias retrieve this;
-						ref auto retrieve ()
+						foreach (ref element; range)
 							{/*...}*/
-								return database[id];
+								result = op (element);
+
+								if (result) 
+									break;
 							}
-						private Id id;
+
+						return result;
+					}
+				int opApply (int delegate(size_t, ref Applied) op)
+					{/*...}*/
+						int result;
+
+						foreach (i, ref element; range)
+							{/*...}*/
+								result = op (i, element);
+
+								if (result) 
+									break;
+							}
+
+						return result;
+					}
+				int opApply (int delegate(ref const Applied) op) const
+					{/*...}*/
+						return (cast()this).opApply (cast(int delegate(ref Applied)) op);
+					}
+				int opApply (int delegate(const size_t, ref const Applied) op) const
+					{/*...}*/
+						return (cast()this).opApply (cast(int delegate(size_t, ref Applied)) op);
 					}
 			}
 		/* enable mixin load_dynamic_library!"libname" */
@@ -932,8 +902,11 @@ public {/*colors}*/
 					}
 				Color clamp ()
 					{/*...}*/
+						import math;
 						foreach (c; Aⁿ!(`r`,`g`,`b`,`a`))
-							mixin (c~`= min (max (`~c~`, 0.0), 1.0);`);
+							mixin (q{
+								} ~c~ q{ = math.clamp (} ~c~ q{, 0.0, 1.0);
+							});
 						return this;
 					}
 				Color opBinary (string op) (Color color)
@@ -941,19 +914,22 @@ public {/*colors}*/
 						Color ret = this;
 						static if (op == `+` || op == `-`) with (color)
 							foreach (c; Aⁿ!(`r`,`g`,`b`))
-								{/*...}*/
-									mixin (`ret.`~c~``~op~`= a*`~c~`;`);
-								}
+								mixin (q{
+									ret.} ~c~ q{} ~op~q{= a * } ~c~ q{;
+								});
 						else static if (op == `*`)
 							foreach (c; Aⁿ!(`r`,`g`,`b`)) with (color)
-								{/*...}*/
-									mixin (`ret.`~c~`+= a*`~c~`; ret.`~c~`/= a+1;`);
-								}
+								mixin (q{
+									ret.} ~c~ q{ += a* } ~c~ q{; 
+									ret.} ~c~ q{ /= a + 1;
+								});
 						return ret.clamp;
 					}
 				Color opOpAssign (string op) (Color color)
 					{/*...}*/
-						mixin (`this = this`~op~`color;`);
+						mixin (q{
+							this = this } ~op~ q{ color;
+						});
 						clamp ();
 						return this;
 					}

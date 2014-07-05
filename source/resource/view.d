@@ -8,6 +8,7 @@ import std.conv;
 import utils;
 
 import resource.allocator;
+import resource.array;
 
 /* Views
 Views are an opaque type-generic layer over certain types of Ranges. They bring
@@ -84,12 +85,6 @@ public {/*identity}*/
 						this.source = Source.generator;
 						this.generator = generator;
 						this.access_range (start, end);
-					}
-			}
-			public {/*=}*/ // REVIEW do i need this?
-				void opAssign (U)(U that)
-					{/*...}*/
-						this.__ctor (that); // XXX
 					}
 			}
 			private:
@@ -271,6 +266,41 @@ public {/*zip}*/
 			mixin ViewFunctor;
 		}
 }
+public {/*static}*/
+	/* The StaticView manages a backing array accessible through the member .mutable 
+		StaticViews are not Functors. They are pinned memory, provide access through an IdentityView,
+		and must be instantiated through a constructor.
+	*/
+	struct StaticView (T)
+		{/*...}*/
+			public:
+				T opAccess (Index i)
+					{/*...}*/
+						return array[i];
+					}
+
+				@property ref auto mutable ()
+					{/*...}*/
+						return array;
+					}
+				@property auto viewable ()
+					{/*...}*/
+						return view;
+					}
+				alias viewable this;
+
+				this (size_t capacity)
+					{/*...}*/
+						array = DynamicArray!T (capacity);
+						view = .view (array[]);
+					}
+			private:
+			private {/*data}*/
+				DynamicArray!T array;
+				View!T view;
+			}
+		}
+}
 
 private:
 private {/*functor}*/
@@ -371,7 +401,7 @@ private {/*functor}*/
 
 				static assert (isRandomAccessRange!This);
 				static assert (is (std.range.ElementType!This == ElementType));
-				//static assert (not (hasMobileElements!This)); BUG moveFront doesn't compile, but hasMobileElements is true
+				//static assert (not (hasMobileElements!This)); OUTSIDE BUG moveFront doesn't compile, but hasMobileElements is true
 				static assert (not (hasSwappableElements!This));
 				static assert (not (hasAssignableElements!This));
 				static assert (not (hasLvalueElements!This));
@@ -427,6 +457,10 @@ unittest
 		auto j = zip_view (generator_view, i);
 		assert (j.equal (g));
 		assert (i.source == Source.array);
+
+		ZipView!(short, string) q = j;
+		assert (q._0.source == j._0.source);
+		assert (q._1.source == j._1.source);
 
 		auto h = view (g);
 		assert (h.source == Source.functor);

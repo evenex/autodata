@@ -245,8 +245,8 @@ class Scribe
 					font_sizes = sizes.idup;
 					load_texture_atlas ();
 
-					vertex_pool = new Allocator!vec (2^^14);
-					glyph_pool = new Allocator!Glyph (2^^12);
+					vertex_pool = Allocator!vec (2^^14);
+					glyph_pool = Allocator!Glyph (2^^12);
 				}
 			this (Display display, uint[] sizes = [12])
 				in {/*...}*/
@@ -293,7 +293,7 @@ class Scribe
 				body {/*...}*/
 					auto size = order.size;
 					auto font = this.font[size];
-					auto card_box = BoundingBox ([0.vec, vec(0, -font.height)]);
+					auto card_box = Box ([0.vec, vec(0, -font.height)]);
 					vec pen = vec(0, -font.ascender);
 
 					auto bounds = order.bounds;
@@ -350,10 +350,6 @@ class Scribe
 
 					auto scale = order.scale;
 					auto transform = (vec v) => scale*((v-pen/2).rotate (rotation) + pen/2);
-					debug if (card_box.empty) 
-						{/*...}*/
-							assert (0, card_box.proxy.to!string);
-						}
 					card_box = card_box.map!transform.bounding_box;
 
 					auto alignment = order.alignment;
@@ -508,7 +504,6 @@ struct Text
 					this.scribe = scribe;
 					this.text = text;
 				}
-			@disable this ();
 		}
 	}
 struct Table

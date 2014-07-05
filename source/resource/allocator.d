@@ -60,11 +60,11 @@ private alias Interval = math.Interval!Index;
 // views are for pinned, up-to-date ranges (pulls)
 struct Allocator (T, Id = Index)
 	{/*...}*/
- // TODO make it automatically extend its capacity instead of throwing an "out of memory" error.
+// TODO make it automatically extend its capacity instead of throwing an "out of memory" error.
 		public:
 		public {/*allocation}*/
 			static if (is (Id == Index))
-				{/*auto-generated id forwarding}*/
+				{/*auto-assigned id}*/
 					static Index generator;
 					auto allocate (Index size)
 						{/*...}*/
@@ -80,14 +80,18 @@ struct Allocator (T, Id = Index)
 							return allocate_and_save (size, range, ++generator);
 						}
 				}
+
 			auto allocate (Index size, Id id)
 				{/*...}*/
-					foreach (ref range; free_list)
-						{/*find free range}*/
-							if (range.size >= size)
+					foreach (i, ref interval; free_list)
+						{/*find free interval}*/
+							if (interval.size >= size)
 								{/*allocate memory}*/
-									resources.append (Resource (id, range.start, size));
-									range.start += size;
+									resources.append (id, Resource (interval.start, size));
+									interval.start += size;
+
+									if (interval.empty)
+										free_list.shift_down_on (i);
 
 									return ResourceHandle (this, id);
 								}
@@ -105,7 +109,7 @@ struct Allocator (T, Id = Index)
 				{/*...}*/
 					auto saved = range.save;
 
-					auto resource = allocate (range.length, id);
+					auto resource = allocate (saved.length, id);
 					resource ~= range;
 
 					return resource;
@@ -117,9 +121,8 @@ struct Allocator (T, Id = Index)
 					assert (saved.length <= size);
 				}
 				body {/*...}*/
-					auto saved = range.save;
-
 					auto resource = allocate (size, id);
+
 					resource ~= range;
 
 					return resource;
@@ -128,38 +131,50 @@ struct Allocator (T, Id = Index)
 		public {/*upkeep}*/
 			void free (Id id)
 				{/*...}*/
-					auto R = fetch (id).bounds;
-					Interval[] left;
-					Interval[] right; 
+					auto A = fetch (id).bounds;
 
-					left = free_list.up_to (R);
-					if (left.length)
-						{/*...}*/
-							left.front.end += R.size;
-							right = left.find!(S => S.start == R.end);
-						}
-					else right = free_list.after (R);
+					auto result = free_list[].binary_search!(starts_before_start!Index) (A);
+					auto i = result.position;
 
-					std.stdio.stderr.writeln (`left `, left);
-					std.stdio.stderr.writeln (`right `, left);
+					assert (not (result.found), `attempted to free interval which is already free`);
 
-					if (right.length && left.length)
-						{/*...}*/
-							left.front.end = right.front.end;
-							free_list.remove_at (left.length);
+					bool merged;
+					if (i < free_list.length)
+						{/*check right interval}*/
+							auto B = &free_list[i];
+
+							if (A.end == B.start)
+								{/*merge left}*/
+									B.start = A.start;
+									merged = true;
+								}
 						}
-					else if (right.length)
-						{/*...}*/
-							right.front.start -= R.size;
+					if (i > 0) 
+						{/*check left interval}*/
+							auto B = &free_list[i-1];
+							
+							if (A.start == B.end)
+								{/*merge right}*/
+									if (merged)
+										{/*merge again and prune}*/
+											free_list[i].start = B.start;
+											free_list.shift_down_on (i-1);
+										}
+									else {/*just merge}*/
+										B.end = A.end;
+										merged = true;
+									}
+								}
 						}
-					else if (left.empty && right.empty)
-						{/*...}*/
-							free_list.add (R);
+					if (not (merged))
+						{/*insert}*/
+							free_list.shift_up_from (i);
+							free_list[i] = A;
 						}
 
-					resources.remove (Resource (id,0,0));
+					resources.remove (id);
 				}
-			void defrag ()
+			void defrag () // TODO
 				{/*...}*/
 				}
 		}
@@ -173,32 +188,26 @@ struct Allocator (T, Id = Index)
 			this (uint capacity = 2^^12)
 				{/*...}*/
 					pool = StaticArray!T (capacity);
-					free_list = List!Interval (100); // REVIEW
+
+					free_list = DynamicArray!Interval (100); // REVIEW
+					free_list ~= Interval (0, capacity);
+
 					resources = Directory!(Resource, Id) (100); // REVIEW
-					free_list.append (Interval (0, capacity)); // REVIEW
 				}
 		}
 		private:
 		private {/*substructs}*/
 			struct Resource
 				{/*...}*/
-					public:
-					int opCmp (ref const Resource that) const
+					this (Index start, Index capacity)
 						{/*...}*/
-							return compare (this.id, that.id);
+							bounds.start = start;
+							bounds.end = start + capacity;
 						}
-					private:
-					private {/*ctor}*/
-						this (Index start, Index capacity)
-							{/*...}*/
-								bounds.start = start;
-								bounds.end = start + capacity;
-							}
-					}
-					private {/*data}*/
-						Index length;
-						Interval bounds;
-					}
+
+					Index length;
+					Interval bounds;
+
 					invariant (){/*...}*/
 						assert (length <= bounds.size);
 					}
@@ -222,7 +231,7 @@ struct Allocator (T, Id = Index)
 							}
 					}
 					public {/*[i..j]}*/
-						auto opSlice (Index start, size_t end)
+						auto opSlice (Index start, Index end)
 							in {/*...}*/
 								assert (start <= end, `range reversed`);
 								assert (end <= length, `range violation [`
@@ -233,13 +242,13 @@ struct Allocator (T, Id = Index)
 							body {/*...}*/
 								return this[][start..end];
 							}
-						auto opSliceAssign (U)(U that, Index start, size_t end)
+						auto opSliceAssign (U)(U that, Index start, Index end)
 							{/*...}*/
 								static if (isInputRange!U)
 									that.copy (this[start..end]);
 								else this[start..end] = that.repeat (end - start);
 							}
-						auto opSliceOpAssign (string op, U)(U that, Index start, size_t end) // BUG these copy methods are gonna stomp over themselves. you gotta do in-place mutation with a forloop. bonus - it can be @safe or whatever
+						auto opSliceOpAssign (string op, U)(U that, Index start, Index end)
 							body {/*...}*/
 								static if (isInputRange!U)
 									mixin(q{
@@ -250,7 +259,7 @@ struct Allocator (T, Id = Index)
 									this[start..end] }~op~q{= that.repeat (end-start);
 								});
 							}
-						auto opSliceUnary (string op)(Index start, size_t end)
+						auto opSliceUnary (string op)(Index start, Index end)
 							{/*...}*/
 								mixin(q{
 									return this[start..end].map!(a => }~op~q{ a);
@@ -344,6 +353,12 @@ struct Allocator (T, Id = Index)
 								length = 0;
 							}
 					}
+					@property {/*valid}*/
+						bool valid ()
+							{/*...}*/
+								return allocator? true:false;
+							}
+					}
 					public {/*free}*/
 						void free ()
 							{/*...}*/
@@ -352,13 +367,13 @@ struct Allocator (T, Id = Index)
 					}
 					private:
 					private {/*data}*/
-						Allocator allocator;
+						Allocator* allocator;
 						Id id;
 					}
 					private {/*ctor}*/
-						this (Allocator allocator, Id id)
+						this (ref Allocator allocator, Id id)
 							{/*...}*/
-								this.allocator = allocator;
+								this.allocator = &allocator;
 								this.id = id;
 							}
 					}
@@ -367,7 +382,7 @@ struct Allocator (T, Id = Index)
 		private {/*access}*/
 			ref auto fetch (Id id)
 				{/*...}*/
-					return resources.get (Resource (id,0,0));
+					return resources.get (id);
 				}
 			auto slice (Id id)
 				{/*...}*/
@@ -386,8 +401,29 @@ struct Allocator (T, Id = Index)
 		}
 		private {/*data}*/
 			StaticArray!T pool;
-			FreeList free_list;
+			DynamicArray!Interval free_list;
 			Directory!(Resource, Id) resources;
+		}
+		invariant () {/*assumptions}*/
+			string violated (lazy string assumption)
+				{/*...}*/
+					return `violated assumption: ` ~assumption~ ` ` ~ free_list.text;
+				}
+			foreach (i, ref interval; free_list)
+				{/*...}*/
+					assert (interval.start < interval.end, 
+						violated (`intervals are non-empty`)
+					);
+					if (i+1 < free_list.length)
+						{/*...}*/
+							assert (interval.start < free_list[i+1].start,
+								violated (`intervals are ordered`)
+							);
+							assert (interval.end <= free_list[i+1].start,
+								violated (`intervals are non-overlapping`)
+							);
+						}
+				}
 		}
 	}
 template Resource (T)
@@ -395,41 +431,11 @@ template Resource (T)
 		alias Resource = Allocator!T.ResourceHandle;
 	}
 
-private struct FreeList
-	{/*...}*/
-		this (size_t memory_capacity, size_t max_entries)
-			{/*...}*/
-				
-			}
-
-		DynamicArray!Interval list;
-
-		invariant () {/*assumptions}*/
-			foreach (i, ref interval; list)
-				{/*...}*/
-					assert (interval.start < interval.end, 
-						`intervals are non-empty`
-					);
-					if (i+1 < list.length)
-						{/*...}*/
-							assert (interval.start < list[i+1].start,
-								`intervals are ordered`
-							);
-							assert (interval.end <= list[i+1].start,
-								`intervals are non-overlapping`
-							);
-						}
-				}
-		}
-
-		// TODO free -> insert|merge
-	}
-
 unittest
 	{/*ResourceHandle ops}*/
 		mixin(report_test!`allocator`);
 
-		scope mem = new Allocator!double (10);
+		auto mem = Allocator!double (10);
 
 		auto X = mem.allocate (5);
 		assert (X.capacity == 5);
@@ -471,35 +477,32 @@ unittest
 
 		assertThrown!Error (X ~= 0.0.repeat (999));
 	}
-unittest//void main ()
+unittest
 	{/*free_list}*/
-		import math;
-		import std.stdio;
+		mixin(report_test!`free list`);
 
-		alias Interval = const(Allocator!int.Interval);
-
-		scope mem = new Allocator!int (10);
-		assert (mem.free_list.view_entries.equal ([Interval(0,10)]));
+		auto mem = Allocator!int (10);
+		assert (mem.free_list[].equal ([Interval(0,10)]));
 
 		auto a2 = mem.save (2.ℕ!int);
-		assert (mem.free_list.view_entries.equal ([Interval(2,10)]));
+		assert (mem.free_list[].equal ([Interval(2,10)]));
 
 		auto a3 = mem.save (3.ℕ!int);
-		assert (mem.free_list.view_entries.equal ([Interval(5,10)]));
+		assert (mem.free_list[].equal ([Interval(5,10)]));
 
 		auto a4 = mem.save (4.ℕ!int);
-		assert (mem.free_list.view_entries.equal ([Interval(9,10)]));
+		assert (mem.free_list[].equal ([Interval(9,10)]));
 
 		a3.free;
-		assert (mem.free_list.view_entries.equal (
+		assert (mem.free_list[].equal (
 			[Interval(2,5), Interval(9,10)]
 		));
 
 		a2.free;
-		assert (mem.free_list.view_entries.equal (
+		assert (mem.free_list[].equal (
 			[Interval(0,5), Interval(9,10)]
 		));
 
 		a4.free;
-		assert (mem.free_list.view_entries.equal ([Interval(0,10)]));
+		assert (mem.free_list[].equal ([Interval(0,10)]));
 	}

@@ -43,7 +43,11 @@ struct TGA_Header
 	}
 struct Image
 	{/*...}*/
-		Allocator!Pixel memory;
+		__gshared Allocator!Pixel memory;
+		shared static this ()
+			{/*...}*/
+				memory = Allocator!Pixel (1024*1024);
+			}
 
 		Resource!Pixel data;
 		uint height;
@@ -56,10 +60,6 @@ struct Image
 			}
 		this (string path) // BUG this wont be platform independent
 			{/*...}*/
-				// TEMP
-				if (memory is null)
-					memory = new Allocator!Pixel (1024*1024);
-
 				auto file = File (path, `r`);
 
 				auto extension = path[$-path.retro.countUntil ('.')..$];
@@ -92,7 +92,7 @@ struct Image
 							this.height = header.height;
 							this.format = Format.rgba; // TEMP until if/when i need more TGA modes
 
-							data = memory.allocate (width*height, 0);
+							data = memory.allocate (width*height);
 							file.stream_tga (data);
 
 							if (header.origin_bottom_left)

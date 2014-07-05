@@ -195,7 +195,7 @@ struct Plot
 			Range y_range = Range (automatic, automatic);
 			Color _color = black;
 			uint _text_size;
-			BoundingBox bounds = bounding_box (only (-1.vec, 1.vec));
+			Box bounds = bounding_box (only (-1.vec, 1.vec));
 			ZipView!(double, double) data;
 		}
 	}
@@ -218,14 +218,17 @@ unittest
 		x.map!(i => 0.04*i).copy (x);
 		x.map!(x => exp(x)).copy (y);
 	
-		Plot (x, y)
+		auto p = Plot (x, y)
 			.title (`test`)
-			.color (red)
+			.color (red.alpha (0.5))
 			.x_axis (`x`, Plot.Range (0, 4))
 			.y_axis (`exp (x)`)
 			.text_size (20)
-			.using (gfx, txt)
-		();
+			.using (gfx, txt);
+
+		auto q = p;
+		q ();
+		p.color (yellow.alpha(0.5))();
 
 		gfx.render;
 
