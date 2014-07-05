@@ -34,20 +34,10 @@ Since the Resource's underlying data is contigious, slicing it returns an Array,
 	which can then be manipulated as a RandomAccessRange.
 Since the Resource's size is declared in advance, appending never allocates. 
 	It is an error to append to a Resource beyond its capacity.
-
 Because Resources are reference types, they are able to maintain 
 	correctness even if the Allocator moves the data in memory. 
 
-Resources will automatically free themselves upon destruction. Because of this, they TODO this is no longer true
-	are unique and cannot be copied, but they may be moved with the assignment 
-	operator (=). This will move the reference information to the LHS Resource and 
-	nullify the RHS Resource. Assigning to a non-null Resource will trigger the LHS 
-	destructor, freeing the associated data before moving the reference info from 
-	the RHS.
-
-Each user of the Allocator is responsible for maintaining its own static list of
-	Resources.
-
+Allocators automatically track allocated Resources, which must be manually freed.
 */
 
 alias Index = size_t;

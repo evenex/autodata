@@ -12,7 +12,7 @@ import std.concurrency;
 import std.conv: to;
 
 // TODO Aspects = Views + Extensions
-//debug = profiler;
+debug = profiler;
 // TODO DESIGN GOALS
 /*
 	DATA AND COMPUTATION
@@ -30,7 +30,7 @@ import std.conv: to;
 		DONE functional data paths
 			no temp buffers, only source, swap and sink buffers
 		DONE limited GC
-			ok for semi-permanent stuff (services, global databases, etc)
+			ok for semi-permanent or one-time stuff (services, filepaths, etc)
 			don't use inside of functional pathways
 	THREADS AND SHARING
 		TODO service-based multithreading
@@ -212,14 +212,14 @@ public {/*debug}*/
 								this.exit_status = exit_status;
 							}
 					}
-				void checkpoint (T)(T mark = T.init)
+				void checkpoint (T...)(T marks)
 					{/*...}*/
 						debug (profiler)
 							{/*...}*/
 								import std.stdio;
 								auto check = Clock.currTime - last_check;
 								this.last_check = Clock.currTime;
-								stderr.writeln (check, ` `~mark.to!string);
+								stderr.writeln (check, ` `, marks);
 								stderr.flush;
 							}
 					}

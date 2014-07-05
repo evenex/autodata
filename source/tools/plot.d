@@ -18,7 +18,7 @@ import tools.scribe;
 struct Plot
 	{/*...}*/
 		public:
-		@property {/*options}*/ // TODO annotate
+		@property {/*options}*/
 			auto using (Display display, Scribe scribe)
 				{/*...}*/
 					this.display = display;
@@ -175,11 +175,13 @@ struct Plot
 				if (not (allSatisfy!(is_IdentityView, TypeTuple!(R1,R2))))
 				{/*...}*/
 					this.data = zip_view (x,y);
+					bounds = bounding_box (only (-1.vec, 1.vec));
 				}
 			this (R1,R2)(R1 x, R2 y)
 				if (allSatisfy!(is_IdentityView, TypeTuple!(R1,R2)))
 				{/*...}*/
 					this.data = zip_view (x,y);
+					bounds = bounding_box (only (-1.vec, 1.vec));
 				}
 		}
 		private:
@@ -195,7 +197,7 @@ struct Plot
 			Range y_range = Range (automatic, automatic);
 			Color _color = black;
 			uint _text_size;
-			Box bounds = bounding_box (only (-1.vec, 1.vec));
+			Box bounds;
 			ZipView!(double, double) data;
 		}
 	}

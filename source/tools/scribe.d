@@ -14,6 +14,7 @@ import utils;
 import math;
 
 import resource.allocator;
+import resource.array;
 
 import services.display;
 
@@ -131,7 +132,7 @@ struct Unicode
 		}
 	}
 
-class Scribe
+final class Scribe
 	{/*...}*/
 		private {/*imports}*/
 			mixin DynamicLibraryLoader;
@@ -188,7 +189,6 @@ class Scribe
 						}
 					return G;
 				}
-					// TODO properties?? actions ^^^
 			auto font_height (uint size)
 				in {/*...}*/
 					assert (size in font);
@@ -247,6 +247,7 @@ class Scribe
 
 					vertex_pool = Allocator!vec (2^^14);
 					glyph_pool = Allocator!Glyph (2^^12);
+					line_starts = DynamicArray!size_t (2^^8);
 				}
 			this (Display display, uint[] sizes = [12])
 				in {/*...}*/
@@ -279,11 +280,12 @@ class Scribe
 							auto geometry = cards [4*i..4*i+4];
 							auto tex_coords = glyph.roi.bounding_box.flip!`vertical`;
 
-							display.draw (glyph.texture, geometry, tex_coords, color);
+							display.draw (glyph.texture, geometry, tex_coords, glyph.color);
 						}
 
 					glyphs.free;
 					cards.free;
+					line_starts.clear;
 				}
 			auto typeset (T1, T2)(ref T1 glyphs, ref Text order, ref T2 cards)
 				if (__traits(compiles, glyphs[0] == Glyph.init) && is_geometric!T2)
@@ -293,17 +295,20 @@ class Scribe
 				body {/*...}*/
 					auto size = order.size;
 					auto font = this.font[size];
-					auto card_box = Box ([0.vec, vec(0, -font.height)]);
+
 					vec pen = vec(0, -font.ascender);
 
 					auto bounds = order.bounds;
+					auto draw_box = bounds[].from_extended_space.to_pixel_space (display).bounding_box;
+
 					auto rotation = order.rotate;
 					auto wrap_width = order.wrap_width;
-					auto draw_box = bounds[].from_extended_space.to_pixel_space (display).bounding_box;
+
 					if (wrap_width < 0) 
 						with (draw_box) wrap_width = right - left;
 					else wrap_width = (wrap_width*î.vec.rotate (rotation)).from_extended_space.to_pixel_space (display).norm;
 
+					line_starts ~= 0;
 					foreach (i, glyph; glyphs[])
 						{/*set card coordinates in pen-space}*/
 							vec offset = glyph.offset;
@@ -314,11 +319,9 @@ class Scribe
 								pen + vec(dims.x, 0),
 								pen + dims,
 								pen + vec(0, dims.y)
-							];
+							]; // REVIEW does this allocate?
 
-							auto new_position = pen.x + dims.x;
-
-							if (new_position > wrap_width)
+							if (pen.x + dims.x > wrap_width)
 								{/*word wrap}*/
 									auto length = glyphs[0..i+1].retro.countUntil!(g => g.symbol.isWhite);
 									if (length < 0)
@@ -338,22 +341,39 @@ class Scribe
 										letter.map!carriage_return.copy (letter);
 
 									pen = carriage_return (pen);
-									card_box.bottom = card_box.bottom - font.height;
+
+									line_starts ~= i - word.length + 1;
 								}
-							if (new_position > card_box.right)
-								card_box.right = new_position;
 
 							cards[$-4..$] = cards[$-4..$].map!(v => v - vec(-offset.x, dims.y - offset.y));
 
 							pen.x += glyph.advance;
 						}
+					line_starts ~= glyphs.length;
+
+					auto card_box = cards.bounding_box;
+					auto alignment = order.alignment;
+
+					foreach (i, line_start; line_starts[0..$-1])
+						{/*...}*/
+							auto line_stop  = line_starts[i+1];
+
+							if (line_stop == line_start)
+								continue;
+
+							auto line_box = cards[4*line_start..4*line_stop].bounding_box;
+
+							auto justification = line_box.offset_to (alignment, card_box).x;
+
+							cards[4*line_start..4*line_stop] += vec(justification, 0);
+						}
 
 					auto scale = order.scale;
-					auto transform = (vec v) => scale*((v-pen/2).rotate (rotation) + pen/2);
-					card_box = card_box.map!transform.bounding_box;
-
-					auto alignment = order.alignment;
 					auto translation = order.translate;
+
+					auto transform = (vec v) => scale*((v-pen/2).rotate (rotation) + pen/2);
+
+					card_box = card_box.map!transform.bounding_box;
 
 					cards[] = cards[].map!transform
 						.map!(v => v + card_box.offset_to (alignment, draw_box))
@@ -382,6 +402,7 @@ class Scribe
 		private {/*resources}*/
 			Allocator!Glyph glyph_pool;
 			Allocator!vec vertex_pool;
+			DynamicArray!size_t line_starts;
 		}
 		extern (C):
 		extern (C) {/*services}*/
@@ -550,8 +571,8 @@ unittest
 								.align_to (Alignment.top_right)
 								.inside (lower)
 							();
-							display.draw ((blue*white).alpha (0.2), upper.bounding_box.from_extended_space.to_draw_space (display));
-							display.draw ((blue*white).alpha (0.2), lower.bounding_box.from_extended_space.to_draw_space (display));
+							display.draw ((blue*white).alpha (0.2), upper.bounding_box.from_extended_space);
+							display.draw ((blue*white).alpha (0.2), lower.bounding_box.from_extended_space);
 						}
 					stuff (0.7);
 
@@ -612,7 +633,7 @@ unittest
 							.inside (bb)
 						();
 
-						display.draw (red.alpha (0.3), bb.bounding_box.from_extended_space.to_draw_space (display));
+						display.draw (red.alpha (0.3), bb.bounding_box.from_extended_space);
 					}
 					{/*word wrap test}*/
 						auto bounds = [-0.8.vec, vec(-0.2,0)];
@@ -626,7 +647,7 @@ unittest
 							.inside (bounds)
 							.color (yellow.alpha (0.2)*green.alpha(0.5))
 						();
-						display.draw (orange.alpha (0.2), bounds.bounding_box.from_extended_space.to_draw_space (display));
+						display.draw (orange.alpha (0.2), bounds.bounding_box.from_extended_space);
 					}
 
 					display.render;

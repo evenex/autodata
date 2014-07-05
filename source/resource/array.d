@@ -91,7 +91,10 @@ struct DynamicArray (T)
 		public {/*[┄]}*/
 			ref auto opIndex (size_t i) inout
 				in {/*...}*/
-					assert (i < length);
+					import std.conv;
+					assert (i < length,
+						i.text ~ ` exceeds DynamicArray! ` ~T.stringof~ ` length ` ~length.text
+					);
 				}
 				body {/*...}*/
 					return array[i];
@@ -152,6 +155,12 @@ struct DynamicArray (T)
 			auto capacity () const
 				{/*...}*/
 					return array.length;
+				}
+		}
+		public {/*clear}*/
+			auto clear ()
+				{/*...}*/
+					length = 0;
 				}
 		}
 		public {/*iteration}*/
@@ -220,6 +229,9 @@ struct DynamicArray (T)
 			StaticArray!T array;
 		}
 		invariant () {/*...}*/
-			assert (this.length <= array.length);
+			import std.conv;
+			assert (this.length <= array.length,
+				`DynamicArray!` ~T.stringof~ ` of length ` ~this.length.text~ ` exceeded capacity ` ~array.length.text
+			);
 		}
 	}

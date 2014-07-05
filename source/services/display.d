@@ -81,6 +81,12 @@ public {/*openGL}*/
 		}
 }
 public {/*coordinate transformations}*/
+	template is_in_display_space (T)
+		{/*...}*/
+			static if (isInputRange!T)
+				enum is_in_display_space = is (ElementType!T == Display.Coords);
+			else enum is_in_display_space = false;
+		}
 	public {/*from}*/
 		auto from_draw_space (T)(T geometry) pure nothrow
 			if (is (T == vec) || is_geometric!T)
@@ -186,12 +192,14 @@ final class Display: Service
 		public:
 		public {/*drawing}*/
 			void draw (T) (Color color, T geometry, GeometryMode mode = GeometryMode.l_loop) 
-				if (is_geometric!T)
+				if (is_geometric!T || is_in_display_space!T)
 				{/*↓}*/
-					draw (0, geometry, geometry, color, mode);
+					static if (is (ElementType!T == Coords))
+						draw (0, geometry.to_draw_space (this), geometry, color, mode);
+					else draw (0, geometry, geometry, color, mode);
 				}
 			void draw (T1, T2) (GLuint texture, T1 geometry, T2 tex_coords, Color color = black.alpha(0), GeometryMode mode = GeometryMode.t_fan)
-				if (allSatisfy!(is_geometric, TypeTuple!(T1, T2)))
+				if (allSatisfy!(templateOr!(is_geometric, is_in_display_space), T1, T2))
 				in {/*...}*/
 					assert (tex_coords.length == geometry.length, `geometry/texture coords length mismatched`);
 				}
@@ -206,8 +214,10 @@ final class Display: Service
 					order.tex_id = texture;
 					order.base = color;
 			
-					// TODO map them all to draw
-					buffer.vertices ~= geometry;
+					static if (is (ElementType!T1 == Coords))
+						buffer.vertices ~= geometry.to_draw_space (this);
+					else buffer.vertices ~= geometry;
+
 					buffer.texture_coords ~= tex_coords;
 					buffer.orders ~= RenderOrder (order);
 				}

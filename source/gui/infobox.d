@@ -150,7 +150,7 @@ struct InfoBox
 		}
 	}
 
-void main ()
+unittest
 	{/*...}*/
 		import std.math;
 		import services.display;
@@ -183,7 +183,7 @@ void main ()
 				.color (blue * white)
 				.using (gfx, txt),
 			square (0.5).map!(v => v*vec(1.2,1))
-		)	.align_to (Alignment.top_right) // BUG don't think this is aligning right either
+		)	.align_to (Alignment.top_right)
 			.decorate ((Box bounds){gfx.draw (blue.alpha (0.5), bounds);});
 
 		info.add (
@@ -192,7 +192,7 @@ void main ()
 				` we shine like stars.`
 			) 	.color (purple * white)
 				.size (10)
-				.align_to (Alignment.center), // BUG totally not aligning correctly
+				.align_to (Alignment.center),
 			square (0.5).map!(v => v * vec(2,1))
 		)	.align_to (Alignment.bottom_center)
 			.decorate ((Box bounds){gfx.draw (purple.alpha (0.5), bounds);});

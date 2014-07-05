@@ -120,7 +120,7 @@ public {/*analysis}*/
 			return value;
 		}
 	/* intervals TODO */
-	struct Interval (Index)
+	struct Interval (Index = size_t)
 		{/*...}*/
 			Index start;
 			Index end;
@@ -567,21 +567,16 @@ public {/*2D geometry}*/
 				this (T)(T geometry)
 					if (is_geometric!T)
 					{/*...}*/
-						vec low_left = geometry.reduce!(
-							(a,b) => vec(min (a.x, b.x), min (a.y, b.y))
-						);
-						vec hi_right = geometry.reduce!(
+						immutable ttt = T.stringof;
+						auto result = geometry.reduce!(
+							(a,b) => vec(min (a.x, b.x), min (a.y, b.y)),
 							(a,b) => vec(max (a.x, b.x), max (a.y, b.y))
 						);
+						vec low_left = result[0];
+						vec hi_right = result[1];
+
 						vec dims = (low_left - hi_right).abs;
 						verts[] = [low_left, low_left + vec(dims.x,0), hi_right, low_left + vec(0,dims.y)];
-					}
-				auto opAssign (T)(T geometry)
-					if (is_geometric!T && not (is(T == Box)))
-					{/*...}*/
-						geometry.bounding_box.verts.copy (this.verts);
-						proxy = null;
-						return this;
 					}
 				@property {/*input range}*/
 					auto popFront ()
@@ -611,14 +606,17 @@ public {/*2D geometry}*/
 				}
 
 				private {/*...}*/
-				public	vec[4] verts; // TEMP
-	public				size_t iterator; // TEMP
+					vec[4] verts;
+					size_t iterator;
 				}
 			}
 		/* compute the bounding box of a polygon */
 		auto bounding_box (T)(T geometry)
 			if (is_geometric!T)
-			{/*...}*/
+			in {/*...}*/
+				assert (geometry.length > 1);
+			}
+			body {/*...}*/
 				static if (is (T == Box))
 					return geometry;
 				else return Box (geometry);

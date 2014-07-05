@@ -487,7 +487,7 @@ class Ballistic
 									.write (`launch speed `~projectile.velocity.norm.to!string[0..min(3,$)]~` m/s`)
 									.color (white).size (10), square
 								).decorate ((Box box)
-									{gfx.draw (color.alpha (0.4), box.scale (1.05).from_extended_space.to_draw_space (gfx));}
+									{gfx.draw (color.alpha (0.4), box.scale (1.05).from_extended_space);}
 								);
 								launch.location = projectile.position - projectile.velocity.unit;
 
@@ -522,7 +522,7 @@ class Ballistic
 									.align_to (Alignment.center),
 									square
 								).decorate ((Box box)
-									{gfx.draw (color.alpha (0.4), box.scale (1.05).from_extended_space.to_draw_space (gfx));} // TODO at least get rid of to_draw_space by having Display handle coords
+									{gfx.draw (color.alpha (0.4), box.scale (1.05).from_extended_space);}
 								);
 
 								trajectory ~= projectile.position;
@@ -543,7 +543,7 @@ class Ballistic
 									.align_to (Alignment.center),
 									square
 								).decorate ((Box box)
-									{gfx.draw (color.alpha (0.4), box.scale (1.05).from_extended_space.to_draw_space (gfx));} // TODO at least get rid of to_draw_space by having Display handle coords
+									{gfx.draw (color.alpha (0.4), box.scale (1.05).from_extended_space);}
 								);
 
 								trajectory ~= projectile.position;
@@ -604,7 +604,7 @@ class Ballistic
 								termination.info.add (plot, square)
 									.align_to (Alignment.top_center)
 									.decorate ((Box box) 
-										{gfx.draw (color, box.scale (1.01).from_extended_space.to_draw_space (gfx));}
+										{gfx.draw (color, box.scale (1.01).from_extended_space);}
 									);
 
 								termination.location = projectile.position + projectile.velocity.unit;
