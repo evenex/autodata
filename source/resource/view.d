@@ -7,7 +7,6 @@ import std.range;
 import std.conv;
 import utils;
 
-import resource.allocator;
 import resource.array;
 
 /* Views
@@ -69,51 +68,29 @@ public {/*identity}*/
 			public {/*☀}*/
 				this (T[] array)
 					{/*...}*/
-						this.source = Source.array;
-						this.array = array;
+						this.source.set (array);
 						this.access_range (0, array.length.to!Index);
 					}
 				this (F)(ref F functor)
 					if (is_Functor!F)
 					{/*...}*/
-						this.source = Source.functor;
-						this.functor = std.functional.toDelegate (&functor.opAccess);
+						this.source.set (&functor.opAccess); // REVIEW would opCall (size_t) or opIndex be better options? would it be good to include them)?
 						this.access_range (functor.start, functor.end);
 					}
 				this (T function(Index) generator, Index start = 0, Index end = Index.max)
 					{/*...}*/
-						this.source = Source.generator;
-						this.generator = generator;
+						this.source.set (generator);
 						this.access_range (start, end);
 					}
 			}
 			private:
 			private {/*data}*/
-				union {/*...}*/
-					T[] array;
-					T function(Index) generator;
-					T delegate(Index) functor;
-				}
-				Source source;
-				enum Source {none, array, functor, generator}
+				IndirectRead!(T, Index) source;
 			}
 			private {/*access}*/
 				T opAccess (Index i)
 					{/*...}*/
-						final switch (source)
-							{/*...}*/
-								case Source.array:
-									return array [i];
-
-								case Source.functor:
-									return functor (i);
-
-								case Source.generator:
-									return generator (i);
-								
-								case Source.none:
-									assert (0, `view is unavailable`);
-							}
+						return source.get (i);
 					}
 			}
 			enum IdentityViewTrait;
@@ -303,6 +280,7 @@ public {/*static}*/
 }
 
 private:
+alias Index = size_t;
 private {/*functor}*/
 	mixin template ViewFunctor ()
 		{/*...}*/
@@ -426,8 +404,6 @@ unittest
 	{/*...}*/
 		mixin(report_test!q{view});
 
-		alias Source = IdentityView!int.Source;
-
 		int[] data1 = [0, 1, 2];
 		string[] data2 = [`a`, `bb`, `ccc`];
 		static short data3 (size_t i) 
@@ -435,41 +411,40 @@ unittest
 
 		// VIEW TESTS
 		auto array_view = view (data1);
-		assert (array_view.source == Source.array);
+		assert (array_view.source.has_array);
 		assert (array_view.equal (data1));
 
 		// indirection path minimization
 		auto b = view (array_view);
-		assert (b.source == Source.array);
+		assert (b.source.has_array);
 		assert (b.equal (array_view));
 
 		auto generator_view = view (&data3, 0, 3);
-		assert (generator_view.source == Source.generator);
+		assert (generator_view.source.has_functor);
 		assert (generator_view.equal (array_view));
 
 		// ZIP TESTS
 		auto g = zip_view (array_view, data2);
-		assert (g._0.source == Source.array);
-		assert (g._1.source == Source.array);
+		assert (g._0.source.has_array);
+		assert (g._1.source.has_array);
 		assert (g.equal (zip (array_view, data2)));
 
 		auto i = data2.view;
 		auto j = zip_view (generator_view, i);
 		assert (j.equal (g));
-		assert (i.source == Source.array);
+		assert (i.source.has_array);
 
 		ZipView!(short, string) q = j;
 		assert (q._0.source == j._0.source);
 		assert (q._1.source == j._1.source);
 
 		auto h = view (g);
-		assert (h.source == Source.functor);
+		assert (h.source.has_functor);
 		assert (h.equal (g));
 		assert (h.equal (zip (array_view, data2)));
-		assert (h.functor == &g.opAccess);
 
 		// MAP TEST
 		auto k = data2.map_view ((string str) => str.length.to!int - 1);
-		assert (k.domain.source == Source.array);
+		assert (k.domain.source.has_array);
 		assert (k.equal (array_view));
 	}

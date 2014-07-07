@@ -11,7 +11,7 @@ import utils; // TODO make views and looks and math public imports?
 import math;
 
 import services.physics;
-import modeling;
+import models.integrator;
 
 class Ballistic
 	{/*...}*/
@@ -225,14 +225,14 @@ class Ballistic
 							)(	0.0f,
 								projectile.velocity.norm,
 								0.0f
-							); debug if (model.tracer !is null)
+							).initial_step (0.001); 
+							debug if (model.tracer !is null)
 								system.on_step ((float x, float v, float t)
 									{model.tracer.on_flight_step (&projectile, x, v, t);}
 								);
 
 							auto flight = system.solve_for ((double x, double v, double t) =>
-								t >= max_duration || v <= critical_speed || x >= distance_to_impact,
-								0.0001
+								t >= max_duration || v <= critical_speed || x >= distance_to_impact
 							);
 
 							auto x_1 = flight[0];
@@ -363,14 +363,14 @@ class Ballistic
 								projectile.velocity.norm,
 								projectile.radius,
 								0.0f
-							); debug if (model.tracer !is null) 
+							).initial_step (0.001);
+							debug if (model.tracer !is null) 
 								system.on_step ((float x, float v, float r, float t)
 									{model.tracer.on_penetration_step (projectile, x, v, r, t);}
 								);
 
 							auto penetration = system.solve_for ((double x, double v, double r, double t) =>
-								t >= max_duration || v <= critical_speed || x >= distance_to_exit,
-								0.0001
+								t >= max_duration || v <= critical_speed || x >= distance_to_exit
 							);
 
 							if (penetration[0] >= distance_to_exit)

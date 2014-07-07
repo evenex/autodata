@@ -355,7 +355,7 @@ final class Scribe
 					auto alignment = order.alignment;
 
 					foreach (i, line_start; line_starts[0..$-1])
-						{/*...}*/
+						{/*justify lines}*/
 							auto line_stop  = line_starts[i+1];
 
 							if (line_stop == line_start)
@@ -658,5 +658,5 @@ unittest
 			}
 
 		spawn (&test);
-		assert (receiveTimeout (hold_time + 1.seconds, (bool _){}));
+		assert (receiveTimeout (2*hold_time, (bool _){}));
 	}

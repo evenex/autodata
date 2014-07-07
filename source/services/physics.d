@@ -13,6 +13,35 @@ import math;
 import services.service;
 
 import resource.buffer;
+import models.model;
+
+final class Physical
+	{/*...}*/
+		@(2^^8)
+		@Aspect struct Body
+			{/*...}*/
+				@(2^^16) 
+				vec[] geometry;
+				vec position;
+				vec velocity;
+				vec heading;
+				double mass;
+				double damping;
+				double elevation;
+				double height;
+			}
+
+		auto model (Entity.Id entity)
+			{/*...}*/
+				
+			}
+		auto release (Entity.Id entity)
+			{/*...}*/
+				
+			}
+
+		mixin Model;
+	}
 
 private {/*library}*/
 	struct cp

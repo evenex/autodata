@@ -6,7 +6,6 @@ import math;
 import utils;
 
 import resource.view;
-import resource.look;
 import resource.allocator;
 import resource.directory;
 
@@ -133,7 +132,6 @@ public {/*models/aspects}*/
 			public {/*aspects}*/
 				struct Object
 					{/*...}*/
-						Entity.Id id;
 						public:
 						public {/*ctor}*/
 							this (T)(T entity)
@@ -191,12 +189,6 @@ public {/*models/aspects}*/
 									return _drawing;
 								}
 						}
-						public {/*sorting}*/
-							int opCmp (ref const Object that) const
-								{/*...}*/
-									return compare (this.id, that.id);
-								}
-						}
 						private:
 						private {/*data}*/
 							View!vec _geometry;
@@ -222,7 +214,7 @@ public {/*models/aspects}*/
 			}
 		__gshared:
 			private {/*resources}*/
-				Directory!Object objects;
+				Directory!(Object, Entity.Id) objects;
 			}
 			static {/*interface}*/
 				auto update ()
@@ -248,6 +240,10 @@ public {/*models/aspects}*/
 						return square.translate (0.5.vec)[i];
 					}
 			}
+			shared static this ()
+				{/*...}*/
+					objects = Directory!(Object, Entity.Id)(66);
+				}
 		}
 	auto visual (T)(T entity)
 		if (__traits(compiles, entity.id == Entity.Id.init))
@@ -258,16 +254,10 @@ public {/*models/aspects}*/
 		}
 	struct Physical
 		{/*...}*/
-			public {/*aspects}*/
+			public {/*}*/ // @Aspect 
 				struct Body
 					{/*...}*/
-						Entity.Id id;
-						int opCmp (ref const Body that) const
-							{/*...}*/
-								return compare (this.id, that.id);
-							}
-
-						View!vec geometry;
+						vec[] geometry;
 						vec position;
 						vec velocity;
 						vec heading;
@@ -278,8 +268,11 @@ public {/*models/aspects}*/
 					}
 			}
 		__gshared:
+			private {/*services}*/
+				Physics physics;
+			}
 			private {/*resources}*/
-				Directory!Body bodies;
+				Directory!(Body, Entity.Id) bodies;
 				Allocator!vec geometry;
 			}
 			static {/*toolkit}*/
@@ -320,7 +313,7 @@ public {/*models/aspects}*/
 		{/*...}*/
 			struct Surface
 				{/*...}*/
-					View!vec _area = [];
+					View!vec _area = vec[].init;
 					Material.Substance _material;
 
 					/*
@@ -396,7 +389,7 @@ public {/*overloads for performing a strip-tidle uv-wrapping over a quad-strip}*
 		}
 }
 
-void main ()
+unittest
 	{/*...}*/
 		scope gfx = new Display;
 		gfx.start; scope (exit) gfx.stop;

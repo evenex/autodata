@@ -55,14 +55,6 @@ public {/*syntax}*/
 		{/*...}*/
 			return !value;
 		}
-	auto compare (T)(T a, T b)
-		{/*...}*/
-			if (a < b)
-				return -1;
-			else if (a == b)
-				return 0;
-			else return 1;
-		}
 }
 public {/*debug}*/
 	/* warning exception */
@@ -283,6 +275,18 @@ public {/*debug}*/
 	}
 }
 public {/*search}*/
+	/* 
+		convenience function for overloading opCmp using member fields 
+	*/
+	int compare (T,U)(T a, U b)
+		{/*...}*/
+			if (a < b)
+				return -1;
+			else if (a == b)
+				return 0;
+			else return 1;
+		}
+
 	/* specify how elements are compared for equality
 	*/
 	enum EqualityPolicy
@@ -299,10 +303,8 @@ public {/*search}*/
 		}
 
 	/* result of a binary search over a sorted, indexable range.
-		if successful, holds a pointer to the element
-		as well as the element's position.
-		otherwise, holds a null pointer and the position
-		that the element would occupy were it in the range.
+		if the element was found, BinarySearchResult holds a pointer to the element and the element's position.
+		otherwise, it holds a null pointer and the position that the element would occupy were it in the range.
 	*/
 	struct BinarySearchResult (T)
 		{/*...}*/
@@ -328,8 +330,7 @@ public {/*search}*/
 		if (is_comparison_function!compare)
 		{/*...}*/
 			auto binary_search (R, T = ElementType!R)(R range, T element)
-				if (hasLength!R 
-				&& __traits(compiles, range[0]))
+				if (hasLength!R && is_indexable!R)
 				{/*...}*/
 					if (range.empty)
 						return BinarySearchResult!T (null, 0L);
@@ -338,11 +339,11 @@ public {/*search}*/
 					long max = range.length;
 
 					static if (hasMember!(T, `opEquals`) && matching != EqualityPolicy.reflexive)
-						auto matched (ref const T that)
+						bool matched (ref const T that)
 							{/*...}*/
 								 return element == that;
 							}
-					else auto matched (ref const T that)
+					else bool matched (ref const T that)
 						{/*...}*/
 							import math : reflexively_equal;
 							return element.reflexively_equal!compare (that);
@@ -478,7 +479,7 @@ public {/*metaprogramming}*/
 			{/*...}*/
 				const bool has_attribute ()
 					{/*...}*/
-						foreach (type; mixin(`__traits (getAttributes, T.`~member~`)`))
+						foreach (type; mixin(q{__traits (getAttributes, T.}~member~q{)}))
 							static if (is (type == attribute))
 								return true;
 						return false;
@@ -512,9 +513,13 @@ public {/*metaprogramming}*/
 		/* test if a template argument is an aliased symbol */
 		template is_alias (T...) if (T.length == 1)
 			{/*...}*/
-				const bool is_alias = __traits(compiles, typeof (T[0]));
+				const bool is_alias = __traits(compiles, typeof (T[0])) 
+					&& not (
+						is_numerical_param!(T[0])
+						|| is_string_param!(T[0])
+					);
 			}
-		/* test if a function behaves syntactically as a comparison of some type */
+		/* test if a function behaves syntactically as a comparison */
 		template is_comparison_function (U...)
 			if (U.length == 1)
 			{/*...}*/
@@ -549,6 +554,20 @@ public {/*metaprogramming}*/
 		template is_indexable (R)
 			{/*...}*/
 				enum is_indexable = __traits(compiles, R.init[0]);
+			}
+		/* test if T is a member function */
+		template is_member_function (T...)
+			if (T.length == 1)
+			{/*...}*/
+				enum is_member_function = isSomeFunction!(T[0])
+					&& not (isFunctionPointer!(T[0])
+						|| isDelegate!(T[0])
+					);
+			}
+		/* test if a type can index D's built-in arrays and slices */
+		template can_index_arrays (T)
+			{/*...}*/
+				enum can_index_arrays = __traits(compiles, T[].init[T.init]);
 			}
 	}
 	public {/*mixins}*/
@@ -747,6 +766,29 @@ public {/*metaprogramming}*/
 					alias types_of = typeof(T);
 				else alias types_of = T;
 			}
+		/* returns a TypeTuple of all nested structs and classes defined within T */
+		template get_substructs (T)
+			{/*...}*/
+				alias get_substructs = Filter!(templateNot!is_numerical_param, 
+					staticMap!(get_substruct!T, __traits(allMembers, T))
+				);
+			}
+		private template get_substruct (T)
+			{/*...}*/
+				template get_substruct (string member)
+					{/*...}*/
+						import std.range;
+
+						static if (member.empty)
+							enum get_substruct = 0;
+						else static if (mixin(q{is (T.} ~member~ q{)}))
+							mixin(q{
+								alias get_substruct = T.} ~member~ q{;
+							});
+						else enum get_substruct = 0;
+					}
+			}
+
 	}
 	public {/*code generation}*/
 		/* declare variables according to format (see unittest) */
@@ -810,6 +852,239 @@ public {/*metaprogramming}*/
 			}
 	}
 }
+public {/*indirection}*/
+	/* 
+		indexed, read-only, type-uniform indirection mechanism
+
+		an IndirectRead can be set() to the following types of sources:
+			a unary static or member function taking an Index parameter
+			a pointer
+			a D slice, indexed by an Index parameter
+
+		if the Index cannot be used to index into a D array (i.e. it does not convert to size_t)
+		then setting the IndirectRead to a slice is statically disallowed.
+
+		to read the redirected value with get(), an Index must be supplied even if the source type is a pointer
+		(which would make the returned value independent of the supplied index)
+	*/
+	struct IndirectRead (T, Index)
+		{/*...}*/
+			public:
+			public {/*get}*/
+				T get (Index index)
+					in {/*...}*/
+						assert (init, `IndirectRead uninitialized`);
+					}
+					body {/*...}*/
+						switch (read_mode)
+							{/*...}*/
+								static if (can_index_arrays!Index)
+									{/*...}*/
+										case ReadMode.array:
+											return passive[index];
+									}
+								case ReadMode.pointer:
+									return *passive;
+								default:
+									return active (index);
+							}
+					}
+			}
+			public {/*setters}*/
+				void set (F)(F functor)
+					if (is (F == T delegate(U), U : Index) 
+					 || is (F == T function(U), U : Index))
+					out {/*...}*/
+						with (ReadMode)
+						assert (read_mode != pointer && read_mode != array);
+					}
+					body {/*...}*/
+						import std.functional;
+						active = toDelegate (functor);
+						debug init = true;
+					}
+
+				void set ()(T* pointer)
+					{/*...}*/
+						read_mode = ReadMode.pointer;
+						passive = pointer;
+						debug init = true;
+					}
+
+				void set ()(T[] array)
+					if (can_index_arrays!Index)
+					{/*...}*/
+						read_mode = ReadMode.array;
+						passive = array.ptr;
+						debug init = true;
+					}
+			}
+			private:
+			private {/*data}*/
+				union {/*...}*/
+					T delegate(Index) active;
+					struct {/*...}*/
+						T* passive;
+						ReadMode read_mode;
+					}
+				}
+				enum ReadMode {pointer = 0x0, array = 0x1}
+				debug bool init;
+
+				static assert (ReadMode.sizeof + (T*).sizeof <= (T delegate(Index)).sizeof);
+			}
+			public version (unittest) {/*...}*/
+				bool has_array ()
+					{/*...}*/
+						return read_mode == ReadMode.array;
+					}
+				bool has_pointer ()
+					{/*...}*/
+						return read_mode == ReadMode.pointer;
+					}
+				bool has_functor ()
+					{/*...}*/
+						return not (has_array || has_pointer);
+					}
+			}
+		}
+	unittest
+		{/*demo}*/
+			import std.exception;
+			struct NotIndex {}
+			IndirectRead!(int, NotIndex) non_indexable;
+			IndirectRead!(int, int) indexable;
+
+			with (IndirectRead!(int,int).ReadMode)
+				{/*...}*/
+					static int test (int i) {return 0;}
+					int x = 1;
+					int[] y = [2,3,4];
+
+					indexable.set (&test);
+					assert (indexable.read_mode != pointer);
+					assert (indexable.read_mode != array);
+					assert (indexable.get (0) == 0);
+					assert (indexable.get (1) == 0);
+
+					indexable.set (&x);
+					assert (indexable.read_mode == pointer);
+					assert (indexable.get (0) == 1);
+					assert (indexable.get (1) == 1);
+
+					indexable.set (y);
+					assert (indexable.read_mode == array);
+					assert (indexable.get (0) == 2);
+					assert (indexable.get (1) == 3);
+					assert (indexable.get (2) == 4);
+				}
+			with (IndirectRead!(int,NotIndex).ReadMode)
+				{/*...}*/
+					static int test_ni (NotIndex i) {return 0;}
+					int x = 1;
+					int[] y = [2,3,4];
+
+					non_indexable.set (&test_ni);
+					assert (non_indexable.read_mode != pointer);
+					assert (non_indexable.read_mode != array);
+					assert (non_indexable.get (NotIndex.init) == 0);
+
+					non_indexable.set (&x);
+					assert (non_indexable.read_mode == pointer);
+					assert (non_indexable.get (NotIndex.init) == 1);
+
+					static assert (not(__traits(compiles, non_indexable.set (y))));
+				}
+		}
+
+	/*
+		extend a host struct with a set of IndirectReads indexed by a common index
+		and, for read-only access, syntactically indistinguishable from member fields
+	*/
+	mixin template Look (alias index, Args...)
+		{/*...}*/
+			alias Types = Filter!(is_type, Args);
+			alias Names = Filter!(is_string_param, Args);
+			alias Index = typeof(index);
+			
+			static assert (Types.length + Names.length == Args.length, `instantiated with extraneous parameters`);
+			static assert (Types.length == Names.length, `type-identifier mismatch`);
+
+			static string declarations ()
+				{/*...}*/
+					import std.conv;
+
+					string code;
+
+					foreach (i, name; Names)
+						code ~= q{
+							IndirectRead!(Types[} ~i.text~ q{], Index) _} ~name~ q{;
+						};
+
+					return code;
+				}
+			static string getters ()
+				{/*...}*/
+					string code;
+
+					foreach (name; Names)
+						code ~= q{
+							@property auto } ~name~ q{ () }`{`q{
+								return _} ~name~ q{.get (index);
+							}`}`q{
+						};
+
+					return code;
+				}
+			static string setters ()
+				{/*...}*/
+					string code;
+
+					foreach (name; Names)
+						code ~= q{
+							@property void set_} ~name~ q{ (T)(T arg) }`{`q{
+								_} ~name~ q{.set (arg);
+							}`}`q{
+						};
+
+					return code;
+				}
+
+			mixin(declarations);
+			mixin(getters);
+			mixin(setters);
+		}
+	unittest
+		{/*demo}*/
+			mixin(report_test!`look`);
+
+			struct MyLook
+				{/*...}*/
+					int index;
+					mixin Look!(index, 
+						int, 	`a`, 
+						ulong, 	`b`, 
+						string, `c`,
+					);
+				}
+
+			MyLook look;
+
+			int a = -1;
+			ulong b (int i) {return i;}
+			string[] c = [`one`, `two`, `three`];
+
+			look.set_a (&a);
+			look.set_b (&b);
+			look.set_c (c);
+
+			look.index = 2;
+
+			assert (look.a == -1);
+			assert (look.b == 2);
+			assert (look.c == `three`);
+		}
+}
 public {/*tags}*/
 	struct Tag 
 		{/*...}*/
@@ -861,7 +1136,7 @@ public {/*tags}*/
 			return tag!(T.stringof);
 		}
 }
-public {/*aliasing}*/
+public {/*tuples}*/
 	template λ (alias f) {alias λ = f;}
 	template Aⁿ (Tn...) {alias Aⁿ = Tn;}
 }

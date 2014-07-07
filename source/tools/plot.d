@@ -234,6 +234,6 @@ unittest
 
 		gfx.render;
 
-		import std.datetime: seconds;
-		core.thread.Thread.sleep (1.seconds);
+		import std.datetime: msecs;
+		core.thread.Thread.sleep (500.msecs);
 	}
