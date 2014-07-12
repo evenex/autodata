@@ -171,17 +171,21 @@ public {/*2D geometry}*/
 			return __traits(compiles, 0.vec + T.init.reduce!((a,b) => a+b));
 		}
 	public {/*vectors}*/
+		// TODO bring Vec2 and Units into compatibility
 		/* test if a type can be used as a vector */
 		const bool is_vector (T)()
 			{/*...}*/
 				const T vector = T.init;
-				return __traits(compiles, vector.x + vector.y / vector.x * vector.y);
+				return __traits(compiles, (-vector.x + vector.y - vector.x) * vector.x / vector.y / vector.x * vector.y);
 			}
 		struct Vec2 (T)
 			{/*...}*/
+				static assert (is_vector!Vec2);
+
 				import std.math;
 				public:
-				@property {/*...}*/
+				struct {T x, y;}
+				@property {/*}*/
 					T norm (uint p = 2)() pure
 						if (isFloatingPoint!T)
 						{/*...}*/
@@ -197,7 +201,7 @@ public {/*2D geometry}*/
 					Vec2 abs () pure
 						{/*...}*/
 							import std.math;
-							return Vec2(abs(x), abs(y));
+							return Vec2(x.abs, y.abs);
 						}
 					T min () pure
 						{/*...}*/
@@ -208,18 +212,12 @@ public {/*2D geometry}*/
 							return std.algorithm.max (x, y);
 						}
 				}
-				public {/*data}*/
-					union {
-						struct {T x, y;}
-						T[2] xy;
-					}
-				}
 				public {/*ops}*/
-					T det (Vec2 v) pure
+					auto det (Vec2 v) pure
 						{/*...}*/
 							return x*v.y - y*v.x;
 						}
-					T dot (Vec2 v) pure
+					auto dot (Vec2 v) pure
 						{/*...}*/
 							return x*v.x + y*v.y;
 						}
@@ -251,8 +249,8 @@ public {/*2D geometry}*/
 					Vec2 opBinaryRight (string op, U) (U lhs) pure
 						{/*...}*/
 							static if (is_vector!U)
-								mixin(`return (cast (vec) lhs) `~op~` this;`);
-							else mixin(`return this `~op~` lhs;`);
+								mixin(q{return vec(lhs) }~op~q{ this;});
+							else mixin(q{return this }~op~q{ lhs;});
 						}
 					Vec2 opOpAssign (string op, U) (U rhs) pure
 						{/*...}*/
@@ -272,14 +270,14 @@ public {/*2D geometry}*/
 								~Vec2.stringof~` `~op~` `~U.stringof
 							);
 						}
-					void opAssign (U)(U rhs)
+					Vec2 opAssign (U)(U rhs)
 						{/*...}*/
 							static if (is_vector!U)
 								{/*...}*/
 									this.x = rhs.x;
 									this.y = rhs.y;
 								}
-							else static if (is (U: T))
+							else static if (is (U:T))
 								{/*...}*/
 									this.x = rhs;
 									this.y = rhs;
@@ -287,7 +285,10 @@ public {/*2D geometry}*/
 							else static assert (null, `incompatible types for operation: `
 								~Vec2.stringof~` = `~U.stringof
 							);
+							return this;
 						}
+				}
+				public {/*misc}*/
 					U opCast (U)()
 						{/*...}*/
 							U ret;
@@ -301,17 +302,19 @@ public {/*2D geometry}*/
 								~Vec2.stringof~` to ` ~U.stringof
 							);
 						}
+					auto toString ()
+						{/*...}*/
+							import std.conv;
+							return `Vec2!(` ~T.stringof~ `)(` ~x.text~ `, ` ~y.text~ `)`;
+						}
 				}
 				public {/*☀}*/
 					this (U)(U that)
 						{/*...}*/
-							const bool compiles = 
-								__traits(compiles, x == that.x)
-								&& __traits(compiles, y == that.y);
-							static if (compiles)
+							static if (is_vector!U)
 								{/*...}*/
-									mixin("x = that.x;");
-									mixin("y = that.y;");
+									this.x = that.x;
+									this.y = that.y;
 									return this;
 								}
 							else static assert (null, `incompatible type for construction: `
@@ -367,7 +370,7 @@ public {/*2D geometry}*/
 			}
 		auto circle (uint samples = 24) (float radius = 1.0, vec center = vec(0))
 			in {/*...}*/
-				assert (radius > 0.0, "circle radius must be non-negative");
+				assert (radius > 0.0, "circle radius must be positive");
 			}
 			body {/*...}*/
 				return ℕ!samples.map!(i => 2*π*i/samples)

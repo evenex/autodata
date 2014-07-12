@@ -8,29 +8,37 @@ import std.traits;
 import std.math;
 
 import utils;
+import units;
 import math;
 
 import services.service;
 
 import resource.buffer;
+import resource.directory;
+import resource.allocator;
+
 import models.model;
+// TODO full conversion to doubles. only openGL really needs 32-bit floats, and we can convert on-the-fly when we write to the output buffer
+// TODO lazy parameters for all ops which move data (like add and append)
 
 final class Physical
-	{/*...}*/
+	{mixin Model;/*}*/
+	//	alias Position = Vec2!Meters;
+	//	alias Velocity = Vec2!(typeof(meters/second));
+
 		@(2^^8)
 		@Aspect struct Body
 			{/*...}*/
-				@(2^^16) 
-				vec[] geometry;
-				vec position;
-				vec velocity;
-				vec heading;
+				@(2^^16) double[] geometry;
+				double position;
+				double velocity;
 				double mass;
 				double damping;
 				double elevation;
 				double height;
 			}
 
+		// TODO aspect stuff
 		auto model (Entity.Id entity)
 			{/*...}*/
 				
@@ -39,8 +47,6 @@ final class Physical
 			{/*...}*/
 				
 			}
-
-		mixin Model;
 	}
 
 private {/*library}*/
@@ -64,575 +70,70 @@ private {/*conversions}*/
 
 final class Physics: Service
 	{/*...}*/
-		public struct Body
-			{/*...}*/
-				public:
-				@Query {/*intrinsic}*/
-					@property {/*mass}*/
-						float mass () const
-							{/*...}*/
-								if (initialized && init_mass != float.infinity)
-									{/*...}*/
-										float mass;
-										Query query =
-											{/*...}*/
-												type: Query.Type.mass,
-												id: this.id
-											};
-										world.send (query);
-										receive ((float reply){mass = reply;});
-										return mass;
-									}
-								else return init_mass;
-							}
-						void mass (float new_mass)
-							in {/*...}*/
-								assert (uninitialized, "attempted to set mass after initialization");
-							}
-							body {/*...}*/
-								init_mass = new_mass;
-							}
-					}
-					@property {/*position}*/
-						vec position () const
-							{/*...}*/
-								if (uninitialized || mass == float.infinity)
-									return init_position;
-								else {/*...}*/
-									vec position;
-									Query query = 
-										{/*...}*/
-											type: Query.Type.position,
-											id: this.id
-										};
-									world.send (query);
-									receive ((vec reply){position = reply;});
-									return position;
-								}
-							}
-						void position (vec new_position)
-							{/*...}*/
-								if (uninitialized)
-									init_position = new_position;
-								else {/*...}*/
-									world.send (id, "position", new_position);
-									receive ((bool acknowledgement){});
-								}
-							}
-					}
-					@property {/*velocity}*/
-						vec velocity () const
-							{/*...}*/
-								if (uninitialized)
-									return init_velocity;
-								else {/*...}*/
-									vec velocity;
-									Query query =
-										{/*...}*/
-											type: Query.Type.velocity,
-											id: this.id
-										};
-									world.send (query);
-									receive ((vec reply){velocity = reply;});
-									return velocity;
-								}
-							}
-						void velocity (vec new_velocity)
-							in {/*...}*/
-								assert (mass != float.infinity);
-							}
-							body {/*...}*/
-								if (uninitialized)
-									init_velocity = new_velocity;
-								else {/*...}*/
-									world.send (id, "velocity", new_velocity);
-									receive ((bool acknowledgement){});
-								}
-							}
-					}
-					@property {/*damping}*/
-						float damping () const
-							{/*...}*/
-								if (uninitialized)
-									return init_damping;
-								else {/*...}*/
-									float damping;
-									Query query =
-										{/*...}*/
-											type: Query.Type.damping,
-											id: this.id
-										};
-									world.send (query);
-									receive ((float reply){damping = reply;});
-									return damping;
-								}
-							}
-						void damping (float new_damping)
-							in {/*...}*/
-								assert (mass != float.infinity);
-							}
-							body {/*...}*/
-								if (uninitialized)
-									init_damping = new_damping;
-								else {/*...}*/
-									world.send (id, "damping", new_damping);
-									receive ((bool acknowledgement){});
-								}
-							}
-					}
-					@property {/*applied force}*/
-						vec applied_force () const
-							in {/*...}*/
-								assert (initialized);
-							}
-							body {/*...}*/
-								vec applied_force;
-								Query query =
-									{/*...}*/
-										type: Query.Type.applied_force,
-										id: this.id
-									};
-								world.send (query);
-								receive ((vec reply){applied_force = reply;});
-								return applied_force;
-							}
-						void applied_force (vec new_force)
-							in {/*...}*/
-								assert (initialized);
-								assert (mass != float.infinity);
-							}
-							body {/*...}*/
-								world.send (id, "applied_force", new_force);
-								receive ((bool acknowledgement){});
-							}
-					}
-				}
-				@Query {/*historic}*/
-					@property vec displacement () const
-						in {/*...}*/
-							assert (initialized);
-						}
-						body {/*...}*/
-							vec displacement;
-							Query query = 
-								{/*...}*/
-									type: Query.Type.displacement,
-									id: this.id
-								};
-							world.send (query);
-							receive ((vec reply){displacement = reply;});
-							return displacement;
-						}
-				}
-				@Query {/*collision}*/
-					@property {/*layer}*/
-						uint layer ()
-							in {/*...}*/
-								assert (initialized);
-							}
-							body {/*...}*/
-								uint layer;
-								Query query = 
-									{/*...}*/
-										type: Query.Type.layer,
-										id: this.id
-									};
-								world.send (query);
-								receive ((uint reply){layer = reply;});
-								return layer;
-							}
-						void layer (uint new_layer)
-							in {/*...}*/
-								assert (initialized);
-							}
-							body {/*...}*/
-								world.send (id, "layer", new_layer);
-								receive ((bool acknowledgement){});
-							}
-					}
-					@property bool colliding () const
-						in {/*...}*/
-							assert (initialized);
-						}
-						body {/*...}*/
-							bool colliding;
-							Query query =
-								{/*...}*/
-									type: Query.Type.colliding,
-									id: this.id
-								};
-							world.send (query);
-							receive ((bool reply){colliding = reply;});
-							return colliding;
-						}
-				}
-				@property {/*existence}*/
-					bool initialized () const
+		private {/*definitions}*/
+			import dchip.all;
+			alias Space 	= cpSpace*;
+			alias ShapeId	= cpShape*;
+			alias BodyId 	= cpBody*;
+			struct UserId 
+				{/*...}*/
+					// REFACTOR
+					size_t transfer; 
+					void* storage ()
 						{/*...}*/
-							if (world is null)
-								return false;
-							else return true;
+							union Cast {size_t _; void* output;}
+							return Cast(transfer).output;
 						}
-					bool uninitialized () const
-						{/*...}*/
-							return not (initialized);
-						}
-				}
-				public:
-				@Action {/*actions}*/
-					private struct Action
-						{/*...}*/
-							auto type = Type.none;
-							vec vector;
-							enum Type {none, force, impulse}
-						}
-					void apply_force (vec force)
-						{/*...}*/
-							Action action = 
-								{/*...}*/
-									type: Action.Type.force,
-									vector: force
-								};
-							world.send (id, action);
-							receive ((bool acknowledge){});
-						}
-					void apply_impulse (vec impulse)
-						{/*...}*/
-							Action action = 
-								{/*...}*/
-									type: Action.Type.impulse,
-									vector: impulse
-								};
-							world.send (id, action);
-							receive ((bool acknowledge){});
-						}
-				}
-				public:
-				public {/*id}*/
-					mixin TypeUniqueId;
-					pure @property Body.Id id () const
-						{/*...}*/
-							return body_id;
-						}
-				}
-				public {/*user data}*/
-					void* user_data;
-				}
-				@Upload {/*☀}*/
-					@() static Body immovable (vec position = vec(0))
-						{/*...}*/
-							return Body (float.infinity, position);
-						}
-					@() this (vec position, vec velocity = vec(0), float damping = 0.0)
-						{/*...}*/
-							this (1.0, position, velocity, damping);
-						}
-					@Id this (float mass, vec position, vec velocity = vec(0), float damping = 0.0)
-						{/*...}*/
-							this.world = null;
-							this.body_id = Body.Id.create;
-							this.init_mass = mass;
-							this.init_position = position;
-							this.init_velocity = velocity;
-							this.init_damping = damping;
-						}
-				}
-				public {/*~}*/
-					~this ()
-						{/*...}*/
-							if (initialized && id != Body.Id.init)
-								{/*...}*/
-									//world.send (id); TODO deletion
-									//receive ((bool goodbye){});
-								}
-						}
-				}
-				private:
-				private {/*data}*/
-					Physics world;
-					Body.Id body_id;
-					float init_mass;
-					vec init_position;
-					vec init_velocity;
-					float init_damping;
-				}
-				private {/*☀}*/
-					@Upload this (Physics world, Body.Id id, float mass, vec velocity, vec position, float damping)
-						in {/*...}*/
-							assert (world !is null, "world doesn't exist");
-						}
-						body {/*...}*/
-							this.world = world;
-							this.body_id = id;
-							this.init_mass = mass;
-							this.init_position = position;
-							this.init_velocity = velocity;
-							this.init_damping = damping;
-						}
-				}
-				debug {/*...}*/
-					TrueBody.Type type ()
-						{/*...}*/
-							world.send (id, "type");
-							TrueBody.Type type;
-							receive ((TrueBody.Type reply) {type = reply;});
-							return type;
-						}
-				}
-			}
-		private struct TrueBody
-			{/*...}*/
-				private {/*imports}*/
-					import dchip.all;
-				}
-				public:
-				public {/*~}*/
-					~this ()
-						{/*...}*/
-							if (id in bodies)
-								{/*...}*/
-									assert (id in body_ptr);
-									assert (id in shape_ptr);
-									auto space = cp.ShapeGetSpace (shape_ptr[id]);
-									assert (cp.SpaceContainsShape (space, shape_ptr[id]));
-									assert (cp.SpaceContainsBody (space, body_ptr[id]));
-									cp.SpaceRemoveBody (space, body_ptr[id]);
-									cp.ShapeFree (shape_ptr[id]);
-									cp.BodyFree (body_ptr[id]);
-									bodies.remove (id);
-									body_ptr.remove (id);
-									shape_ptr.remove (id);
-								}
-						}
-				}
-				private:
-				@property {/*intrinsic}*/
-					@property {/*mass}*/
-						float mass ()
-							{/*...}*/
-								return cp.BodyGetMass (body_ptr[id]);
-							}
-					}
-					@property {/*position}*/
-						vec position ()
-							{/*...}*/
-								return cast(vec)cp.BodyGetPos (body_ptr[id]);
-							}
-						void position (vec new_position)
-							{/*...}*/
-								cp.BodySetPos (body_ptr[id], new_position.to_cpv);
-								auto space = cp.ShapeGetSpace (shape_ptr[id]);
-								cp.SpaceReindexShapesForBody (space, body_ptr[id]);
-							}
-					}
-					@property {/*velocity}*/
-						vec velocity ()
-							{/*...}*/
-								return cast(vec)cp.BodyGetVel (body_ptr[id]);
-							}
-						void velocity (vec new_velocity)
-							in {/*...}*/
-								assert (mass != float.infinity);
-							}
-							body {/*...}*/
-								cp.BodySetVel (body_ptr[id], new_velocity.to_cpv);
-							}
-					}
-					@property {/*damping}*/
-						float damping ()
-							{/*...}*/
-								return velocity_damping;
-							}
-						void damping (float new_damping)
-							in {/*...}*/
-								assert (mass != float.infinity);
-							}
-							body {/*...}*/
-								velocity_damping = new_damping;
-							}
-					}
-					@property {/*applied_force}*/
-						vec applied_force ()
-							{/*...}*/
-								return cast(vec)cp.BodyGetForce (body_ptr[id]);
-							}
-						void applied_force (vec new_force)
-							{/*...}*/
-								cp.BodySetForce (body_ptr[id], new_force.to_cpv);
-							}
-					}
-				}
-				@property {/*historic}*/
-					@property {/*displacement}*/
-						vec displacement ()
-							{/*...}*/
-								return position - last_position;
-							}
-						void displacement (vec new_displacement)
-							{/*...}*/
-								assert (null);
-							}
-					}
-				}
-				@property {/*collision}*/
-					@property {/*layer}*/
-						uint layer ()
-							{/*...}*/
-								return cp.ShapeGetLayers (shape_ptr[id]);
-							}
-						void layer (uint new_layer)
-							{/*...}*/
-								cp.ShapeSetLayers (shape_ptr[id], new_layer);
-							}
-					}
-					@property bool colliding ()
-						{/*...}*/
-							static void collide (cpBody* impl, cpArbiter* arbiter, void* data)
-								{/*...}*/
-									*cast(bool*)data = true;
-								}
-							static void colliding (cpBody* impl, void* data)
-								{/*...}*/
-									cpBodyEachArbiter (impl, &collide, data);
-								}
-							////////////
-							bool is_colliding;
-							colliding (body_ptr[id], &is_colliding);
-							return is_colliding;
-						}
-				}
-				private {/*data}*/
-					Body.Id id;
-					vec last_position = vec(0);
-					float velocity_damping = 0.0;
-					Type type = Type.none;
-					enum Type {none, circle, polygon};
-				}
-				private {/*☀}*/
-					this (T) (cpSpace* space, T geometry, float mass, vec position, vec velocity, float damping, Body.Id id)
-						in {/*...}*/
-							assert (mass == mass);
-							assert (position == position);
-							assert (velocity == velocity || mass == float.infinity);
-							assert (geometry.length > 2);
-							auto bounds = geometry.reduce!(
-								(u,v) => vec(max(u.x, v.x), max(u.y, v.y)),
-								(u,v) => vec(min(u.x, v.x), min(u.y, v.y)),
-							);
-							assert ((bounds[1]-bounds[0]).norm > float.epsilon,
-								"attempted to create physics body with zero volume");
-						}
-						body {/*...}*/
-							this.id = id;
-							with (TrueBody.Type) {/*deduce shape}*/
-								import std.math;
 
-								auto center = geometry.mean;
-								auto V = geometry.map!(v => v - center).array;
-								auto segs = V.zip (V[1..$]~V[0..1]).map!(v => (v[1]-v[0]).unit).array;
-								auto diff = segs.zip (segs[1..$]~segs[0..1]);
-
-								auto dot = diff.map!(v => v[0].dot(v[1]));
-								auto μ_dot = dot.mean;
-								auto σ_dot = dot.std_dev (μ_dot);
-
-								auto det = diff.map!(v => v[0].det(v[1]));
-								auto σ_det = det.std_dev;
-
-								{/*assign shape type}*/
-									assert (σ_det.between ( 0.0, 1.0)
-										 && σ_dot.between ( 0.0, 1.0)
-										 && μ_dot.between (-1.0, 1.0)
-									);
-
-									if (// as we walk along the boundary of the polygon, we're ...
-										σ_det <= 0.05 // turning in a consistent direction
-									 && σ_dot <= 0.05 // turning at a consistent angle
-									 && μ_dot >= 0.40 // turning at angles < 66° on average
-									) this.type = circle;
-									else this.type = polygon;
-								}
-								vec offset = mass == float.infinity? center: vec(0);
-								final switch (type)
-									{/*create simulation data}*/
-										case circle:
-											{/*...}*/
-												auto radius = V.radius;
-												if (mass != float.infinity)
-													body_ptr[id] = cp.BodyNew (mass, cp.MomentForCircle (mass, 0.0, radius, cpvzero));
-												else body_ptr[id] = cp.SpaceGetStaticBody (space);
-												shape_ptr[id] = cp.CircleShapeNew (body_ptr[id], radius, offset.to_cpv);
-												break;
-											}
-										case polygon:
-											{/*...}*/
-												auto len = cast(int) V.length;
-												auto poly = cast(cpVect*) V.ptr;
-												auto hull = new cpVect[len];
-												len = cp.ConvexHull (len, poly, hull.ptr, null, 0.0);
-												if (mass != float.infinity)
-													body_ptr[id] = cp.BodyNew (mass, cp.MomentForPoly (mass, len, hull.ptr, cpvzero));
-												else body_ptr[id] = cp.SpaceGetStaticBody (space);
-												shape_ptr[id] = cp.PolyShapeNew (body_ptr[id], len, hull.ptr, offset.to_cpv);
-												break;
-											}
-										case none: assert (null);
-									}
-							}
-							{/*add to space}*/
-								if (mass != float.infinity)
-									cp.SpaceAddBody (space, body_ptr[id]);
-								cp.SpaceAddShape (space, shape_ptr[id]);
-							}
-							{/*set properties}*/
-								union Cast {Body.Id id; void* ptr;}
-								cp.BodySetUserData (body_ptr[id], Cast(id).ptr);
-								cp.ShapeSetUserData (shape_ptr[id], Cast(id).ptr);
-								if (mass != float.infinity)
-									{/*...}*/
-										this.position = position;
-										this.velocity = velocity;
-										this.damping = damping;
-									}
-								else {/*static body initial displacement correction}*/
-									assert (cp.BodyIsStatic (body_ptr[id]));
-									assert (this.position == vec(0));
-									this.last_position = -position;
-								}
-							}
+					static opCall (T)(T id)
+						if (T.sizeof <= UserId.sizeof)
+						{/*...}*/
+							union Cast {T _; UserId output;}
+							return Cast(id).output;
 						}
+
+					T opCast (T)()
+						if (T.sizeof <= UserId.sizeof)
+						{/*...}*/
+							union Cast {UserId _; T output;}
+							return Cast(this).output;
+						}
+
+					mixin CompareBy!transfer;
+
+					static assert (size_t.sizeof == (void*).sizeof);
 				}
-			}
+		}
 		public:
 		public {/*queries}*/
+			// REVIEW its uncertain which queries, if any, are safe to cast while the simulator is iterating.
+			// this problem may require fibers and some kind of traffic control system
+			// but how do i test?
 			private struct Query
 				{/*...}*/
 					auto type = Type.none;
-					Body.Id id;
+					UserId id;
 					vec[2] args;
 					enum Type {
 						/*error*/ 		none, 
 						/*intrinsic*/ 	mass, position, velocity, damping, applied_force, 
-						/*historic*/	displacement, 
-						/*collision*/	colliding, layer,
+						///*historic*/	displacement, XXX
+						/*collision*/	/*colliding,XXX*/ layer,
 						/*spatial*/ 	box, ray, ray_exclusive
 					}
 					public {/*sort}*/
-						int opCmp (ref Query Q) const
-							{/*...}*/
-								return this.id < Q.id;
-							}
+						mixin CompareBy!id;
 					}
 				}
 			struct Incidence
 				{/*...}*/
-					Body.Id body_id;
+					UserId body_id;
 					vec surface_normal;
-					float ray_time;
+					double ray_time;
 				}
-			@Query Body.Id[] box_query (vec[2] corners)
+			@Query UserId[] box_query (vec[2] corners)
 				in {/*...}*/
-					assert (this.is_running, "attempted query before starting service (currently "~this.status.to!string~")");
+					assert (this.is_running, "attempted query before starting service (currently "~this.status.text~")");
 				}
 				body {/*...}*/
 					Query query =
@@ -641,14 +142,14 @@ final class Physics: Service
 							args: corners
 						};
 					send (query);
-					Body.Id[] result;
-					receive ((immutable Body.Id[] reply) 
+					UserId[] result;
+					receive ((immutable UserId[] reply)
 						{result = reply.dup;});
 					return result;
 				}
 			@Query Incidence ray_cast (vec[2] ray)
 				in {/*...}*/
-					assert (this.is_running, "attempted query before starting service (currently "~this.status.to!string~")");
+					assert (this.is_running, "attempted query before starting service (currently "~this.status.text~")");
 				}
 				body {/*...}*/
 					Query query =
@@ -662,14 +163,14 @@ final class Physics: Service
 						{result = reply;});
 					return result;
 				}
-			@Query Incidence ray_query (Body.Id id, vec[2] ray)
+			@Query Incidence ray_query (T)(T id, vec[2] ray)
 				in {/*...}*/
 					assert (this.is_running, "attempted query before starting service (currently "~this.status.to!string~")");
 				}
 				body {/*...}*/
 					Query query =
 						{/*...}*/
-							id: id,
+							id: UserId (id),
 							type: Query.Type.ray,
 							args: ray
 						};
@@ -679,14 +180,14 @@ final class Physics: Service
 						{result = reply;});
 					return result;
 				}
-			@Query Incidence ray_cast_excluding (Body.Id id, vec[2] ray)
+			@Query Incidence ray_cast_excluding (T)(T id, vec[2] ray)
 				in {/*...}*/
 					assert (this.is_running, "attempted query before starting service (currently "~this.status.to!string~")");
 				}
 				body {/*...}*/
 					Query query =
 						{/*...}*/
-							id: id,
+							id: UserId (id),
 							type: Query.Type.ray_exclusive,
 							args: ray
 						};
@@ -700,11 +201,11 @@ final class Physics: Service
 		public {/*uploads}*/
 			private struct Upload
 				{/*...}*/
-					Body.Id id;
-					float mass;
+					UserId id; // wierd
+					double mass;
 					vec position;
 					vec velocity;
-					float damping;
+					double damping;
 					public {/*vertices}*/
 						uint index;
 						uint length;
@@ -762,7 +263,10 @@ final class Physics: Service
 		public {/*ctor}*/
 			this ()
 				{/*...}*/
-					vertices = new shared DoubleBuffer!(vec, 2^^12);
+					buffer.initialize;
+					bodies = Directory!(Body, UserId) ();
+					shape_id_memory = Allocator!ShapeId ();
+					geometry_buffer = Allocator!vec ();
 				}
 		}
 		protected:
@@ -776,36 +280,30 @@ final class Physics: Service
 				}
 			bool process ()
 				{/*...}*/
-					mixin (profiler);
-					{/*record histories}*/
-						foreach (ref rigid_body; bodies.byValue)
-							rigid_body.last_position = rigid_body.position;
-					}
 					{/*process uploads}*/
-						vertices.swap;
-						auto vertex_pool = vertices.rear[];
-						foreach (upload; uploads)
+						buffer.swap;
+						auto vertex_pool = buffer.vertices.rear[];
+						foreach (upload; buffer.uploads.rear[])
 							{/*...}*/
 								auto i = upload.index;
 								auto n = upload.length;
-								auto temp = TrueBody (
+								auto temp = Body (
 									space,
-									vertex_pool[i..i+n], 
 									upload.mass, 
 									upload.position, 
 									upload.velocity, 
 									upload.damping, 
-									upload.id
+									upload.id,
+									vertex_pool[i..i+n], 
 								);
 								bodies[upload.id] = temp;
-								temp.id = Body.Id.init;
+								temp.body_id = BodyId.init; // REVIEW
 							}
-						uploads.clear ();
 					}
 					cp.SpaceStep (space, Δt);
-					t++;
+					++t;
 					{/*postprocess}*/
-						foreach (ref dynamic_body; bodies.byValue)
+						foreach (ref dynamic_body; bodies)
 							with (dynamic_body) if (damping > 0.0)
 								velocity = velocity*(1.0 - damping);
 					}
@@ -814,32 +312,26 @@ final class Physics: Service
 			bool listen ()
 				{/*...}*/
 					bool listening = true;
-					mixin(profiler!`prof1`);
 
 					auto proceed (bool _) 
 						{/*...}*/
-					mixin (profiler);
 							listening = false;
 						}
 					auto upload (Upload upload)
 						{/*...}*/
-					mixin (profiler);
-							uploads ~= upload; 
+							buffer.uploads ~= upload; 
 							reply (true);
 						}
-					auto remove (Body.Id id)
+					auto remove (UserId id)
 						{/*...}*/
-					mixin (profiler);
 							bodies.remove (id);
 							reply (true);
 						}
 					auto query (Query query)
 						{/*...}*/
-					mixin (profiler!`prof3`);
-							static Body.Id get_id (cpShape* shape)
+							static auto get_id (cpShape* shape)
 								{/*...}*/
-					mixin(profiler!`prof2`);
-									return cast(Body.Id)cast(long)(cp.ShapeGetUserData (shape));
+									return UserId (cp.ShapeGetUserData (shape));
 								}
 							auto box_query (Query query)
 								in {/*...}*/
@@ -847,8 +339,7 @@ final class Physics: Service
 										assert (c.x == c.x && c.y == c.y);
 								}
 								body {/*...}*/
-					mixin(profiler!`prof2`);
-									Body.Id[] bodies;
+									UserId[] bodies; // REFACTOR
 									auto corners = query.args;
 
 									auto a = corners[0];
@@ -860,14 +351,13 @@ final class Physics: Service
 
 									cp.SpaceBBQuery (space, box, layers, group, 
 										(cpShape* shape, void* bodies) 
-											{(*cast(Body.Id[]*) bodies) ~= get_id (shape);},
+											{(*cast(UserId[]*) bodies) ~= get_id (shape);}, // REFACTOR gross
 										&bodies
 									);
-									return bodies.map!(ptr => cast(immutable) ptr).array.idup;
+									return bodies.map!(ptr => cast(immutable) ptr).array.idup; // REFACTOR super gross
 								}
 							auto ray_query (Query query)
 								{/*...}*/
-					mixin(profiler!`prof2`);
 									auto id = query.id;
 									auto ray = query.args;
 
@@ -876,19 +366,19 @@ final class Physics: Service
 
 									cpSegmentQueryInfo info;
 
-									if (id != Body.Id.init)
-										cp.ShapeSegmentQuery (shape_ptr[id], ray[0].to_cpv, ray[1].to_cpv, &info);
+									if (id != UserId.init)
+										foreach (shape; bodies[id].shape_ids)
+											cp.ShapeSegmentQuery (shape, ray[0].to_cpv, ray[1].to_cpv, &info);
 									else cp.SpaceSegmentQueryFirst (space, ray[0].to_cpv, ray[1].to_cpv, 
 										layers, group, &info
 									);
 
 									if (info.shape)
 										return Incidence (get_id (info.shape), info.n.vec, info.t);
-									else return Incidence (Body.Id.init, 0.vec, 1.0);
+									else return Incidence (UserId.init, 0.vec, 1.0);
 								}
 							auto ray_exclusive_query (Query query)
 								{/*...}*/
-					mixin(profiler!`prof2`);
 									auto id = query.id;
 									auto ray = query.args;
 
@@ -908,7 +398,7 @@ final class Physics: Service
 
 									if (info.shape)
 										return Incidence (get_id (info.shape), info.n.vec, info.t);
-									else return Incidence (Body.Id.init, 0.vec, 1.0);
+									else return Incidence (UserId.init, 0.vec, 1.0);
 								}
 							const string get (string prop)()
 								{/*...}*/
@@ -928,21 +418,21 @@ final class Physics: Service
 								mixin (get!`damping`);
 								mixin (get!`applied_force`);
 								/*historic*/
-								mixin (get!`displacement`);
+							//	mixin (get!`displacement`); XXX
 								/*spatial*/
 								mixin (ask!`box`);
 								mixin (ask!`ray`);
 								mixin (ask!`ray_exclusive`);
 								/*misc*/
-								mixin (get!`colliding`);
+								//mixin (get!`colliding`); XXX
 								mixin (get!`layer`);
 								/*error*/
 								case none: assert (null);
 							}
 						}
-					auto act (Body.Id id, Body.Action action)
+					static if (0) //XXX
+					auto act (Id id, Body.Action action)
 						{/*...}*/
-					mixin (profiler);
 							assert (id in body_ptr, "body "~to!string(id)~" does not exist");
 							import std.string: cap = capitalize;
 							const string apply (string op) ()
@@ -958,10 +448,9 @@ final class Physics: Service
 									}
 							reply (true);
 						}
-					auto set (Body.Id id, string property, vec value)
+					auto set (T)(T id, string property, vec value)
 						{/*...}*/
-					mixin (profiler);
-							assert (id in body_ptr, "body "~to!string(id)~" does not exist");
+							assert (id in bodies, "body "~id.text~" does not exist");
 							const string set (string prop) ()
 								{/*...}*/
 									return q{case }`"`~prop~`"`q{: bodies[id].}~prop~q{ = value; break;};
@@ -975,9 +464,8 @@ final class Physics: Service
 								}
 							reply (true);
 						}
-					auto debug_query (Body.Id id, string query)
+					auto debug_query (T)(T id, string query)
 						{/*...}*/
-					mixin (profiler);
 							assert (id in bodies, "queried body "~to!string(id)~" not uploaded");
 							debug const string get (string prop) ()
 								{/*...}*/
@@ -991,7 +479,7 @@ final class Physics: Service
 							else assert (null);
 						}
 
-					receive (&proceed, &upload, &remove, &query, &act, &set, &debug_query);
+					receive (&proceed, &upload, &remove, &query /*, &act, &set, &debug_query XXX*/);
 
 					return listening;
 				}
@@ -1005,19 +493,235 @@ final class Physics: Service
 					return "physics";
 				}
 		}
-		private:
-		private {/*data}*/
-			shared DoubleBuffer!(vec, 2^^12) vertices;
+		private: 
+		static {/*data}*/ // TODO maybe __gshared
+			Space space;
+			Directory!(Body, UserId) 
+				bodies;
+			Allocator!ShapeId 
+				shape_id_memory;
+			Allocator!vec 
+				geometry_buffer;
+			shared BufferGroup!(
+				DoubleBuffer!(vec, 2^^12),
+					`vertices`,
+				DoubleBuffer!(Upload, 2^^10),
+					`uploads`,
+			) buffer;
 		}
-		static:
-		static {/*context}*/
-			import dchip.all;
-			cpSpace* space;
-			TrueBody[Body.Id] bodies;
-			cpBody*[Body.Id]   body_ptr;
-			cpShape*[Body.Id]  shape_ptr;
-			Upload[] uploads;
-		}
+		struct Body
+			{/*...}*/
+				BodyId body_id;
+				Resource!ShapeId shape_ids;
+
+				double velocity_damping = 0.0;
+
+				enum Type {none, circle, polygon}
+
+				public:
+				@property {/*get}*/
+					double mass ()
+						{/*...}*/
+							return cp.BodyGetMass (body_id);
+						}
+
+					vec position ()
+						{/*...}*/
+							return vec(cp.BodyGetPos (body_id));
+						}
+
+					vec velocity ()
+						{/*...}*/
+							return vec(cp.BodyGetVel (body_id));
+						}
+
+					double damping ()
+						{/*...}*/
+							return velocity_damping;
+						}
+
+					uint layer ()
+						{/*...}*/
+							return cp.ShapeGetLayers (shape_ids[0]); // REVIEW
+						}
+
+					vec applied_force ()
+						{/*...}*/
+							return vec(cp.BodyGetForce (body_id));
+						}
+				}
+				private:
+				@property {/*set}*/
+					void position (vec new_position)
+						{/*...}*/
+							cp.BodySetPos (body_id, new_position.to_cpv);
+							auto space = cp.BodyGetSpace (body_id);
+							cp.SpaceReindexShapesForBody (space, body_id);
+						}
+
+					void velocity (vec new_velocity)
+						in {/*...}*/
+							assert (mass != double.infinity);
+						}
+						body {/*...}*/
+							cp.BodySetVel (body_id, new_velocity.to_cpv);
+						}
+
+					void damping (double new_damping)
+						in {/*...}*/
+							assert (mass != double.infinity);
+						}
+						body {/*...}*/
+							velocity_damping = new_damping;
+						}
+
+					void applied_force (vec new_force)
+						{/*...}*/
+							cp.BodySetForce (body_id, new_force.to_cpv);
+						}
+
+					void layer (uint new_layer)
+						{/*...}*/
+							foreach (shape; shape_ids)
+								cp.ShapeSetLayers (shape, new_layer); // REVIEW
+						}
+				}
+				private {/*☀/~}*/
+					this (R...)(cpSpace* space, double mass, vec position, vec velocity, double damping, UserId user_id, R geometries)
+						if (allSatisfy!(is_geometric, R))
+						in {/*...}*/
+							assert (mass == mass);
+							assert (position == position);
+							assert (velocity == velocity || mass == double.infinity);
+							foreach (geometry; geometries)
+								{/*...}*/
+									assert (geometry.length > 2);
+									auto bounds = geometry.reduce!(
+										(u,v) => vec(max(u.x, v.x), max(u.y, v.y)),
+										(u,v) => vec(min(u.x, v.x), min(u.y, v.y)),
+									);
+									assert ((bounds[1]-bounds[0]).norm > double.epsilon,
+										"attempted to create physics body with zero volume");
+								}
+						}
+						body {/*...}*/
+							if (mass == double.infinity)
+								this.body_id = cp.BodyNewStatic;
+							else this.body_id = cp.BodyNew (mass, 0.0);
+
+							cp.SpaceAddBody (space, body_id);
+							this.position = position;
+							this.velocity = velocity;
+							this.damping  = damping;
+							cp.BodySetUserData (body_id, user_id.storage);
+
+							auto areas = only (geometries).map!area;
+							auto Σ_areas = sum (areas);
+							
+							this.shape_ids = shape_id_memory.allocate (R.length);
+							foreach (i, geometry; geometries)
+								{/*...}*/
+									ShapeId shape;
+									double moment;
+
+									auto component_mass = mass * areas[i] / Σ_areas;
+
+									with (Body.Type) final switch (deduce_shape (geometry))
+										{/*create simulation data}*/
+											case circle:
+												{/*...}*/
+													auto radius = geometry.radius;
+													auto center = geometry.mean.to_cpv;
+
+													moment = cp.BodyGetMoment (body_id) + cp.MomentForCircle (component_mass, 0.0, radius, center);
+													this.shape_ids ~= cp.CircleShapeNew (body_id, radius, center);
+
+													break;
+												}
+											case polygon:
+												{/*...}*/
+													auto len = geometry.length.to!int;
+													auto poly = geometry_buffer.save (geometry);
+													auto hull = geometry_buffer.allocate (len);
+
+													cp.ConvexHull (len, cast(cpVect*)poly[].ptr, cast(cpVect*)hull[].ptr, null, 0.0);
+
+													moment = cp.BodyGetMoment (body_id) + cp.MomentForPoly (component_mass, len, cast(cpVect*)hull[].ptr, cpvzero);
+													this.shape_ids ~= cp.PolyShapeNew (body_id, len, cast(cpVect*)hull[].ptr, cpvzero);
+
+													poly.free;
+													hull.free;
+
+													break;
+												}
+											case none: assert (null);
+										}
+
+									cp.BodySetMoment (body_id, moment);
+									cp.SpaceAddShape (space, shape);
+									cp.ShapeSetUserData (shape, user_id.storage);
+								}
+						}
+
+					void free ()
+						{/*...}*/
+							auto space = cp.BodyGetSpace (body_id);
+
+							foreach (shape; shape_ids[])
+								{/*...}*/
+									cp.SpaceRemoveShape (space, shape);
+									cp.ShapeFree (shape);
+								}
+							shape_ids.free;
+
+							cp.SpaceRemoveBody (space, body_id);
+							cp.BodyFree (body_id);
+						}
+				}
+				static {/*shape deduction}*/
+					auto deduce_shape (T)(T geometry)
+						if (is_geometric!T)
+						{/*...}*/
+							auto center = geometry.mean;
+							auto vs = geometry.map!(v => v - center);
+							auto dirs = geometry.zip (geometry.shift).map!(v => (v[1]-v[0]).unit);
+							auto turn = dirs.zip (dirs.shift);
+
+							auto dot = turn.map!(v => v[0].dot(v[1]));
+							auto μ_dot = dot.mean;
+							auto σ_dot = dot.std_dev (μ_dot);
+
+							auto det = turn.map!(v => v[0].det(v[1]));
+							auto σ_det = det.std_dev;
+
+							assert (σ_det.between ( 0.0, 1.0)
+								 && σ_dot.between ( 0.0, 1.0)
+								 && μ_dot.between (-1.0, 1.0)
+							);
+
+							if (// as we walk along the boundary of the polygon, we're ...
+								σ_det <= 0.05 // turning in a consistent direction
+							 && σ_dot <= 0.05 // turning at a consistent angle
+							 && μ_dot >= 0.40 // turning at angles < 66° on average
+							) return Type.circle;
+							
+							else return Type.polygon;
+						}
+				}
+			}
+	}
+
+auto area (R)(R polygon) // TODO unittest
+	if (is_geometric!R)
+	{/*...}*/
+		return 0.5 * Σ (polygon.zip (polygon.shift).map!(v => v[0].det (v[1])));
+	}
+auto shift (R)(R range, long positions = 1) // TODO unittest
+	{/*...}*/
+		auto n = range.length;
+		auto i = (positions + n) % n;
+		assert (i > 0);
+		return range.cycle[i..n+i];
 	}
 
 unittest
@@ -1027,13 +731,10 @@ unittest
 
 		mixin (report_test!`multithreaded physics`);
 		static void test () {/*...}*/
-		mixin(profiler);
 			scope lP = new Physics;
 			auto P = cast(shared)lP;
 			P.initialize ();
-		profiler.checkpoint (0);
 			P.process ();
-		profiler.checkpoint (1);
 			P.terminate ();
 			try ownerTid.send (true);
 			catch (TidMissingException ex){}

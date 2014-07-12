@@ -205,10 +205,9 @@ struct Allocator (T, Id = Index)
 			struct ResourceHandle
 				{/*...}*/
 					private {/*contract}*/
-						static assert (not (isOutputRange!(ResourceHandle, T)));
 						static assert (not (isInputRange!ResourceHandle));
 						static assert (isRandomAccessRange!(typeof(this[])));
-						static assert (isOutputRange!(typeof(this[]), T));
+			//			static assert (isOutputRange!(ResourceHandle, T)); //TEMP problems with units
 					}
 					public:
 					public {/*[i]}*/
@@ -301,6 +300,12 @@ struct Allocator (T, Id = Index)
 					public {/*~=}*/
 						@disable auto opBinary (string op: `~`, U)(U);
 						auto opOpAssign (string op: `~`, U)(U that)
+							{/*...}*/
+								this.put (that);
+							}
+					}
+					public {/*output}*/
+						auto put (U)(U that)
 							in {/*...}*/
 								static if (hasLength!U || isForwardRange!U)
 									assert (length + that.length <= allocator.capacity_of (id), 

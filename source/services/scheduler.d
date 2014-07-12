@@ -81,10 +81,7 @@ class Scheduler: Service
 						struct Event
 							{/*...}*/
 								public:
-								public {/*sort}*/
-									int opCmp (ref const Event that) const
-										{return this.time.opCmp (that.time);}
-								}
+								mixin CompareBy!time;
 								private:
 								private {/*data}*/
 									Tid tid;

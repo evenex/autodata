@@ -144,12 +144,12 @@ public {/*map}*/
 }
 public {/*zip}*/
 	/*
-	The ZipView merges multiple Views into a single View
-		(of Tuples of the ElementTypes of the input Views).
+	The ZipView merges multiple Views in parallel
+		(as Tuples of the ElementTypes of the input Views).
 	*/
 	auto zip_view (R...)(R ranges)
 		if (R.length > 1
-		&& allSatisfy!(templateOr!(isRandomAccessRange, isArray), R))
+		&& allSatisfy!(Or!(isRandomAccessRange, isArray), R))
 		{/*...}*/
 			return ZipView!(staticMap!(ElementType, R)) (ranges);
 		}
@@ -170,8 +170,8 @@ public {/*zip}*/
 						mixin(q{return } ~ opAccess_build_tuple);
 					}
 			}
-			private {/*code generation}*/
-				static string ctor ()
+			static {/*code generation}*/
+				string ctor ()
 					{/*...}*/
 						return q{
 							this } ~ctor_template_args ~ ctor_function_args~ q{
@@ -184,7 +184,7 @@ public {/*zip}*/
 								}`}`q{
 						};
 					}
-				static string ctor_template_args ()
+				string ctor_template_args ()
 					{/*...}*/
 						string code;
 
@@ -193,7 +193,7 @@ public {/*zip}*/
 
 						return `(` ~code[0..$-2]~ `)`;
 					}
-				static string ctor_function_args ()
+				string ctor_function_args ()
 					{/*...}*/
 						string code;
 
@@ -202,7 +202,7 @@ public {/*zip}*/
 
 						return `(` ~code[0..$-2]~ `)`;
 					}
-				static string ctor_in_contract ()
+				string ctor_in_contract ()
 					{/*...}*/
 						string code;
 
@@ -211,7 +211,7 @@ public {/*zip}*/
 
 						return code;
 					}
-				static string ctor_set_views ()
+				string ctor_set_views ()
 					{/*...}*/
 						string code;
 
@@ -221,7 +221,7 @@ public {/*zip}*/
 
 						return code;
 					}
-				static string view_declarations ()
+				string view_declarations ()
 					{/*...}*/
 						string code;
 
@@ -230,7 +230,7 @@ public {/*zip}*/
 
 						return code;
 					}
-				static string opAccess_build_tuple ()
+				string opAccess_build_tuple ()
 					{/*...}*/
 						string code;
 						
@@ -243,39 +243,48 @@ public {/*zip}*/
 			mixin ViewFunctor;
 		}
 }
-public {/*static}*/
-	/* The StaticView manages a backing array accessible through the member .mutable 
-		StaticViews are not Functors. They are pinned memory, provide access through an IdentityView,
-		and must be instantiated through a constructor.
+public {/*chain}*/
+	/*
+	The ChainView merges multiple Views in series
 	*/
-	struct StaticView (T)
+	struct ChainView (T, uint n_links)
 		{/*...}*/
-			public:
-				T opAccess (Index i)
+			public {/*☀}*/
+				this (R...)(ref R ranges)
+					if (R.length == n_links)
 					{/*...}*/
-						return array[i];
-					}
+						foreach (i, ref range; ranges)
+							links[i] = view (range);
 
-				@property ref auto mutable ()
-					{/*...}*/
-						return array;
+						this.access_range (0, sum (links.map!(link => link.length)));
 					}
-				@property auto viewable ()
-					{/*...}*/
-						return view;
-					}
-				alias viewable this;
-
-				this (size_t capacity)
-					{/*...}*/
-						array = DynamicArray!T (capacity);
-						view = .view (array[]);
-					}
-			private:
-			private {/*data}*/
-				DynamicArray!T array;
-				View!T view;
 			}
+			private:
+			private {/*access}*/
+				auto opAccess (Index i)
+					{/*...}*/
+						import std.range : chain;
+
+						mixin(q{
+							return chain (} ~all_links~ q{)[i];
+						});
+					}
+			}
+			private {/*data}*/
+				IdentityView!T[n_links] links;
+			}
+			static {/*code generation}*/
+				string all_links ()
+					{/*...}*/
+						string code;
+
+						foreach (i; 0..n_links)
+							code ~= q{links[} ~i.text~ q{],	};
+
+						return code[0..$-2];
+					}
+			}
+			mixin ViewFunctor;
 		}
 }
 
@@ -362,14 +371,12 @@ private {/*functor}*/
 			}
 
 			private:
-			private {/*settings}*/
+			private {/*range}*/
 				void access_range (Index start, Index end)
 					{/*...}*/
 						this.start = start;
 						this.end = end;
 					}
-			}
-			private {/*data}*/
 				Index start;
 				Index end;
 			}

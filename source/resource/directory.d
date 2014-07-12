@@ -24,7 +24,7 @@ import math;
 
 struct Directory (T, Arg...)
 	if (Arg.length == 0 
-	|| (Arg.length == 1 && allSatisfy!(templateOr!(is_comparable, is_comparison_function), Arg)))
+	|| (Arg.length == 1 && allSatisfy!(Or!(is_comparable, is_comparison_function), Arg)))
 	{/*...}*/
 		public {/*definitions}*/
 			/* Key */
@@ -197,6 +197,10 @@ struct Directory (T, Arg...)
 				}
 		}
 		public {/*access}*/
+			ref auto opIndex (Key key)
+				{/*...}*/
+					return get (key);
+				}
 			ref auto get (Key key)
 				in {/*...}*/
 					assert (this.contains (key));
@@ -230,9 +234,11 @@ struct Directory (T, Arg...)
 						return entry.position;
 					else return -1;
 				}
-			auto opBinaryRight (string op: `in`)(Key key)
+			auto opBinaryRight (string op: `in`, U)(U key)
 				{/*...}*/
-					return search_for (key).found;
+					static if (is (U: Key))
+						return search_for (key).found;
+					else static assert (0, `cannot lookup ` ~U.stringof~ ` in ` ~typeof(this).stringof);
 				}
 			auto contains (Key key)
 				{/*...}*/

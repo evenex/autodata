@@ -49,11 +49,26 @@ debug = profiler;
 		command-based construction
 */
 
-public {/*syntax}*/
+public {/*misc}*/
 	alias τ = tuple;
+
 	const bool not (T)(const T value)
 		{/*...}*/
 			return !value;
+		}
+
+	alias And = templateAnd;
+	alias Or  = templateOr;
+	alias Not = templateNot;
+
+	/* simulate opCmp */
+	int compare (T,U)(T a, U b)
+		{/*...}*/
+			if (a < b)
+				return -1;
+			else if (a > b)
+				return 1;
+			else return 0;
 		}
 }
 public {/*debug}*/
@@ -275,29 +290,17 @@ public {/*debug}*/
 	}
 }
 public {/*search}*/
-	/* 
-		convenience function for overloading opCmp using member fields 
-	*/
-	int compare (T,U)(T a, U b)
-		{/*...}*/
-			if (a < b)
-				return -1;
-			else if (a == b)
-				return 0;
-			else return 1;
-		}
-
 	/* specify how elements are compared for equality
 	*/
 	enum EqualityPolicy
 		{/*...}*/
 			/*
-				default to opEquals, if it is defined.
+				use ==, if it is defined.
 				otherwise, elements are tested for reflexive equality 
 			*/  
 			intrinsic, 
 			/*
-				ignore opEquals and always test for reflexive equality.
+				ignore == and always test for reflexive equality.
 			*/
 			reflexive
 		}
@@ -326,7 +329,7 @@ public {/*search}*/
 		
 		equality checking is intrinsic by default, but can optionally be overridden as well.
 	*/
-	template binary_search (alias compare, EqualityPolicy matching = EqualityPolicy.intrinsic)
+	template binary_search (alias compare, EqualityPolicy equality = EqualityPolicy.intrinsic)
 		if (is_comparison_function!compare)
 		{/*...}*/
 			auto binary_search (R, T = ElementType!R)(R range, T element)
@@ -338,12 +341,12 @@ public {/*search}*/
 					long min = 0;
 					long max = range.length;
 
-					static if (hasMember!(T, `opEquals`) && matching != EqualityPolicy.reflexive)
-						bool matched (ref const T that)
+					static if (hasMember!(T, `opEquals`) && equality != EqualityPolicy.reflexive)
+						bool equal_to (ref const T that)
 							{/*...}*/
 								 return element == that;
 							}
-					else bool matched (ref const T that)
+					else bool equal_to (ref const T that)
 						{/*...}*/
 							import math : reflexively_equal;
 							return element.reflexively_equal!compare (that);
@@ -355,7 +358,7 @@ public {/*search}*/
 
 							auto mid = (max + min)/2;
 
-							if (matched (range[mid]))
+							if (equal_to (range[mid]))
 								return BinarySearchResult!T (&range[mid], mid);
 							else if (sorted (element, range[mid]))
 								max = mid;
@@ -363,7 +366,7 @@ public {/*search}*/
 								min = mid + 1;
 						}
 
-					if (min < range.length && matched (range[min]))
+					if (min < range.length && equal_to (range[min]))
 						return BinarySearchResult!T (&range[min], min);
 					else return BinarySearchResult!T (null, min);
 				}
@@ -548,7 +551,8 @@ public {/*metaprogramming}*/
 		template is_comparable (T...)
 			if (T.length == 1)
 			{/*...}*/
-				enum is_comparable = __traits(compiles, T[0].init < T[0].init);
+				const T[0] a, b;
+				enum is_comparable = __traits(compiles, a < b);
 			}
 		/* test if a range is indexable */
 		template is_indexable (R)
@@ -569,6 +573,11 @@ public {/*metaprogramming}*/
 			{/*...}*/
 				enum can_index_arrays = __traits(compiles, T[].init[T.init]);
 			}
+		/* test if a member of T is publicly accessible */
+		template is_accessible (T, string member)
+			{/*...}*/
+				enum is_accessible = mixin(q{__traits(compiles, T.} ~member~ q{)});
+			}
 	}
 	public {/*mixins}*/
 		/* a unique (up to the host type) identifier */
@@ -578,28 +587,10 @@ public {/*metaprogramming}*/
 
 				struct Id
 					{/*...}*/
-						public:
-						public {/*☀}*/
-							static auto create () nothrow
-								{/*...}*/
-									return typeof(this) (++generator);
-								}
-						}
-						public {/*comparison}*/
-							int opCmp (ref const Id that) const
-								{/*...}*/
-									if (this.id < that.id)
-										return -1;
-									else if (this.id == that.id)
-										return 0;
-									else return 1;
-								}
-							int opCmp (const Id that) const
-								{/*...}*/
-									return this.opCmp (that);
-								}
-						}
-						private:
+						static auto create () nothrow
+							{/*...}*/
+								return typeof(this) (++generator);
+							}
 						private {/*data}*/
 							static if (bit == 64)
 								ulong id;
@@ -612,6 +603,7 @@ public {/*metaprogramming}*/
 							else static assert (0);
 							__gshared typeof(id) generator;
 						}
+						mixin CompareBy!id;
 					}
 			}
 		/* applies the command pattern to a struct */
@@ -657,13 +649,13 @@ public {/*metaprogramming}*/
 				mixin(command_property_declaration);
 				mixin(command_data_declaration);
 			}
-		/* forward a foreach loop to a contained range */
-		mixin template ForwardForEach (alias range)
+		/* forward opApply (foreach) to a member */
+		mixin template IterateOver (alias range)
 			{/*...}*/
 				static assert (is(typeof(this)), `mixin requires host struct`);
 				alias Applied = typeof(range[0]);
 
-				int opApply (int delegate(ref Applied) op)
+				int opApply (scope int delegate(ref Applied) op)
 					{/*...}*/
 						int result;
 
@@ -677,7 +669,7 @@ public {/*metaprogramming}*/
 
 						return result;
 					}
-				int opApply (int delegate(size_t, ref Applied) op)
+				int opApply (scope int delegate(size_t, ref Applied) op)
 					{/*...}*/
 						int result;
 
@@ -691,14 +683,36 @@ public {/*metaprogramming}*/
 
 						return result;
 					}
-				int opApply (int delegate(ref const Applied) op) const
+				int opApply (scope int delegate(ref const Applied) op) const
 					{/*...}*/
 						return (cast()this).opApply (cast(int delegate(ref Applied)) op);
 					}
-				int opApply (int delegate(const size_t, ref const Applied) op) const
+				int opApply (scope int delegate(const size_t, ref const Applied) op) const
 					{/*...}*/
 						return (cast()this).opApply (cast(int delegate(size_t, ref Applied)) op);
 					}
+			}
+		/* forward opCmp (<,>) to a member */
+		mixin template CompareBy (alias member)
+			{/*...}*/
+				static assert (is(typeof(this)), `mixin requires host struct`);
+
+				public {/*opCmp}*/
+					int opCmp (ref const typeof(this) that) const
+						{/*...}*/
+							const string name = __traits(identifier, member);
+							mixin(q{
+								return compare (this.} ~name~ q{, that.} ~name~ q{);
+							});
+						}
+					int opCmp (const typeof(this) that) const
+						{/*...}*/
+							const string name = __traits(identifier, member);
+							mixin(q{
+								return compare (this.} ~name~ q{, that.} ~name~ q{);
+							});
+						}
+				}
 			}
 		/* enable mixin load_dynamic_library!"libname" */
 		/* which attempts to link all member extern (C) function pointers with the specified lib */
@@ -769,26 +783,33 @@ public {/*metaprogramming}*/
 		/* returns a TypeTuple of all nested structs and classes defined within T */
 		template get_substructs (T)
 			{/*...}*/
-				alias get_substructs = Filter!(templateNot!is_numerical_param, 
+				private template get_substruct (T)
+					{/*...}*/
+						template get_substruct (string member)
+							{/*...}*/
+								import std.range;
+								static immutable name = q{T.} ~member;
+
+								static if (member.empty)
+									enum get_substruct = 0;
+								
+								else static if (mixin(q{is (}~name~q{)})
+									//&& is_accessible!(T, member) // TEMP
+									&& not (mixin(q{is (}~name~q{ == T)}))
+								) {/*...}*/
+									static if (not (isBuiltinType!(mixin(name))))
+										mixin(q{
+											alias get_substruct = T.} ~member~ q{;
+										});
+								}
+								else enum get_substruct = 0;
+							}
+					}
+
+				alias get_substructs = Filter!(Not!is_numerical_param, 
 					staticMap!(get_substruct!T, __traits(allMembers, T))
 				);
 			}
-		private template get_substruct (T)
-			{/*...}*/
-				template get_substruct (string member)
-					{/*...}*/
-						import std.range;
-
-						static if (member.empty)
-							enum get_substruct = 0;
-						else static if (mixin(q{is (T.} ~member~ q{)}))
-							mixin(q{
-								alias get_substruct = T.} ~member~ q{;
-							});
-						else enum get_substruct = 0;
-					}
-			}
-
 	}
 	public {/*code generation}*/
 		/* declare variables according to format (see unittest) */

@@ -4,44 +4,89 @@ import std.conv;
 import std.typetuple;
 import std.traits;
 import utils;
+import math;
+
+alias Scalar = double;
+alias Vector = vec;
 
 public {/*mass}*/
-	auto kilogram (double scalar = 1)
+	alias Kilograms = ReturnType!kilogram;
+	alias Grams = ReturnType!gram;
+	alias kilograms = kilogram;
+	alias grams = gram;
+
+	auto kilogram (Scalar scalar = 1)
 		{/*...}*/
-			return Unit!(Kilogram, 1)(scalar);
+			return Unit!(Mass, 1)(scalar);
 		}
-	auto gram (double scalar = 1)
+	auto gram (Scalar scalar = 1)
 		{/*...}*/
 			return (scalar/1000).kilogram;
 		}
 }
 public {/*space}*/
-	auto meter (double scalar = 1)
+	alias Meters = ReturnType!meter;
+	alias Kilometers = ReturnType!kilometer;
+	alias meters = meter;
+	alias kilometers = kilometer;
+
+	auto meter (Scalar scalar = 1)
 		{/*...}*/
-			return Unit!(Meter, 1)(scalar);
+			return Unit!(Space, 1)(scalar);
 		}
-	auto kilometer (double scalar = 1) // TODO into doubles
+	auto kilometer (Scalar scalar = 1)
 		{/*...}*/
 			return scalar*1000.meter;
 		}
 }
 public {/*time}*/
-	auto second (double scalar = 1)
+	alias Seconds = ReturnType!second;
+	alias Minutes = ReturnType!minute;
+	alias Hours = ReturnType!hour;
+	alias seconds = second;
+	alias minutes = minute;
+	alias hours = hour;
+
+	auto second (Scalar scalar = 1)
 		{/*...}*/
-			return Unit!(Second, 1)(scalar);
+			return Unit!(Time, 1)(scalar);
+		}
+	auto minute (Scalar scalar = 1)
+		{/*...}*/
+			return Unit!(Time, 1)(scalar/60.0);
+		}
+	auto hour (Scalar scalar = 1)
+		{/*...}*/
+			return Unit!(Time, 1)(scalar/3600.0);
 		}
 }
 public {/*force}*/
-	auto newton (double scalar = 1)
+	alias Newtons = ReturnType!newton;
+	alias newtons = newton;
+
+	auto newton (Scalar scalar = 1)
 		{/*...}*/
 			return kilogram*meter/second/second;
 		}
 }
  
-private {/*unit analysis}*/
+public {/*unit analysis}*/
 	struct Unit (T...)
-		if (allSatisfy!(templateOr!(is_Dimension, is_numerical_param), T))
+		if (allSatisfy!(Or!(is_Dimension, is_numerical_param), T))
 		{/*...}*/
+			public {/*math overloads}*/
+				auto abs ()
+					{/*...}*/
+						import std.math;
+						return Unit (abs(scalar));
+					}
+				auto opCmp (ref const Unit that) const
+					{/*...}*/
+						return compare (this.scalar, that.scalar);
+					}
+			}
+
+			private:
 			private {/*...}*/
 				alias In_Dim = Filter!(is_Dimension, T);
 				alias In_Pow = Filter!(is_numerical_param, T);
@@ -50,7 +95,7 @@ private {/*unit analysis}*/
 				);
 			}
 
-			double scalar;
+			Scalar scalar;
 			enum UnitTrait;
 			alias Dimension = T;
 
@@ -59,6 +104,7 @@ private {/*unit analysis}*/
 				{/*...}*/
 					scalar = value;
 				}
+			public:
 			auto opUnary (string op)() const
 				{/*...}*/
 					Unit ret;
@@ -132,7 +178,15 @@ private {/*unit analysis}*/
 
 					string[] dims;
 					foreach (Dim; Dims)
-						dims ~= ` ` ~ Dim.stringof.toLower;
+						{/*...}*/
+							static if (is (Dim == Space))
+								dims ~= `m`;
+							else static if (is (Dim == Time))
+								dims ~= `s`;
+							else static if (is (Dim == Mass))
+								dims ~= `kg`;
+						}
+
 					auto powers = [Filter!(is_numerical_param, T)];
 
 					auto sorted_by_descending_power = zip (dims, powers)
@@ -161,12 +215,12 @@ private {/*unit analysis}*/
 							}
 						}
 
-					dstring output = scalar.to!dstring;
+					dstring output = scalar.to!dstring ~ ` `;
 
 					foreach (dim; numerator)
 						output ~= dim[0].to!dstring ~ to_superscript (dim[1]);
 
-					output ~= denominator.length? ` /` : ``;
+					output ~= denominator.length? `/` : ``;
 
 					foreach (dim; denominator)
 						output ~= dim[0].to!dstring ~ to_superscript (dim[1]);
@@ -175,10 +229,26 @@ private {/*unit analysis}*/
 				}
 		}
 }
+public {/*dimensions}*/
+	struct Mass
+		{/*...}*/
+			enum DimensionTrait;
+		}
+	struct Space
+		{/*...}*/
+			enum DimensionTrait;
+		}
+	struct Time
+		{/*...}*/
+			enum DimensionTrait;
+		}
+}
 private {/*code generation}*/
 	auto combine_dimension (alias op, T, U)()
 		if (allSatisfy!(is_Unit, T, U))
 		{/*...}*/
+			import std.range;
+
 			static auto code ()()
 				{/*...}*/
 					alias T_Dim = Filter!(is_Dimension, T.Dimension);
@@ -208,24 +278,13 @@ private {/*code generation}*/
 					return code;
 				}
 
-			mixin(q{
+			static if (code.empty)
+				Scalar ret;
+			else mixin(q{
 				Unit!(} ~ code ~ q{) ret;
 			});
+
 			return ret;
-		}
-}
-private {/*dimensions}*/
-	struct Kilogram
-		{/*...}*/
-			enum DimensionTrait;
-		}
-	struct Meter
-		{/*...}*/
-			enum DimensionTrait;
-		}
-	struct Second
-		{/*...}*/
-			enum DimensionTrait;
 		}
 }
 private {/*traits}*/
@@ -270,19 +329,25 @@ private {/*traits}*/
 				}
 		}
 }
+private {/*forwarding}*/
+	ref Scalar scalar (ref Scalar s)
+		{/*...}*/
+			return s;
+		}
+}
 
 unittest
 	{/*...}*/
-		auto x = 10.meter;
-		auto y = 5.second;
+		auto x = 10.meters;
+		auto y = 5.seconds;
 
 		static assert (not (is_equivalent_Unit!(typeof(x), typeof(y))));
 		static assert (not (__traits(compiles, x + y)));
 		static assert (__traits(compiles, x * y));
 
-		auto z = 600.meter/second;
+		auto z = 600.meters/second;
 
 		auto w = z + x/y;
 
-		assert (w == 602.meter/second);
+		assert (w == 602.meters/second);
 	}

@@ -10,14 +10,8 @@ import math;
 
 private import services.service;
 
-template is_camera (Cam)
-	{/*...}*/
-		const bool is_camera = __traits(compiles, Cam.is_camera);
-	}
-
 public {/*mappings}*/
 	vec to_view_space (Cam)(vec from_world_space, Cam camera) pure
-		if (is_camera!Cam)
 		{/*...}*/
 			auto v = from_world_space;
 			auto c = camera.world_center; 
@@ -25,12 +19,11 @@ public {/*mappings}*/
 			return (v-c)/s;
 		}
 	auto to_view_space (T, Cam)(T from_world_space, Cam camera)
-		if (is_geometric!T && is_camera!Cam)
+		if (is_geometric!T)
 		{/*...}*/
 			return from_world_space.map!(v => v.to_view_space (camera));
 		}
 	vec to_world_space (Cam)(vec from_view_space, Cam camera) pure
-		if (is_camera!Cam)
 		{/*...}*/
 			auto v = from_view_space;
 			auto c = camera.world_center;
@@ -38,7 +31,7 @@ public {/*mappings}*/
 			return v*s+c;
 		}
 	auto to_world_space (T, Cam)(T from_view_space, Cam camera)
-		if (is_geometric!T && is_camera!Cam)
+		if (is_geometric!T)
 		{/*...}*/
 			return from_view_space.map!(v => v.to_world_space (camera));
 		}
@@ -46,7 +39,7 @@ public {/*mappings}*/
 
 class Camera
 	{/*...}*/
-		alias Capture = Physics.Body.Id;
+		alias Capture = Physics.UserId;
 		public {/*controls}*/
 			void set_program (void delegate(Capture) program)
 				{/*...}*/
@@ -93,7 +86,6 @@ class Camera
 			void delegate(Capture) program;
 		}
 		private {/*properties}*/
-			enum is_camera;
 			vec world_center = 0.vec;
 			vec world_scale = 1.vec;
 			vec[2] view_bounds ()

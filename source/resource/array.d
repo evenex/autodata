@@ -48,7 +48,7 @@ struct StaticArray (T)
 				}
 		}
 		public {/*iteration}*/
-			mixin ForwardForEach!opSlice;
+			mixin IterateOver!opSlice;
 		}
 		public {/*ctor/dtor}*/
 			this (size_t length)
@@ -164,42 +164,7 @@ struct DynamicArray (T)
 				}
 		}
 		public {/*iteration}*/
-			int opApply (int delegate(ref T) op)
-				{/*...}*/
-					int result;
-
-					for (auto i = 0; i < length; ++i)
-						{/*...}*/
-							result = op (array[i]);
-
-							if (result) 
-								break;
-						}
-
-					return result;
-				}
-			int opApply (int delegate(size_t, ref T) op)
-				{/*...}*/
-					int result;
-
-					for (auto i = 0; i < length; ++i)
-						{/*...}*/
-							result = op (i, array[i]);
-
-							if (result) 
-								break;
-						}
-
-					return result;
-				}
-			int opApply (int delegate(ref const T) op) const
-				{/*...}*/
-					return (cast()this).opApply (cast(int delegate(ref T)) op);
-				}
-			int opApply (int delegate(const size_t, ref const T) op) const
-				{/*...}*/
-					return (cast()this).opApply (cast(int delegate(size_t, ref T)) op);
-				}
+			mixin IterateOver!opSlice;
 		}
 		public {/*ctor}*/
 			this (size_t capacity)

@@ -12,10 +12,11 @@ import math;
 
 import services.physics;
 import models.integrator;
+import models.entity;
 
 class Ballistic
 	{/*...}*/
-		private alias Body = Physics.Body.Id;
+		private alias Body = Entity.Id;
 
 		static immutable critical_speed = 100.0; // m/s
 		static immutable max_flight_time = 1.2; // s
@@ -185,7 +186,7 @@ class Ballistic
 					float duration;
 
 					bool resulted_in_impact;
-					Body impact_body;
+					Entity.Id impact_body;
 					vec impact_normal;
 					
 					this (Ballistic model, ref Projectile projectile, double max_duration)
@@ -209,7 +210,7 @@ class Ballistic
 							auto Δx = projectile.velocity * max_duration;
 							auto trace = model.world.ray_cast_excluding (projectile.source, [x, x+Δx]); // BUG turns out, array literals will trigger a heap allocation
 							auto distance_to_impact = Δx.norm * trace.ray_time;
-							this.impact_body = trace.body_id;
+							this.impact_body = trace.body_id.to!(Entity.Id);
 							this.impact_normal = trace.surface_normal;
 
 							auto m = projectile.mass;
@@ -396,8 +397,6 @@ class Ballistic
 			Tracer tracer;
 			final class Tracer
 				{/*...}*/
-					private alias Id = Physics.Body.Id;
-
 					import services.display;
 					import tools.camera;
 					import tools.scribe;
