@@ -17,25 +17,25 @@ import resource.buffer;
 import resource.directory;
 import resource.allocator;
 
-import models.model;
+import models.aspect;
 // TODO full conversion to doubles. only openGL really needs 32-bit floats, and we can convert on-the-fly when we write to the output buffer
 // TODO lazy parameters for all ops which move data (like add and append)
 
 final class Physical
 	{mixin Model;/*}*/
-	//	alias Position = Vec2!Meters;
-	//	alias Velocity = Vec2!(typeof(meters/second));
+		alias Position = Vec2!Meters;
+		alias Velocity = Vec2!(typeof(meters/second));
 
 		@(2^^8)
 		@Aspect struct Body
 			{/*...}*/
-				@(2^^16) double[] geometry;
-				double position;
-				double velocity;
-				double mass;
-				double damping;
-				double elevation;
-				double height;
+				@(2^^16) Position[] geometry;
+				Position position;
+				Velocity velocity;
+				Kilograms mass;
+				Scalar damping;
+				Meters elevation;
+				Meters height;
 			}
 
 		// TODO aspect stuff
@@ -47,7 +47,16 @@ final class Physical
 			{/*...}*/
 				
 			}
+
+		Physics world;
+
+		void initialize () {}
+		void update () {}
 	}
+		// TEMP make a dummy model and assert this stuff so we know when Model breaks
+		static assert (is(Physical.BodyBack));
+		static assert (is(typeof(Physical.BodyBack.mass)));
+		static assert (is(typeof(Physical.BodyFront.velocity)));
 
 private {/*library}*/
 	struct cp

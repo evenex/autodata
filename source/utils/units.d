@@ -166,7 +166,11 @@ public {/*unit analysis}*/
 						return this } ~ op ~ q{ lhs;
 					});
 				}
-			/*TODO - opAssign, opOpAssign */
+			/*TODO - opOpAssign */
+			auto opAssign (Unit that)
+				{/*...}*/
+					this.scalar = that.scalar;
+				}
 			auto toString () const
 				{/*...}*/
 					import std.algorithm;

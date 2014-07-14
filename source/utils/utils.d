@@ -551,8 +551,12 @@ public {/*metaprogramming}*/
 		template is_comparable (T...)
 			if (T.length == 1)
 			{/*...}*/
-				const T[0] a, b;
-				enum is_comparable = __traits(compiles, a < b);
+				static if (is (T[0]))
+					{/*...}*/
+						const T[0] a, b;
+						enum is_comparable = __traits(compiles, a < b);
+					}
+				else enum is_comparable = false;
 			}
 		/* test if a range is indexable */
 		template is_indexable (R)

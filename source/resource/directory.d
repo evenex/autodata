@@ -29,34 +29,60 @@ struct Directory (T, Arg...)
 		public {/*definitions}*/
 			/* Key */
 			static if (Arg.length == 0)
-				alias Key = T;
+				{enum lookup = `by item`;/*}*/
+					alias Key = T;
+				}
 			else static if (is_comparable!(Arg[0]) && not (is_comparison_function!(Arg[0])))
-				alias Key = Arg[0];
-			else alias Key = T;
+				{enum lookup = `by key`;/*}*/
+					alias Key = Arg[0];
+				}
+			else {enum lookup = `by item`;/*}*/
+				alias Key = T;
+			}
 
 			/* Entry */
-			static if (Arg.length == 0 || is (Key == T))
-				alias Entry = T;
-			else alias Entry = Tuple!(Key, T);
-
-			/* sorting */
-			static if (Arg.length == 0)
-				alias compare = less_than!T;
-			else static if (is_comparison_function!(Arg[0]))
-				alias compare = Arg[0];
-			else static if (not (is (Key == T)))
-				static auto compare (ref const Entry a, ref const Entry b)
-					{/*...}*/
-						return a[0] < b[0];
-					}
+			static if (lookup is `by item`)
+				{/*...}*/
+					alias Entry = T;
+				}
+			else static if (lookup is `by key`)
+				{/*...}*/
+					alias Entry = Tuple!(Key, T);
+				}
 			else static assert (0);
 
-			/* searching */
+			/* compare */
+			static if (lookup is `by item`)
+				{/*...}*/
+					static if (Arg.length == 0)
+						alias compare = less_than!T;
+
+					else static if (is_comparison_function!(Arg[0]))
+						alias compare = Arg[0];
+					
+					else static assert (0);
+				}
+			else static if (lookup is `by key`)
+				{/*...}*/
+					static auto compare (ref const Entry a, ref const Entry b)
+						{/*...}*/
+							return a[0] < b[0];
+						}
+				}
+			else static assert (0);
+
+			/* search */
 			auto search_for (Key key)
 				{/*...}*/
-					static if (is (Key == T))
-						return entries.binary_search!compare (key);
-					else return entries.binary_search!(compare, EqualityPolicy.reflexive) (Entry (key, T.init));
+					static if (lookup is `by item`)
+						{/*...}*/
+							return entries.binary_search!compare (key);
+						}
+					else static if (lookup is `by key`)
+						{/*...}*/
+							return entries.binary_search!(compare, EqualityPolicy.reflexive) (Entry (key, T.init));
+						}
+					else static assert (0);
 				}
 		}
 
@@ -73,9 +99,11 @@ struct Directory (T, Arg...)
 
 					foreach (ref entry; entries)
 						{/*...}*/
-							static if (is (Key == T))
+							static if (lookup is `by item`)
 								result = op (entry);
-							else result = op (entry[1]);
+							else static if (lookup is `by key`)
+								result = op (entry[1]);
+							else static assert (0);
 
 							if (result) 
 								break;
@@ -89,9 +117,11 @@ struct Directory (T, Arg...)
 
 					foreach (ref entry; entries.retro)
 						{/*...}*/
-							static if (is (Key == T))
+							static if (lookup is `by item`)
 								result = op (entry);
-							else result = op (entry[1]);
+							else static if (lookup is `by key`)
+								result = op (entry[1]);
+							else static assert (0);
 
 							if (result) 
 								break;
@@ -101,7 +131,7 @@ struct Directory (T, Arg...)
 				}
 		}
 		public {/*mutation}*/
-			static if (not (is (Key == T)))
+			static if (lookup is `by key`)
 				{/*add/append}*/
 					auto append (Key key, T entry)
 						{/*...}*/
@@ -120,9 +150,11 @@ struct Directory (T, Arg...)
 						`attempted to append entry out of order `
 						~entries.back.text~ ` ~ ` ~entry.text
 					);
-					static if (is (Key == T))
+					static if (lookup is `by item`)
 						auto exists = this.contains (entry);
-					else auto exists = this.contains (entry[0]);
+					else static if (lookup is `by key`)
+						auto exists = this.contains (entry[0]);
+					else static assert (0);
 
 					assert (not (exists),
 						`attempted to add duplicate entry ` ~entry.text
@@ -136,18 +168,22 @@ struct Directory (T, Arg...)
 				in {/*...}*/
 					assert (_entries.capacity);
 
-					static if (is (Key == T))
+					static if (lookup is `by item`)
 						auto exists = this.contains (entry);
-					else auto exists = this.contains (entry[0]);
+					else static if (lookup is `by key`)
+						auto exists = this.contains (entry[0]);
+					else static assert (0);
 
 					assert (not (exists),
 						`attempted to add duplicate entry ` ~entry.text
 					);
 				}
 				body {/*...}*/
-					static if (is (Key == T))
+					static if (lookup is `by item`)
 						auto result = search_for (entry);
-					else auto result = search_for (entry[0]);
+					else static if (lookup is `by key`)
+						auto result = search_for (entry[0]);
+					else static assert (0);
 
 					auto i = result.position;
 					
@@ -197,6 +233,11 @@ struct Directory (T, Arg...)
 				}
 		}
 		public {/*access}*/
+			ref auto opIndex (U...)(U key)
+				if (__traits(compiles, Key (key)))
+				{/*...}*/
+					return get (Key (key));
+				}
 			ref auto opIndex (Key key)
 				{/*...}*/
 					return get (key);
@@ -206,9 +247,11 @@ struct Directory (T, Arg...)
 					assert (this.contains (key));
 				}
 				body {/*...}*/
-					static if (is (Key == T))
+					static if (lookup is `by item`)
 						return *search_for (key).found;
-					else return (*search_for (key).found)[1];
+					else static if (lookup is `by key`)
+						return (*search_for (key).found)[1];
+					else static assert (0);
 				}
 			ref auto front ()
 				in {/*...}*/
@@ -238,6 +281,9 @@ struct Directory (T, Arg...)
 				{/*...}*/
 					static if (is (U: Key))
 						return search_for (key).found;
+					else static if (__traits(compiles, Key (key)))
+						return search_for (Key (key)).found;
+
 					else static assert (0, `cannot lookup ` ~U.stringof~ ` in ` ~typeof(this).stringof);
 				}
 			auto contains (Key key)
