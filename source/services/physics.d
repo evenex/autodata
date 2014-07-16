@@ -21,6 +21,7 @@ import models.aspect;
 // TODO full conversion to doubles. only openGL really needs 32-bit floats, and we can convert on-the-fly when we write to the output buffer
 // TODO lazy parameters for all ops which move data (like add and append)
 
+static if (0) {
 final class Physical
 	{mixin Model;/*}*/
 		alias Position = Vec2!Meters;
@@ -61,6 +62,7 @@ final class Physical
 		static assert (is(Physical.BodyBack));
 		static assert (is(typeof(Physical.BodyBack.mass)));
 		static assert (is(typeof(Physical.BodyFront.velocity)));
+		}
 
 private {/*library}*/
 	struct cp

@@ -68,26 +68,7 @@ final class Testing
 				int[] array;
 
 				/*
-					@Direct variables compile to variables on read and write.
-				*/
-				@Direct int direct_variable;
-				/*
-					@Direct arrays compile to Views on read and Resources on write.
-				*/
-				@Direct int[] direct_array;
-
-				/*
-					@Remote variables compile to Looks on read and cannot write.
-				*/
-				@Remote int remote_variable;
-				/*
-					@Remote arrays compile to Looks to Views on read and cannot write.
-				*/
-				@Remote int[] remote_array;
-
-				/*
 					@(n) where n ∈ ℕ specifies the capacity of the underlying Allocator.
-					@Remote arrays ignore capacity specifiers.
 				*/
 				@(2^^4) int[] array_4;
 				@(2^^8) int[] array_8;
@@ -145,79 +126,43 @@ void main ()
 		simulation = new typeof(simulation);
 
 		/* initialize Entities */
-		Entity.Id test_unit = model_entity (`test`).As!(Testing.Unit);
+		auto test_unit = model_entity (`test`).As!(Testing.Unit);
 
-		void demo_default_properties ()
-			{/*...}*/
-				{/*variables}*/
-					/* write value */
-					test_unit.write!(Testing.Unit, `variable`)(10);
-					assert (test_unit.observe!(Testing.Unit, `variable`) == 10);
+		{/*variables}*/
+			/* write value */
+			test_unit.variable (10);
+			assert (test_unit.variable == 10);
 
-					/* change source */
-					static int eleven (Entity.Id id) {return 11;}
-					test_unit.source!(Testing.Unit, `variable`)(& eleven);
-					assert (test_unit.observe!(Testing.Unit, `variable`) == 11);
+			/* change source */
+			static int eleven (Entity.Id id) {return 11;}
+			test_unit.variable(& eleven);
+			assert (test_unit.variable == 11);
 
-					/* verify source */
-					test_unit.write!(Testing.Unit, `variable`)(12);
-					assert (test_unit.observe!(Testing.Unit, `variable`) == 11);
+			/* verify source */
+			test_unit.variable (12);
+			assert (test_unit.variable == 11);
 
-					/* reset source */
-					test_unit.source!(Testing.Unit, `variable`)();
-					assert (test_unit.observe!(Testing.Unit, `variable`) == 12);
-				}
-				{/*arrays}*/
-					/* write value */
-					test_unit.write!(Testing.Unit, `array`)([10, 9, 8, 7, 6]);
-					assert (test_unit.observe!(Testing.Unit, `array`).equal ([10, 9, 8, 7, 6]));
+			/* reset source */
+			test_unit.reset!(Testing.Unit, `variable`);
+			assert (test_unit.variable == 12);
+		}
+		{/*arrays}*/
+			/* write value */
+			test_unit.array ([10, 9, 8, 7, 6]);
+			assert (test_unit.array.equal ([10, 9, 8, 7, 6]));
 
-					/* change source */
-					static int N (size_t i) {return cast(int)i + 1;}
-					static View!int view_N (Entity.Id id) {return (&N).view (0,5);}
-					test_unit.source!(Testing.Unit, `array`)(& view_N);
-					assert (test_unit.observe!(Testing.Unit, `array`).equal ([1, 2, 3, 4, 5]));
+			/* change source */
+			static int N (size_t i) {return cast(int)i + 1;}
+			static View!int view_N (Entity.Id id) {return (&N).view (0,5);}
+			test_unit.array (& view_N);
+			assert (test_unit.array.equal ([1, 2, 3, 4, 5]));
 
-					/* verify source */
-					test_unit.write!(Testing.Unit, `array`)([5, 4, 3, 2, 1]);
-					assert (test_unit.observe!(Testing.Unit, `array`).equal ([1, 2, 3, 4, 5]));
+			/* verify source */
+			test_unit.array ([5, 4, 3, 2, 1]);
+			assert (test_unit.array.equal ([1, 2, 3, 4, 5]));
 
-					/* reset source */
-					test_unit.source!(Testing.Unit, `array`)();
-					assert (test_unit.observe!(Testing.Unit, `array`).equal ([5, 4, 3, 2, 1]));
-				}
-			}
-		void demo_direct_properties ()
-			{/*...}*/
-				{/*variables}*/
-					/* write value */
-					test_unit.write!(Testing.Unit, `direct_variable`)(10);
-					assert (test_unit.observe!(Testing.Unit, `direct_variable`) == 10);
-
-					/* cannot change source */
-					static int eleven (Entity.Id id) {return 11;}
-					static assert (not(__traits(compiles, test_unit.source!(Testing.Unit, `direct_variable`)(& eleven))));
-
-					/* cannot reset source */
-					static assert (not(__traits(compiles, test_unit.source!(Testing.Unit, `direct_variable`)())));
-				}
-				{/*arrays}*/
-					/* write value */
-					static assert (not(__traits(compiles, test_unit.write!(Testing.Unit, `direct_array`)([10, 9, 8, 7, 6])))); // actually this should allocate the resource and update the view
-					int[] array = [10, 9, 8, 7, 6];
-					test_unit.write!(Testing.Unit, `direct_array`)(view (array));
-					assert (test_unit.observe!(Testing.Unit, `direct_array`).equal (array));
-
-					/* change source */
-					static int N (size_t i) {return cast(int)i + 1;}
-					static View!int view_N (Entity.Id id) {return (&N).view (0,5);}
-					static assert (not(__traits(compiles, test_unit.source!(Testing.Unit, `direct_array`)(& view_N))));
-
-					/* reset source */
-					static assert (not(__traits(compiles, test_unit.source!(Testing.Unit, `direct_array`)())));
-				}
-			}
-		
-		demo_default_properties; 
-		demo_direct_properties;
+			/* reset source */
+			test_unit.reset!(Testing.Unit, `array`);
+			assert (test_unit.array.equal ([5, 4, 3, 2, 1]));
+		}
 	}

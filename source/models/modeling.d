@@ -16,7 +16,6 @@ enum default_capacity = 2^^10;
 
 // aspect - frontend (redirection), backup (default source), arbitrary functions. assume that internal data is hotter remotely sourced data
 // performance - generated vs stored data
-// @Direct, @Cached,
 
 // TODO doc
 enum Aspect; // applies to struct definitions. generate frontends, backends, directories, allocators, etc.
@@ -26,9 +25,6 @@ enum Aspect; // applies to struct definitions. generate frontends, backends, dir
  // initializing sets the backend data
  // sourcing sets the frontend source
  // this can only be done privately, by the owning model, or at the top level, using an As! builder
-enum Direct; // no backend data generated. frontend contains actual value. can not coexist with Remote. sourcing a @Direct property from the As! builder is a compile-time error.
-enum Remote; // no backend data generated, model must source this property from elsewhere. can't coexist with Direct. initializing a @Remote property from the As! builder is a compile-time error.
-enum Cached; // TODO optional InvalidationPolicy, otherwise memoization cache clears itself after every model update
 
 /* mixing this in produces iterable aspect_frontends and aspect_backends directories */
 mixin template Model ()
@@ -79,7 +75,7 @@ mixin template Model ()
 
 		mixin(generate_aspect_structure!This);
 		mixin(generate_aspect_constructor!This);
-		mixin PropertyAccessInterface!null;
+		mixin PropertyAccessLayer!null;
 
 		auto service_addresses ()
 			{/*...}*/
@@ -104,36 +100,227 @@ mixin template Model ()
 
 				return mixin(class_level_services);
 			}
-		void source_from_backends (Aspect)(Entity.Id entity)
+		void reset_sources (Aspect)(Entity.Id entity)
 			if (is_aspect!Aspect)
 			{/*...}*/
-				immutable aspect = AspectDecl!Aspect.name;
-
-				string code ()
-					{/*...}*/
-						string code;
-
-						alias is_default = Not!(Or!(is_direct, is_remote));
-
-						foreach (T; Filter!(is_default, get_variable_decls!Aspect))
-							code ~= q{
-								} ~aspect~ q{_frontends[entity].set_} ~T.name~ q{ (&} ~aspect~ q{_backends[entity].} ~T.name~ q{);
-							};
-
-						foreach (T; Filter!(is_default, get_resource_decls!Aspect))
-							code ~= q{
-								} ~aspect~ q{_frontends[entity].set_} ~T.name~ q{ (&view_} ~aspect~ q{_} ~T.name~ q{);
-							};
-
-						return code;
-					}
-
-				mixin(code);
+				foreach (T; TypeTuple!(get_variable_decls!Aspect, get_resource_decls!Aspect))
+					reset!(Aspect, T.name)(entity);
 			}
 	}
 
+
 static if (__ctfe) 
 	{/*code generation}*/
+		mixin template PropertyAccessLayer (alias simulation)
+			if (is_simulation!(typeof(simulation))		// external
+			|| is (typeof(simulation) == typeof(null)))	// internal
+			{/*...}*/
+				public:
+					void reset (Aspect, string property)(Entity.Id entity)
+						{/*...}*/
+							static if (is (ResourceDecl!(Aspect, property) Resource))
+								mixin(q{
+									entity.As!Aspect.} ~property~ q{ (&_model!Aspect.} ~Resource.viewing_function~ q{);
+								});
+
+							else mixin(q{
+								entity.As!Aspect.} ~property~ q{ (&_fetch!(Aspect, `back`) (entity).} ~property~ q{);
+							});
+						}
+					struct As (Aspect)
+						if (is_aspect!Aspect)
+						{/*...}*/
+							import std.traits;
+							import std.typetuple;
+
+							public:
+							Entity.Id entity;
+							alias entity this;
+
+							@disable this ();
+							this (Entity.Id entity)
+								{/*...}*/
+									this.entity = entity;
+
+									if (not (_exists!Aspect (entity)))
+										_add!Aspect (entity);
+								}
+
+							mixin(property_access_interface);
+
+							private:
+							Type!(Aspect, `Front`)* frontend;
+							Type!(Aspect, `Back`)*  backend;
+							static {/*code generation}*/
+								string property_access_interface ()
+									{/*...}*/
+										import std.typetuple;
+
+										string code;
+
+										foreach (U; TypeTuple!(get_resource_decls!Aspect, get_variable_decls!Aspect))
+											code ~= define_observe!U
+												~define_source!U
+												~define_write!U;
+
+										return code;
+									}
+								string define_observe (U)()
+										{/*...}*/
+											string signature = q{
+												auto } ~U.name~ q{ ()};
+
+											return signature~ q{
+													}`{`q{
+														if (frontend is null)
+															frontend = &_fetch!(Aspect, `front`)(entity);
+
+														return frontend.} ~U.name~ q{;
+													}`}`q{
+											};
+										}
+								string define_source (U)()
+										{/*...}*/
+											string signature = q{
+												As } ~U.name~ q{ (F)(F signal)
+												if (isSomeFunction!F || isPointer!F)};
+
+											return signature~ q{
+													}`{`q{
+														if (frontend is null)
+															frontend = &_fetch!(Aspect, `front`)(entity);
+
+														frontend.set_} ~U.name~ q{ (signal);
+
+														return this;
+													}`}`q{
+											};
+										}
+								string define_write (U)()
+										{/*...}*/
+											string signature = q{
+												As } ~U.name~ q{ (Args...)(lazy scope Args args)
+													if (not (anySatisfy!(Or!(isSomeFunction, isPointer), Args)))};
+
+											return signature~ q{
+													}`{`q{
+														if (backend is null)
+															backend = &_fetch!(Aspect, "back")(entity);
+
+														_write!}`"`~U.name~`"`q{ (*backend, args);
+
+														return this;
+													}`}`q{
+											};
+										}
+							}
+						}
+				private:
+				private {/*...}*/
+					private {/*policy}*/
+						static bool interface_is_external ()
+							{/*...}*/
+								/* REVIEW
+									models are prohibited from directly accessing properties of other models,
+									and have no knowledge of the simulation. (this also prevents a circular
+									dependency of the models on the currently active simulation type).
+									as such models can only access their own aspects.
+									properties can be sourced from "phenomenon" functions which are defined
+									at the top level and have access to the active simulation.
+									thus models can indirectly access other models' properties, but the knowledge
+									of this is contained at the top "phenomenon" level
+								*/
+								return is_simulation!(typeof(simulation));
+							}
+						static assert (interface_is_external != is(typeof(this)));
+					}
+					private {/*implementation}*/
+						static if (__ctfe)
+						template Type (Aspect, string side = ``)
+							{/*...}*/
+								alias Decl = AspectDecl!Aspect;
+								mixin(q{alias Type = } ~Decl.model~ q{.} ~Decl.type~side~ q{;}); 
+							}
+						auto ref _model (Aspect)()
+							{/*...}*/
+								static if (interface_is_external)
+									 mixin(q{return simulation.get!(} ~AspectDecl!Aspect.model~ q{);});
+
+								else return this;
+							}
+						void _add (Aspect)(Entity.Id entity)
+							if (is_aspect!Aspect)
+							in {/*...}*/
+								assert (not (_exists!Aspect(entity)));
+							}
+							body {/*...}*/
+								alias Decl = AspectDecl!Aspect;
+
+								auto ref directory (string side)() 
+									{/*...}*/
+										return mixin(q{_model!Aspect.} ~Decl.name~ q{_} ~side~ q{ends});
+									}
+
+								directory!`front`.add (Type!(Aspect, `Front`)(entity));
+								directory!`back` .add (entity, Type!(Aspect, `Back`).init);
+
+								_model!Aspect.reset_sources!(Type!Aspect) (entity);
+							}
+						bool _exists (Aspect)(Entity.Id entity)
+							if (is_aspect!Aspect)
+							{/*...}*/
+								mixin(q{
+									return entity in _model!Aspect.} ~AspectDecl!Aspect.name~ q{_frontends? true:false;
+								});
+							}
+						auto ref _fetch (Aspect, string side = `front`)(Entity.Id entity)
+							if (is_aspect!Aspect)
+							in {/*...}*/
+								assert (_exists!Aspect(entity)); 
+							}
+							body {/*...}*/
+								mixin(q{
+									return _model!Aspect.} ~AspectDecl!Aspect.name~ q{_} ~side~ q{ends[entity];
+								});
+							}
+						void _write (string property, Aspect, Args...)(ref Aspect fetched, lazy scope Args args)
+							if (Args.length > 0)
+							{/*...}*/
+								import resource.allocator;
+
+								static string lhs ()
+									{/*...}*/
+										return q{fetched.} ~property;
+									}
+								static string construction ()
+									{/*...}*/
+										return q{typeof(} ~lhs~ q{) (args)};
+									}
+								static string assignment (string rhs)()
+									{/*...}*/
+										return lhs~ `=` ~rhs;
+									}
+
+								static if (is (ResourceDecl!(Aspect.Base, property) Resource))
+									mixin(q{
+										} ~lhs~ q{ = _model!(Aspect.Base).} ~Resource.allocator~ q{.save (args);
+									});
+								else mixin(q{
+									static if (__traits(compiles, } ~assignment!`args[0]`~ q{))
+										} ~assignment!`args[0]`~ q{;
+
+									else static if (__traits(compiles, } ~construction~ q{))
+										} ~assignment!construction~ q{;
+
+									else static assert (0, 
+										`couldn't construct or assign ` ~Args.stringof~ ` to ` ~typeof(lhs()).stringof~ ` ` ~property
+									);
+								});
+							}
+					}
+				}
+			}
+
 		template generate_aspect_structure (T)
 			{/*...}*/
 				string generate_aspect_structure ()
@@ -144,7 +331,7 @@ static if (__ctfe)
 							code ~= q{
 								}~AspectDecl!U.define_frontend~q{
 								}~AspectDecl!U.define_backend~q{
-								}~AspectDecl!U.declare_dataories~q{
+								}~AspectDecl!U.declare_directories~q{
 								}~AspectDecl!U.declare_allocators~q{
 								}~AspectDecl!U.define_viewing_functions;
 
@@ -168,31 +355,12 @@ static if (__ctfe)
 					}
 			}
 
-		template is_aspect (T...) // predicate over declarations
+		template is_aspect (T...)
 			if (T.length == 1)
 			{/*...}*/
 				enum is_aspect = staticIndexOf!(Aspect, __traits(getAttributes, T[0])) > -1;
 			}
 			
-		template is_direct (T, string field) // internal predicate
-			{/*...}*/
-				enum is_direct = staticIndexOf!(Direct, __traits(getAttributes, __traits(getMember, T, field))) > -1;
-			}
-		template is_remote (T, string field) // internal predicate
-			{/*...}*/
-				enum is_remote = staticIndexOf!(Remote, __traits(getAttributes, __traits(getMember, T, field))) > -1;
-			}
-		template is_direct (T) // predicate over declarations
-			if (__traits(compiles, T.is_direct))
-			{/*...}*/
-				enum is_direct = T.is_direct;
-			}
-		template is_remote (T) // predicate over declarations
-			if (__traits(compiles, T.is_remote))
-			{/*...}*/
-				enum is_remote = T.is_remote;
-			}
-
 		template Aspects (T)
 			{/*...}*/
 				alias Aspects = Filter!(is_aspect, get_substructs!T);
@@ -244,14 +412,10 @@ static if (__ctfe)
 							mixin CompareBy!id;
 						};
 
-						foreach (U; Filter!(is_direct, get_resource_decls!T, get_variable_decls!T))
-							code ~= q{
-								} ~U.declare_data;				
-
 						code ~= q{
 							mixin Look!(id,};
 
-						foreach (U; Filter!(Not!is_direct, get_resource_decls!T, get_variable_decls!T))
+						foreach (U; TypeTuple!(get_resource_decls!T, get_variable_decls!T))
 							code ~= q{
 								} ~U.declare_look;				
 
@@ -265,11 +429,11 @@ static if (__ctfe)
 							alias Base = } ~type~ q{;
 						};
 
-						foreach (U; Filter!(Not!(Or!(is_direct, is_remote)), get_variable_decls!T))
+						foreach (U; get_variable_decls!T)
 							code ~= q{
 								} ~U.declare_data;
 
-						foreach (U; Filter!(Not!is_remote, get_resource_decls!T))
+						foreach (U; get_resource_decls!T)
 							code ~= q{
 								} ~U.declare_resource;
 
@@ -280,14 +444,14 @@ static if (__ctfe)
 					{/*...}*/
 						string code;
 
-						foreach (R; Filter!(Not!is_remote, get_resource_decls!T))
+						foreach (R; get_resource_decls!T)
 							code ~= q{
 							} ~R.define_viewing_function;
 
 						return code;
 					}
 
-				string declare_dataories ()
+				string declare_directories ()
 					{/*...}*/
 						return q{
 							Directory!(} ~type~ q{Front) } ~name~ q{_frontends;
@@ -298,7 +462,7 @@ static if (__ctfe)
 					{/*...}*/
 						string code;
 
-						foreach (R; Filter!(Not!is_remote, get_resource_decls!T))
+						foreach (R; get_resource_decls!T)
 							code ~= q{
 							} ~R.declare_allocator;
 
@@ -316,26 +480,16 @@ static if (__ctfe)
 					{/*...}*/
 						string code;
 
-						foreach (R; Filter!(Not!is_remote, get_resource_decls!T))
+						foreach (R; get_resource_decls!T)
 							code ~= q{
 							} ~R.initialize_allocator;
 
 						return code;
 					}
 			}
-		template get_aspect_decl (T)
-			{/*...}*/
-				alias get_aspect_decl = AspectDecl!T;
-			}
-		template get_aspect_decls (T)
-			{/*...}*/
-				alias get_aspect_decls = staticMap!(get_aspect_decl, Aspects!T);
-			}
 		struct ResourceDecl (T, string field)
 			{/*...}*/
 				static assert (is (typeof(__traits(getMember, T, field)) == U[], U), T.stringof~ `.` ~field~ ` is not a resource`);
-				static assert (not (is_direct && is_remote));
-				// BUG these are being generated for position, velocity and mass as well... wtf?
 
 				static:
 
@@ -365,15 +519,6 @@ static if (__ctfe)
 						return aspect~ q{_} ~field~ q{_memory};
 					}
 
-				bool is_direct ()
-					{/*...}*/
-						return .is_direct!(T, field);
-					}
-				bool is_remote ()
-					{/*...}*/
-						return .is_remote!(T, field);
-					}
-
 				string viewing_function ()
 					{/*...}*/
 						return q{view_} ~aspect~ q{_} ~field;
@@ -383,7 +528,7 @@ static if (__ctfe)
 						return q{
 							auto } ~viewing_function~ q{ (Entity.Id entity)
 							}`{`q{
-								return view (} ~aspect~ q{_backends[entity].} ~field~ q{[]); // TODO this is where i left off
+								return view (} ~aspect~ q{_backends[entity].} ~field~ q{[]);
 							}`}`q{
 						};
 					}
@@ -461,15 +606,6 @@ static if (__ctfe)
 					{/*...}*/
 						return field;
 					}
-				bool is_direct ()
-					{/*...}*/
-						return .is_direct!(T, field);
-					}
-				bool is_remote ()
-					{/*...}*/
-						return .is_remote!(T, field);
-					}
-				static assert (not (is_direct && is_remote));
 
 				string declare_data ()
 					{/*...}*/
@@ -500,10 +636,6 @@ static if (__ctfe)
 			}
 	}
 
-///////////////////////////
-///////////////////////////
-///////////////////////////
-///////////////////////////
 ///////////////////////////
 ///////////////////////////
 ///////////////////////////
@@ -541,311 +673,6 @@ auto model_entity (string name)
 	{/*...}*/
 		entities.append (Entity (name));
 		return entities.back.id;
-	}
-
-mixin template PropertyAccessInterface (alias simulation)
-	if (is_simulation!(typeof(simulation))		// external
-	|| is (typeof(simulation) == typeof(null)))	// internal
-	{/*...}*/
-		public:
-		public {/*primitives}*/
-			template observe (Aspect, string property)
-				{/*...}*/
-					auto observe (Entity.Id entity)
-						{/*...}*/
-							return _execute_observe!property (_fetch!Aspect (entity));
-						}
-				}
-			template source (Aspect, string property)
-				{/*...}*/
-					void source ()(Entity.Id entity)
-						{/*...}*/
-							static if (is_direct!(Aspect, property))
-								static assert (0, `cannot remotely source Direct property`);
-
-							else static if (is_remote!(Aspect, property))
-								_execute_source!property (_fetch!Aspect (entity), null);
-							
-							else static if (__traits(compiles, ResourceDecl!(Aspect, property)))
-								_execute_source!property (_fetch!Aspect (entity), 
-									mixin(q{&} ~_resolve!Aspect~ResourceDecl!(Aspect, property).viewing_function)
-								);
-
-							else _execute_source!property (_fetch!Aspect (entity), 
-								&_execute_observe!property (_fetch!(Aspect, `back`) (entity))
-							);
-						}
-					void source (F)(Entity.Id entity, F signal)
-						{/*...}*/
-							static if (is_direct!(Aspect, property))
-								static assert (0, `cannot remotely source Direct property`);
-
-							else _execute_source!property (_fetch!Aspect (entity), signal);
-						}
-				}
-			template write (Aspect, string property)
-				{/*...}*/
-					void write (Args...)(Entity.Id entity, Args args)
-						{/*...}*/
-							static if (is_direct!(Aspect, property))
-								immutable side = `front`;
-
-							else static if (not (is_remote!(Aspect, property)))
-								immutable side = `back`;
-
-							else static assert (0, `cannot directly write to Remote property`);
-
-							_execute_write!property (_fetch!(Aspect, side)(entity), args);
-						}
-				}
-		}
-		public {/*acceleration}*/
-			struct As (Aspect)
-				if (is_aspect!Aspect)
-				{/*...}*/
-					Entity.Id entity;
-					alias entity this;
-
-					private mixin(q{
-						} ~AspectDecl!Aspect.model~ q{.} ~AspectDecl!Aspect.type~ q{Front* frontend;
-						} ~AspectDecl!Aspect.model~ q{.} ~AspectDecl!Aspect.type~ q{Back* backend;
-					});
-
-					@disable this ();
-					this (Entity.Id entity)
-						{/*...}*/
-							this.entity = entity;
-
-							if (not (_check!Aspect (entity)))
-								_add!Aspect (entity);
-						}
-
-					mixin(property_access_interface);
-
-					static {/*code generation}*/
-						string property_access_interface ()
-							{/*...}*/
-								import std.typetuple;
-
-								string code;
-
-								foreach (U; TypeTuple!(get_resource_decls!Aspect, get_variable_decls!Aspect))
-									code ~= define_observe!U
-										~define_source!U
-										~define_write!U;
-
-								return code;
-							}
-						string define_observe (U)()
-								{/*...}*/
-									return q{
-										auto } ~U.name~ q{ ()
-											}`{`q{
-												if (frontend is null)
-													frontend = &_fetch!(Aspect, `front`)(entity);
-
-												return _execute_observe!}`"`~U.name~`"`q{ (*frontend);
-											}`}`q{
-									};
-								}
-						string define_source (U)()
-								{/*...}*/
-									string signature = q{
-										As } ~U.name~ q{ (F)(F signal)
-										if (isSomeFunction!F)};
-
-									static if (U.is_direct)
-										return signature~ q{
-											}`{`q{
-												static assert (0, `cannot remotely source Direct property`);
-											}`}`q{
-										};
-									else return signature~ q{
-											}`{`q{
-												if (frontend is null)
-													frontend = &_fetch!(Aspect, `front`)(entity);
-
-												_execute_source!}`"`~U.name~`"`q{ (*frontend, signal);
-
-												return this;
-											}`}`q{
-									};
-								}
-						string define_write (U)()
-								{/*...}*/
-									static if (U.is_direct)
-										string side = `front`;
-									
-									else string side = `back`;
-
-									string signature = q{
-										As } ~U.name~ q{ (Args...)(lazy scope Args args)
-											if (not (anySatisfy!(isSomeFunction, Args)))};
-
-									static if (U.is_remote)
-										return signature~ q{
-											}`{`q{
-												static assert (0, `cannot directly write to Remote property`);
-											}`}`q{
-										};
-									else return signature~ q{
-											}`{`q{
-												if (} ~side~ q{end is null)
-													} ~side~ q{end = &_fetch!(Aspect, }`"`~side~`"`q{)(entity);
-
-												_execute_write!}`"`~U.name~`"`q{ (*} ~side~ q{end, args);
-
-												return this;
-											}`}`q{
-									};
-								}
-					}
-				}
-		}
-		private:
-		private {/*...}*/
-			private {/*policy}*/
-				static bool interface_is_external ()
-					{/*...}*/
-						/* REVIEW
-							models are prohibited from directly accessing properties of other models,
-							and have no knowledge of the simulation. (this also prevents a circular
-							dependency of the models on the currently active simulation type).
-							as such models can only access their own aspects.
-							properties can be sourced from "phenomenon" functions which are defined
-							at the top level and have access to the active simulation.
-							thus models can indirectly access other models' properties, but the knowledge
-							of this is contained at the top "phenomenon" level
-						*/
-						return is_simulation!(typeof(simulation));
-					}
-				static assert (interface_is_external != is(typeof(this)));
-			}
-			private {/*implementation}*/
-				template _resolve (Aspect)
-					{/*...}*/
-						static if (interface_is_external)
-							static string _resolve ()
-								{/*...}*/
-									 return q{simulation.get!(} ~AspectDecl!Aspect.model~ q{).};
-								}
-						else static string _resolve ()
-							{/*...}*/
-								 return q{};
-							}
-					}
-				template _check (Aspect)
-					if (is_aspect!Aspect)
-					{/*...}*/
-						auto _check (Entity.Id entity)
-							{/*...}*/
-								immutable resolve = _resolve!Aspect;
-
-								mixin(q{
-									return entity in } ~resolve~AspectDecl!Aspect.name~ q{_frontends;
-								});
-							}
-					}
-				template _fetch (Aspect, string side = `front`)
-					if (is_aspect!Aspect)
-					{/*...}*/
-						auto ref _fetch (Entity.Id entity)
-							in {/*...}*/
-								assert (_check!Aspect(entity)); 
-							}
-							body {/*...}*/
-								immutable resolve = _resolve!Aspect;
-
-								mixin(q{
-									return } ~resolve~AspectDecl!Aspect.name~ q{_} ~side~ q{ends[entity];
-								});
-							}
-					}
-				template _add (Aspect)
-					if (is_aspect!Aspect)
-					{/*...}*/
-						void _add (Entity.Id entity)
-							in {/*...}*/
-								assert (not (_check!Aspect(entity)));
-							}
-							body {/*...}*/
-								immutable resolve = _resolve!Aspect;
-								immutable string aspect = AspectDecl!Aspect.name;
-								immutable string Type = AspectDecl!Aspect.model~ q{.} ~AspectDecl!Aspect.type;
-
-								mixin(q{
-									} ~resolve~aspect~ q{_frontends.add (} ~Type~ q{Front (entity));
-									} ~resolve~aspect~ q{_backends.add (entity, } ~Type~ q{Back.init);
-									} ~resolve~ q{source_from_backends!(} ~Type~ q{)(entity);
-								});
-							}
-					}
-				template _execute_observe (string property)
-					{/*...}*/
-						auto ref _execute_observe (Aspect)(ref Aspect fetched)
-							{/*...}*/
-								mixin(q{
-									return fetched.} ~property~ q{;
-								});
-							}
-					}
-				template _execute_source (string property)
-					{/*...}*/
-						void _execute_source (Aspect, U)(ref Aspect fetched, U signal)
-							{/*...}*/
-								mixin(q{
-									fetched.set_} ~property ~ q{ (signal);
-								});
-							}
-					}
-				template _execute_write (string property)
-					{/*...}*/
-						void _execute_write (Aspect, Args...)(ref Aspect fetched, lazy scope Args args)
-							if (Args.length > 0)
-							{/*...}*/
-								import resource.allocator;
-
-								auto ref lhs ()
-									{/*...}*/
-										mixin(q{
-											return fetched.} ~property~ q{;
-										});
-									}
-								static string construction ()
-									{/*...}*/
-										return q{typeof(lhs ()) (args)};
-									}
-								static string assignment (string rhs)()
-									{/*...}*/
-										return `lhs = ` ~rhs;
-									}
-
-								static if (__traits(compiles, ResourceDecl!(Aspect.Base, property)))
-									{/*...}*/
-										immutable resolve = _resolve!(Aspect.Base);
-										alias Resource = ResourceDecl!(Aspect.Base, property);
-
-										static if (Resource.is_direct)
-											mixin(q{
-												lhs = } ~resolve~Resource.allocator~ q{.save (args);
-											});
-										else mixin(q{
-											lhs = } ~resolve~Resource.allocator~ q{.save (args);
-										});
-									}
-								else mixin(q{
-									static if (__traits(compiles, } ~assignment!`args[0]`~ q{))
-										} ~assignment!`args[0]`~ q{;
-
-									else static if (__traits(compiles, } ~construction~ q{))
-										} ~assignment!construction~ q{;
-
-									else static assert (0, `couldn't construct or assign ` ~Args.stringof~ ` to ` ~typeof(lhs()).stringof~ ` ` ~property);
-								});
-							}
-					}
-			}
-		}
 	}
 
 mixin template Simulation (Models...)
@@ -926,7 +753,7 @@ mixin template Simulation (Models...)
 			}
 
 		__gshared Simulation simulation;
-		mixin PropertyAccessInterface!simulation;
+		mixin PropertyAccessLayer!simulation;
 	}
 bool is_simulation (T)()
 	{/*...}*/
