@@ -82,6 +82,7 @@ public {/*identity}*/
 						this.source.set (generator);
 						this.access_range (start, end);
 					}
+				this(this) {}// BUG don't even know why this is necessary, but weird shit happens if its missing: apparently not assignable from lazy scope (rvalue) param, and if assigned from lvalue, then i get data corruption. i define an empty copy constructor, and everything works perfectly. wtf?
 			}
 			private:
 			private {/*data}*/

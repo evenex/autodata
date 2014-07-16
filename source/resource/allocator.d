@@ -207,12 +207,13 @@ struct Allocator (T, Id = Index)
 					private {/*contract}*/
 						static assert (not (isInputRange!ResourceHandle));
 						static assert (isRandomAccessRange!(typeof(this[])));
-			//			static assert (isOutputRange!(ResourceHandle, T)); //TEMP problems with units
+						static assert (isOutputRange!(ResourceHandle, T));
 					}
 					public:
 					public {/*[i]}*/
 						ref auto opIndex (Index i)
 							in {/*...}*/
+								assert_initialized;
 								assert (i < length, `range violation`);
 							}
 							body {/*...}*/
@@ -238,7 +239,7 @@ struct Allocator (T, Id = Index)
 								else this[start..end] = that.repeat (end - start);
 							}
 						auto opSliceOpAssign (string op, U)(U that, Index start, Index end)
-							body {/*...}*/
+							{/*...}*/
 								static if (isInputRange!U)
 									mixin(q{
 										this[start..end] = this[start..end].zip (that)
@@ -257,7 +258,10 @@ struct Allocator (T, Id = Index)
 					}
 					public {/*[]}*/
 						auto opSlice ()
-							{/*...}*/
+							in {/*...}*/
+								assert_initialized;
+							}
+							body {/*...}*/
 								return allocator.slice (id);
 							}
 						auto opSliceAssign (U)(U that)
@@ -304,9 +308,24 @@ struct Allocator (T, Id = Index)
 								this.put (that);
 							}
 					}
+					public {/*=}*/
+						shared void opAssign (shared ResourceHandle that)
+							{/*...}*/
+								cast()this = cast()that;
+							}
+						void opAssign (ResourceHandle that)
+							{/*...}*/
+								if (allocator) 
+									free;
+
+								this.id = that.id;
+								this.allocator = that.allocator;
+							}
+					}
 					public {/*output}*/
 						auto put (U)(U that)
 							in {/*...}*/
+								assert_initialized;
 								static if (hasLength!U || isForwardRange!U)
 									assert (length + that.length <= allocator.capacity_of (id), 
 										`range overflow: ` ~ (length + that.length).text ~ ` exceeds ` 
@@ -332,13 +351,19 @@ struct Allocator (T, Id = Index)
 					}
 					@property {/*length}*/
 						ref auto length ()
-							{/*...}*/
+							in {/*...}*/
+								assert_initialized;
+							}
+							body {/*...}*/
 								return allocator.length_of (id);
 							}
 					}
 					@property {/*capacity}*/
 						Index capacity ()
-							{/*...}*/
+							in {/*...}*/
+								assert_initialized;
+							}
+							body {/*...}*/
 								return allocator.capacity_of (id);
 							}
 					}
@@ -348,16 +373,16 @@ struct Allocator (T, Id = Index)
 								length = 0;
 							}
 					}
-					@property {/*valid}*/
-						bool valid ()
-							{/*...}*/
-								return allocator? true:false;
-							}
-					}
 					public {/*free}*/
 						void free ()
-							{/*...}*/
+							in {/*...}*/
+								assert_initialized;
+							}
+							body {/*...}*/
 								allocator.free (id);
+
+								id = Id.init;
+								allocator = null;
 							}
 					}
 					private:
@@ -370,6 +395,12 @@ struct Allocator (T, Id = Index)
 							{/*...}*/
 								this.allocator = &allocator;
 								this.id = id;
+							}
+					}
+					debug {/*...}*/
+						void assert_initialized () 
+							{/*...}*/
+								assert (id != Id.init, `attempted to use uninitialized Resource`);
 							}
 					}
 				}
@@ -491,6 +522,12 @@ unittest
 		a3.free;
 		assert (mem.free_list[].equal (
 			[Interval(2,5), Interval(9,10)]
+		));
+
+		// overwrite assignment automatically frees allocated data
+		a2 = mem.save (3.ℕ!int);
+		assert (mem.free_list[].equal (
+			[Interval(0,2), Interval(9,10)]
 		));
 
 		a2.free;

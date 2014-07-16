@@ -11,12 +11,12 @@ public {/*constants}*/
 }
 public {/*logic}*/
 	/* (¬(a < b || b < a) ⇒ a = b) */
-	bool reflexively_equal (alias cmp, T,U)(T a, U b)
+	bool reflexively_equal (alias cmp, T,U)(inout T a, inout U b)
 		if (__traits(compiles, cmp (a, b)))
 		{/*...}*/
 			return not (cmp (a,b) || cmp (b,a));
 		}
-	bool reflexively_equal (T,U)(T a, U b)
+	bool reflexively_equal (T,U)(inout T a, inout U b)
 		if (__traits(compiles, a < b))
 		{/*...}*/
 			return not (a < b || b < a);

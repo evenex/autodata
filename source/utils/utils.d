@@ -185,15 +185,19 @@ public {/*debug}*/
 	/* report the status of a unit test */
 	template report_test (string name)
 		{/*...}*/
-			const string report_test =`
-				import std.stdio;
-				stderr.writeln ("initiating `~name~` test...");
-				stderr.flush;
+			const string report_test = `
+				{
+					import std.stdio;
+					stderr.writeln ("initiating `~name~` test...");
+					stderr.flush;
+				}
 				scope (success) {
+					import std.stdio;
 					stderr.writeln ("`~name~` test passed");
 					stderr.flush;
 				}
 				scope (failure) {
+					import std.stdio;
 					stderr.writeln ("`~name~` test failed!");
 					stderr.flush;
 				}
@@ -958,7 +962,7 @@ public {/*indirection}*/
 
 				static assert (ReadMode.sizeof + (T*).sizeof <= (T delegate(Index)).sizeof);
 			}
-			public version (unittest) {/*...}*/
+			public debug {/*...}*/
 				bool has_array ()
 					{/*...}*/
 						return read_mode == ReadMode.array;

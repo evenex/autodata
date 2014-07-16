@@ -38,7 +38,8 @@ final class Physical
 				Meters height;
 			}
 
-		// TODO aspect stuff
+		Physics world;
+
 		auto model (Entity.Id entity)
 			{/*...}*/
 				
@@ -47,11 +48,14 @@ final class Physical
 			{/*...}*/
 				
 			}
-
-		Physics world;
-
-		void initialize () {}
-		void update () {}
+		void initialize ()
+			{/*...}*/
+				
+			}
+		void update ()
+			{/*...}*/
+				
+			}
 	}
 		// TEMP make a dummy model and assert this stuff so we know when Model breaks
 		static assert (is(Physical.BodyBack));

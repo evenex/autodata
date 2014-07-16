@@ -4,6 +4,8 @@ import std.conv;
 import std.typecons;
 import std.typetuple;
 import std.traits;
+import std.algorithm;
+import std.range;
 import utils;
 import units;
 import math;
@@ -92,14 +94,41 @@ mixin template Model ()
 							static if (thing.empty) 
 								continue;
 							else static if (mixin(q{is(typeof(} ~thing~ q{) : Service)}))
-								names ~= q{&} ~thing~ q{, };
+								static if (mixin(q{__traits(getProtection, } ~thing~ q{) == `public`}))
+									names ~= q{&} ~thing~ q{, };
 
 						if (names.empty)
-							return names;
+							return q{τ()};
 						else return q{τ(} ~names[0..$-2]~ q{)};
 					}
 
 				return mixin(class_level_services);
+			}
+		void source_from_backends (Aspect)(Entity.Id entity)
+			if (is_aspect!Aspect)
+			{/*...}*/
+				immutable aspect = AspectDecl!Aspect.name;
+
+				string code ()
+					{/*...}*/
+						string code;
+
+						alias is_default = Not!(Or!(is_direct, is_remote));
+
+						foreach (T; Filter!(is_default, get_variable_decls!Aspect))
+							code ~= q{
+								} ~aspect~ q{_frontends[entity].set_} ~T.name~ q{ (&} ~aspect~ q{_backends[entity].} ~T.name~ q{);
+							};
+
+						foreach (T; Filter!(is_default, get_resource_decls!Aspect))
+							code ~= q{
+								} ~aspect~ q{_frontends[entity].set_} ~T.name~ q{ (&view_} ~aspect~ q{_} ~T.name~ q{);
+							};
+
+						return code;
+					}
+
+				mixin(code);
 			}
 	}
 
@@ -115,8 +144,9 @@ static if (__ctfe)
 							code ~= q{
 								}~AspectDecl!U.define_frontend~q{
 								}~AspectDecl!U.define_backend~q{
-								}~AspectDecl!U.declare_directories~q{
-								}~AspectDecl!U.declare_allocators;
+								}~AspectDecl!U.declare_dataories~q{
+								}~AspectDecl!U.declare_allocators~q{
+								}~AspectDecl!U.define_viewing_functions;
 
 						return code;
 					}
@@ -185,6 +215,7 @@ static if (__ctfe)
 		struct AspectDecl (T)
 			{/*...}*/
 				static:
+				static assert (is_aspect!T, T.stringof~ ` is not an aspect`);
 
 				enum capacity = get_capacity!T;
 
@@ -207,20 +238,22 @@ static if (__ctfe)
 				string define_frontend ()
 					{/*...}*/
 						string code = q{struct } ~type~ q{Front }`{`q{
+							alias Base = } ~type~ q{;
+
 							Entity.Id id;
 							mixin CompareBy!id;
 						};
 
 						foreach (U; Filter!(is_direct, get_resource_decls!T, get_variable_decls!T))
 							code ~= q{
-								} ~U.declare_direct;				
+								} ~U.declare_data;				
 
 						code ~= q{
 							mixin Look!(id,};
 
 						foreach (U; Filter!(Not!is_direct, get_resource_decls!T, get_variable_decls!T))
 							code ~= q{
-								} ~U.declare_indirect;				
+								} ~U.declare_look;				
 
 						return code ~ q{
 							);
@@ -228,11 +261,13 @@ static if (__ctfe)
 					}
 				string define_backend ()
 					{/*...}*/
-						string code = q{struct } ~type~ q{Back }`{`;
+						string code = q{struct } ~type~ q{Back }`{`q{
+							alias Base = } ~type~ q{;
+						};
 
 						foreach (U; Filter!(Not!(Or!(is_direct, is_remote)), get_variable_decls!T))
 							code ~= q{
-								} ~U.declare_direct;
+								} ~U.declare_data;
 
 						foreach (U; Filter!(Not!is_remote, get_resource_decls!T))
 							code ~= q{
@@ -241,8 +276,18 @@ static if (__ctfe)
 						return code ~ q{
 						}`}`;
 					}
+				string define_viewing_functions ()
+					{/*...}*/
+						string code;
 
-				string declare_directories ()
+						foreach (R; Filter!(Not!is_remote, get_resource_decls!T))
+							code ~= q{
+							} ~R.define_viewing_function;
+
+						return code;
+					}
+
+				string declare_dataories ()
 					{/*...}*/
 						return q{
 							Directory!(} ~type~ q{Front) } ~name~ q{_frontends;
@@ -253,7 +298,7 @@ static if (__ctfe)
 					{/*...}*/
 						string code;
 
-						foreach (R; get_resource_decls!T)
+						foreach (R; Filter!(Not!is_remote, get_resource_decls!T))
 							code ~= q{
 							} ~R.declare_allocator;
 
@@ -271,7 +316,7 @@ static if (__ctfe)
 					{/*...}*/
 						string code;
 
-						foreach (R; get_resource_decls!T)
+						foreach (R; Filter!(Not!is_remote, get_resource_decls!T))
 							code ~= q{
 							} ~R.initialize_allocator;
 
@@ -288,6 +333,10 @@ static if (__ctfe)
 			}
 		struct ResourceDecl (T, string field)
 			{/*...}*/
+				static assert (is (typeof(__traits(getMember, T, field)) == U[], U), T.stringof~ `.` ~field~ ` is not a resource`);
+				static assert (not (is_direct && is_remote));
+				// BUG these are being generated for position, velocity and mass as well... wtf?
+
 				static:
 
 				mixin(q{
@@ -325,8 +374,19 @@ static if (__ctfe)
 						return .is_remote!(T, field);
 					}
 
-				static assert (not (is_direct && is_remote));
-
+				string viewing_function ()
+					{/*...}*/
+						return q{view_} ~aspect~ q{_} ~field;
+					}
+				string define_viewing_function ()
+					{/*...}*/
+						return q{
+							auto } ~viewing_function~ q{ (Entity.Id entity)
+							}`{`q{
+								return view (} ~aspect~ q{_backends[entity].} ~field~ q{[]); // TODO this is where i left off
+							}`}`q{
+						};
+					}
 				string initialize_allocator ()
 					{/*...}*/
 						return q{
@@ -344,14 +404,15 @@ static if (__ctfe)
 					{/*...}*/
 						return q{Resource!(} ~type~ q{) } ~field~ q{;};
 					}
-				string declare_direct ()
+				string declare_data ()
 					{/*...}*/
 						return q{View!(} ~type~ q{) } ~field~ q{;};
 					}
-				string declare_indirect ()
+				string declare_look ()
 					{/*...}*/
 						return q{View!(} ~type~ q{),} `"`~field~`"` q{,};
 					}
+
 
 				static void static_assertions ()
 					{/*...}*/
@@ -378,6 +439,11 @@ static if (__ctfe)
 		struct VariableDecl (T, string field)
 			{/*...}*/
 				static:
+				static assert (mixin(q{
+					not (is (typeof(T.} ~field~ q{) == U[], U)
+						|| is_member_function!(T.} ~field~ q{)
+					)
+				}), T.stringof~ `.` ~field~ ` is not a variable`);
 
 				string aspect ()
 					{/*...}*/
@@ -405,11 +471,11 @@ static if (__ctfe)
 					}
 				static assert (not (is_direct && is_remote));
 
-				string declare_direct ()
+				string declare_data ()
 					{/*...}*/
 						return type~ q{ } ~field~ q{;};
 					}
-				string declare_indirect ()
+				string declare_look ()
 					{/*...}*/
 						return type~ q{,} `"`~field~`"` q{,};
 					}
@@ -492,6 +558,23 @@ mixin template PropertyAccessInterface (alias simulation)
 				}
 			template source (Aspect, string property)
 				{/*...}*/
+					void source ()(Entity.Id entity)
+						{/*...}*/
+							static if (is_direct!(Aspect, property))
+								static assert (0, `cannot remotely source Direct property`);
+
+							else static if (is_remote!(Aspect, property))
+								_execute_source!property (_fetch!Aspect (entity), null);
+							
+							else static if (__traits(compiles, ResourceDecl!(Aspect, property)))
+								_execute_source!property (_fetch!Aspect (entity), 
+									mixin(q{&} ~_resolve!Aspect~ResourceDecl!(Aspect, property).viewing_function)
+								);
+
+							else _execute_source!property (_fetch!Aspect (entity), 
+								&_execute_observe!property (_fetch!(Aspect, `back`) (entity))
+							);
+						}
 					void source (F)(Entity.Id entity, F signal)
 						{/*...}*/
 							static if (is_direct!(Aspect, property))
@@ -505,10 +588,10 @@ mixin template PropertyAccessInterface (alias simulation)
 					void write (Args...)(Entity.Id entity, Args args)
 						{/*...}*/
 							static if (is_direct!(Aspect, property))
-								string side = `front`;
+								immutable side = `front`;
 
 							else static if (not (is_remote!(Aspect, property)))
-								string side = `back`;
+								immutable side = `back`;
 
 							else static assert (0, `cannot directly write to Remote property`);
 
@@ -542,6 +625,8 @@ mixin template PropertyAccessInterface (alias simulation)
 					static {/*code generation}*/
 						string property_access_interface ()
 							{/*...}*/
+								import std.typetuple;
+
 								string code;
 
 								foreach (U; TypeTuple!(get_resource_decls!Aspect, get_variable_decls!Aspect))
@@ -559,7 +644,7 @@ mixin template PropertyAccessInterface (alias simulation)
 												if (frontend is null)
 													frontend = &_fetch!(Aspect, `front`)(entity);
 
-												_execute_observe!}`"`~U.name~`"`q{ (*frontend);
+												return _execute_observe!}`"`~U.name~`"`q{ (*frontend);
 											}`}`q{
 									};
 								}
@@ -594,7 +679,7 @@ mixin template PropertyAccessInterface (alias simulation)
 									else string side = `back`;
 
 									string signature = q{
-										As } ~U.name~ q{ (Args...)(scope lazy Args args)
+										As } ~U.name~ q{ (Args...)(lazy scope Args args)
 											if (not (anySatisfy!(isSomeFunction, Args)))};
 
 									static if (U.is_remote)
@@ -637,14 +722,24 @@ mixin template PropertyAccessInterface (alias simulation)
 				static assert (interface_is_external != is(typeof(this)));
 			}
 			private {/*implementation}*/
+				template _resolve (Aspect)
+					{/*...}*/
+						static if (interface_is_external)
+							static string _resolve ()
+								{/*...}*/
+									 return q{simulation.get!(} ~AspectDecl!Aspect.model~ q{).};
+								}
+						else static string _resolve ()
+							{/*...}*/
+								 return q{};
+							}
+					}
 				template _check (Aspect)
 					if (is_aspect!Aspect)
 					{/*...}*/
 						auto _check (Entity.Id entity)
 							{/*...}*/
-								static if (interface_is_external)
-									immutable string resolve = q{simulation.get!(} ~AspectDecl!Aspect.model~ q{).};
-								else immutable string resolve;
+								immutable resolve = _resolve!Aspect;
 
 								mixin(q{
 									return entity in } ~resolve~AspectDecl!Aspect.name~ q{_frontends;
@@ -659,9 +754,7 @@ mixin template PropertyAccessInterface (alias simulation)
 								assert (_check!Aspect(entity)); 
 							}
 							body {/*...}*/
-								static if (interface_is_external)
-									immutable string resolve = q{simulation.get!(} ~AspectDecl!Aspect.model~ q{).};
-								else immutable string resolve;
+								immutable resolve = _resolve!Aspect;
 
 								mixin(q{
 									return } ~resolve~AspectDecl!Aspect.name~ q{_} ~side~ q{ends[entity];
@@ -676,22 +769,20 @@ mixin template PropertyAccessInterface (alias simulation)
 								assert (not (_check!Aspect(entity)));
 							}
 							body {/*...}*/
-								static if (interface_is_external)
-									immutable string resolve = q{simulation.get!(} ~AspectDecl!Aspect.model~ q{).};
-								else immutable string resolve;
-
+								immutable resolve = _resolve!Aspect;
 								immutable string aspect = AspectDecl!Aspect.name;
 								immutable string Type = AspectDecl!Aspect.model~ q{.} ~AspectDecl!Aspect.type;
 
 								mixin(q{
 									} ~resolve~aspect~ q{_frontends.add (} ~Type~ q{Front (entity));
 									} ~resolve~aspect~ q{_backends.add (entity, } ~Type~ q{Back.init);
+									} ~resolve~ q{source_from_backends!(} ~Type~ q{)(entity);
 								});
 							}
 					}
 				template _execute_observe (string property)
 					{/*...}*/
-						auto _execute_observe (Aspect)(ref Aspect fetched)
+						auto ref _execute_observe (Aspect)(ref Aspect fetched)
 							{/*...}*/
 								mixin(q{
 									return fetched.} ~property~ q{;
@@ -709,8 +800,11 @@ mixin template PropertyAccessInterface (alias simulation)
 					}
 				template _execute_write (string property)
 					{/*...}*/
-						void _execute_write (Aspect, Args...)(ref Aspect fetched, scope lazy Args args)
+						void _execute_write (Aspect, Args...)(ref Aspect fetched, lazy scope Args args)
+							if (Args.length > 0)
 							{/*...}*/
+								import resource.allocator;
+
 								auto ref lhs ()
 									{/*...}*/
 										mixin(q{
@@ -726,9 +820,22 @@ mixin template PropertyAccessInterface (alias simulation)
 										return `lhs = ` ~rhs;
 									}
 
-								mixin(q{
-									static if (__traits(compiles, } ~assignment!`args`~ q{))
-										} ~assignment!`args`~ q{;
+								static if (__traits(compiles, ResourceDecl!(Aspect.Base, property)))
+									{/*...}*/
+										immutable resolve = _resolve!(Aspect.Base);
+										alias Resource = ResourceDecl!(Aspect.Base, property);
+
+										static if (Resource.is_direct)
+											mixin(q{
+												lhs = } ~resolve~Resource.allocator~ q{.save (args);
+											});
+										else mixin(q{
+											lhs = } ~resolve~Resource.allocator~ q{.save (args);
+										});
+									}
+								else mixin(q{
+									static if (__traits(compiles, } ~assignment!`args[0]`~ q{))
+										} ~assignment!`args[0]`~ q{;
 
 									else static if (__traits(compiles, } ~construction~ q{))
 										} ~assignment!construction~ q{;
@@ -743,10 +850,14 @@ mixin template PropertyAccessInterface (alias simulation)
 
 mixin template Simulation (Models...)
 	{/*...}*/
+		import utils;
 		static assert (not(is(typeof(this))), `Simulation must be mixed in at global scope`);
 
 		final class Simulation
 			{/*...}*/
+				import std.typetuple;
+				import std.traits;
+				import utils;
 
 				enum is_simulation = true;
 
@@ -770,11 +881,11 @@ mixin template Simulation (Models...)
 								names ~= thing~ q{, };
 
 						if (names.empty)
-							return names;
+							return q{TypeTuple!()};
 						else return q{TypeTuple!(} ~names[0..$-2]~ q{)};
 					}
 
-				alias Services = staticMap!(types_of, mixin(module_level_services));
+				alias Services = staticMap!(types_of, mixin(module_level_services));// BUG no services, no map?
 
 				Models models;
 				Services services;
@@ -788,7 +899,7 @@ mixin template Simulation (Models...)
 					{/*...}*/
 						foreach (ref service; mixin(module_level_services))
 							{/*survey}*/
-								assert (service.is_running);
+								assert (service.is_running, `attempted to start Simulation before starting ` ~typeof(service).stringof~ ` service`);
 								this.services[staticIndexOf!(typeof(service), Services)] = service;
 							}
 						foreach (ref model; models)
@@ -801,7 +912,8 @@ mixin template Simulation (Models...)
 										{/*...}*/
 											immutable i = staticIndexOf!(typeof(*service), Services);
 
-											static assert (i >= 0, `could not locate required service: ` ~typeof(*service).stringof);
+											static assert (i >= 0, `could not locate required service: ` ~typeof(*service).stringof~ 
+												` (simulation services must be declared at module scope)`);
 
 											*service = this.services[i];
 										}
@@ -822,53 +934,78 @@ bool is_simulation (T)()
 	}
 
 import services.physics;
+import resource.view;
 Physics physics;
 
-mixin Simulation!(Physical);
-
-void main ()
+static if (0)
 	{/*...}*/
-		physics = new Physics;
-		physics.start; scope (exit) physics.stop;
+		mixin Simulation!(Physical);
 
-		simulation = new typeof(simulation);
+		auto sq (size_t i)
+			{/*...}*/
+				return Physical.Position (square[i].x.meters, square[i].y.meters);
+			}
+		void main ()
+			{/*...}*/
+				physics = new Physics;
+				physics.start; scope (exit) physics.stop;
 
-		Entity.Id fred = model_entity (`fred`)
-			.As!(Physical.Body)
-				.position (Physical.Position (0.meters)) // start here, use default source
-				.velocity (0.meters/second) // should be able to just forward ctor args. also special syntax for vectorizing units would be nice
-				.mass (10.kilograms)
-		;
+				simulation = new typeof(simulation);
 
-		std.stdio.stderr.writeln (fred.observe!(Physical.Body, `position`));
-	//			.damping (& ground_contact_friction) // this sets the source. we've customized the behavior without resorting to a new type. Aspect/Model > OOP ... but something makes me feel like biomechanics should determine this somehow? or rather the function does something conditional on if the things got biomechanics or what... so the models dont know about each other unless they're prereqs, but can otherwise communicate through events and share data through routing defined at the top level. but the model functions, entity function whatever, they can know about all kinds of models. they are like general units of like knowledge and observation and pattern recognition or whatever.... i dunno, like slivers of interpretation basically. what the fuck do you call that?? but anyway the point is, these functions are what operate at the highest level of abstraction. they are just my thoughts and observations on the world.
-	//			.elevation (& fall_to_ground) // this should post a message, `fred fell x meters` so Medical can react
-	//			.height (1.7.meters)
-	//			.geometry (& human_geometry) // this function draws from height and mass to make a circle of some plausible diameter
-	//	();
-	static if (0)
-		{/*...}*/
-			.As!(Visual.Object)
-				.geometry (& observe!(Physical.Body, `geometry`)) // observe is probably okay syntax
-				.texture (`art/fred.tga`) // @Direct
-			.As!(Container.Inventory)
-				.capacity (1)
-				.items (`ak47`) // JK THIS TOTALLY SETS A PROPERTY NOW // this doesnt set a property, but rather affects some initial state
-			.As!(Behavioral.Agent)
-				.priorities (`run around`, `shoot randomly`) // ditto ^
-				.resources (& skills) // since skills requires behavior model, it should know how to phrase skills as a resource
-			.As!(Skill.Practitioner) // requires behavioral model
-				.basic (`firearms`)
-				.advanced (`sprinting`) // how do i get this to affect biomechanics? define (autodocumenting, somehow) functions that look at the skills and determine bonuses. these functions can be thought of as... i dunno, skill effects? abilities? things that tend to happen when you're good at something?
-				.expert (`bullshit`)
-				.elite (`fredness`, `potty training`)
-				.master (`disguise`)
-			.As!(Medical.Subject) // average starting values and sources automatically preloaded
-			.As!(Biomechanical.Biped) // requires physical body and medical subject
-				.top_speed (& ability!`top_speed`) // ability!prop is in the Skills model and computes the value of the attribute given some skills
-				// now what if fred puts on a powered exoskeleton? that's something he's piloting
-				// it is a Piloting.Vehicle or something and a Biomechanical.Biped to boot
-				// and it can partially source its top speed from the driver or whatever
-		(); // verification step. set dtor to assert verification.. bc this is not an entity, its is a command
-		}
+				auto fred = model_entity (`fred`)
+					.As!(Physical.Body)
+						.position (Physical.Position (0.meters)) // can assign values
+						.velocity (0.meters/second) // can also forward ctor args to assign value
+						.mass (10.kilograms)
+						.geometry (square (0.5).map!(v => Physical.Position (v)))
+						// TODO source it once its been allocated
+						/* TODO 
+							if this is data, allocate on the backend
+							and point the frontend at it
+							if this is a function returning a view, source it
+							if this is a view... then this property needs to be direct
+							TODO LATER if this thing needs to be allocated with room to grow...
+							 then shit. declaration-level allocation strategy?
+							 uint Capacity (how much is available, total?)
+							 double Reserve (what percentage extra to allocate?)
+						*/
+				;
+
+
+				std.stdio.stderr.writeln (observe!(Physical.Body, `position`)(fred));
+				std.stdio.stderr.writeln (fred.position);
+				std.stdio.stderr.writeln (observe!(Physical.Body, `velocity`)(fred));
+				std.stdio.stderr.writeln (fred.velocity);
+				std.stdio.stderr.writeln (fred.geometry);
+			//			.damping (& ground_contact_friction) // this sets the source. we've customized the behavior without resorting to a new type. Aspect/Model > OOP ... but something makes me feel like biomechanics should determine this somehow? or rather the function does something conditional on if the things got biomechanics or what... so the models dont know about each other unless they're prereqs, but can otherwise communicate through events and share data through routing defined at the top level. but the model functions, entity function whatever, they can know about all kinds of models. they are like general units of like knowledge and observation and pattern recognition or whatever.... i dunno, like slivers of interpretation basically. what the fuck do you call that?? but anyway the point is, these functions are what operate at the highest level of abstraction. they are just my thoughts and observations on the world.
+			//			.elevation (& fall_to_ground) // this should post a message, `fred fell x meters` so Medical can react
+			//			.height (1.7.meters)
+			//			.geometry (& human_geometry) // this function draws from height and mass to make a circle of some plausible diameter
+			//	();
+			static if (0)
+				{/*...}*/
+					.As!(Visual.Object)
+						.geometry (& observe!(Physical.Body, `geometry`)) // observe is probably okay syntax
+						.texture (`art/fred.tga`) // @Direct
+					.As!(Container.Inventory)
+						.capacity (1)
+						.items (`ak47`) // JK THIS TOTALLY SETS A PROPERTY NOW // this doesnt set a property, but rather affects some initial state
+					.As!(Behavioral.Agent)
+						.priorities (`run around`, `shoot randomly`) // ditto ^
+						.resources (& skills) // since skills requires behavior model, it should know how to phrase skills as a resource
+					.As!(Skill.Practitioner) // requires behavioral model
+						.basic (`firearms`)
+						.advanced (`sprinting`) // how do i get this to affect biomechanics? define (autodocumenting, somehow) functions that look at the skills and determine bonuses. these functions can be thought of as... i dunno, skill effects? abilities? things that tend to happen when you're good at something?
+						.expert (`bullshit`)
+						.elite (`fredness`, `potty training`)
+						.master (`disguise`)
+					.As!(Medical.Subject) // average starting values and sources automatically preloaded
+					.As!(Biomechanical.Biped) // requires physical body and medical subject
+						.top_speed (& ability!`top_speed`) // ability!prop is in the Skills model and computes the value of the attribute given some skills
+						// now what if fred puts on a powered exoskeleton? that's something he's piloting
+						// it is a Piloting.Vehicle or something and a Biomechanical.Biped to boot
+						// and it can partially source its top speed from the driver or whatever
+				(); // verification step. set dtor to assert verification.. bc this is not an entity, its is a command
+				}
+			}
 	}

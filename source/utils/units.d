@@ -199,6 +199,9 @@ public {/*unit analysis}*/
 					auto n_positive_powers = sorted_by_descending_power
 						.countUntil!(a => a[1] < 0);
 
+					if (n_positive_powers < 0)
+						n_positive_powers = dims.length;
+
 					auto numerator   = sorted_by_descending_power
 						[0..n_positive_powers];
 
