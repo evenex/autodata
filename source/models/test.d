@@ -62,6 +62,7 @@ final class Testing
 			{/*...}*/
 				/*
 					declared variables compile to Looks on read and variables on write.
+
 				*/
 				int variable;
 				/*
@@ -115,7 +116,7 @@ unittest
 		assert (simulation.model!Testing.server is server && server.is_running);
 	}
 
-unittest
+void main()
 	{/*demo}*/
 		mixin(report_test!`simulation demo`);
 		import std.exception;
@@ -168,6 +169,22 @@ unittest
 			/* reset source */
 			simulation.model!Testing.reset_observation_sources (entity);
 			assert (entity.array.equal ([5, 4, 3, 2, 1]));
+		}
+		{/*external observation}*/
+			/* the observe template offers a convenient way to source properties across models */
+			entity.array_4 ([9,9,9]);
+			entity.array_8 (&observe!(Testing.Unit, `array_4`));
+
+			assert (entity.array_4.equal (entity.array_8));
+
+			/* note that it is only possible to source properties from different aspects of the same entity using the observe template */
+			/* more complicated sourcing functions can of course be used, but will be defined on a per-case basis */
+
+			/* independent verification */
+			auto f1 = &observe!(Testing.Unit, `variable`);
+			auto f2 = &observe!(Testing.Unit, `array`);
+			assert (f1 (entity) == entity.variable);
+			assert (f2 (entity).equal (entity.array));
 		}
 
 		/* entities are not made known to models until the next simulation update */

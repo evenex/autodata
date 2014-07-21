@@ -526,13 +526,13 @@ public {/*access}*/
 												lhs = aspect!Aspect.allocators[i].save (args);
 											}
 										else {/*write to variable}*/
-											static string constructor ()
-												{/*...}*/
-													return q{typeof(lhs) (args)};
-												}
 											static string assign_to (string rhs)()
 												{/*...}*/
 													return `lhs =` ~rhs;
+												}
+											static string constructor ()
+												{/*...}*/
+													return q{typeof(lhs) (args)};
 												}
 
 											mixin(q{
@@ -583,6 +583,13 @@ public {/*access}*/
 						static if (interface_is_external)
 							return simulation.aspect!Aspect;
 						else return this;
+					}
+				auto observe (Aspect, string property)(Entity.Id entity)
+					if (is_aspect!Aspect)
+					{/*...}*/
+						mixin(q{
+							return aspect!Aspect.observable[entity].} ~property ~q{;
+						});
 					}
 			}
 		}
