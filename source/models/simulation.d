@@ -8,13 +8,16 @@ import std.algorithm;
 import std.range;
 import utils;
 import units;
+import indirect;
 import math;
+
+public import models.entity;
 
 /* if aspect and resource capacities are not specified, default to this */
 enum default_capacity = 2^^10;
 
-// TODO test simulate/terminate
 // TODO doc
+// XXX protip: if a Model is generating shit compiler errors, turn off the Model mixin to see whats really going on
 struct Aspect (Description)
 	{/*...}*/
 		private {/*imports}*/
@@ -28,6 +31,35 @@ struct Aspect (Description)
 
 			alias Resources = Filter!(isArray, FieldTypeTuple!Base);
 			alias Allocators = staticMap!(Allocator, staticMap!(ElementType, Resources));
+		}
+		public {/*subaspects}*/
+			struct Observable
+				{/*...}*/
+					Entity.Id id;
+					mixin CompareBy!id;
+
+					mixin Look!(id, 
+						staticMap!(observable_type, FieldTypeTuple!Base), 
+						assignable_members!Base
+					);
+				}
+			struct Writeable
+				{/*...}*/
+					Entity.Id id; // XXX potential optimization - search directory by key only. maybe it'll be kept in a register, since we won't have to drag along the entire struct just to make comparisons
+					mixin CompareBy!id;
+
+					Tuple!(staticMap!(writeable_type, FieldTypeTuple!Base)) data;
+
+					auto ref opDispatch (string property)()
+						{/*...}*/
+							static immutable i = staticIndexOf!(property, assignable_members!Base);
+
+							static assert (i >= 0);
+							static assert (is (writeable_type!(typeof(__traits(getMember, Base, property))) == data.Types[i]));
+
+							return data[i];
+						}
+				}
 		}
 		public {/*data}*/
 			Directory!Observable observable;
@@ -52,35 +84,6 @@ struct Aspect (Description)
 							};
 
 					return code;
-				}
-		}
-		public {/*subaspects}*/
-			struct Observable
-				{/*...}*/
-					Entity.Id id;
-					mixin CompareBy!id;
-
-					mixin Look!(id, 
-						staticMap!(observable_type, FieldTypeTuple!Base), 
-						__traits(allMembers, Base)
-					);
-				}
-			struct Writeable
-				{/*...}*/
-					Entity.Id id; // XXX potential optimization - search directory by key only. maybe it'll be kept in a register, since we won't have to drag along the entire struct just to make comparisons
-					mixin CompareBy!id;
-
-					Tuple!(staticMap!(writeable_type, FieldTypeTuple!Base)) data;
-
-					auto ref opDispatch (string property)()
-						{/*...}*/
-							static immutable i = staticIndexOf!(property, __traits(allMembers, Base));
-
-							static assert (i >= 0);
-							static assert (is (writeable_type!(typeof(__traits(getMember, Base, property))) == data.Types[i]));
-
-							return data[i];
-						}
 				}
 		}
 		public {/*interface}*/
@@ -119,7 +122,7 @@ struct Aspect (Description)
 				}
 			void reset_observation_sources (Entity.Id entity)
 				{/*...}*/
-					foreach (property; __traits(allMembers, Base))
+					foreach (property; assignable_members!Base)
 						reset_observation_source!property (entity);
 				}
 			void represent (Entity.Id entity)
@@ -202,7 +205,7 @@ mixin template Model ()
 				{/*...}*/
 					return q{
 						static assert (__traits(compiles, This.} ~method~ q{ (Entity.Id.init)),
-							This.stringof ~ ` Model must define method: ` ~method
+							This.stringof ~ ` Model must define method: `} `"`~method~`"` q{
 						);
 					};
 				}
@@ -599,30 +602,12 @@ public {/*access}*/
 ///////////////////////////
 ///////////////////////////
 ///////////////////////////
-struct Entity
-	{/*...}*/
-		mixin TypeUniqueId;
-		this (string name)
-			{/*...}*/
-				this.name = name;
-				id = Id.create;
-			}
-		this (Entity.Id id)
-			{/*...}*/
-				this.id = id;
-			}
-
-		string name; // XXX this probably GCs
-		Id id;
-
-		mixin CompareBy!id;
-	}
 ///////////////////////////
 ///////////////////////////
 ///////////////////////////
-import services.physics;
+import services.collision;
 import resource.view;
-Physics physics;
+Collision collision;
 
 static if (0)
 	{/*...}*/
@@ -632,10 +617,10 @@ static if (0)
 			{/*...}*/
 				return Physical.Position (square[i].x.meters, square[i].y.meters);
 			}
-		void main ()
+		unittest
 			{/*...}*/
-				physics = new Physics;
-				physics.start; scope (exit) physics.stop;
+				collision = new Collision;
+				collision.start; scope (exit) collision.stop;
 
 				simulation = new typeof(simulation);
 

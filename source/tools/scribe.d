@@ -11,6 +11,7 @@ import std.range;
 import std.array;
 
 import utils;
+import color;
 import math;
 
 import resource.allocator;

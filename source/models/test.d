@@ -116,7 +116,7 @@ unittest
 		assert (simulation.model!Testing.server is server && server.is_running);
 	}
 
-void main()
+unittest
 	{/*demo}*/
 		mixin(report_test!`simulation demo`);
 		import std.exception;

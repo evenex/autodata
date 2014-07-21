@@ -2,7 +2,7 @@ module tools.camera;
 
 import std.traits;
 import std.algorithm;
-import services.physics;
+import services.collision;
 import services.display;
 import services.display: GLenum;
 import utils;
@@ -39,7 +39,7 @@ public {/*mappings}*/
 
 class Camera
 	{/*...}*/
-		alias Capture = Physics.UserId;
+		alias Capture = Collision.UserId;
 		public {/*controls}*/
 			void set_program (void delegate(Capture) program)
 				{/*...}*/
@@ -72,14 +72,14 @@ class Camera
 				}
 		}
 		public {/*☀}*/
-			this (Physics world, Display display)
+			this (Collision world, Display display)
 				{/*...}*/
 					this.world = world;
 					this.display = display;
 					this.program = program;
 					this.world_scale = cast(vec)(display.dimensions);
 				}
-			this () {assert (0, `must initialize camera with physics and display`);} // OUTSIDE BUG @disable this() => linker error
+			this () {assert (0, `must initialize camera with collision and display`);} // OUTSIDE BUG @disable this() => linker error
 		}
 		private:
 		private {/*program}*/
@@ -96,7 +96,7 @@ class Camera
 				}
 		}
 		private {/*services}*/
-			Physics world;
+			Collision world;
 			Display display;
 		}
 	}
@@ -105,9 +105,9 @@ unittest
 	{/*...}*/
 		mixin(report_test!"camera");
 
-		auto world = new Physics;
+		auto world = new Collision;
 		auto display = new Display;
-		alias Body = Physics.Body;
+		alias Body = Collision.Body;
 		world.start; scope (exit) world.stop;
 		display.start; scope (exit) display.stop;
 		auto cam = new Camera (world, display);
@@ -117,7 +117,7 @@ unittest
 
 		auto triangle = [vec(0), vec(1), vec(1,0)];
 
-		auto x = world.add (Physics.Body (vec(0)), triangle.map!(v => v - triangle.mean));
+		auto x = world.add (Collision.Body (vec(0)), triangle.map!(v => v - triangle.mean));
 		world.update;
 
 		frame = cam.capture;

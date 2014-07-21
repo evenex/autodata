@@ -788,7 +788,7 @@ public {/*metaprogramming}*/
 					alias types_of = typeof(T);
 				else alias types_of = T;
 			}
-		/* returns a TypeTuple of all nested structs and classes defined within T */
+		/* build a TypeTuple of all nested structs and classes defined within T */
 		template get_substructs (T)
 			{/*...}*/
 				private template get_substruct (T)
@@ -802,14 +802,11 @@ public {/*metaprogramming}*/
 									enum get_substruct = 0;
 								
 								else static if (mixin(q{is (}~name~q{)})
-									//&& is_accessible!(T, member) // TEMP
+									&& is_accessible!(T, member)
 									&& not (mixin(q{is (}~name~q{ == T)}))
-								) {/*...}*/
-									static if (not (isBuiltinType!(mixin(name))))
-										mixin(q{
-											alias get_substruct = T.} ~member~ q{;
-										});
-								}
+								) mixin(q{
+									alias get_substruct = T.} ~member~ q{;
+								});
 								else enum get_substruct = 0;
 							}
 					}
@@ -817,6 +814,19 @@ public {/*metaprogramming}*/
 				alias get_substructs = Filter!(Not!is_numerical_param, 
 					staticMap!(get_substruct!T, __traits(allMembers, T))
 				);
+			}
+		/* build a string tuple of all assignable members of T */
+		template assignable_members (T)
+			{/*...}*/
+				private template is_assignable (T)
+					{/*...}*/
+						template is_assignable (string member)
+							{/*...}*/
+								enum is_assignable = isAssignable!(typeof(__traits(getMember, T, member)));
+							}
+					}
+
+				alias assignable_members = Filter!(is_assignable!T, __traits(allMembers, T));
 			}
 	}
 	public {/*code generation}*/
@@ -881,239 +891,6 @@ public {/*metaprogramming}*/
 			}
 	}
 }
-public {/*indirection}*/
-	/* 
-		indexed, read-only, type-uniform indirection mechanism
-
-		an IndirectRead can be set to read from the following types of sources:
-			a unary static or member function taking an Index parameter
-			a pointer
-			a D slice, indexed by an Index parameter
-
-		if the Index cannot be used to index into a D array (i.e. it does not convert to size_t)
-		then setting the IndirectRead to a slice is statically disallowed.
-
-		to read the redirected value with get(), an Index must be supplied even if the source type is a pointer
-		(which would make the returned value independent of the supplied index)
-	*/
-	struct IndirectRead (T, Index)
-		{/*...}*/
-			public:
-			public {/*getter}*/
-				T get (Index index)
-					in {/*...}*/
-						assert (init, `IndirectRead uninitialized`);
-					}
-					body {/*...}*/
-						switch (read_mode)
-							{/*...}*/
-								static if (can_index_arrays!Index)
-									{/*...}*/
-										case ReadMode.array:
-											return passive[index];
-									}
-								case ReadMode.pointer:
-									return *passive;
-								default:
-									return active (index);
-							}
-					}
-			}
-			public {/*read_from}*/
-				void read_from (F)(F functor)
-					if (is (F == T delegate(U), U : Index) 
-					 || is (F == T function(U), U : Index))
-					out {/*...}*/
-						with (ReadMode)
-						assert (read_mode != pointer && read_mode != array);
-					}
-					body {/*...}*/
-						import std.functional;
-						active = toDelegate (functor);
-						debug init = true;
-					}
-
-				void read_from ()(T* pointer)
-					{/*...}*/
-						read_mode = ReadMode.pointer;
-						passive = pointer;
-						debug init = true;
-					}
-
-				void read_from ()(T[] array)
-					if (can_index_arrays!Index)
-					{/*...}*/
-						read_mode = ReadMode.array;
-						passive = array.ptr;
-						debug init = true;
-					}
-			}
-			private:
-			private {/*data}*/
-				union {/*...}*/
-					T delegate(Index) active;
-					struct {/*...}*/
-						T* passive;
-						ReadMode read_mode;
-					}
-				}
-				enum ReadMode {pointer = 0x0, array = 0x1}
-				debug bool init;
-
-				static assert (ReadMode.sizeof + (T*).sizeof <= (T delegate(Index)).sizeof);
-			}
-			public debug {/*...}*/
-				bool has_array ()
-					{/*...}*/
-						return read_mode == ReadMode.array;
-					}
-				bool has_pointer ()
-					{/*...}*/
-						return read_mode == ReadMode.pointer;
-					}
-				bool has_functor ()
-					{/*...}*/
-						return not (has_array || has_pointer);
-					}
-			}
-		}
-	unittest
-		{/*demo}*/
-			import std.exception;
-			struct NotIndex {}
-			IndirectRead!(int, NotIndex) non_indexable;
-			IndirectRead!(int, int) indexable;
-
-			with (IndirectRead!(int,int).ReadMode)
-				{/*...}*/
-					static int test (int i) {return 0;}
-					int x = 1;
-					int[] y = [2,3,4];
-
-					indexable.source (&test);
-					assert (indexable.read_mode != pointer);
-					assert (indexable.read_mode != array);
-					assert (indexable.get (0) == 0);
-					assert (indexable.get (1) == 0);
-
-					indexable.source (&x);
-					assert (indexable.read_mode == pointer);
-					assert (indexable.get (0) == 1);
-					assert (indexable.get (1) == 1);
-
-					indexable.source (y);
-					assert (indexable.read_mode == array);
-					assert (indexable.get (0) == 2);
-					assert (indexable.get (1) == 3);
-					assert (indexable.get (2) == 4);
-				}
-			with (IndirectRead!(int,NotIndex).ReadMode)
-				{/*...}*/
-					static int test_ni (NotIndex i) {return 0;}
-					int x = 1;
-					int[] y = [2,3,4];
-
-					non_indexable.source (&test_ni);
-					assert (non_indexable.read_mode != pointer);
-					assert (non_indexable.read_mode != array);
-					assert (non_indexable.get (NotIndex.init) == 0);
-
-					non_indexable.source (&x);
-					assert (non_indexable.read_mode == pointer);
-					assert (non_indexable.get (NotIndex.init) == 1);
-
-					static assert (not(__traits(compiles, non_indexable.set (y))));
-				}
-		}
-
-	/*
-		extend a host struct with a set of IndirectReads indexed by a common index
-		and, for read-only access, syntactically indistinguishable from member fields
-	*/
-	mixin template Look (alias index, Args...)
-		{/*...}*/
-			alias Types = Filter!(is_type, Args);
-			alias Names = Filter!(is_string_param, Args);
-			alias Index = typeof(index);
-			
-			static assert (Types.length + Names.length == Args.length, `instantiated with extraneous parameters`);
-			static assert (Types.length == Names.length, `type-identifier mismatch`);
-
-			static string declarations ()
-				{/*...}*/
-					import std.conv;
-
-					string code;
-
-					foreach (i, name; Names)
-						code ~= q{
-							IndirectRead!(Types[} ~i.text~ q{], Index) _} ~name~ q{;
-						};
-
-					return code;
-				}
-			static string getters ()
-				{/*...}*/
-					string code;
-
-					foreach (name; Names)
-						code ~= q{
-							@property auto } ~name~ q{ () }`{`q{
-								return _} ~name~ q{.get (index);
-							}`}`q{
-						};
-
-					return code;
-				}
-			static string setters ()
-				{/*...}*/
-					string code;
-
-					foreach (name; Names)
-						code ~= q{
-							@property void read_} ~name~ q{_from (T)(T arg) }`{`q{
-								_} ~name~ q{.read_from (arg);
-							}`}`q{
-						};
-
-					return code;
-				}
-
-			mixin(declarations);
-			mixin(getters);
-			mixin(setters);
-		}
-	unittest
-		{/*demo}*/
-			mixin(report_test!`look`);
-
-			struct MyLook
-				{/*...}*/
-					int index;
-					mixin Look!(index, 
-						int, 	`a`, 
-						ulong, 	`b`, 
-						string, `c`,
-					);
-				}
-
-			MyLook look;
-
-			int a = -1;
-			ulong b (int i) {return i;}
-			string[] c = [`one`, `two`, `three`];
-
-			look.set_a (&a);
-			look.set_b (&b);
-			look.set_c (c);
-
-			look.index = 2;
-
-			assert (look.a == -1);
-			assert (look.b == 2);
-			assert (look.c == `three`);
-		}
-}
 public {/*tags}*/
 	struct Tag 
 		{/*...}*/
@@ -1168,146 +945,4 @@ public {/*tags}*/
 public {/*tuples}*/
 	template λ (alias f) {alias λ = f;}
 	template Aⁿ (Tn...) {alias Aⁿ = Tn;}
-}
-public {/*colors}*/
-	public enum {/*Color palette}*/
-		/* mono */
-		black 	= Color (0.0),
-		white 	= Color (1.0),
-		/* primary */
-		red 	= Color (1.0, 0.0, 0.0),
-		green 	= Color (0.0, 1.0, 0.0),
-		blue 	= Color (0.0, 0.0, 1.0),
-		/* secondary */
-		yellow 	= red + green,
-		cyan 	= green + blue,
-		magenta = blue + red,
-		/* others */
-		gray	= black*white,
-		orange 	= red*yellow,
-		purple 	= blue*magenta,
-		brown	= orange*black,
-	}
-	struct Color
-		{/*...}*/
-			public:
-			public {/*data}*/
-				float 	r = 1.0, 
-						g = 0.0,
-						b = 1.0, 
-						a = 1.0;
-			}
-			public {/*ops}*/
-				Color alpha (float A)
-					{/*...}*/
-						Color ret = this;
-						ret.a = A;
-						return ret;
-					}
-				Color clamp ()
-					{/*...}*/
-						import math;
-						foreach (c; Aⁿ!(`r`,`g`,`b`,`a`))
-							mixin (q{
-								} ~c~ q{ = math.clamp (} ~c~ q{, 0.0, 1.0);
-							});
-						return this;
-					}
-				Color opBinary (string op) (Color color)
-					{/*...}*/
-						Color ret = this;
-						static if (op == `+` || op == `-`) with (color)
-							foreach (c; Aⁿ!(`r`,`g`,`b`))
-								mixin (q{
-									ret.} ~c~ q{} ~op~q{= a * } ~c~ q{;
-								});
-						else static if (op == `*`)
-							foreach (c; Aⁿ!(`r`,`g`,`b`)) with (color)
-								mixin (q{
-									ret.} ~c~ q{ += a* } ~c~ q{; 
-									ret.} ~c~ q{ /= a + 1;
-								});
-						return ret.clamp;
-					}
-				Color opOpAssign (string op) (Color color)
-					{/*...}*/
-						mixin (q{
-							this = this } ~op~ q{ color;
-						});
-						clamp ();
-						return this;
-					}
-			}
-			public {/*☀}*/
-				this (float brightness, float A = 1.0)
-					{/*...}*/
-						auto L = brightness;
-						r = (g = (b = L));
-						a = A;
-						this.clamp;
-					}
-				this (float R, float G, float B, float A = 1.0)
-					{/*...}*/
-						r = R;
-						g = G;
-						b = B;
-						a = A;
-						this.clamp;
-					}
-				this (Color color)
-					{/*...}*/
-						this.r = color.r;
-						this.g = color.g;
-						this.b = color.b;
-						this.a = color.a;
-					}
-				static auto from_hsv (float H, float S = 1.0, float V = 1.0)
-					{/*...}*/
-						import math;
-
-						H = H.clamp (0, 360);
-						S = S.clamp (0, 1);
-						V = V.clamp (0, 1);
-
-						auto M = 255*V;
-						auto m = M*(1.0-S);
-						
-						auto z = (M-m)*(1.0 - abs((H/60.0)%2.0-1.0));
-
-						float R, G, B;
-						if (H.between (-float.infinity, 60))
-							R = M, G = z+m, B = m;
-						else if (H.between (60, 120))
-							R = z+m, G = M, B = m;
-						else if (H.between (120, 180))
-							R = m, G = M, B = z+m;
-						else if (H.between (180, 240))
-							R = m, G = z+m, B = M;
-						else if (H.between (240, 300))
-							R = z+m, G = m, B = M;
-						else R = M, G = m, B = z+m;
-
-						R /= 255.0;
-						G /= 255.0;
-						B /= 255.0;
-
-						return Color (R,G,B);
-					}
-			}
-			unittest
-				{/*...}*/
-					mixin (report_test!"Color ops");
-
-					assert (red + blue == magenta);
-					assert (red + green == yellow);
-					assert (cyan - blue == green);
-					assert (cyan - blue - green == black);
-					assert (red + yellow + blue == white);
-					assert (white - (red + blue) == green);
-
-					auto orange = Color (1.0, 0.5, 0.0);
-					assert (red + yellow == yellow);
-					assert (red * yellow == orange);
-				}
-		};
 }

@@ -12,6 +12,7 @@ import tools.scribe;
 import tools.plot;
 
 import utils;
+import color;
 import math;
 
 struct InfoBox

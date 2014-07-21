@@ -1,4 +1,4 @@
-module services.physics;
+module services.collision;
 
 import std.algorithm;
 // TODO more stable methods
@@ -17,52 +17,9 @@ import resource.buffer;
 import resource.directory;
 import resource.allocator;
 
-import models.aspect;
 // TODO full conversion to doubles. only openGL really needs 32-bit floats, and we can convert on-the-fly when we write to the output buffer
 // TODO lazy parameters for all ops which move data (like add and append)
 
-static if (0) {
-final class Physical
-	{mixin Model;/*}*/
-		alias Position = Vec2!Meters;
-		alias Velocity = Vec2!(typeof(meters/second));
-
-		@(2^^8)
-		@Aspect struct Body
-			{/*...}*/
-				@(2^^16) Position[] geometry;
-				Position position;
-				Velocity velocity;
-				Kilograms mass;
-				Scalar damping;
-				Meters elevation;
-				Meters height;
-			}
-
-		Physics world;
-
-		auto model (Entity.Id entity)
-			{/*...}*/
-				
-			}
-		auto release (Entity.Id entity)
-			{/*...}*/
-				
-			}
-		void initialize ()
-			{/*...}*/
-				
-			}
-		void update ()
-			{/*...}*/
-				
-			}
-	}
-		// TEMP make a dummy model and assert this stuff so we know when Model breaks
-		static assert (is(Physical.BodyBack));
-		static assert (is(typeof(Physical.BodyBack.mass)));
-		static assert (is(typeof(Physical.BodyFront.velocity)));
-		}
 
 private {/*library}*/
 	struct cp
@@ -83,7 +40,7 @@ private {/*conversions}*/
 		}
 }
 
-final class Physics: Service
+final class Collision: Service
 	{/*...}*/
 		private {/*definitions}*/
 			import dchip.all;
@@ -505,7 +462,7 @@ final class Physics: Service
 				}
 			const string name ()
 				{/*...}*/
-					return "physics";
+					return "collision";
 				}
 		}
 		private: 
@@ -616,7 +573,7 @@ final class Physics: Service
 										(u,v) => vec(min(u.x, v.x), min(u.y, v.y)),
 									);
 									assert ((bounds[1]-bounds[0]).norm > double.epsilon,
-										"attempted to create physics body with zero volume");
+										"attempted to create collision body with zero volume");
 								}
 						}
 						body {/*...}*/
@@ -744,13 +701,13 @@ unittest
 		import core.thread;
 		import std.concurrency;
 
-		mixin (report_test!`multithreaded physics`);
+		mixin (report_test!`multithreaded collision`);
 		static void test () {/*...}*/
-			scope lP = new Physics;
-			auto P = cast(shared)lP;
-			P.initialize ();
-			P.process ();
-			P.terminate ();
+			scope lC = new Collision;
+			auto C = cast(shared)lC;
+			C.initialize ();
+			C.process ();
+			C.terminate ();
 			try ownerTid.send (true);
 			catch (TidMissingException ex){}
 		}
@@ -760,13 +717,13 @@ unittest
 	}
 unittest
 	{/*shape deduction}*/
-		alias Body = Physics.Body;
-		alias TrueBody = Physics.TrueBody;
+		alias Body = Collision.Body;
+		alias TrueBody = Collision.TrueBody;
 		import std.datetime;
 
 		mixin (report_test!"shape deduction");
 
-		scope p = new Physics;
+		scope p = new Collision;
 		p.start; scope (exit) p.stop;
 
 		auto a = p.add (Body (vec(0)), square (0.5));
@@ -800,11 +757,11 @@ unittest
 	}
 unittest
 	{/*body positioning}*/
-		alias Body = Physics.Body;
+		alias Body = Collision.Body;
 
 		mixin (report_test!`body positioning`);
 
-		auto P = new Physics;
+		auto P = new Collision;
 		P.start; scope (exit) P.stop;
 
 		auto triangle = [vec(-1,-1), vec(-1,0), vec(0,-1)];
@@ -834,16 +791,16 @@ unittest
 	{/*box_query}*/
 		mixin (report_test!`box_query`);
 
-		auto p = new Physics;
+		auto p = new Collision;
 		p.start; scope (exit) p.stop;
 		
 		auto sq = [vec(0),vec(1,0),vec(1),vec(0,1)];
 		auto μ = sq.mean;
 		sq = sq.map!(v => v - μ).array;
-		auto a = p.add (Physics.Body (vec(0)), sq);
-		auto b = p.add (Physics.Body (vec(1.49)), sq);
-		auto c = p.add (Physics.Body (vec(-1.51)), sq);
-		auto d = p.add (Physics.Body (vec(1000)), sq);
+		auto a = p.add (Collision.Body (vec(0)), sq);
+		auto b = p.add (Collision.Body (vec(1.49)), sq);
+		auto c = p.add (Collision.Body (vec(-1.51)), sq);
+		auto d = p.add (Collision.Body (vec(1000)), sq);
 		p.update;
 		assert (p.box_query ([vec(-1),vec(1)])		.length == 2); // BUG probably disallow array literals cause they GC
 		assert (p.box_query ([vec(-2),vec(0)])		.length == 2);

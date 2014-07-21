@@ -4,13 +4,14 @@ import std.conv;
 
 import math;
 import utils;
+import color;
 
 import resource.view;
 import resource.allocator;
 import resource.directory;
 
 import services.display;
-import services.physics;
+import services.collision;
 
 import tools.image;
 
@@ -119,11 +120,11 @@ public {/*world}*/
 }
 public {/*services}*/
 	Display display;
-	Physics physics;
+	Collision collision;
 	shared static this ()
 		{/*...}*/
 			display = new Display;
-			physics = new Physics;
+			collision = new Collision;
 		}
 }
 public {/*models/aspects}*/
@@ -136,7 +137,6 @@ public {/*models/aspects}*/
 						public {/*ctor}*/
 							this (T)(T entity)
 								{/*...}*/
-						// TODO generic "change of representation" method, calling on entity extracts id and fetches aspect from model
 								}
 						}
 						public {/*command}*/
@@ -269,7 +269,7 @@ public {/*models/aspects}*/
 			}
 		__gshared:
 			private {/*services}*/
-				Physics physics;
+				Collision collision;
 			}
 			private {/*resources}*/
 				Directory!(Body, Entity.Id) bodies;
@@ -300,7 +300,6 @@ public {/*models/aspects}*/
 							}
 						this (T)(T entity, Material material)
 							{/*...}*/
-								// TODO generic "change of representation" method, calling on entity extracts id and fetches aspect from model
 							}
 					}
 					float density;

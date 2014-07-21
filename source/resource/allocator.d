@@ -207,7 +207,7 @@ struct Allocator (T, Id = Index)
 					private {/*contract}*/
 						static assert (not (isInputRange!ResourceHandle));
 						static assert (isRandomAccessRange!(typeof(this[])));
-					//	static assert (isOutputRange!(ResourceHandle, T)); TODO
+						static assert (isOutputRange!(ResourceHandle, T));
 					}
 					public:
 					public {/*[i]}*/

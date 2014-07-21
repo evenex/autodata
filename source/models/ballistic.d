@@ -8,11 +8,14 @@ import resource.view;
 import resource.array;
 
 import utils; // TODO make views and looks and math public imports?
+import color;
 import math;
 
-import services.physics;
+import services.collision;
 import models.integrator;
 import models.entity;
+
+alias Physics = Collision;
 
 class Ballistic
 	{/*...}*/
