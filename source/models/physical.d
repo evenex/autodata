@@ -5,7 +5,6 @@ import units;
 import models.aspect;
 import services.collision;
 
-void main() {}
 final class Physical
 	{mixin Model;/*}*/
 		alias Position = Vec2!Meters;

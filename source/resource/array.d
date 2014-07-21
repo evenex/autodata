@@ -67,7 +67,7 @@ struct StaticArray (T)
 				{/*...}*/
 					import std.conv;
 
-					static if (isInputRange!(T[]))
+					static if (__traits(compiles, array[0..length].text))
 						return array[0..length].text;
 					else return `[` ~T.stringof~ `...]`;
 				}
@@ -177,7 +177,7 @@ struct DynamicArray (T)
 				{/*...}*/
 					import std.conv;
 
-					static if (isInputRange!(T[]))
+					static if (__traits(compiles, array[0..length].text))
 						return array.array[0..length].text;
 					else return `[` ~T.stringof~ `...]`;
 				}

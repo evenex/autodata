@@ -119,7 +119,7 @@ struct Allocator (T, Id = Index)
 				}
 		}
 		public {/*upkeep}*/
-			void free (Id id)
+			void free (Id id) nothrow
 				{/*...}*/
 					auto A = fetch (id).bounds;
 
@@ -207,7 +207,7 @@ struct Allocator (T, Id = Index)
 					private {/*contract}*/
 						static assert (not (isInputRange!ResourceHandle));
 						static assert (isRandomAccessRange!(typeof(this[])));
-						static assert (isOutputRange!(ResourceHandle, T));
+						//static assert (isOutputRange!(ResourceHandle, T));
 					}
 					public:
 					public {/*[i]}*/
@@ -311,9 +311,6 @@ struct Allocator (T, Id = Index)
 					public {/*=}*/
 						void opAssign (ResourceHandle that)
 							{/*...}*/
-								if (allocator) 
-									free;
-
 								this.id = that.id;
 								this.allocator = that.allocator;
 
@@ -372,16 +369,17 @@ struct Allocator (T, Id = Index)
 								length = 0;
 							}
 					}
-					public {/*free}*/
-						void free ()
-							in {/*...}*/
-								assert_allocated;
-							}
-							body {/*...}*/
-								allocator.free (id);
-
-								id = Id.init;
-								allocator = null;
+					public {/*dtor}*/
+						static if (is (ResourceHandle == shared)) // REVIEW
+							shared ~this ()
+								{/*...}*/
+									if (is_allocated)
+										allocator.free (id);
+								}
+						else ~this ()
+							{/*...}*/
+								if (is_allocated)
+									allocator.free (id);
 							}
 					}
 					public {/*status}*/
@@ -524,7 +522,7 @@ unittest
 		auto a4 = mem.save (4.ℕ!int);
 		assert (mem.free_list[].equal ([Interval(9,10)]));
 
-		a3.free;
+		a3.destroy;
 		assert (mem.free_list[].equal (
 			[Interval(2,5), Interval(9,10)]
 		));
@@ -535,11 +533,11 @@ unittest
 			[Interval(0,2), Interval(9,10)]
 		));
 
-		a2.free;
+		a2.destroy;
 		assert (mem.free_list[].equal (
 			[Interval(0,5), Interval(9,10)]
 		));
 
-		a4.free;
+		a4.destroy;
 		assert (mem.free_list[].equal ([Interval(0,10)]));
 	}

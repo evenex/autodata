@@ -145,20 +145,23 @@ struct Directory (T, Arg...)
 
 			auto append (Entry entry)
 				in {/*...}*/
-					assert (_entries.capacity);
-					assert (entries.length? compare (entries.back, entry) : true,
-						`attempted to append entry out of order `
-						~entries.back.text~ ` ~ ` ~entry.text
-					);
-					static if (lookup is `by item`)
-						auto exists = this.contains (entry);
-					else static if (lookup is `by key`)
-						auto exists = this.contains (entry[0]);
-					else static assert (0);
+					try {/*...}*/
+						assert (_entries.capacity);
+						assert (entries.length? compare (entries.back, entry) : true,
+							`attempted to append entry out of order `
+							~entries.back.text~ ` ~ ` ~entry.text
+						);
+						static if (lookup is `by item`)
+							auto exists = this.contains (entry);
+						else static if (lookup is `by key`)
+							auto exists = this.contains (entry[0]);
+						else static assert (0);
 
-					assert (not (exists),
-						`attempted to add duplicate entry ` ~entry.text
-					);
+						assert (not (exists),
+							`attempted to add duplicate entry ` ~entry.text
+						);
+					}
+					catch (Throwable) assert (0);
 				}
 				body {/*...}*/
 					_entries ~= entry;
@@ -174,9 +177,10 @@ struct Directory (T, Arg...)
 						auto exists = this.contains (entry[0]);
 					else static assert (0);
 
-					assert (not (exists),
+					try assert (not (exists),
 						`attempted to add duplicate entry ` ~entry.text
 					);
+					catch (Throwable) assert (0);
 				}
 				body {/*...}*/
 					static if (lookup is `by item`)
@@ -208,10 +212,11 @@ struct Directory (T, Arg...)
 
 			auto remove (Key key)
 				in {/*...}*/
-					assert (this.contains (key),
+					try assert (this.contains (key),
 						`attempt to remove nonexistent entry ` ~key.text~ `
 							current entries: ` ~entries.text
 					);
+					catch (Throwable) assert (0);
 				}
 				body {/*...}*/
 					auto i = index_of (key);

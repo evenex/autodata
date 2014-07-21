@@ -39,7 +39,7 @@ public {/*mappings}*/
 
 class Camera
 	{/*...}*/
-		alias Capture = Collision.UserId;
+		alias Capture = Collision.ClientId; // REVIEW
 		public {/*controls}*/
 			void set_program (void delegate(Capture) program)
 				{/*...}*/

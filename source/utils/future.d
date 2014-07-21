@@ -32,32 +32,44 @@ struct Future (T)
 	}
 struct Promise (T)
 	{/*...}*/
-		bool is_fulfilled;
-
 		T payload;
+		bool is_fulfilled;
 
 		void opAssign (U)(U that)
 			if (__traits(compiles, payload = that))
-			{/*...}*/
+			in {/*...}*/
+				assert (not (is_fulfilled));
+			}
+			body {/*...}*/
 				payload = that;
 				is_fulfilled = true;
 			}
 	}
 
+auto promise (T)(ref Promise!T result)
+	{/*...}*/
+		return Future!T (result);
+	}
+
 unittest
 	{/*demo}*/
 		mixin(report_test!`future`);
+		import std.exception;
 
 		Promise!int promise;
 
-		auto future = Future!int (promise);
+		auto future = .promise (promise);
 
 		assert (not (promise.is_fulfilled));
 		assert (not (future.is_ready));
+		/* cannot read future before promise fulfillment */
+		assertThrown!Error (future ());
 
 		promise = 6;
 
 		assert (promise.is_fulfilled);
 		assert (future.is_ready);
 		assert (future == 6);
+		/* cannot fulfill promise twice */
+		assertThrown!Error (promise = 1);
 	}

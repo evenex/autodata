@@ -68,4 +68,3 @@ template Integrator (alias method, alias equation)
 					}
 			}
 	} 
-

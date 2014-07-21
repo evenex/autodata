@@ -248,7 +248,7 @@ final class Scribe
 
 					vertex_pool = Allocator!vec (2^^14);
 					glyph_pool = Allocator!Glyph (2^^12);
-					line_starts = DynamicArray!size_t (2^^8);
+					newline_positions = DynamicArray!size_t (2^^8);
 				}
 			this (Display display, uint[] sizes = [12])
 				in {/*...}*/
@@ -284,9 +284,7 @@ final class Scribe
 							display.draw (glyph.texture, geometry, tex_coords, glyph.color);
 						}
 
-					glyphs.free;
-					cards.free;
-					line_starts.clear;
+					newline_positions.clear;
 				}
 			auto typeset (T1, T2)(ref T1 glyphs, ref Text order, ref T2 cards)
 				if (__traits(compiles, glyphs[0] == Glyph.init) && is_geometric!T2)
@@ -309,7 +307,7 @@ final class Scribe
 						with (draw_box) wrap_width = right - left;
 					else wrap_width = (wrap_width*î.vec.rotate (rotation)).from_extended_space.to_pixel_space (display).norm;
 
-					line_starts ~= 0;
+					newline_positions ~= 0;
 					foreach (i, glyph; glyphs[])
 						{/*set card coordinates in pen-space}*/
 							vec offset = glyph.offset;
@@ -343,21 +341,21 @@ final class Scribe
 
 									pen = carriage_return (pen);
 
-									line_starts ~= i - word.length + 1;
+									newline_positions ~= i - word.length + 1;
 								}
 
 							cards[$-4..$] = cards[$-4..$].map!(v => v - vec(-offset.x, dims.y - offset.y));
 
 							pen.x += glyph.advance;
 						}
-					line_starts ~= glyphs.length;
+					newline_positions ~= glyphs.length;
 
 					auto card_box = cards.bounding_box;
 					auto alignment = order.alignment;
 
-					foreach (i, line_start; line_starts[0..$-1])
+					foreach (i, line_start; newline_positions[0..$-1])
 						{/*justify lines}*/
-							auto line_stop  = line_starts[i+1];
+							auto line_stop  = newline_positions[i+1];
 
 							if (line_stop == line_start)
 								continue;
@@ -403,7 +401,7 @@ final class Scribe
 		private {/*resources}*/
 			Allocator!Glyph glyph_pool;
 			Allocator!vec vertex_pool;
-			DynamicArray!size_t line_starts;
+			DynamicArray!size_t newline_positions;
 		}
 		extern (C):
 		extern (C) {/*services}*/

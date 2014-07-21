@@ -277,7 +277,7 @@ final class Display: Service
 				}
 			this ()
 				{/*...}*/
-					buffer.initialize;
+					buffer = new typeof(buffer);
 				}
 		}
 		protected:

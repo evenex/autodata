@@ -150,17 +150,6 @@ struct Aspect (Description)
 					assert (this.is_representing (entity).not);
 				}
 				body {/*...}*/
-					{/*free resources}*/
-						auto write = &writeable[entity];
-
-						foreach (property; __traits(allMembers, Base))
-							static if (isArray!(typeof(__traits(getMember, Base, property))))
-								mixin(q{
-									if (write.} ~property~ q{.is_allocated)
-										write.} ~property~ q{.free;
-								});
-					}
-
 					observable.remove (Observable (entity));
 					writeable.remove (Writeable (entity));
 				}

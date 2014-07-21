@@ -280,7 +280,9 @@ abstract class Service
 				}
 			pure shared bool opDispatch (string op) () const nothrow
 				{/*...}*/
-					mixin (`return mode == Mode.`~op~`;`);
+					mixin (q{
+						return mode == Mode.} ~op~q{;
+					});
 				}
 		}
 	};

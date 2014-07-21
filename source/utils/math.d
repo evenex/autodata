@@ -21,7 +21,7 @@ public {/*logic}*/
 		{/*...}*/
 			return not (a < b || b < a);
 		}
-	bool less_than (T)(inout T a, inout T b)
+	bool less_than (T)(inout T a, inout T b) nothrow
 		{/*...}*/
 			return a < b;
 		}

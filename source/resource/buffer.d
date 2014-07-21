@@ -183,18 +183,11 @@ template TripleBuffer (T, uint size, uint sync_frequency = 4_000)
 	all Buffers contained within it. Individual Buffers may be
 	accessed as data members of the BufferGroup.
 */
-struct BufferGroup (Types_and_Names...)
+class BufferGroup (Declarations...)
 	{/*...}*/
-		alias Types = Filter!(is_type, Types_and_Names);
-		alias Names = Filter!(is_string_param, Types_and_Names);
+		mixin DeclarationSplitter!Declarations;
 
 		public {/*assertions}*/
-			static assert (Types.length == Names.length, 
-				`types and identifiers must be paired in BufferGroup declaration`
-			);
-			static assert (Types.length + Names.length == Types_and_Names.length, 
-				`BufferGroup declaration must consist only of types and identifier strings`
-			);
 			static bool same_swap_strategy (T)()
 				{/*...}*/
 					return __traits(compiles, T.swap) && __traits(compiles, Types[0].swap)
@@ -236,7 +229,7 @@ struct BufferGroup (Types_and_Names...)
 				}
 		}
 
-		shared void initialize ()
+		shared this ()
 			{/*...}*/
 				foreach (i, T; Types)
 					mixin(q{

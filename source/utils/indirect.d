@@ -152,12 +152,8 @@ unittest
 */
 mixin template Look (alias index, Args...)
 	{/*...}*/
-		alias Types = Filter!(is_type, Args);
-		alias Names = Filter!(is_string_param, Args);
+		mixin DeclarationSplitter!Args;
 		alias Index = typeof(index);
-		
-		static assert (Types.length + Names.length == Args.length, `instantiated with extraneous parameters`);
-		static assert (Types.length == Names.length, `type-identifier mismatch`);
 
 		static string declarations ()
 			{/*...}*/

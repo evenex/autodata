@@ -614,15 +614,22 @@ public {/*metaprogramming}*/
 						mixin CompareBy!id;
 					}
 			}
-		/* applies the command pattern to a struct */
+		/* separate Types and Names into eponymous TypeTuples */
+		mixin template DeclarationSplitter (Args...)
+			{/*...}*/
+				alias Types = Filter!(is_type, Args);
+				alias Names = Filter!(is_string_param, Args);
+				static assert (Types.length == Names.length, `type/name mismatch`);
+				static assert (Types.length + Names.length == Args.length, `extraneous template parameters`);
+			}
+		/* generate getters and command setters for a set of declared fields */
 		mixin template Command (Args...)
 			{/*...}*/
 				static assert (is(typeof(this)), `mixin requires host struct`);
 				import std.typetuple;
 				import std.typecons;
 
-				alias Types = Filter!(is_type, Args);
-				alias Names = Filter!(is_string_param, Args);
+				mixin DeclarationSplitter!Args;
 
 				static string command_property_declaration ()
 					{/*...}*/
@@ -700,20 +707,20 @@ public {/*metaprogramming}*/
 						return (cast()this).opApply (cast(int delegate(size_t, ref Applied)) op);
 					}
 			}
-		/* forward opCmp (<,>) to a member */
+		/* forward opCmp (<,>,<=,>=) to a member */
 		mixin template CompareBy (alias member)
 			{/*...}*/
 				static assert (is(typeof(this)), `mixin requires host struct`);
 
 				public {/*opCmp}*/
-					int opCmp (ref const typeof(this) that) const
+					int opCmp (ref const typeof(this) that) const nothrow
 						{/*...}*/
 							const string name = __traits(identifier, member);
 							mixin(q{
 								return compare (this.} ~name~ q{, that.} ~name~ q{);
 							});
 						}
-					int opCmp (const typeof(this) that) const
+					int opCmp (const typeof(this) that) const nothrow
 						{/*...}*/
 							const string name = __traits(identifier, member);
 							mixin(q{
@@ -944,5 +951,5 @@ public {/*tags}*/
 }
 public {/*tuples}*/
 	template λ (alias f) {alias λ = f;}
-	template Aⁿ (Tn...) {alias Aⁿ = Tn;}
+	template Aⁿ (T...) {alias Aⁿ = T;}
 }
