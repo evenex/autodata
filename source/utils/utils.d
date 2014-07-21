@@ -885,7 +885,7 @@ public {/*indirection}*/
 	/* 
 		indexed, read-only, type-uniform indirection mechanism
 
-		an IndirectRead can be set() to the following types of sources:
+		an IndirectRead can be set to read from the following types of sources:
 			a unary static or member function taking an Index parameter
 			a pointer
 			a D slice, indexed by an Index parameter
@@ -899,7 +899,7 @@ public {/*indirection}*/
 	struct IndirectRead (T, Index)
 		{/*...}*/
 			public:
-			public {/*get}*/
+			public {/*getter}*/
 				T get (Index index)
 					in {/*...}*/
 						assert (init, `IndirectRead uninitialized`);
@@ -919,8 +919,8 @@ public {/*indirection}*/
 							}
 					}
 			}
-			public {/*setters}*/
-				void set (F)(F functor)
+			public {/*read_from}*/
+				void read_from (F)(F functor)
 					if (is (F == T delegate(U), U : Index) 
 					 || is (F == T function(U), U : Index))
 					out {/*...}*/
@@ -933,14 +933,14 @@ public {/*indirection}*/
 						debug init = true;
 					}
 
-				void set ()(T* pointer)
+				void read_from ()(T* pointer)
 					{/*...}*/
 						read_mode = ReadMode.pointer;
 						passive = pointer;
 						debug init = true;
 					}
 
-				void set ()(T[] array)
+				void read_from ()(T[] array)
 					if (can_index_arrays!Index)
 					{/*...}*/
 						read_mode = ReadMode.array;
@@ -990,18 +990,18 @@ public {/*indirection}*/
 					int x = 1;
 					int[] y = [2,3,4];
 
-					indexable.set (&test);
+					indexable.source (&test);
 					assert (indexable.read_mode != pointer);
 					assert (indexable.read_mode != array);
 					assert (indexable.get (0) == 0);
 					assert (indexable.get (1) == 0);
 
-					indexable.set (&x);
+					indexable.source (&x);
 					assert (indexable.read_mode == pointer);
 					assert (indexable.get (0) == 1);
 					assert (indexable.get (1) == 1);
 
-					indexable.set (y);
+					indexable.source (y);
 					assert (indexable.read_mode == array);
 					assert (indexable.get (0) == 2);
 					assert (indexable.get (1) == 3);
@@ -1013,12 +1013,12 @@ public {/*indirection}*/
 					int x = 1;
 					int[] y = [2,3,4];
 
-					non_indexable.set (&test_ni);
+					non_indexable.source (&test_ni);
 					assert (non_indexable.read_mode != pointer);
 					assert (non_indexable.read_mode != array);
 					assert (non_indexable.get (NotIndex.init) == 0);
 
-					non_indexable.set (&x);
+					non_indexable.source (&x);
 					assert (non_indexable.read_mode == pointer);
 					assert (non_indexable.get (NotIndex.init) == 1);
 
@@ -1071,8 +1071,8 @@ public {/*indirection}*/
 
 					foreach (name; Names)
 						code ~= q{
-							@property void set_} ~name~ q{ (T)(T arg) }`{`q{
-								_} ~name~ q{.set (arg);
+							@property void read_} ~name~ q{_from (T)(T arg) }`{`q{
+								_} ~name~ q{.read_from (arg);
 							}`}`q{
 						};
 

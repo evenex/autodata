@@ -54,6 +54,8 @@ final class Hidden: Service
 
 Server server;
 
+bool entity_simulated;
+
 final class Testing
 	{mixin Model;/*}*/
 		@Aspect struct Unit
@@ -68,7 +70,7 @@ final class Testing
 				int[] array;
 
 				/*
-					@(n) where n ∈ ℕ specifies the capacity of the underlying Allocator.
+					@(N) specifies the capacity of the underlying Allocator.
 				*/
 				@(2^^4) int[] array_4;
 				@(2^^8) int[] array_8;
@@ -84,8 +86,10 @@ final class Testing
 		*/
 		private Hidden hidden; /// no Hidden Services are available at module scope, but this will compile because it is private
 
-		void model (Entity.Id id){}
-		void release (Entity.Id id){}
+		void simulate (Entity.Id id) 
+			{entity_simulated = true;}
+		void terminate (Entity.Id id) 
+			{entity_simulated = false;}
 
 		void initialize (){}
 		void update (){}
@@ -108,10 +112,10 @@ unittest
 		simulation = new typeof(simulation);
 
 		// upon initialization, Simulation automatically connects all Models to required Services
-		assert (simulation.get!Testing.server is server && server.is_running);
+		assert (simulation.model!Testing.server is server && server.is_running);
 	}
 
-void main ()
+unittest
 	{/*demo}*/
 		mixin(report_test!`simulation demo`);
 		import std.exception;
@@ -125,44 +129,54 @@ void main ()
 		/* initialize Model layer */
 		simulation = new typeof(simulation);
 
-		/* initialize Entities */
-		auto test_unit = model_entity (`test`).As!(Testing.Unit);
+		/* initialize test Entity */
+		auto entity = simulate (`test`).As!(Testing.Unit);
 
 		{/*variables}*/
 			/* write value */
-			test_unit.variable (10);
-			assert (test_unit.variable == 10);
+			entity.variable (10);
+			assert (entity.variable == 10);
 
 			/* change source */
 			static int eleven (Entity.Id id) {return 11;}
-			test_unit.variable(& eleven);
-			assert (test_unit.variable == 11);
+			entity.variable(& eleven);
+			assert (entity.variable == 11);
 
 			/* verify source */
-			test_unit.variable (12);
-			assert (test_unit.variable == 11);
+			entity.variable (12);
+			assert (entity.variable == 11);
 
 			/* reset source */
-			test_unit.reset!(Testing.Unit, `variable`);
-			assert (test_unit.variable == 12);
+			simulation.model!Testing.reset_observation_sources (entity);
+			assert (entity.variable == 12);
 		}
 		{/*arrays}*/
 			/* write value */
-			test_unit.array ([10, 9, 8, 7, 6]);
-			assert (test_unit.array.equal ([10, 9, 8, 7, 6]));
+			entity.array ([10, 9, 8, 7, 6]);
+			assert (entity.array.equal ([10, 9, 8, 7, 6]));
 
 			/* change source */
 			static int N (size_t i) {return cast(int)i + 1;}
 			static View!int view_N (Entity.Id id) {return (&N).view (0,5);}
-			test_unit.array (& view_N);
-			assert (test_unit.array.equal ([1, 2, 3, 4, 5]));
+			entity.array (& view_N);
+			assert (entity.array.equal ([1, 2, 3, 4, 5]));
 
 			/* verify source */
-			test_unit.array ([5, 4, 3, 2, 1]);
-			assert (test_unit.array.equal ([1, 2, 3, 4, 5]));
+			entity.array ([5, 4, 3, 2, 1]);
+			assert (entity.array.equal ([1, 2, 3, 4, 5]));
 
 			/* reset source */
-			test_unit.reset!(Testing.Unit, `array`);
-			assert (test_unit.array.equal ([5, 4, 3, 2, 1]));
+			simulation.model!Testing.reset_observation_sources (entity);
+			assert (entity.array.equal ([5, 4, 3, 2, 1]));
 		}
+
+		/* entities are not made known to models until the next simulation update */
+		/* this allows the entity to be fully initialized before being processed */
+		assert (not (entity_simulated));
+		simulation.update;
+		assert (entity_simulated);
+
+		/* terminating an entity can safely take place in a single step */
+		terminate (entity);
+		assert (not (entity_simulated));
 	}

@@ -102,7 +102,7 @@ struct Allocator (T, Id = Index)
 					auto resource = allocate (saved.length, id);
 					resource ~= range;
 
-					return resource;
+					return resource; // REVIEW this might fuck up RAII
 				}
 			void allocate_and_save (R)(Index size, R range, Id id)
 				if (isForwardRange!R)
@@ -114,8 +114,8 @@ struct Allocator (T, Id = Index)
 					auto resource = allocate (size, id);
 
 					resource ~= range;
-
-					return resource;
+ 
+					return resource;// REVIEW this might fuck up RAII
 				}
 		}
 		public {/*upkeep}*/
@@ -186,7 +186,7 @@ struct Allocator (T, Id = Index)
 				}
 		}
 		private:
-		private {/*substructs}*/
+		private {/*resources}*/
 			struct Resource
 				{/*...}*/
 					this (Index start, Index capacity)
@@ -207,13 +207,13 @@ struct Allocator (T, Id = Index)
 					private {/*contract}*/
 						static assert (not (isInputRange!ResourceHandle));
 						static assert (isRandomAccessRange!(typeof(this[])));
-						static assert (isOutputRange!(ResourceHandle, T));
+					//	static assert (isOutputRange!(ResourceHandle, T)); TODO
 					}
 					public:
 					public {/*[i]}*/
 						ref auto opIndex (Index i)
 							in {/*...}*/
-								assert_initialized;
+								assert_allocated;
 								assert (i < length, `range violation`);
 							}
 							body {/*...}*/
@@ -259,7 +259,7 @@ struct Allocator (T, Id = Index)
 					public {/*[]}*/
 						auto opSlice ()
 							in {/*...}*/
-								assert_initialized;
+								assert_allocated;
 							}
 							body {/*...}*/
 								return allocator.slice (id);
@@ -309,10 +309,6 @@ struct Allocator (T, Id = Index)
 							}
 					}
 					public {/*=}*/
-						shared void opAssign (shared ResourceHandle that)
-							{/*...}*/
-								cast()this = cast()that;
-							}
 						void opAssign (ResourceHandle that)
 							{/*...}*/
 								if (allocator) 
@@ -320,12 +316,15 @@ struct Allocator (T, Id = Index)
 
 								this.id = that.id;
 								this.allocator = that.allocator;
+
+								that.id = Id.init;
+								that.allocator = null;
 							}
 					}
 					public {/*output}*/
 						auto put (U)(U that)
 							in {/*...}*/
-								assert_initialized;
+								assert_allocated;
 								static if (hasLength!U || isForwardRange!U)
 									assert (length + that.length <= allocator.capacity_of (id), 
 										`range overflow: ` ~ (length + that.length).text ~ ` exceeds ` 
@@ -352,7 +351,7 @@ struct Allocator (T, Id = Index)
 					@property {/*length}*/
 						ref auto length ()
 							in {/*...}*/
-								assert_initialized;
+								assert_allocated;
 							}
 							body {/*...}*/
 								return allocator.length_of (id);
@@ -361,7 +360,7 @@ struct Allocator (T, Id = Index)
 					@property {/*capacity}*/
 						Index capacity ()
 							in {/*...}*/
-								assert_initialized;
+								assert_allocated;
 							}
 							body {/*...}*/
 								return allocator.capacity_of (id);
@@ -376,13 +375,19 @@ struct Allocator (T, Id = Index)
 					public {/*free}*/
 						void free ()
 							in {/*...}*/
-								assert_initialized;
+								assert_allocated;
 							}
 							body {/*...}*/
 								allocator.free (id);
 
 								id = Id.init;
 								allocator = null;
+							}
+					}
+					public {/*status}*/
+						bool is_allocated ()
+							{/*...}*/
+								return allocator !is null;
 							}
 					}
 					private:
@@ -398,9 +403,9 @@ struct Allocator (T, Id = Index)
 							}
 					}
 					debug {/*...}*/
-						void assert_initialized () 
+						void assert_allocated () 
 							{/*...}*/
-								assert (id != Id.init, `attempted to use uninitialized Resource`);
+								assert (this.is_allocated, `attempted to use unallocated Resource`);
 							}
 					}
 				}

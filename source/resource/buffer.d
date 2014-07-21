@@ -77,8 +77,8 @@ template DoubleBuffer (T, uint size)
 						{/*...}*/
 							auto memory = new Allocator!T (size*2);
 
-							buffer[0] = cast(shared)memory.allocate (size);
-							buffer[1] = cast(shared)memory.allocate (size);
+							cast()buffer[0] = memory.allocate (size);
+							cast()buffer[1] = memory.allocate (size);
 						}
 				}
 				private:
@@ -160,9 +160,9 @@ template TripleBuffer (T, uint size, uint sync_frequency = 4_000)
 						{/*...}*/
 							auto memory = new Allocator!T (size*3); // REVIEW allocator can't be manually deleted now... buffers will probably last all program, but still...
 
-							buffer[0] = cast(shared)memory.allocate (size);
-							buffer[1] = cast(shared)memory.allocate (size);
-							buffer[2] = cast(shared)memory.allocate (size);
+							cast()buffer[0] = memory.allocate (size);
+							cast()buffer[1] = memory.allocate (size);
+							cast()buffer[2] = memory.allocate (size);
 						}
 				}
 				private:

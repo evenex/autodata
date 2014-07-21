@@ -68,18 +68,18 @@ public {/*identity}*/
 			public {/*☀}*/
 				this (T[] array)
 					{/*...}*/
-						this.source.set (array);
+						this.source.read_from (array);
 						this.access_range (0, array.length.to!Index);
 					}
 				this (F)(ref F functor)
 					if (is_Functor!F)
 					{/*...}*/
-						this.source.set (&functor.opAccess); // REVIEW would opCall (size_t) or opIndex be better options? would it be good to include them)?
+						this.source.read_from (&functor.opAccess); // REVIEW would opCall (size_t) or opIndex be better options? would it be good to include them)?
 						this.access_range (functor.start, functor.end);
 					}
 				this (T function(Index) generator, Index start = 0, Index end = Index.max)
 					{/*...}*/
-						this.source.set (generator);
+						this.source.read_from (generator);
 						this.access_range (start, end);
 					}
 				this(this) {}// BUG don't even know why this is necessary, but weird shit happens if its missing: apparently not assignable from lazy scope (rvalue) param, and if assigned from lvalue, then i get data corruption. i define an empty copy constructor, and everything works perfectly. wtf?
