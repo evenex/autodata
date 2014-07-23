@@ -411,12 +411,12 @@ class Ballistic
 					Event launch;
 					Event termination;
 
-					DynamicArray!Event 
+					Dynamic!(Array!Event) 
 						impacts;
-					DynamicArray!Event 
+					Dynamic!(Array!Event) 
 						penetrations;
 
-					DynamicArray!vec
+					Dynamic!(Array!vec)
 						trajectory;
 
 					struct Event
@@ -444,10 +444,10 @@ class Ballistic
 							this.txt = txt;
 							this.cam = cam;
 
-							this.impacts = DynamicArray!Event (16);
-							this.penetrations = DynamicArray!Event (16);
+							this.impacts = Dynamic!(Array!Event) (16);
+							this.penetrations = Dynamic!(Array!Event) (16);
 
-							this.trajectory = DynamicArray!vec (2^^10);
+							this.trajectory = Dynamic!(Array!vec) (2^^10);
 						}
 					void update ()
 						{/*...}*/

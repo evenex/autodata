@@ -39,9 +39,6 @@ Because Resources are reference types, they are able to maintain
 
 Allocators automatically track allocated Resources, which must be manually freed.
 */
-
-alias Index = size_t;
-private alias Interval = math.Interval!Index;
 // and so you have a static function indexed by entity.id that uses it to pick up a Range from an allocator and slice it
 // all i need is an up-to-date, high performance view at all times
 // up to date means against moves - so use a look sourced possibly by a pinned member function
@@ -50,7 +47,8 @@ private alias Interval = math.Interval!Index;
 // views are for pinned, up-to-date ranges (pulls)
 struct Allocator (T, Id = Index)
 	{/*...}*/
-// TODO make it automatically extend its capacity instead of throwing an "out of memory" error.
+		private alias Interval = math.Interval!Index; // REFACTOR
+// TODO make it automatically extend its capacity instead of throwing an "out of memory" error?
 		public:
 		public {/*allocation}*/
 			static if (is (Id == Index))
@@ -177,12 +175,12 @@ struct Allocator (T, Id = Index)
 		public {/*ctor}*/
 			this (uint capacity = 2^^12)
 				{/*...}*/
-					pool = StaticArray!T (capacity);
+					pool = Array!T (capacity);
 
-					free_list = DynamicArray!Interval (100); // REVIEW
+					free_list = typeof(free_list) (100); // REVIEW
 					free_list ~= Interval (0, capacity);
 
-					resources = Directory!(Resource, Id) (100); // REVIEW
+					resources = typeof(resources) (100); // REVIEW
 				}
 		}
 		private:
@@ -370,7 +368,7 @@ struct Allocator (T, Id = Index)
 							}
 					}
 					public {/*dtor}*/
-						static if (is (ResourceHandle == shared)) // REVIEW
+						static if (0)// is (ResourceHandle == shared)) // REVIEW
 							shared ~this ()
 								{/*...}*/
 									if (is_allocated)
@@ -429,8 +427,8 @@ struct Allocator (T, Id = Index)
 				}
 		}
 		private {/*data}*/
-			StaticArray!T pool;
-			DynamicArray!Interval free_list;
+			Array!T pool;
+			Dynamic!(Array!Interval) free_list;
 			Directory!(Resource, Id) resources;
 		}
 		invariant () {/*assumptions}*/
@@ -509,6 +507,8 @@ unittest
 unittest
 	{/*free_list}*/
 		mixin(report_test!`free list`);
+
+		alias Interval = Allocator!int.Interval;
 
 		auto mem = Allocator!int (10);
 		assert (mem.free_list[].equal ([Interval(0,10)]));

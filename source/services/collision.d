@@ -40,10 +40,12 @@ private {/*conversions}*/
 		}
 }
 
-void main() {}
 private struct UpdateSignal {};
 import future;
 import resource.view;
+
+private immutable MAX_SHAPES = 8;
+void main(){}
 
 final class Collision: Service
 	{/*...}*/
@@ -153,23 +155,39 @@ final class Collision: Service
 					buffer.queries.ray_cast_excluding ~= Query.RayCastExcluding (ClientId (id), Query.RayCast (ray));
 					return promise (buffer.queries.ray_cast_excluding.fore.back.result);
 				}
-			void upload (Upload me) {}
 		}
 		public {/*uploads}*/
 			private struct Upload
 				{/*...}*/
 					mixin Command!(
-						ClientId,	`id`,
 						double, 	`mass`,
 						vec, 		`position`,
 						vec, 		`velocity`,
 						double, 	`damping`,
 					);
+					Dynamic!(Indices[MAX_SHAPES]) shapes;
+
+					auto shape (R)(R geometry)
+						if (is_geometric!R)
+						{/*...}*/
+							with (server.buffer)
+								{/*...}*/
+									auto start = vertices.length;
+
+									vertices ~= geometry;
+
+									this.shapes ~= Interval (start, vertices.length);
+								}
+							return this;
+						}
+
 					private {/*fulfillment}*/
+						ClientId id;
 						Collision server;
 
-						this (Collision server)
+						this (ClientId id, Collision server)
 							{/*...}*/
+								this.id = id;
 								this.server = server;
 							}
 						auto opCall ()
@@ -177,34 +195,21 @@ final class Collision: Service
 								assert (server);
 							}
 							body {/*...}*/
-								server.upload (this);
+								server.buffer.uploads ~= this;
 								server = null;
 							}
 					}
 				}
+			private void upload (Upload init)
+				{/*...}*/
+				}
 
-			@Upload Future!Body add (Id)(Id id)
+			@Upload auto add_body (Id = ClientId)(Id id = Id.init)
 				in {/*...}*/
 					assert (this.is_running, "attempted to add body before starting service");
 				}
 				body {/*...}*/
-					if (seed.init_position != seed.init_position)
-						seed.init_position = geometry.mean;
-
-					Upload upload =
-						{/*...}*/
-							id: seed.id,
-							mass: seed.mass,
-							position: seed.init_position,
-							velocity: seed.init_velocity,
-							damping: seed.init_damping,
-							index: vertices.length.to!uint,
-							length: geometry.length.to!uint
-						};
-
-					vertices ~= geometry;
-					uploads ~= upload;
-					with (seed) seed = Body (this, id, mass, init_velocity, init_position, init_damping);
+					return Upload (ClientId (id), this);
 				}
 		}
 		public {/*update}*/
@@ -218,11 +223,11 @@ final class Collision: Service
 		}
 		static shared {/*time}*/
 			immutable real Δt = 0.016667; // TODO set custom
+			private ulong t = 0;
 			auto time ()
 				{/*...}*/
 					return t * Δt;
 				}
-			private ulong t = 0;
 		}
 		public {/*ctor}*/
 			this ()
@@ -244,11 +249,26 @@ final class Collision: Service
 				}
 			bool process ()
 				{/*...}*/
+					static if (0)
 					{/*process uploads}*/
 						buffer.swap;
 						auto vertex_pool = buffer.vertices.rear[];
 						foreach (upload; buffer.uploads.rear[])
 							{/*...}*/
+								with (upload) if (position != position)
+									position = geometry.mean;
+
+								Upload upload =
+									{/*...}*/
+										id: upload.id,
+										mass: upload.mass,
+										position: upload.position,
+										velocity: upload.velocity,
+										damping: upload.damping,
+									};
+
+								with (upload) Body (this, id, mass, velocity, position, damping);
+
 								auto i = 0;//upload.index;TODO
 								auto n = 1;//upload.length;TODO
 								auto temp = Body (
@@ -323,7 +343,7 @@ final class Collision: Service
 
 										cp.SpaceBBQuery (space, box, layers, group, 
 											(cpShape* shape, void* bodies) 
-												{(*cast(DynamicArray!ClientId*) bodies) ~= get_id (shape);},
+												{(*cast(Dynamic!(Array!ClientId)*) bodies) ~= get_id (shape);},
 											&queried_bodies
 										);
 										return view (queried_bodies[i..$]);
@@ -476,7 +496,7 @@ final class Collision: Service
 				), `queries`
 			) buffer;
 
-			DynamicArray!ClientId queried_bodies;
+			Dynamic!(Array!ClientId) queried_bodies;
 		}
 		struct Body
 			{/*...}*/
@@ -712,10 +732,13 @@ unittest
 		scope p = new Collision;
 		p.start; scope (exit) p.stop;
 
-		auto a = p.add (Body (vec(0)), square (0.5));
-		auto b = p.add (Body (vec(0)), square (0.5, vec(1000.0)));
-		auto c = p.add (Body (vec(0)), circle (0.5));
-		auto d = p.add (Body (vec(0)), circle (0.5, vec(1000.0)));
+		auto a = p.add_body
+			.position (vec(0))
+			.shape (square (0.5))
+		();
+		auto b = p.add_body (Body (vec(0)), square (0.5, vec(1000.0)));
+		auto c = p.add_body (Body (vec(0)), circle (0.5));
+		auto d = p.add_body (Body (vec(0)), circle (0.5, vec(1000.0)));
 		p.update ();
 		assert (a.type == Body.Type.polygon);
 		assert (b.type == Body.Type.polygon);
@@ -725,17 +748,17 @@ unittest
 		assert (b.initialized && b.position == vec(0));
 		assert (c.initialized && c.position == vec(0));
 		assert (d.initialized && d.position == vec(0));
-		auto e = p.add (Body (vec(1000)), square (0.5));
-		auto f = p.add (Body (vec(1000)), square (0.5, vec(1000.0)));
+		auto e = p.add_body (Body (vec(1000)), square (0.5));
+		auto f = p.add_body (Body (vec(1000)), square (0.5, vec(1000.0)));
 		p.update ();
 		assert (e.type == Body.Type.polygon);
 		assert (f.type == Body.Type.polygon);
 		assert (e.initialized && e.position == vec(1000));
 		assert (f.initialized && f.position == vec(1000));
 
-		auto tri = p.add (Body (vec(0)), circle!3 (0.5, vec(1000.0)));
-		auto pen = p.add (Body (vec(0)), circle!5 (0.5, vec(1000.0)));
-		auto hex = p.add (Body (vec(0)), circle!6 (0.5, vec(1000.0)));
+		auto tri = p.add_body (Body (vec(0)), circle!3 (0.5, vec(1000.0)));
+		auto pen = p.add_body (Body (vec(0)), circle!5 (0.5, vec(1000.0)));
+		auto hex = p.add_body (Body (vec(0)), circle!6 (0.5, vec(1000.0)));
 		p.update ();
 		assert (tri.type == Body.Type.polygon);
 		assert (pen.type == Body.Type.polygon);
@@ -751,8 +774,8 @@ unittest
 		P.start; scope (exit) P.stop;
 
 		auto triangle = [vec(-1,-1), vec(-1,0), vec(0,-1)];
-		auto a = P.add (Body (vec(1)), triangle);
-		auto b = P.add (Body.immovable (vec(-1)), triangle);
+		auto a = P.add_body (Body (vec(1)), triangle);
+		auto b = P.add_body (Body.immovable (vec(-1)), triangle);
 		P.update;
 
 		assert (a.position == vec(1));
@@ -783,10 +806,10 @@ unittest
 		auto sq = [vec(0),vec(1,0),vec(1),vec(0,1)];
 		auto μ = sq.mean;
 		sq = sq.map!(v => v - μ).array;
-		auto a = p.add (Collision.Body (vec(0)), sq);
-		auto b = p.add (Collision.Body (vec(1.49)), sq);
-		auto c = p.add (Collision.Body (vec(-1.51)), sq);
-		auto d = p.add (Collision.Body (vec(1000)), sq);
+		auto a = p.add_body (Collision.Body (vec(0)), sq);
+		auto b = p.add_body (Collision.Body (vec(1.49)), sq);
+		auto c = p.add_body (Collision.Body (vec(-1.51)), sq);
+		auto d = p.add_body (Collision.Body (vec(1000)), sq);
 		p.update;
 		assert (p.box_query ([vec(-1),vec(1)])		.length == 2); // BUG probably disallow array literals cause they GC
 		assert (p.box_query ([vec(-2),vec(0)])		.length == 2);

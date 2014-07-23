@@ -88,7 +88,7 @@ struct Directory (T, Arg...)
 
 		this (size_t capacity)
 			{/*...}*/
-				_entries = DynamicArray!Entry (capacity);
+				_entries = Dynamic!(Array!Entry) (capacity);
 			}
 
 		public:
@@ -336,7 +336,7 @@ struct Directory (T, Arg...)
 				{/*...}*/
 					return _entries[];
 				}
-			DynamicArray!Entry _entries;
+			Dynamic!(Array!Entry) _entries;
 		}
 		debug {/*}*/
 		//version (unittest) {/*}*/ TODO

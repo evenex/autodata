@@ -7,6 +7,7 @@ import std.range;
 import std.conv;
 
 import utils;
+import math;
 import indirect;
 
 import resource.array;
@@ -292,7 +293,6 @@ public {/*chain}*/
 }
 
 private:
-alias Index = size_t;
 private {/*functor}*/
 	mixin template ViewFunctor ()
 		{/*...}*/

@@ -120,7 +120,7 @@ public {/*analysis}*/
 			return value;
 		}
 	/* intervals TODO */
-	struct Interval (Index = size_t)
+	struct Interval (Index)
 		{/*...}*/
 			Index start;
 			Index end;
@@ -133,6 +133,8 @@ public {/*analysis}*/
 					return not (end - start);
 				}
 		}
+	alias Index = size_t; // REFACTOR these are discrete numbers, they don't belong in analysis
+	alias Indices = Interval!Index;
 	bool ends_before_end (T)(Interval!T a, Interval!T b)
 		{/*...}*/
 			return a.end < b.end;

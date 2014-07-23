@@ -562,6 +562,11 @@ public {/*metaprogramming}*/
 					}
 				else enum is_comparable = false;
 			}
+		/* test if a range has slicing, more permissive than std.range.hasSlicing */
+		template is_sliceable (R)
+			{/*...}*/
+				enum is_sliceable = __traits(compiles, R.init[0..1]);
+			}
 		/* test if a range is indexable */
 		template is_indexable (R)
 			{/*...}*/

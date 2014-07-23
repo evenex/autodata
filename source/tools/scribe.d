@@ -248,7 +248,7 @@ final class Scribe
 
 					vertex_pool = Allocator!vec (2^^14);
 					glyph_pool = Allocator!Glyph (2^^12);
-					newline_positions = DynamicArray!size_t (2^^8);
+					newline_positions = Dynamic!(Array!size_t) (2^^8);
 				}
 			this (Display display, uint[] sizes = [12])
 				in {/*...}*/
@@ -401,7 +401,7 @@ final class Scribe
 		private {/*resources}*/
 			Allocator!Glyph glyph_pool;
 			Allocator!vec vertex_pool;
-			DynamicArray!size_t newline_positions;
+			Dynamic!(Array!size_t) newline_positions;
 		}
 		extern (C):
 		extern (C) {/*services}*/
