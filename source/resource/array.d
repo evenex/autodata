@@ -8,11 +8,11 @@ import std.c.stdlib;
 mixin template ArrayInterface (alias pointer, alias length)
 	{/*...}*/
 		public {/*assertions}*/
-			static assert (is_indexable!(typeof(array)),
-				`backing array must support indexing`
+			static assert (is_indexable!(typeof(pointer)),
+				`backing struct must support indexing`
 			);
-			static assert (is_sliceable!(typeof(array)),
-				`backing array must support slicing`
+			static assert (is_sliceable!(typeof(pointer)),
+				`backing struct must support slicing`
 			);
 		}
 		public:
@@ -22,14 +22,14 @@ mixin template ArrayInterface (alias pointer, alias length)
 					assert (i < length);
 				}
 				body {/*...}*/
-					return this.array[i];
+					return pointer[i];
 				}
 			auto opSlice (size_t i, size_t j)
 				in {/*...}*/
 					assert (i <= j && j <= length);
 				}
 				body {/*...}*/
-					return this.array[i..j];
+					return pointer[i..j];
 				}
 			auto opSlice ()
 				{/*...}*/
@@ -64,9 +64,9 @@ mixin template ArrayInterface (alias pointer, alias length)
 				{/*...}*/
 					import std.conv;
 
-					static if (__traits(compiles, this.array[0..length].text))
-						return this.array[0..length].text;
-					else return `[` ~ElementType!(typeof(array)).stringof~ `...]`;
+					static if (__traits(compiles, pointer[0..length].text))
+						return pointer[0..length].text;
+					else return `[` ~ElementType!(typeof(pointer)).stringof~ `...]`;
 				}
 			auto text () const
 				{/*...}*/
@@ -75,35 +75,25 @@ mixin template ArrayInterface (alias pointer, alias length)
 		}
 	}
 
-mixin template Malloc (alias pointer, alias size)
-	if (is (typeof(pointer) == T*, T)
-	&& is (typeof(size): size_t)
-	&& is (typeof(size) == const))
-	{/*...}*/
-		public:
-
-		this (size_t length)
-			{/*...}*/
-				alias T = typeof(*pointer);
-
-				pointer = cast(T*)malloc (length * T.sizeof);
-
-				size = length;
-			}
-		~this ()
-			{/*...}*/
-				free (cast(void*)pointer);
-			}
-		@disable this (this);
-	}
-
 struct Array (T)
 	{/*...}*/
 		public const size_t length;
-		private T* array;
+
+		this (size_t length)
+			{/*...}*/
+				this.length = length;
+
+				array = cast(T*)malloc (length * T.sizeof);
+			}
+		~this ()
+			{/*...}*/
+				free (cast(void*)array);
+			}
+		@disable this (this);
 
 		mixin ArrayInterface!(array, length);
-		mixin Malloc!(array, length);
+
+		private T* array;
 	}
 
 enum Destruction {immediate, deferred}
@@ -197,13 +187,7 @@ struct Dynamic (Array, Destruction destruction = Destruction.deferred)
 		public {/*ctor}*/
 			static if (__traits(hasMember, Array, `__ctor`))
 				this (ParameterTypeTuple!(Array.__ctor) args)
-					in {/*}*/
-						assert (length == 0);
-					}
-					out {/*}*/
-						assert (length == 0);
-					}
-					body {/*...}*/
+					{/*...}*/
 						array = Array (args);
 					}
 		}

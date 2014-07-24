@@ -45,7 +45,6 @@ import future;
 import resource.view;
 
 private immutable MAX_SHAPES = 8;
-void main(){}
 
 final class Collision: Service
 	{/*...}*/
@@ -159,6 +158,7 @@ final class Collision: Service
 		public {/*uploads}*/
 			private struct Upload
 				{/*...}*/
+					public:
 					mixin Command!(
 						double, 	`mass`,
 						vec, 		`position`,
@@ -167,10 +167,6 @@ final class Collision: Service
 					);
 					Dynamic!(vec[][MAX_SHAPES]) shapes;
 
-					@property auto geometry ()
-						{/*...}*/
-							return contigious (shapes[]);
-						}
 					auto shape (R)(R geometry)
 						if (is_geometric!R)
 						{/*...}*/
@@ -180,40 +176,33 @@ final class Collision: Service
 
 									vertices ~= geometry;
 
-									this.shapes ~= vertices[start..vertices.length];
+									this.shapes ~= vertices.write[start..vertices.length];
 								}
 							return this;
 						}
 
-					private {/*fulfillment}*/
-						ClientId id;
-						Collision server;
-
-						this (ClientId id, Collision server)
-							{/*...}*/
-								this.id = id;
-								this.server = server;
-							}
-						auto opCall () // XXX
-							in {/*...}*/
-								assert (server);
-							}
-							body {/*...}*/
-								server.buffer.uploads ~= this;
-								server = null;
-							}
-					}
-				}
-			private void upload (Upload init)
-				{/*...}*/
+					private:
+					@property auto geometry ()
+						{/*...}*/
+							return contigious (shapes[]);
+						}
+					ClientId id;
+					Collision server; // XXX OUT
+					this (ClientId id, Collision server)
+						{/*...}*/
+							this.id = id;
+							this.server = server;
+						}
 				}
 
-			@Upload auto add_body (Id = ClientId)(Id id = Id.init)
+			@Upload auto add_body (Id = ClientId)(Id id)
 				in {/*...}*/
 					assert (this.is_running, "attempted to add body before starting service");
+					assert (not (id in bodies), `duplicate ids`);
 				}
 				body {/*...}*/
-					return Upload (ClientId (id), this);
+					buffer.uploads ~= Upload (ClientId (id), this);
+					return Forwarded!Upload (&buffer.uploads.write.back);
 				}
 		}
 		public {/*update}*/
@@ -653,8 +642,8 @@ final class Collision: Service
 						{/*...}*/
 							auto center = geometry.mean;
 							auto vs = geometry.map!(v => v - center);
-							auto dirs = geometry.zip (geometry.rotate_elements).map!(v => (v[1]-v[0]).unit);
-							auto turn = dirs.zip (dirs.rotate_elements);
+							auto dirs = geometry.adjacent_pairs.map!(v => (v[1]-v[0]).unit);
+							auto turn = dirs.adjacent_pairs;
 
 							auto dot = turn.map!(v => v[0].dot(v[1]));
 							auto μ_dot = dot.mean;
@@ -673,26 +662,10 @@ final class Collision: Service
 							 && σ_dot <= 0.05 // turning at a consistent angle
 							 && μ_dot >= 0.40 // turning at angles < 66° on average
 							) return Type.circle;
-							
 							else return Type.polygon;
 						}
 				}
 			}
-	}
-
-// REFACTOR to math.geometry
-auto area (R)(R polygon) // TODO unittest
-	if (is_geometric!R)
-	{/*...}*/
-		return 0.5 * Σ (polygon.zip (polygon.rotate_elements).map!(v => v[0].det (v[1])));
-	}
-// REFACTOR to utils.move
-auto rotate_elements (R)(R range, long positions = 1) // TODO unittest
-	{/*...}*/
-		auto n = range.length;
-		auto i = (positions + n) % n;
-		assert (i > 0);
-		return range.cycle[i..n+i];
 	}
 
 unittest
@@ -714,7 +687,7 @@ unittest
 		std.concurrency.spawn (&test);
 		std.concurrency.receive ((bool _){});
 	}
-unittest
+void main()
 	{/*shape deduction}*/
 		alias Body = Collision.Body;
 		import std.datetime;
@@ -724,13 +697,23 @@ unittest
 		scope p = new Collision;
 		p.start; scope (exit) p.stop;
 
-		auto a = p.add_body
+		auto a = p.add_body (0)
 			.position (vec(0))
-			.shape (square (0.5))
-		();
-		auto b = p.add_body (Body (vec(0)), square (0.5, vec(1000.0)));
-		auto c = p.add_body (Body (vec(0)), circle (0.5));
-		auto d = p.add_body (Body (vec(0)), circle (0.5, vec(1000.0)));
+			.shape (square (0.5));
+		pragma(msg, typeof(a));
+
+		auto b = p.add_body (1)
+			.position(vec(0))
+			.shape (square (0.5, vec(1000.0)));
+
+		auto c = p.add_body (2)
+			.position (vec(0))
+			.shape (circle (0.5));
+
+		auto d = p.add_body (3)
+			.position (vec(0))
+			.shape (circle (0.5, vec(1000.0)));
+
 		p.update ();
 		assert (a.type == Body.Type.polygon);
 		assert (b.type == Body.Type.polygon);
@@ -748,9 +731,18 @@ unittest
 		assert (e.initialized && e.position == vec(1000));
 		assert (f.initialized && f.position == vec(1000));
 
-		auto tri = p.add_body (Body (vec(0)), circle!3 (0.5, vec(1000.0)));
-		auto pen = p.add_body (Body (vec(0)), circle!5 (0.5, vec(1000.0)));
-		auto hex = p.add_body (Body (vec(0)), circle!6 (0.5, vec(1000.0)));
+		auto tri = p.add_body (4)
+			.position (vec(0))
+			.shape (circle!3 (0.5, vec(1000.0)));
+
+		auto pen = p.add_body (5)
+			.position (vec(0))
+			.shape (circle!5 (0.5, vec(1000.0)));
+
+		auto hex = p.add_body (6)
+			.position (vec(0))
+			.shape (circle!6 (0.5, vec(1000.0)));
+
 		p.update ();
 		assert (tri.type == Body.Type.polygon);
 		assert (pen.type == Body.Type.polygon);

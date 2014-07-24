@@ -386,14 +386,22 @@ public {/*2D geometry}*/
 				 auto c = geometry.mean;
 				 return geometry.map!(v => (v-c).norm).reduce!max;
 			}
+		/* get the area of a polygon */
+		auto area (R)(R polygon)
+			if (is_geometric!R)
+			{/*...}*/
+				return 0.5 * abs (Σ (polygon.adjacent_pairs.map!(v => v[0].det (v[1]))));
+			}
 		/* reflect a polygon over a "direction" axis passing through its centroid */
 		auto flip (string direction, T)(T geometry)
 			if (is_geometric!T && (direction == `vertical` || direction == `horizontal`))
 			{/*...}*/
 				auto c = geometry.mean;
+
 				static if (direction == `vertical`)
 					auto p = ElementType!T(1,-1);
 				else auto p = ElementType!T(-1,1);
+
 				return geometry.map!(v => (v-c)*p+c);
 			}
 		/* translate a polygon by a vector */
@@ -572,7 +580,6 @@ public {/*2D geometry}*/
 				this (T)(T geometry)
 					if (is_geometric!T)
 					{/*...}*/
-						immutable ttt = T.stringof;
 						auto result = geometry.reduce!(
 							(a,b) => vec(min (a.x, b.x), min (a.y, b.y)),
 							(a,b) => vec(max (a.x, b.x), max (a.y, b.y))
@@ -590,9 +597,6 @@ public {/*2D geometry}*/
 						}
 					auto front ()
 						{/*...}*/
-							auto bp = 1;
-							if (iterator > 3)
-								bp++;
 							return verts[iterator];
 						}
 					auto empty ()

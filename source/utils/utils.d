@@ -580,12 +580,13 @@ public {/*metaprogramming}*/
 			}
 		/* test if T is a member function */
 		template is_member_function (T...)
-			if (T.length == 1)
 			{/*...}*/
-				enum is_member_function = isSomeFunction!(T[0])
-					&& not (isFunctionPointer!(T[0])
-						|| isDelegate!(T[0])
-					);
+				static if (T.length == 1)
+					enum is_member_function = isSomeFunction!(T[0])
+						&& not (isFunctionPointer!(T[0])
+							|| isDelegate!(T[0])
+						);
+				else enum is_member_function = false;
 			}
 		/* test if a type can index D's built-in arrays and slices */
 		template can_index_arrays (T)
@@ -628,52 +629,58 @@ public {/*metaprogramming}*/
 		/* separate Types and Names into eponymous TypeTuples */
 		mixin template DeclarationSplitter (Args...)
 			{/*...}*/
+				private import std.typetuple: Filter;
+
 				alias Types = Filter!(is_type, Args);
 				alias Names = Filter!(is_string_param, Args);
 				static assert (Types.length == Names.length, `type/name mismatch`);
 				static assert (Types.length + Names.length == Args.length, `extraneous template parameters`);
 			}
-		/* generate getters and command setters for a set of declared fields */
+		/* generate getters and this-returning setters for a set of declared fields */
 		mixin template Command (Args...)
 			{/*...}*/
 				static assert (is(typeof(this)), `mixin requires host struct`);
-				import std.typetuple;
-				import std.typecons;
 
 				mixin DeclarationSplitter!Args;
 
-				static string command_property_declaration ()
-					{/*...}*/
-						static string command_getter_setter (string name)()
-							{/*...}*/
-								alias Type = Types[staticIndexOf!(name, Names)];
-								return q{
-									@property auto }~name~q{ (}~Type.stringof~q{ value)
-										}`{`q{
-											_}~name~q{ = value;
-											return this;
-										}`}`q{
-									@property auto }~name~q{ ()
-										}`{`q{
-											return _}~name~q{;
-										}`}`q{
-								};
-							}
-
-						string code;
-						foreach (name; Names)
-							code ~= command_getter_setter!name;
-						return code;
-					}
-				static string command_data_declaration ()
-					{/*...}*/
-						template prepend_underscore (string name)
-							{enum prepend_underscore = `_`~name;}
-						return alignForSize!Types ([staticMap!(prepend_underscore, Names)]);
-					}
-
 				mixin(command_property_declaration);
 				mixin(command_data_declaration);
+
+				private {/*code generation}*/
+					static string command_property_declaration ()
+						{/*...}*/
+							static string command_getter_setter (string name)()
+								{/*...}*/
+									import std.typetuple;
+
+									alias Type = Types[staticIndexOf!(name, Names)];
+									return q{
+										@property auto ref }~name~q{ (}~Type.stringof~q{ value)
+											}`{`q{
+												_}~name~q{ = value;
+												return this;
+											}`}`q{
+										@property auto ref }~name~q{ ()
+											}`{`q{
+												return _}~name~q{;
+											}`}`q{
+									};
+								}
+
+							string code;
+							foreach (name; Names)
+								code ~= command_getter_setter!name;
+							return code;
+						}
+					static string command_data_declaration ()
+						{/*...}*/
+							import std.typecons;
+
+							template prepend_underscore (string name)
+								{enum prepend_underscore = `_`~name;}
+							return alignForSize!Types ([staticMap!(prepend_underscore, Names)]);
+						}
+				}
 			}
 		/* forward opApply (foreach) to a member */
 		mixin template IterateOver (alias range)
@@ -769,6 +776,44 @@ public {/*metaprogramming}*/
 				static const string load_dynamic_symbol (string symbol) ()
 					{/*...}*/
 						return symbol~` = cast (typeof (`~symbol~`)) dlsym (library, "`~symbol~`");`;
+					}
+			}
+	}
+	public {/*wrappers}*/
+		/* forward all member functions of some object via pointer */
+		struct Forwarded (T)
+			{/*...}*/
+				public mixin(forward_members);
+
+				private:
+
+				T* command;
+				static string forward_members ()
+					{/*...}*/
+						string code;
+
+						foreach (member; __traits(allMembers, T))
+							{/*...}*/
+								static if (member.empty || member == `__ctor`)
+									continue;
+								else {/*...}*/
+									string forward = q{command.} ~member~ q{ (args)};
+
+									code ~= q{
+										auto } ~member~ q{ (Args...)(scope lazy Args args)
+											}`{`q{
+												static if (__traits(compiles, } ~forward~ q{))
+													}`{`q{
+														} ~forward~ q{;
+														return this;
+													}`}`q{
+												else static assert (0, } `"`~member~ ` cannot be forwarded"`q{);
+											}`}`q{
+									};
+								}
+							}
+
+						return code;
 					}
 			}
 	}
@@ -1044,7 +1089,7 @@ public {/*ranges}*/
 			return Contigious!R (ranges);
 		}
 	unittest
-		{/*...}*/
+		{/*contigious}*/
 			int[2] x = [1,2];
 			int[2] y = [3,4];
 			int[2] z = [5,6];
@@ -1052,5 +1097,18 @@ public {/*ranges}*/
 			int[2][] A = [x,y,z];
 
 			assert (A.contigious.sum == 21);
+		}
+	/* traverse a range with elements rotated left by some number of positions */
+	auto rotate_elements (R)(R range, long positions = 1)
+		{/*...}*/
+			auto n = range.length;
+			auto i = (positions + n) % n;
+			assert (i > 0);
+			return range.cycle[i..n+i];
+		}
+	/* pair each element of a range with its successor in the range, cyclically */
+	auto adjacent_pairs (R)(R range)
+		{/*...}*/
+			return range.zip (range.rotate_elements);
 		}
 }
