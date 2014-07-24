@@ -314,9 +314,9 @@ final class Display: Service
 				}
 			bool process ()
 				{/*...}*/
-					auto vertex_pool = buffer.vertices.rear[];
-					auto texture_coord_pool = buffer.texture_coords.rear[];
-					auto order_pool = buffer.orders.rear[];
+					auto vertex_pool = buffer.vertices.read[];
+					auto texture_coord_pool = buffer.texture_coords.read[];
+					auto order_pool = buffer.orders.read[];
 
 					if (order_pool.length)
 						{/*sort orders}*/
@@ -363,7 +363,7 @@ final class Display: Service
 						{/*...}*/
 							buffer.reader_swap;
 							listening = false;
-							assert (buffer.texture_coords.rear.length == buffer.vertices.rear.length, 
+							assert (buffer.texture_coords.read.length == buffer.vertices.read.length, 
 								`vertices and texture coords not 1-to-1`
 							);
 						}

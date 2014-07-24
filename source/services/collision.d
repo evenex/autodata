@@ -129,7 +129,7 @@ final class Collision: Service
 				}
 				body {/*...}*/
 					buffer.queries.box ~= Query.Box (corners);
-					return promise (buffer.queries.box.fore.back.result);
+					return promise (buffer.queries.box.write.back.result);
 				}
 			Future!Incidence ray_cast (vec[2] ray)
 				in {/*...}*/
@@ -137,23 +137,23 @@ final class Collision: Service
 				}
 				body {/*...}*/
 					buffer.queries.ray_cast ~= Query.RayCast (ray);
-					return promise (buffer.queries.ray_cast.fore.back.result);
+					return promise (buffer.queries.ray_cast.write.back.result);
 				}
 			Future!Incidence ray_query (T)(T id, vec[2] ray)
 				in {/*...}*/
-					assert (this.is_running, "attempted query before starting service (currently "~this.status.to!string~")");
+					assert (this.is_running, "attempted query before starting service (currently "~this.status.text~")");
 				}
 				body {/*...}*/
 					buffer.queries.ray ~= Query.Ray (ClientId (id), Query.RayCast (ray));
-					return promise (buffer.queries.ray.fore.back.result);
+					return promise (buffer.queries.ray.write.back.result);
 				}
 			Future!Incidence ray_cast_excluding (T)(T id, vec[2] ray)
 				in {/*...}*/
-					assert (this.is_running, "attempted query before starting service (currently "~this.status.to!string~")");
+					assert (this.is_running, "attempted query before starting service (currently "~this.status.text~")");
 				}
 				body {/*...}*/
 					buffer.queries.ray_cast_excluding ~= Query.RayCastExcluding (ClientId (id), Query.RayCast (ray));
-					return promise (buffer.queries.ray_cast_excluding.fore.back.result);
+					return promise (buffer.queries.ray_cast_excluding.write.back.result);
 				}
 		}
 		public {/*uploads}*/
@@ -165,8 +165,12 @@ final class Collision: Service
 						vec, 		`velocity`,
 						double, 	`damping`,
 					);
-					Dynamic!(Indices[MAX_SHAPES]) shapes;
+					Dynamic!(vec[][MAX_SHAPES]) shapes;
 
+					@property auto geometry ()
+						{/*...}*/
+							return contigious (shapes[]);
+						}
 					auto shape (R)(R geometry)
 						if (is_geometric!R)
 						{/*...}*/
@@ -176,7 +180,7 @@ final class Collision: Service
 
 									vertices ~= geometry;
 
-									this.shapes ~= Interval (start, vertices.length);
+									this.shapes ~= vertices[start..vertices.length];
 								}
 							return this;
 						}
@@ -190,7 +194,7 @@ final class Collision: Service
 								this.id = id;
 								this.server = server;
 							}
-						auto opCall ()
+						auto opCall () // XXX
 							in {/*...}*/
 								assert (server);
 							}
@@ -249,25 +253,13 @@ final class Collision: Service
 				}
 			bool process ()
 				{/*...}*/
-					static if (0)
 					{/*process uploads}*/
 						buffer.swap;
-						auto vertex_pool = buffer.vertices.rear[];
-						foreach (upload; buffer.uploads.rear[])
+						auto vertex_pool = buffer.vertices.read[];
+						foreach (upload; buffer.uploads.read[])
 							{/*...}*/
 								with (upload) if (position != position)
 									position = geometry.mean;
-
-								Upload upload =
-									{/*...}*/
-										id: upload.id,
-										mass: upload.mass,
-										position: upload.position,
-										velocity: upload.velocity,
-										damping: upload.damping,
-									};
-
-								with (upload) Body (this, id, mass, velocity, position, damping);
 
 								auto i = 0;//upload.index;TODO
 								auto n = 1;//upload.length;TODO
@@ -376,7 +368,7 @@ final class Collision: Service
 						queried_bodies.clear;
 						void process_queries (string type)()
 							{/*...}*/
-								foreach (query; mixin(q{buffer.queries.} ~type~ q{.rear[]}))
+								foreach (query; mixin(q{buffer.queries.} ~type~ q{.read[]}))
 									query.result = answer (query);
 							}
 						process_queries!`box`;
@@ -407,7 +399,7 @@ final class Collision: Service
 					static if (0) //XXX
 					auto act (Id id, Body.Action action)
 						{/*...}*/
-							assert (id in body_ptr, "body "~to!string(id)~" does not exist");
+							assert (id in body_ptr, "body "~id.text~" does not exist");
 							import std.string: cap = capitalize;
 							const string apply (string op) ()
 								{/*...}*/
@@ -440,7 +432,7 @@ final class Collision: Service
 						}
 					auto debug_query (T)(T id, string query)
 						{/*...}*/
-							assert (id in bodies, "queried body "~to!string(id)~" not uploaded");
+							assert (id in bodies, "queried body "~id.text~" not uploaded");
 							debug const string get (string prop) ()
 								{/*...}*/
 									return q{case }`"`~prop~`"`q{: reply (bodies[id].}~prop~q{); return;};

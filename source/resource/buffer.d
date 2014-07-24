@@ -13,9 +13,9 @@ import resource.allocator;
 Buffers are a mechanism for safely transferring large quantities
 	of data over thread boundaries. They must be declared shared.
 
-Buffers expose two Ranges, called the fore and rear buffers,
-	and themselves act as an OutputRange with appending (which 
-	writes to the fore buffer). Buffers are backed by Resources, 
+Buffers expose two Ranges, called the write and read buffers.
+	The Buffer itself acts as an OutputRange with appending (which 
+	writes to the write buffer). Buffers are backed by Resources, 
 	so their length cannot exceed their declared capacity.
 
 Because of the nondeterministic nature of the GC, Invalid Memory 
@@ -39,13 +39,13 @@ template DoubleBuffer (T, uint size)
 				shared {/*swap}*/
 					void swap ()
 						{/*...}*/
-							(cast()this).buffer[++write %= 2].clear;
+							(cast()this).buffer[++write_index %= 2].clear;
 						}
 				}
 				shared {/*append}*/
 					void put (U)(U data)
 						{/*...}*/
-							(cast()this).buffer[write] ~= data;
+							(cast()this).buffer[write_index] ~= data;
 						}
 					void opOpAssign (string op: `~`, U)(U that)
 						{/*...}*/
@@ -53,23 +53,23 @@ template DoubleBuffer (T, uint size)
 						}
 				}
 				shared @property {/*buffers}*/
-					auto fore ()
+					auto write ()
 						{/*...}*/
-							return (cast()this).buffer[write][];
+							return (cast()this).buffer[write_index][];
 						}
-					auto rear ()
+					auto read ()
 						{/*...}*/
-							return (cast()this).buffer[(write+1)%2][];
+							return (cast()this).buffer[(write_index+1)%2][];
 						}
 				}
 				shared @property {/*size}*/
 					auto length ()
 						{/*...}*/
-							return (cast()buffer[write]).length;
+							return (cast()buffer[write_index]).length;
 						}
 					auto capacity ()
 						{/*...}*/
-							return (cast()buffer[write]).capacity;
+							return (cast()buffer[write_index]).capacity;
 						}
 				}
 				shared {/*ctor}*/
@@ -84,7 +84,7 @@ template DoubleBuffer (T, uint size)
 				private:
 				private {/*data}*/
 					Resource!T buffer[2];
-					uint write = 0;
+					uint write_index = 0;
 				}
 				enum BufferTrait;
 			}
@@ -94,8 +94,8 @@ template DoubleBuffer (T, uint size)
 
 /*
 	TripleBuffers employ a lockless two-step swap strategy.
-	In no particular order, the writing thread must call writer_swap ()
-		and the reading thread must call reader_swap ().
+	In no particular order, the write thread must call writer_swap ()
+		and the read thread must call reader_swap ().
 	At the cost of 50% more memory usage over DoubleBuffers, TripleBuffers 
 		can forego synchronization without the risk of tearing. As long as 
 		the delay between paired swap calls does not exceed one processing 
@@ -114,21 +114,21 @@ template TripleBuffer (T, uint size, uint sync_frequency = 4_000)
 				shared {/*swap}*/
 					void writer_swap ()
 						{/*...}*/
-							while ((write + 2) % 3 != read)
+							while ((write_index + 2) % 3 != read_index)
 								Thread.sleep (sync_cycle);
-							(cast()buffer[++write %= 3]).clear;
+							(cast()buffer[++write_index %= 3]).clear;
 						}
 					void reader_swap ()
 						{/*...}*/
-							while ((write + 1) % 3 != read)
+							while ((write_index + 1) % 3 != read_index)
 								Thread.sleep (sync_cycle);
-							++read %= 3;
+							++read_index %= 3;
 						}
 				}
 				shared {/*append}*/
 					void put (U)(U data)
 						{/*...}*/
-							(cast()this).buffer[write] ~= data;
+							(cast()this).buffer[write_index] ~= data;
 						}
 					void opOpAssign (string op: `~`, U)(U that)
 						{/*...}*/
@@ -136,23 +136,23 @@ template TripleBuffer (T, uint size, uint sync_frequency = 4_000)
 						}
 				}
 				shared @property {/*buffers}*/
-					auto fore ()
+					auto write ()
 						{/*...}*/
-							return (cast()this).buffer[write][];
+							return (cast()this).buffer[write_index][];
 						}
-					auto rear ()
+					auto read ()
 						{/*...}*/
-							return (cast()this).buffer[read][];
+							return (cast()this).buffer[read_index][];
 						}
 				}
 				shared @property {/*size}*/
 					auto length ()
 						{/*...}*/
-							return fore.length;
+							return write.length;
 						}
 					auto capacity ()
 						{/*...}*/
-							return (cast()buffer[write]).capacity;
+							return (cast()buffer[write_index]).capacity;
 						}
 				}
 				shared {/*ctor}*/
@@ -168,8 +168,8 @@ template TripleBuffer (T, uint size, uint sync_frequency = 4_000)
 				private:
 				private {/*data}*/
 					Resource!T buffer[3];
-					uint write = 0;
-					uint read  = 2;
+					uint write_index = 0;
+					uint read_index  = 2;
 				}
 				enum BufferTrait;
 			}
@@ -265,22 +265,22 @@ unittest
 				b ~= [5,4];
 				assert (b.length == 6);
 
-				assert (b.fore[].equal ([9,8,7,6,5,4]));
-				assert (b.rear[].equal ((int[]).init));
+				assert (b.write[].equal ([9,8,7,6,5,4]));
+				assert (b.read[].equal ((int[]).init));
 
 				static if (Buffer == q{TripleBuffer})
 					b.writer_swap, b.reader_swap;
 				else b.swap;
 
-				assert (b.fore[].equal ((int[]).init));
-				assert (b.rear[].equal ([9,8,7,6,5,4]));
+				assert (b.write[].equal ((int[]).init));
+				assert (b.read[].equal ([9,8,7,6,5,4]));
 
 				static if (Buffer == q{TripleBuffer})
 					b.writer_swap, b.reader_swap;
 				else b.swap;
 
-				assert (b.fore[].equal ((int[]).init));
-				assert (b.rear[].equal ((int[]).init));
+				assert (b.write[].equal ((int[]).init));
+				assert (b.read[].equal ((int[]).init));
 			}
 
 		test!q{DoubleBuffer};
@@ -307,7 +307,7 @@ unittest
 						static if (Buffer == q{TripleBuffer})
 							A.reader_swap;
 
-						auto data = A.rear[];
+						auto data = A.read[];
 						ownerTid.send (data.sum);
 					}
 

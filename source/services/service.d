@@ -158,7 +158,7 @@ abstract class Service
 						void receive ()
 							{std.concurrency.receive ((Stop signal){}, ops);}
 						debug try receive;
-							catch (Warning warning) {elaborate_exception (warning);}
+							catch (Warning warning) {print_stack_trace (warning);}
 						else receive;
 					}
 				bool received_before (Ops...) (Duration timeout, Ops ops)
@@ -167,7 +167,7 @@ abstract class Service
 							{return std.concurrency.receiveTimeout (timeout, (Stop signal){}, ops);}
 						debug try return received;
 							catch (Warning warning) {/*...}*/
-								elaborate_exception (warning);
+								print_stack_trace (warning);
 								// HACK can't just assume we ran out of time, but can't use a clock in here either
 								return received_before (0.msecs, ops);
 							}
@@ -250,7 +250,7 @@ abstract class Service
 						{/*...}*/
 							debug try return func ();
 								catch (Throwable error) {/*...}*/
-									elaborate_exception (error, "while ", mode);
+									print_stack_trace (error, "while ", mode);
 									throw error;
 								}
 							else return func ();

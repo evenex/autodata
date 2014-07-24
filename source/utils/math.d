@@ -10,13 +10,13 @@ public {/*constants}*/
 	alias e = E;
 }
 public {/*logic}*/
-	/* (¬(a < b || b < a) ⇒ a = b) */
-	bool reflexively_equal (alias cmp, T,U)(inout T a, inout U b)
+	/* (¬(a < b || b < a) ⇒ a == b) */
+	bool antisymmetrically_equivalent (alias cmp, T,U)(inout T a, inout U b)
 		if (__traits(compiles, cmp (a, b)))
 		{/*...}*/
 			return not (cmp (a,b) || cmp (b,a));
 		}
-	bool reflexively_equal (T,U)(inout T a, inout U b)
+	bool antisymmetrically_equivalent (T,U)(inout T a, inout U b)
 		if (__traits(compiles, a < b))
 		{/*...}*/
 			return not (a < b || b < a);

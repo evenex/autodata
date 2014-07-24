@@ -81,7 +81,8 @@ public {/*debug}*/
 				}
 		}
 	/* print detailed information about a caught exception */
-	auto elaborate_exception (Ex, T...) (Ex exception, T message) if (is (Ex: Throwable))
+	auto print_stack_trace (Ex, T...) (Ex exception, T message) 
+		if (is (Ex: Throwable))
 		{/*...}*/
 			import std.stdio;
 			const string type = is (Ex == Warning)? `warning`: `error`;
@@ -294,24 +295,25 @@ public {/*debug}*/
 	}
 }
 public {/*search}*/
-	/* specify how elements are compared for equality
+	/* specify how elements are compared for equivalence
 	*/
-	enum EqualityPolicy
+	enum Equivalence
 		{/*...}*/
 			/*
 				use ==, if it is defined.
-				otherwise, elements are tested for reflexive equality 
+				otherwise, elements are tested for antisymmetric equivalence 
+				i.e. ¬(a < b || b < a) ⇒ a == b
 			*/  
 			intrinsic, 
 			/*
-				ignore == and always test for reflexive equality.
+				ignore == and always test for antisymmetric equivalence.
 			*/
-			reflexive
+			antisymmetric
 		}
 
 	/* result of a binary search over a sorted, indexable range.
 		if the element was found, BinarySearchResult holds a pointer to the element and the element's position.
-		otherwise, it holds a null pointer and the position that the element would occupy were it in the range.
+		otherwise, it holds a null pointer and the position that the element would occupy if it were in the range.
 	*/
 	struct BinarySearchResult (T)
 		{/*...}*/
@@ -326,34 +328,38 @@ public {/*search}*/
 			return range.binary_search!(less_than!T)(element);
 		}
 
-	/* perform a customized policy-based binary search.
+	/* perform a custom policy-based binary search.
 		by default, binary search compares elements with the < operator. 
 		this can be overridden by supplying a comparison function as a template parameter. 
 		the	range is assumed to be ordered according to the comparison function.
 		
-		equality checking is intrinsic by default, but can optionally be overridden as well.
+		equivalence checking is intrinsic by default, but can optionally be overridden.
 	*/
-	template binary_search (alias compare, EqualityPolicy equality = EqualityPolicy.intrinsic)
+	template binary_search (alias compare, Equivalence equivalence = Equivalence.intrinsic)
 		if (is_comparison_function!compare)
 		{/*...}*/
 			auto binary_search (R, T = ElementType!R)(R range, T element)
 				if (hasLength!R && is_indexable!R)
-				{/*...}*/
+				in {/*...}*/
+					try assert (range.isSorted!compare);
+					catch (Exception) assert (0);
+				}
+				body {/*...}*/
 					if (range.empty)
-						return BinarySearchResult!T (null, 0L);
+						return BinarySearchResult!T (null, 0);
 
 					long min = 0;
 					long max = range.length;
 
-					static if (hasMember!(T, `opEquals`) && equality != EqualityPolicy.reflexive)
+					static if (hasMember!(T, `opEquals`) && equivalence != Equivalence.antisymmetric) // REVIEW hasMember => traits(compiles, T.init == T.init) ?
 						bool equal_to (ref const T that)
 							{/*...}*/
 								 return element == that;
 							}
 					else bool equal_to (ref const T that)
 						{/*...}*/
-							import math : reflexively_equal;
-							return element.reflexively_equal!compare (that);
+							import math : antisymmetrically_equivalent;
+							return element.antisymmetrically_equivalent!compare (that);
 						}
 
 					while (min < max)
@@ -957,4 +963,94 @@ public {/*tags}*/
 public {/*tuples}*/
 	template λ (alias f) {alias λ = f;}
 	template Aⁿ (T...) {alias Aⁿ = T;}
+}
+public {/*ranges}*/
+	/* construct a ForwardRange out of a range of ranges such that the inner ranges appear concatenated */
+	struct Contigious (R)
+		if ((is_indexable!R && is_indexable!(ElementType!R))
+		&& not (isForwardRange!R && isForwardRange!(ElementType!R)))
+		{/*...}*/
+			private size_t i, j;
+			R ranges;
+
+			this (R ranges)
+				{/*...}*/
+					this.ranges = ranges;
+				}
+			@property auto length ()
+				{/*...}*/
+					import math: sum;
+					return ranges.map!(r => r.length).sum;
+				}
+
+			auto ref front ()
+				{/*...}*/
+					return ranges[j][i];
+				}
+			void popFront ()
+				{/*...}*/
+					if (++i == ranges[j].length)
+						{/*...}*/
+							++j;
+							i = 0;
+						}
+				}
+			bool empty ()
+				{/*...}*/
+					return j >= ranges.length;
+				}
+			auto save ()
+				{/*...}*/
+					return this;
+				}
+		}
+	struct Contigious (R)
+		if (isForwardRange!R && isForwardRange!(ElementType!R))
+		{/*...}*/
+			R ranges;
+
+			this (R ranges)
+				{/*...}*/
+					this.ranges = ranges;
+				}
+			@property auto length ()
+				{/*...}*/
+					import math: sum;
+					return ranges.map!(r => r.length).sum;
+				}
+
+			auto ref front ()
+				{/*...}*/
+					return ranges.front.front;
+				}
+			void popFront ()
+				{/*...}*/
+					ranges.front.popFront;
+
+					if (ranges.front.empty)
+						ranges.popFront;
+				}
+			bool empty ()
+				{/*...}*/
+					return ranges.empty;
+				}
+			auto save ()
+				{/*...}*/
+					return this;
+				}
+		}
+	auto contigious (R)(R ranges)
+		{/*...}*/
+			return Contigious!R (ranges);
+		}
+	unittest
+		{/*...}*/
+			int[2] x = [1,2];
+			int[2] y = [3,4];
+			int[2] z = [5,6];
+
+			int[2][] A = [x,y,z];
+
+			assert (A.contigious.sum == 21);
+		}
 }

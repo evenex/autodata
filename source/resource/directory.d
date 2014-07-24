@@ -80,7 +80,7 @@ struct Directory (T, Arg...)
 						}
 					else static if (lookup is `by key`)
 						{/*...}*/
-							return entries.binary_search!(compare, EqualityPolicy.reflexive) (Entry (key, T.init));
+							return entries.binary_search!(compare, Equivalence.antisymmetric) (Entry (key, T.init));
 						}
 					else static assert (0);
 				}
@@ -161,7 +161,7 @@ struct Directory (T, Arg...)
 							`attempted to add duplicate entry ` ~entry.text
 						);
 					}
-					catch (Throwable) assert (0);
+					catch (Exception) assert (0);
 				}
 				body {/*...}*/
 					_entries ~= entry;
@@ -180,7 +180,7 @@ struct Directory (T, Arg...)
 					try assert (not (exists),
 						`attempted to add duplicate entry ` ~entry.text
 					);
-					catch (Throwable) assert (0);
+					catch (Exception) assert (0);
 				}
 				body {/*...}*/
 					static if (lookup is `by item`)
@@ -216,7 +216,7 @@ struct Directory (T, Arg...)
 						`attempt to remove nonexistent entry ` ~key.text~ `
 							current entries: ` ~entries.text
 					);
-					catch (Throwable) assert (0);
+					catch (Exception) assert (0);
 				}
 				body {/*...}*/
 					auto i = index_of (key);

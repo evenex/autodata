@@ -5,7 +5,7 @@ import std.range;
 import utils;
 import std.c.stdlib;
 
-mixin template ArrayInterface (alias array)
+mixin template ArrayInterface (alias pointer, alias length)
 	{/*...}*/
 		public {/*assertions}*/
 			static assert (is_indexable!(typeof(array)),
@@ -13,9 +13,6 @@ mixin template ArrayInterface (alias array)
 			);
 			static assert (is_sliceable!(typeof(array)),
 				`backing array must support slicing`
-			);
-			static assert (hasLength!(typeof(this)),
-				`host struct must define length`
 			);
 		}
 		public:
@@ -78,12 +75,12 @@ mixin template ArrayInterface (alias array)
 		}
 	}
 
-mixin template Malloc (alias pointer)
-	if (is (typeof(pointer) == T*, T))
+mixin template Malloc (alias pointer, alias size)
+	if (is (typeof(pointer) == T*, T)
+	&& is (typeof(size): size_t)
+	&& is (typeof(size) == const))
 	{/*...}*/
 		public:
-
-		const size_t length;
 
 		this (size_t length)
 			{/*...}*/
@@ -91,7 +88,7 @@ mixin template Malloc (alias pointer)
 
 				pointer = cast(T*)malloc (length * T.sizeof);
 
-				this.length = length;
+				size = length;
 			}
 		~this ()
 			{/*...}*/
@@ -102,12 +99,11 @@ mixin template Malloc (alias pointer)
 
 struct Array (T)
 	{/*...}*/
-		private:
+		public const size_t length;
+		private T* array;
 
-		T* array;
-
-		mixin Malloc!array;
-		mixin ArrayInterface!array;
+		mixin ArrayInterface!(array, length);
+		mixin Malloc!(array, length);
 	}
 
 enum Destruction {immediate, deferred}

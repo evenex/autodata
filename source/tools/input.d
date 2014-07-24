@@ -31,7 +31,7 @@ final class Input
 			void process ()
 				{/*...}*/
 					events.swap ();
-					foreach (event; events.rear) with (event) 
+					foreach (event; events.read[]) with (event) 
 						if (button in mouse_map)
 							mouse_map[button](pressed);
 						else if (key in key_map)

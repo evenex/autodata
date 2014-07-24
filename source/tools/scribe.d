@@ -653,7 +653,7 @@ unittest
 					Thread.sleep (hold_time);
 					display.stop;
 				}
-				catch (Throwable ex) {elaborate_exception (ex);}
+				catch (Throwable ex) {print_stack_trace (ex);}
 			}
 
 		spawn (&test);
