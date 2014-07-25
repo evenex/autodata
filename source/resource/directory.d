@@ -251,7 +251,13 @@ struct Directory (T, Arg...)
 				}
 			ref auto get (Key key)
 				in {/*...}*/
-					assert (this.contains (key));
+					string key_text;
+
+					static if (__traits(compiles, key.text))
+						try key_text = key.text;
+						catch (Exception) assert (0);
+
+					assert (this.contains (key), `couldn't find ` ~key_text~ ` in ` ~typeof(this).stringof);
 				}
 				body {/*...}*/
 					static if (lookup is `by item`)

@@ -120,7 +120,7 @@ class Ballistic
 		public {/*objects}*/
 			struct Projectile
 				{/*...}*/
-					mixin Command!(
+					mixin Builder!(
 						float, 	`mass`,
 						float, 	`radius`,
 						float, 	`hardness`,

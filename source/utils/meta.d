@@ -194,7 +194,7 @@ public {/*mixins}*/
 			static assert (Types.length + Names.length == Args.length, `extraneous template parameters`);
 		}
 	/* generate getters and this-returning setters for a set of declared fields */
-	mixin template Command (Args...)
+	mixin template Builder (Args...)
 		{/*...}*/
 			static assert (is(typeof(this)), `mixin requires host struct`);
 
@@ -410,15 +410,15 @@ public {/*mixins}*/
 		}
 }
 public {/*wrappers}*/
-	/* forward all member functions of some object via pointer 
+	/* forwards function calls via pointer and returns itself for chaining
 	*/
-	struct Forwarded (T)
+	struct Forward (T)
 		{/*...}*/
 			public mixin(forward_members);
 
 			private:
 
-			T* command;
+			T* to_build;
 			static string forward_members ()
 				{/*...}*/
 					string code;
@@ -428,7 +428,7 @@ public {/*wrappers}*/
 							static if (member.empty || member == `__ctor`)
 								continue;
 							else {/*...}*/
-								string forward = q{command.} ~member~ q{ (args)};
+								string forward = q{to_build.} ~member~ q{ (args)};
 
 								code ~= q{
 									auto } ~member~ q{ (Args...)(scope lazy Args args)

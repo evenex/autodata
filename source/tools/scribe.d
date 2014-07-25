@@ -475,7 +475,7 @@ struct Text
 	{/*...}*/
 		public:
 		@property {/*font settings}*/
-			mixin Command!(
+			mixin Builder!(
 				Color, `color`,
 				uint, `size`
 			);
@@ -495,12 +495,12 @@ struct Text
 					this.alignment = alignment;
 					return this;
 				}
-			mixin Command!(
+			mixin Builder!(
 				double, `wrap_width`,
 			);
 		}
 		@property {/*transformation}*/
-			mixin Command!(
+			mixin Builder!(
 				double, `rotate`,
 				vec, 	`translate`,
 				double, `scale`,
