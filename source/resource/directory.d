@@ -9,6 +9,8 @@ import std.range;
 import resource.array;
 
 import utils;
+import bsearch;
+import meta;
 import math;
 
 /** Directory

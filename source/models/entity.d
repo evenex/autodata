@@ -2,6 +2,7 @@ module models.entity;
 
 import std.traits;
 import utils;
+import meta;
 
 struct Entity
 	{/*...}*/

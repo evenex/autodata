@@ -5,8 +5,11 @@ import std.exception;
 import std.range;
 import std.ascii;
 import std.conv;
+
+import bsearch;
 import utils;
 import math;
+import meta;
 
 import resource.array;
 import resource.directory;

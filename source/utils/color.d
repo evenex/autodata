@@ -1,7 +1,9 @@
 module color;
 
 import std.math;
+
 import utils;
+import math;
 
 public enum {/*Color palette}*/
 	/* mono */
@@ -24,7 +26,7 @@ public enum {/*Color palette}*/
 struct Color
 	{/*...}*/
 		public:
-		public {/*data}*/
+		@Normalized {/*components}*/
 			float 	r = 1.0, 
 					g = 0.0,
 					b = 1.0, 
@@ -127,6 +129,7 @@ struct Color
 					return Color (R,G,B);
 				}
 		}
+		mixin NormalizedInvariance!(Normalized.positive);
 		unittest
 			{/*...}*/
 				mixin (report_test!"Color ops");

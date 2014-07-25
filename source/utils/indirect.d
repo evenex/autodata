@@ -1,6 +1,7 @@
 module indirect;
 
 import utils;
+import meta;
 
 /* 
 	indexed, read-only, type-uniform indirection mechanism

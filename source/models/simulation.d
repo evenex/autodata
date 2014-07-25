@@ -6,10 +6,12 @@ import std.typetuple;
 import std.traits;
 import std.algorithm;
 import std.range;
+
 import utils;
 import units;
 import indirect;
 import math;
+import meta;
 
 public import models.entity;
 
@@ -271,7 +273,8 @@ mixin template Simulation (Models...)
 			{/*...}*/
 				import std.typetuple;
 				import std.traits;
-				import utils;
+
+				import meta;
 
 				enum is_simulation = true;
 

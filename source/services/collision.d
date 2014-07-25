@@ -2,13 +2,14 @@ module services.collision;
 
 import std.algorithm;
 import std.range;
-import std.array;
 import std.traits;
 import std.math;
 
 import utils;
 import units;
 import math;
+import meta;
+import future;
 
 import services.service;
 
@@ -16,6 +17,7 @@ import resource.array;
 import resource.buffer;
 import resource.directory;
 import resource.allocator;
+import resource.view;
 
 // TODO full conversion to doubles. only openGL really needs 32-bit floats, and we can convert on-the-fly when we write to the output buffer
 // TODO lazy parameters for all ops which move data (like add and append)
@@ -41,8 +43,6 @@ private {/*conversions}*/
 }
 
 private struct UpdateSignal {};
-import future;
-import resource.view;
 
 private immutable MAX_SHAPES = 8;
 
@@ -692,61 +692,18 @@ void main()
 		alias Body = Collision.Body;
 		import std.datetime;
 
-		mixin (report_test!"shape deduction");
+		mixin(report_test!"shape deduction");
 
-		scope p = new Collision;
-		p.start; scope (exit) p.stop;
+		assert (Body.deduce_shape (circle) == Body.Type.circle);
+		assert (Body.deduce_shape (square) == Body.Type.polygon);
 
-		auto a = p.add_body (0)
-			.position (vec(0))
-			.shape (square (0.5));
-		pragma(msg, typeof(a));
+		auto triangle = circle!3;
+		auto pentagon = circle!5;
+		auto hexagon = circle!6;
 
-		auto b = p.add_body (1)
-			.position(vec(0))
-			.shape (square (0.5, vec(1000.0)));
-
-		auto c = p.add_body (2)
-			.position (vec(0))
-			.shape (circle (0.5));
-
-		auto d = p.add_body (3)
-			.position (vec(0))
-			.shape (circle (0.5, vec(1000.0)));
-
-		p.update ();
-		assert (a.type == Body.Type.polygon);
-		assert (b.type == Body.Type.polygon);
-		assert (c.type == Body.Type.circle);
-		assert (d.type == Body.Type.circle);
-		assert (a.initialized && a.position == vec(0));
-		assert (b.initialized && b.position == vec(0));
-		assert (c.initialized && c.position == vec(0));
-		assert (d.initialized && d.position == vec(0));
-		auto e = p.add_body (Body (vec(1000)), square (0.5));
-		auto f = p.add_body (Body (vec(1000)), square (0.5, vec(1000.0)));
-		p.update ();
-		assert (e.type == Body.Type.polygon);
-		assert (f.type == Body.Type.polygon);
-		assert (e.initialized && e.position == vec(1000));
-		assert (f.initialized && f.position == vec(1000));
-
-		auto tri = p.add_body (4)
-			.position (vec(0))
-			.shape (circle!3 (0.5, vec(1000.0)));
-
-		auto pen = p.add_body (5)
-			.position (vec(0))
-			.shape (circle!5 (0.5, vec(1000.0)));
-
-		auto hex = p.add_body (6)
-			.position (vec(0))
-			.shape (circle!6 (0.5, vec(1000.0)));
-
-		p.update ();
-		assert (tri.type == Body.Type.polygon);
-		assert (pen.type == Body.Type.polygon);
-		assert (hex.type == Body.Type.circle);
+		assert (Body.deduce_shape (triangle) == Body.Type.polygon);
+		assert (Body.deduce_shape (pentagon) == Body.Type.polygon);
+		assert (Body.deduce_shape (hexagon) == Body.Type.circle);
 	}
 unittest
 	{/*body positioning}*/

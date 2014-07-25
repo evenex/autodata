@@ -6,6 +6,7 @@ import std.typetuple;
 import std.conv: to, text;
 
 import utils;
+import meta;
 
 import resource.allocator;
 

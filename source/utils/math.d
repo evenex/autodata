@@ -101,6 +101,7 @@ public {/*statistics}*/
 		}
 }
 public {/*analysis}*/
+	immutable infinity = real.infinity;
 	/* compute the derivative of f at x */
 	real derivative (alias f, real Δx = 0.01)(real x)
 		if (isCallable!f)
@@ -119,7 +120,36 @@ public {/*analysis}*/
 			value = value > max? max: value;
 			return value;
 		}
-	/* intervals TODO */
+
+	/* tags a floating point value as only holding normalized values */
+	/* and specifies the range for invariance checking */
+	enum Normalized {positive, full}
+	/* ensure that values tagged Normalized are indeed normalized 
+		between -1.0 and 1.0 by default
+		or 0.0 and 1.0 if Normalized.positive policy is specified
+	*/
+	mixin template NormalizedInvariance (Normalized range = Normalized.full)
+		{/*...}*/
+			invariant ()
+				{/*...}*/
+					import meta;
+
+					alias This = typeof(this);
+
+					static if (range == Normalized.full)
+						immutable left_limit = -1.0;
+					else static if (range == Normalized.positive)
+						immutable left_limit = 0.0;
+					else static assert (0);
+
+
+					foreach (member; __traits(allMembers, This))
+						static if (has_attribute!(This, member, Normalized))
+							mixin(q{assert (} ~member~ q{.between (left_limit, 1.0),} `"`~member~` is not normalized (` q{~} ~member~ q{.text~)}`)"`q{);});
+				}
+		}
+}
+public {/*intervals}*/
 	struct Interval (Index)
 		{/*...}*/
 			Index start;
@@ -133,8 +163,6 @@ public {/*analysis}*/
 					return not (end - start);
 				}
 		}
-	alias Index = size_t; // REFACTOR these are discrete numbers, they don't belong in analysis
-	alias Indices = Interval!Index;
 	bool ends_before_end (T)(Interval!T a, Interval!T b)
 		{/*...}*/
 			return a.end < b.end;
@@ -151,20 +179,9 @@ public {/*analysis}*/
 		{/*...}*/
 			return a.start < b.start;
 		}
-	/* tag a floating point value as only holding values between -1.0 and 1.0 */
-	struct Normalized {}
-	/* ensure that values tagged Normalized are between -1.0 and 1.0 */
-	mixin template NormalizedInvariance ()
-		{/*...}*/
-			invariant ()
-				{/*...}*/
-					alias This = typeof(this);
 
-					foreach (member; __traits(allMembers, This))
-						static if (has_attribute!(This, member, Normalized))
-							mixin(q{assert (}~member~q{.between (-1.0, 1.0), member~` is not normalized (value `~}~member~q{.to!string~`)`);});
-				}
-		}
+	alias Index = size_t;
+	alias Indices = Interval!Index;
 }
 public {/*2D geometry}*/
 	/* test if a type can be used by this library */

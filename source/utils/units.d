@@ -3,8 +3,10 @@ module units;
 import std.conv;
 import std.typetuple;
 import std.traits;
+
 import utils;
 import math;
+import meta;
 
 alias Scalar = double;
 alias Vector = vec;

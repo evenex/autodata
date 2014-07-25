@@ -2,6 +2,17 @@ module services.service;
 
 // ☀
 //version = verbose;
+
+import core.thread;
+import core.sync.condition;
+import std.concurrency;
+import std.typecons: Tuple, tuple;
+import std.traits;
+
+import utils;
+import meta;
+import math;
+
 public {/*traits}*/
 	const bool is_service (T) ()
 		{/*...}*/
@@ -9,16 +20,6 @@ public {/*traits}*/
 			return is (Unqual!T: Service);
 		}
 }
-private {/*imports}*/
-	import core.thread;
-	import core.sync.condition;
-	import std.concurrency;
-	import utils;
-	import math;
-}
-
-import std.typecons: Tuple, tuple;
-import std.traits;
 
 private __gshared Tuple!(Service.Id, string)[Tid] service_threads;
 private string thread_info ()

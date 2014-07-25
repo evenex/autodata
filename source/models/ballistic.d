@@ -10,6 +10,7 @@ import resource.array;
 import utils; // TODO make views and looks and math public imports?
 import color;
 import math;
+import meta;
 
 import services.collision;
 import models.integrator;

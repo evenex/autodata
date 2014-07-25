@@ -5,6 +5,7 @@ import std.conv;
 import math;
 import utils;
 import color;
+import meta;
 
 import resource.view;
 import resource.allocator;

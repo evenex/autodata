@@ -11,6 +11,7 @@ import std.array;
 import utils;
 import color;
 import math;
+import meta;
 
 import services.service;
 import services.scheduler;

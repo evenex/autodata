@@ -14,6 +14,7 @@ import tools.plot;
 import utils;
 import color;
 import math;
+import meta;
 
 struct InfoBox
 	{/*...}*/
