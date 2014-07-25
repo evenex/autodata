@@ -58,6 +58,11 @@ public {/*misc}*/
 		{/*...}*/
 			return !value;
 		}
+	const bool not (alias predicate, T)(const T value)
+		if (isSomeFunction!predicate)
+		{/*...}*/
+			return not (predicate (value));
+		}
 
 	alias And = templateAnd;
 	alias Or  = templateOr;

@@ -101,7 +101,6 @@ public {/*statistics}*/
 		}
 }
 public {/*analysis}*/
-	immutable infinity = real.infinity;
 	/* compute the derivative of f at x */
 	real derivative (alias f, real Δx = 0.01)(real x)
 		if (isCallable!f)

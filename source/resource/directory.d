@@ -135,13 +135,13 @@ struct Directory (T, Arg...)
 		public {/*mutation}*/
 			static if (lookup is `by key`)
 				{/*add/append}*/
-					auto append (Key key, T entry)
+					auto ref append (Key key, T entry)
 						{/*...}*/
-							append (τ(key, entry));
+							return append (τ(key, entry));
 						}
-					auto add (Key key, T entry)
+					auto ref add (Key key, T entry)
 						{/*...}*/
-							add (τ(key, entry));
+							return add (τ(key, entry));
 						}
 				}
 
@@ -167,6 +167,7 @@ struct Directory (T, Arg...)
 				}
 				body {/*...}*/
 					_entries ~= entry;
+					return entries.back;
 				}
 
 			auto add (Entry entry)
@@ -196,6 +197,8 @@ struct Directory (T, Arg...)
 					_entries.shift_up_from (i);
 
 					entries[i] = entry;
+
+					return entries[i];
 				}
 
 			auto add (U...)(U entries)
