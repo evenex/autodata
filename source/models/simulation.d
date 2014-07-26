@@ -599,10 +599,10 @@ public {/*access}*/
 ///////////////////////////
 import services.collision;
 import resource.view;
-Collision collision;
 
 static if (0)
 	{/*...}*/
+		Collision!(Entity.Id) collision;
 		mixin Simulation!(Physical);
 
 		auto sq (size_t i)

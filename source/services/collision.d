@@ -46,7 +46,7 @@ private struct UpdateSignal {};
 
 private immutable MAX_SHAPES = 8;
 
-auto new_body (ClientId id)
+auto new_body (ClientId)(ClientId id)
 	{/*...}*/
 		return Collision.Upload (id);
 	}
@@ -133,7 +133,7 @@ final class Collision (ClientId = size_t): Service
 					private:
 					private {/*☀/~}*/
 						this (R)(cpSpace* space, double mass, vec position, vec velocity, double damping, ClientId client_id, R geometries)
-							if (is_geometric, ElementType!R)
+							if (is_geometric!(ElementType!R))
 							in {/*...}*/
 								assert (mass == mass);
 								assert (position == position);
@@ -268,7 +268,7 @@ final class Collision (ClientId = size_t): Service
 						}
 
 					private:
-					const ClientId id;
+					ClientId id;
 					Dynamic!(vec[][MAX_SHAPES]) shapes;
 					Promise!(Body*) promise;
 
@@ -610,7 +610,7 @@ final class Collision (ClientId = size_t): Service
 			shared BufferGroup!(
 				DoubleBuffer!(vec, 2^^12),
 					`vertices`,
-				DoubleBuffer!(BodyUpload, 2^^10),
+				DoubleBuffer!(Upload, 2^^10),
 					`uploads`,
 				BufferGroup!(
 					DoubleBuffer!(Query.Box, 2^^4),

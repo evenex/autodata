@@ -121,11 +121,11 @@ public {/*world}*/
 }
 public {/*services}*/
 	Display display;
-	Collision collision;
+	Collision!(Entity.Id) collision;
 	shared static this ()
 		{/*...}*/
-			display = new Display;
-			collision = new Collision;
+			display = new typeof(display);
+			collision = new typeof(collision);
 		}
 }
 public {/*models/aspects}*/
@@ -270,7 +270,7 @@ public {/*models/aspects}*/
 			}
 		__gshared:
 			private {/*services}*/
-				Collision collision;
+				Collision!(Entity.Id) collision;
 			}
 			private {/*resources}*/
 				Directory!(Body, Entity.Id) bodies;

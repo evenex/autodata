@@ -22,7 +22,7 @@ final class Physical
 				Meters height;
 			}
 
-		Collision collision;
+		Collision!(Entity.Id) collision;
 
 		void simulate (Entity.Id entity)
 			{/*...}*/

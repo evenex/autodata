@@ -2,11 +2,15 @@ module tools.camera;
 
 import std.traits;
 import std.algorithm;
+
 import services.collision;
 import services.display;
 import services.display: GLenum;
+
 import utils;
 import math;
+
+import models.entity;
 
 private import services.service;
 
@@ -39,7 +43,7 @@ public {/*mappings}*/
 
 class Camera
 	{/*...}*/
-		alias Capture = Collision.ClientId; // REVIEW
+		alias Capture = Collision!(Entity.Id).Capture;
 		public {/*controls}*/
 			void set_program (void delegate(Capture) program)
 				{/*...}*/
@@ -72,7 +76,7 @@ class Camera
 				}
 		}
 		public {/*☀}*/
-			this (Collision world, Display display)
+			this (Collision!(Entity.Id) world, Display display)
 				{/*...}*/
 					this.world = world;
 					this.display = display;
@@ -96,7 +100,7 @@ class Camera
 				}
 		}
 		private {/*services}*/
-			Collision world;
+			Collision!(Entity.Id) world;
 			Display display;
 		}
 	}

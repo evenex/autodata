@@ -162,6 +162,10 @@ then
 	echo ""
 	grep -rn '\<TEMP\>' ./source/ | grep -v Binary | grep -v freetype-gl | grep -v ode[-]0[.]13 | tr -d '\t'
 fi
+printf '=%0.s' $DASHES
+echo "
+MAIN LOCATED AT:"
+grep -rn 'void\s*main\s*()' ./source/ | grep -v Binary | grep -v freetype-gl | grep -v ode[-]0[.]13 | tr -d '\t'
 
 
 DASHES=$(seq 2 $(echo "$HEADER" | wc -c))
