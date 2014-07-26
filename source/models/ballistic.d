@@ -16,7 +16,7 @@ import services.collision;
 import models.integrator;
 import models.entity;
 
-alias Physics = Collision!(Entity.Id);
+alias Physics = CollisionDynamics!(Entity.Id);
 
 class Ballistic
 	{/*...}*/

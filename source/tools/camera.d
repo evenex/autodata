@@ -43,7 +43,7 @@ public {/*mappings}*/
 
 class Camera
 	{/*...}*/
-		alias Capture = Collision!(Entity.Id).Capture;
+		alias Capture = CollisionDynamics!(Entity.Id).Capture;
 		public {/*controls}*/
 			void set_program (void delegate(Capture) program)
 				{/*...}*/
@@ -76,7 +76,7 @@ class Camera
 				}
 		}
 		public {/*☀}*/
-			this (Collision!(Entity.Id) world, Display display)
+			this (CollisionDynamics!(Entity.Id) world, Display display)
 				{/*...}*/
 					this.world = world;
 					this.display = display;
@@ -100,7 +100,7 @@ class Camera
 				}
 		}
 		private {/*services}*/
-			Collision!(Entity.Id) world;
+			CollisionDynamics!(Entity.Id) world;
 			Display display;
 		}
 	}
@@ -109,9 +109,9 @@ unittest
 	{/*...}*/
 		mixin(report_test!"camera");
 
-		auto world = new Collision;
+		auto world = new CollisionDynamics;
 		auto display = new Display;
-		alias Body = Collision.Body;
+		alias Body = CollisionDynamics.Body;
 		world.start; scope (exit) world.stop;
 		display.start; scope (exit) display.stop;
 		auto cam = new Camera (world, display);
@@ -121,7 +121,7 @@ unittest
 
 		auto triangle = [vec(0), vec(1), vec(1,0)];
 
-		auto x = world.add (Collision.Body (vec(0)), triangle.map!(v => v - triangle.mean));
+		auto x = world.add (CollisionDynamics.Body (vec(0)), triangle.map!(v => v - triangle.mean));
 		world.update;
 
 		frame = cam.capture;

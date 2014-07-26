@@ -285,6 +285,10 @@ struct Directory (T, Arg...)
 				}
 		}
 		public {/*search}*/
+			auto at (size_t i)
+				{/*...}*/
+					return entries[i];
+				}
 			auto index_of (Key key)
 				{/*...}*/
 					auto entry = search_for (key);

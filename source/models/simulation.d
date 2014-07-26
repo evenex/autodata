@@ -602,7 +602,7 @@ import resource.view;
 
 static if (0)
 	{/*...}*/
-		Collision!(Entity.Id) collision;
+		CollisionDynamics!(Entity.Id) collision;
 		mixin Simulation!(Physical);
 
 		auto sq (size_t i)
@@ -611,7 +611,7 @@ static if (0)
 			}
 		unittest
 			{/*...}*/
-				collision = new Collision;
+				collision = new CollisionDynamics!(Entity.Id);
 				collision.start; scope (exit) collision.stop;
 
 				simulation = new typeof(simulation);

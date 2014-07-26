@@ -48,10 +48,10 @@ private immutable MAX_SHAPES = 8;
 
 auto new_body (ClientId)(ClientId id)
 	{/*...}*/
-		return Collision.Upload (id);
+		return CollisionDynamics.Upload (id);
 	}
 
-final class Collision (ClientId = size_t): Service
+final class CollisionDynamics (ClientId = size_t): Service
 	if (ClientId.sizeof <= (void*).sizeof)
 	{/*...}*/
 		private {/*definitions}*/
@@ -66,7 +66,7 @@ final class Collision (ClientId = size_t): Service
 				{/*...}*/
 					BodyId body_id;
 					Dynamic!(ShapeId[MAX_SHAPES]) shape_ids;
-					Collision world;
+					CollisionDynamics world;
 
 					double velocity_damping = 0.0;
 
@@ -282,17 +282,61 @@ final class Collision (ClientId = size_t): Service
 							this.id = id;
 						}
 				}
-			@Upload auto add (Upload upload)
+			@Upload void add (Upload upload)
 				in {/*...}*/
 					assert (this.is_running, "attempted to add body before starting service");
 					assert (not (upload.id in bodies), `duplicate ids`);
 				}
 				body {/*...}*/
 					buffer.uploads ~= upload;
-					return promise (buffer.uploads.write.back.promise);
 				}
 		}
 		public {/*queries}*/
+			struct BodyInterface
+				{/*...}*/
+					Body* body_option;
+					Upload* upload_option;
+
+					this (ref Body physical_body)
+						{/*...}*/
+							body_option = &physical_body;
+						}
+					this (ref Upload upload)
+						{/*...}*/
+							upload_option = &upload;
+						}
+
+					@property auto ref opDispatch (string op)()
+						{/*...}*/
+							if (body_option) mixin(q{
+								return body_option.} ~op~ q{;
+							}); else mixin(q{
+								return upload_option.} ~op~ q{;
+							});
+						}
+					@property auto ref opDispatch (string op, Args...)(scope lazy Args args)
+						in {/*...}*/
+							assert (not (upload_option), ``); // TODO start here
+						}
+						body {/*...}*/
+							mixin(q{
+								return body_option.} ~op~ q{ (args);
+							}); 
+						}
+				}
+			auto body_ (ClientId id)
+				{/*...}*/
+					auto result = bodies.index_of (id);
+
+					if (result > -1)
+						return BodyInterface (bodies[id]);
+					else foreach (ref upload; uploads)
+						if (upload.id == id)
+							return BodyInterface (upload);
+
+					assert (0, `body ` ~id.text~ ` does not exist`);
+				}
+
 			struct Query
 				{/*...}*/
 					struct Box
@@ -395,7 +439,7 @@ final class Collision (ClientId = size_t): Service
 			bool initialize ()
 				{/*...}*/
 					space = cp.SpaceNew ();
-					cp.SpaceSetCollisionSlop (space, 0.01);
+					cp.SpaceSetCollisionDynamicsSlop (space, 0.01);
 					return true;
 				}
 			bool process ()
@@ -648,7 +692,7 @@ unittest
 
 		mixin (report_test!`multithreaded collision`);
 		static void test () {/*...}*/
-			scope lC = new Collision;
+			scope lC = new CollisionDynamics;
 			auto C = cast(shared)lC;
 			C.initialize ();
 			C.process ();
@@ -662,7 +706,7 @@ unittest
 	}
 unittest
 	{/*shape deduction}*/
-		alias Body = Collision.Body;
+		alias Body = CollisionDynamics.Body;
 		import std.datetime;
 
 		mixin(report_test!"shape deduction");
@@ -683,34 +727,39 @@ void main()
 		import core.thread;
 		import std.datetime;
 
-		alias Body = Collision.Body;
+		alias Body = CollisionDynamics!().Body;
 
 		mixin (report_test!`body upload`);
 
-		auto P = new Collision;
+		auto P = new CollisionDynamics!();
 		P.start; scope (exit) P.stop;
 
 		auto triangle = [vec(-1,-1), vec(-1,0), vec(0,-1)];
 
-		auto a = P.add (new_body (0)
+		P.add (new_body (0)
 			.position (vec(1))
+			.velocity (vec(100))
 			.shape (triangle)
 		);
 
-		auto b = P.add (new_body (1)
+		P.add (new_body (1)
 			.position (vec(-1))
+			.velocity (vec(100))
 			.shape (triangle)
 		);
 
-		P.update;
-
-		while (not (a.is_ready && b.is_ready))
-			Thread.sleep (100.msecs);
+		auto a = P.body_(0);
+		auto b = P.body_(1);
 
 		assert (a.position == vec(1));
 		// static geometry is held at position (0,0) internally
 		assert (b.position == vec(-1));
 		// but should report its position correctly when queried
+
+		P.update;
+
+		assert (a.position == vec(1));
+		assert (b.position == vec(-1));
 
 		//assert (a.displacement == vec(1));
 		// initial displacement for static bodies must be handled specially TODO i think this is no longer true
@@ -721,25 +770,24 @@ void main()
 		// the displacement goes to 0 after the next update XXX
 		//assert (b.displacement == vec(0));  XXX
 		// but the position is still reported correctly
-		assert (b.position == vec(-1));
-		// a remains unchanged as it has not been acted upon
-		assert (a.position == vec(1));
+		assert (b.position.x > -1);
+		assert (a.position.x > -1);
 	}
 unittest
 	{/*queries}*/
 		mixin (report_test!`queries`);
 		// TODO all other queries
 
-		auto p = new Collision;
+		auto p = new CollisionDynamics;
 		p.start; scope (exit) p.stop;
 		
 		auto sq = [vec(0),vec(1,0),vec(1),vec(0,1)];
 		auto μ = sq.mean;
 		sq = sq.map!(v => v - μ).array;
-		auto a = p.add_body (Collision.Body (vec(0)), sq);
-		auto b = p.add_body (Collision.Body (vec(1.49)), sq);
-		auto c = p.add_body (Collision.Body (vec(-1.51)), sq);
-		auto d = p.add_body (Collision.Body (vec(1000)), sq);
+		auto a = p.add_body (CollisionDynamics.Body (vec(0)), sq);
+		auto b = p.add_body (CollisionDynamics.Body (vec(1.49)), sq);
+		auto c = p.add_body (CollisionDynamics.Body (vec(-1.51)), sq);
+		auto d = p.add_body (CollisionDynamics.Body (vec(1000)), sq);
 		p.update;
 		assert (p.box_query ([vec(-1),vec(1)])		.length == 2); // BUG probably disallow array literals cause they GC
 		assert (p.box_query ([vec(-2),vec(0)])		.length == 2);
