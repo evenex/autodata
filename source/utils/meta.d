@@ -157,7 +157,8 @@ public {/*traits}*/
 		}
 }
 public {/*mixins}*/
-	/* a unique (up to the host type) identifier */
+	/* a unique (up to the host type) identifier 
+	*/
 	mixin template TypeUniqueId (uint bit = 64)
 		{/*...}*/
 			static assert (is(typeof(this)), `mixin requires host struct`);
@@ -183,7 +184,9 @@ public {/*mixins}*/
 					mixin CompareBy!id;
 				}
 		}
-	/* separate Types and Names into eponymous TypeTuples */
+
+	/* separate Types and Names into eponymous TypeTuples 
+	*/
 	mixin template DeclarationSplitter (Args...)
 		{/*...}*/
 			private import std.typetuple: Filter;
@@ -193,7 +196,9 @@ public {/*mixins}*/
 			static assert (Types.length == Names.length, `type/name mismatch`);
 			static assert (Types.length + Names.length == Args.length, `extraneous template parameters`);
 		}
-	/* generate getters and this-returning setters for a set of declared fields */
+
+	/* generate getters and this-returning setters for a set of declared fields 
+	*/
 	mixin template Builder (Args...)
 		{/*...}*/
 			static assert (is(typeof(this)), `mixin requires host struct`);
@@ -239,7 +244,9 @@ public {/*mixins}*/
 					}
 			}
 		}
-	/* forward opApply (foreach) */
+
+	/* forward opApply (foreach) 
+	*/
 	mixin template IterateOver (alias range)
 		{/*...}*/
 			static assert (is(typeof(this)), `mixin requires host struct`);
@@ -282,7 +289,9 @@ public {/*mixins}*/
 					return (cast()this).opApply (cast(int delegate(size_t, ref Applied)) op);
 				}
 		}
-	/* forward opCmp (<,>,<=,>=) */
+
+	/* forward opCmp (<,>,<=,>=) 
+	*/
 	mixin template CompareBy (alias member)
 		{/*...}*/
 			static assert (is(typeof(this)), `mixin requires host struct`);
@@ -304,7 +313,9 @@ public {/*mixins}*/
 					}
 			}
 		}
-	/* apply an array interface over a pointer and length variable */
+
+	/* apply an array interface over a pointer and length variable 
+	*/
 	mixin template ArrayInterface (alias pointer, alias length)
 		{/*...}*/
 			public {/*assertions}*/
@@ -361,25 +372,69 @@ public {/*mixins}*/
 			public {/*iteration}*/
 				mixin IterateOver!opSlice;
 			}
-			public {/*text}*/
-				auto toString () const
+			const {/*text}*/
+				auto toString ()
 					{/*...}*/
-						import std.conv;
-						import std.range;
+						import std.conv: text;
+						import std.range: empty;
+						import std.traits: PointerTarget;
 
-						static if (__traits(compiles, pointer[0..length].text))
-							return pointer[0..length].text;
-						else return `[` ~ElementType!(typeof(pointer)).stringof~ `...]`;
+						static if (__traits(compiles, this[].text))
+							return this[].text;
+						else static if (__traits(compiles, this[0].text))
+							{/*...}*/
+								string output;
+
+								foreach (element; 0..length)
+									output ~= element.text ~ `, `;
+
+								if (output.empty)
+									return `[]`;
+								else return `[` ~output[0..$-2]~ `]`;
+							}
+						else return `[` ~PointerTarget!(typeof(pointer)).stringof~ `...]`;
 					}
-				auto text () const
+				auto text ()
 					{/*...}*/
 						return toString;
 					}
 			}
 		}
-	/* enable mixin load_dynamic_library!"libname" */
-	/* which attempts to link all member extern (C) function pointers with the specified lib */
-	/* when mixed into a member function (typically the constructor) of a type */
+
+	/* generate a private member function auto_initialize () which automatically initializes all fields tagged Initialize
+	*/
+	mixin template AutoInitialize ()
+		{/*...}*/
+			private void auto_initialize ()
+				{/*...}*/
+					alias This = typeof(this);
+					foreach (member; __traits(allMembers, This))
+						static if (__traits(compiles, __traits(getMember, This, member)))
+							static if (not (is_type!(__traits(getMember, This, member))))
+								foreach (Attribute; __traits(getAttributes, __traits(getMember, This, member)))
+									static if (__traits(compiles, Attribute.is_initializer))
+										{/*...}*/
+											static if (is (typeof(__traits(getMember, This, member)) == class))
+												__traits(getMember, This, member) = new typeof(__traits(getMember, This, member))(Attribute.Args);
+											else static if (is (typeof(__traits(getMember, This, member)) == struct))
+												__traits(getMember, This, member) = typeof(__traits(getMember, This, member))(Attribute.Args);
+											else static assert (0);
+										}
+				}
+		}
+
+	/* specify field constructor parameters at the point of field declaration 
+	*/
+	struct Initialize (CtorArgs...)
+		{/*...}*/
+			alias Args = CtorArgs;
+			enum is_initializer;
+		}
+
+	/* enable mixin load_dynamic_library!"libname"
+		which attempts to link all member extern (C) function pointers with the specified lib
+		when mixed into a member function (typically the constructor) of a type 
+	*/
 	mixin template DynamicLibraryLoader ()
 		{/*...}*/
 			static const string load_dynamic_library (string library) ()
@@ -526,6 +581,10 @@ public {/*wrappers}*/
 					{/*...}*/
 						return array.length;
 					}
+				auto empty () const
+					{/*...}*/
+						return length == 0;
+					}
 			}
 			public {/*clear}*/
 				auto clear ()
@@ -547,16 +606,16 @@ public {/*wrappers}*/
 							array = Array (args);
 						}
 			}
-			public {/*text}*/
-				auto toString () const
+			const {/*text}*/
+				auto toString ()
 					{/*...}*/
 						import std.conv;
 
-						static if (__traits(compiles, array[0..length].text))
-							return array.array[0..length].text;
+						static if (__traits(compiles, array.text))
+							return array.text;
 						else return `[` ~T.stringof~ `...]`;
 					}
-				auto text () const
+				auto text ()
 					{/*...}*/
 						return toString;
 					}

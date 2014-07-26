@@ -10,8 +10,6 @@ import services.display: GLenum;
 import utils;
 import math;
 
-import models.entity;
-
 private import services.service;
 
 public {/*mappings}*/
@@ -41,9 +39,9 @@ public {/*mappings}*/
 		}
 }
 
-class Camera
+class Camera (Capture)
 	{/*...}*/
-		alias Capture = CollisionDynamics!(Entity.Id).Capture;
+		alias World = CollisionDynamics!Capture;
 		public {/*controls}*/
 			void set_program (void delegate(Capture) program)
 				{/*...}*/
@@ -76,7 +74,7 @@ class Camera
 				}
 		}
 		public {/*☀}*/
-			this (CollisionDynamics!(Entity.Id) world, Display display)
+			this (World world, Display display)
 				{/*...}*/
 					this.world = world;
 					this.display = display;
@@ -100,7 +98,7 @@ class Camera
 				}
 		}
 		private {/*services}*/
-			CollisionDynamics!(Entity.Id) world;
+			World world;
 			Display display;
 		}
 	}

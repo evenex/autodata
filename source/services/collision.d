@@ -46,11 +46,6 @@ private struct UpdateSignal {};
 
 private immutable MAX_SHAPES = 8;
 
-auto new_body (ClientId)(ClientId id)
-	{/*...}*/
-		return CollisionDynamics.Upload (id);
-	}
-
 final class CollisionDynamics (ClientId = size_t): Service
 	if (ClientId.sizeof <= (void*).sizeof)
 	{/*...}*/
@@ -135,9 +130,14 @@ final class CollisionDynamics (ClientId = size_t): Service
 						this (R)(cpSpace* space, double mass, vec position, vec velocity, double damping, ClientId client_id, R geometries)
 							if (is_geometric!(ElementType!R))
 							in {/*...}*/
-								assert (mass == mass);
-								assert (position == position);
-								assert (velocity == velocity || mass.isInfinity);
+								string not_specified (string property)
+									{/*...}*/
+										return property~ ` of body ` ~client_id.text~ ` not specified`;
+									}
+
+								assert (mass == mass, not_specified (`mass`));
+								assert (position == position, not_specified (`position`));
+								assert (velocity == velocity || mass.isInfinity, not_specified (`velocity`));
 								foreach (geometry; geometries)
 									{/*...}*/
 										assert (geometry.length > 2);
@@ -148,7 +148,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 							body {/*...}*/
 								if (mass.isInfinity)
 									this.body_id = cp.BodyNewStatic;
-								else this.body_id = cp.BodyNew (mass, 0.0);
+								else this.body_id = cp.BodyNew (mass, 1.0);
 
 								cp.SpaceAddBody (space, body_id);
 								this.position = position;
@@ -156,12 +156,11 @@ final class CollisionDynamics (ClientId = size_t): Service
 								this.damping  = damping;
 								cp.BodySetUserData (body_id, store (client_id));
 
-								auto areas = geometries.map!area;
+								auto areas = geometries[].map!area;
 								auto Σ_areas = sum (areas);
 								
 								foreach (i, geometry; geometries)
 									{/*...}*/
-										ShapeId shape;
 										double moment;
 
 										auto component_mass = mass * areas[i] / Σ_areas;
@@ -193,10 +192,11 @@ final class CollisionDynamics (ClientId = size_t): Service
 													}
 												case none: assert (null);
 											}
-
+										auto shape_id = shape_ids.back;
+							
 										cp.BodySetMoment (body_id, moment);
-										cp.SpaceAddShape (space, shape);
-										cp.ShapeSetUserData (shape, store (client_id));
+										cp.SpaceAddShape (space, shape_id);
+										cp.ShapeSetUserData (shape_id, store (client_id));
 									}
 							}
 
@@ -269,6 +269,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 
 					private:
 					ClientId id;
+					CollisionDynamics server;
 					Dynamic!(vec[][MAX_SHAPES]) shapes;
 					Promise!(Body*) promise;
 
@@ -277,9 +278,10 @@ final class CollisionDynamics (ClientId = size_t): Service
 							return contigious (shapes[]);
 						}
 
-					this (ClientId id)
+					this (ClientId id, CollisionDynamics server)
 						{/*...}*/
 							this.id = id;
+							this.server = server;
 						}
 				}
 			@Upload void add (Upload upload)
@@ -290,37 +292,53 @@ final class CollisionDynamics (ClientId = size_t): Service
 				body {/*...}*/
 					buffer.uploads ~= upload;
 				}
+			auto new_body (ClientId)(ClientId id)
+				{/*...}*/
+					return Upload (id, this);
+				}
+		}
+		public {/*actions}*/
+			struct Action {}
 		}
 		public {/*queries}*/
 			struct BodyInterface
 				{/*...}*/
+					ClientId id;
 					Body* body_option;
 					Upload* upload_option;
+					CollisionDynamics dynamics;
 
 					this (ref Body physical_body)
 						{/*...}*/
 							body_option = &physical_body;
 						}
-					this (ref Upload upload)
+					this (ref Upload upload, CollisionDynamics dynamics)
 						{/*...}*/
+							id = upload.id;
 							upload_option = &upload;
+							this.dynamics = dynamics;
 						}
 
+					private bool body_uploaded ()
+						{/*...}*/
+							body_option = dynamics.bodies.find (id);
+							
+							return body_option? true:false;
+						}
 					@property auto ref opDispatch (string op)()
 						{/*...}*/
-							if (body_option) mixin(q{
+							if (body_option || body_uploaded) mixin(q{
 								return body_option.} ~op~ q{;
 							}); else mixin(q{
 								return upload_option.} ~op~ q{;
 							});
 						}
 					@property auto ref opDispatch (string op, Args...)(scope lazy Args args)
-						in {/*...}*/
-							assert (not (upload_option), ``); // TODO start here
-						}
-						body {/*...}*/
-							mixin(q{
+						{/*...}*/
+							if (body_option || body_uploaded) mixin(q{
 								return body_option.} ~op~ q{ (args);
+							}); else mixin(q{
+								return upload_option.} ~op~ q{;
 							}); 
 						}
 				}
@@ -330,9 +348,9 @@ final class CollisionDynamics (ClientId = size_t): Service
 
 					if (result > -1)
 						return BodyInterface (bodies[id]);
-					else foreach (ref upload; uploads)
+					else foreach (ref upload; buffer.uploads.write[])
 						if (upload.id == id)
-							return BodyInterface (upload);
+							return BodyInterface (upload, this);
 
 					assert (0, `body ` ~id.text~ ` does not exist`);
 				}
@@ -342,7 +360,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 					struct Box
 						{/*...}*/
 							vec[2] corners;
-							Promise!Capture result;
+							Promise!(View!ClientId) result;
 						}
 					struct Ray
 						{/*...}*/
@@ -373,9 +391,8 @@ final class CollisionDynamics (ClientId = size_t): Service
 					vec surface_normal;
 					double ray_time;
 				}
-			alias Capture = View!ClientId;
 
-			Future!Capture box_query (vec[2] corners)
+			Future!(View!ClientId) box_query (vec[2] corners)
 				in {/*...}*/
 					assert (this.is_running, "attempted query before starting service (currently "~this.status.text~")");
 				}
@@ -417,6 +434,9 @@ final class CollisionDynamics (ClientId = size_t): Service
 					send (UpdateSignal ());
 				}
 		}
+		public {/*ctor}*/
+			this () {auto_initialize;}
+		}
 		static shared {/*time}*/
 			immutable real Δt = 0.016667; // TODO set custom
 			private ulong t = 0;
@@ -425,25 +445,19 @@ final class CollisionDynamics (ClientId = size_t): Service
 					return t * Δt;
 				}
 		}
-		public {/*ctor}*/
-			this ()
-				{/*...}*/
-					buffer = new typeof(buffer);
-					bodies = typeof (bodies)();
-					geometry_memory = typeof(geometry_memory)();
-				}
-		}
 		protected:
 		@Service shared override {/*interface}*/
 			import dchip.all;
 			bool initialize ()
 				{/*...}*/
 					space = cp.SpaceNew ();
-					cp.SpaceSetCollisionDynamicsSlop (space, 0.01);
+					cp.SpaceSetCollisionSlop (space, 0.01);
 					return true;
 				}
 			bool process ()
 				{/*...}*/
+					mixin(profiler);
+					(profiler).checkpoint (&bodies);
 					{/*process uploads}*/
 						buffer.swap;
 						auto vertex_pool = buffer.vertices.read[];
@@ -452,7 +466,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 								with (upload) if (position != position)
 									position = geometry.mean;
 
-								upload.promise = &bodies.add (upload.id,
+								upload.promise = &bodies.add (upload.id, // TODO promise xor interface?
 									Body (
 										space,
 										upload.mass, 
@@ -462,7 +476,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 										upload.id,
 										upload.shapes
 									)
-								);
+								)[1];
 							}
 					}
 					cp.SpaceStep (space, Δt);
@@ -475,7 +489,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 					{/*reply to queries}*/
 						static auto get_id (cpShape* shape)
 							{/*...}*/
-								return StorageId (cp.ShapeGetUserData (shape)).id;
+								return retrieve (cp.ShapeGetUserData (shape));
 							}
 
 						auto answer (T)(T query)
@@ -511,18 +525,18 @@ final class CollisionDynamics (ClientId = size_t): Service
 									}
 								else static if (is (T == Query.Box))
 									{/*...}*/
-										auto i = queried_bodies.length;
+										auto i = query_results.length;
 
-										auto box = cp.BB (query.corners.bounding_box.tupleof);
+										auto box = cp.BB (query.corners.bounding_box.bounds_tuple.expand);
 										auto layers = CP_ALL_LAYERS;
 										auto group = CP_NO_GROUP;
 
 										cp.SpaceBBQuery (space, box, layers, group, 
-											(cpShape* shape, void* bodies) 
-												{(*cast(Dynamic!(Array!ClientId)*) bodies) ~= get_id (shape);},
-											&queried_bodies
+											(cpShape* shape, void* results) 
+												{(*cast(Dynamic!(Array!ClientId)*) results) ~= get_id (shape);},
+											&query_results
 										);
-										return view (queried_bodies[i..$]);
+										return view (query_results[i..$]);
 									}
 								else static if (is (T == Query.RayCastExcluding))
 									{/*...}*/
@@ -549,7 +563,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 									}
 							}
 
-						queried_bodies.clear;
+						query_results.clear;
 						void process_queries (string type)()
 							{/*...}*/
 								foreach (ref query; mixin(q{buffer.queries.} ~type~ q{.read[]}))
@@ -567,7 +581,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 					// REVIEW ALL
 					bool listening = true;
 
-					auto proceed (bool _) 
+					auto proceed (UpdateSignal _) 
 						{/*...}*/
 							listening = false;
 						}
@@ -640,22 +654,30 @@ final class CollisionDynamics (ClientId = size_t): Service
 				}
 		}
 		private: 
-		static {/*data}*/ // TODO maybe __gshared
+		__gshared {/*data}*/
 			Space space;
 
+			mixin AutoInitialize;
+
+			@Initialize!(2^^12) 
 			Directory!(Body, ClientId) 
 				bodies;
 
+			@Initialize!(2^^10) 
 			Dynamic!(Array!ClientId) 
 				query_results;
 				
+			@Initialize!(2^^12) 
 			Allocator!vec geometry_memory;
 
+			@Initialize!()
 			shared BufferGroup!(
 				DoubleBuffer!(vec, 2^^12),
 					`vertices`,
 				DoubleBuffer!(Upload, 2^^10),
 					`uploads`,
+				DoubleBuffer!(Action, 2^^10),
+					`actions`,
 				BufferGroup!(
 					DoubleBuffer!(Query.Box, 2^^4),
 						`box`,
@@ -669,10 +691,21 @@ final class CollisionDynamics (ClientId = size_t): Service
 			) buffer;
 		}
 		static {/*id conversion}*/
-			union StorageCast
+			struct StorageCast
 				{/*...}*/
-					 ClientId value;
-					 void* pointer;
+					union {/*...}*/
+						 ClientId value;
+						 void* pointer;
+					}
+					this (ClientId value)
+						{/*...}*/
+							this.value = value;
+						}
+					this (void* pointer)
+						{/*...}*/
+							this.pointer = pointer;
+						}
+
 				}
 			void* store (ClientId id)
 				{/*...}*/
@@ -692,7 +725,7 @@ unittest
 
 		mixin (report_test!`multithreaded collision`);
 		static void test () {/*...}*/
-			scope lC = new CollisionDynamics;
+			scope lC = new CollisionDynamics!();
 			auto C = cast(shared)lC;
 			C.initialize ();
 			C.process ();
@@ -706,7 +739,7 @@ unittest
 	}
 unittest
 	{/*shape deduction}*/
-		alias Body = CollisionDynamics.Body;
+		alias Body = CollisionDynamics!().Body;
 		import std.datetime;
 
 		mixin(report_test!"shape deduction");
@@ -736,13 +769,15 @@ void main()
 
 		auto triangle = [vec(-1,-1), vec(-1,0), vec(0,-1)];
 
-		P.add (new_body (0)
+		with (P) add (new_body (0)
+			.mass (1)
 			.position (vec(1))
 			.velocity (vec(100))
 			.shape (triangle)
 		);
 
-		P.add (new_body (1)
+		with (P) add (new_body (1)
+			.mass (1)
 			.position (vec(-1))
 			.velocity (vec(100))
 			.shape (triangle)
@@ -751,15 +786,17 @@ void main()
 		auto a = P.body_(0);
 		auto b = P.body_(1);
 
+
 		assert (a.position == vec(1));
 		// static geometry is held at position (0,0) internally
 		assert (b.position == vec(-1));
 		// but should report its position correctly when queried
 
 		P.update;
+					Thread.sleep (1.seconds); //  TODO
 
-		assert (a.position == vec(1));
-		assert (b.position == vec(-1));
+		assert (b.position.x > -1);
+		assert (a.position.x > -1);
 
 		//assert (a.displacement == vec(1));
 		// initial displacement for static bodies must be handled specially TODO i think this is no longer true

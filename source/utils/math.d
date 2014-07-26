@@ -403,7 +403,7 @@ public {/*2D geometry}*/
 				 return geometry.map!(v => (v-c).norm).reduce!max;
 			}
 		/* get the area of a polygon */
-		auto area (R)(R polygon)
+		auto area (R)(R polygon) // TODO Units?
 			if (is_geometric!R)
 			{/*...}*/
 				return 0.5 * abs (Σ (polygon.adjacent_pairs.map!(v => v[0].det (v[1]))));
@@ -590,6 +590,17 @@ public {/*2D geometry}*/
 						{/*...}*/
 							auto c = this.mean;
 							return verts[].map!(v => v-c+x).copy (verts[]);
+						}
+				}
+				@property {/*tuples}*/
+					auto vertex_tuple ()
+						{/*...}*/
+							alias v = verts;
+							return τ(v[0], v[1], v[2], v[3]);
+						}
+					auto bounds_tuple ()
+						{/*...}*/
+							return τ(left, bottom, right, top);
 						}
 				}
 

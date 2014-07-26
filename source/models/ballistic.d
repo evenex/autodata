@@ -437,9 +437,9 @@ class Ballistic
 
 					Display gfx;
 					Scribe txt;
-					Camera cam;
+					Camera!(Entity.Id) cam;
 
-					this (Display gfx, Camera cam, Scribe txt)
+					this (Display gfx, Camera!(Entity.Id) cam, Scribe txt)
 						{/*...}*/
 							this.gfx = gfx;
 							this.txt = txt;

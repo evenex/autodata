@@ -73,7 +73,10 @@ struct Allocator (T, Id = Index)
 				}
 
 			auto allocate (Index size, Id id)
-				{/*...}*/
+				in {/*...}*/
+					assert (not (free_list.empty), T.stringof ~` allocator not initialized`);
+				}
+				body {/*...}*/
 					foreach (i, ref interval; free_list)
 						{/*find free interval}*/
 							if (interval.size >= size)
@@ -93,7 +96,8 @@ struct Allocator (T, Id = Index)
 						free: 
 							`~free_list.text~`
 						used:
-							`~resources.text);
+							`~resources.text
+					);
 				}
 			auto save (R)(R range, Id id)
 				if (isForwardRange!R)

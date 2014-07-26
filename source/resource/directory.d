@@ -170,7 +170,7 @@ struct Directory (T, Arg...)
 					return entries.back;
 				}
 
-			auto add (Entry entry)
+			auto ref add (Entry entry)
 				in {/*...}*/
 					assert (_entries.capacity);
 
@@ -201,7 +201,7 @@ struct Directory (T, Arg...)
 					return entries[i];
 				}
 
-			auto add (U...)(U entries)
+			void add (U...)(U entries)
 				if (U.length > 1)
 				in {/*...}*/
 					foreach (u; U)
@@ -309,6 +309,18 @@ struct Directory (T, Arg...)
 			auto contains (Key key)
 				{/*...}*/
 					return key in this;
+				}
+			auto ref find (Key key)
+				{/*...}*/
+					auto result = search_for (key);
+
+					static if (lookup is `by key`)
+						{/*...}*/
+							return result.found? 
+								&(*result.found)[1]:
+								null;
+						}
+					else return result.found;
 				}
 			auto up_to (Key key)
 				{/*...}*/
