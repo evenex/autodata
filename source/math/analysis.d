@@ -59,7 +59,10 @@ bool between (T, U, V) (T t, U t0, V t1)
 /* clamp a value between two other values 
 */
 auto clamp (T, U, V)(T value, U min, V max)
-	{/*...}*/
+	in {/*...}*/
+		assert (min < max);
+	}
+	body {/*...}*/
 		value = value < min? min: value;
 		value = value > max? max: value;
 		return value;
