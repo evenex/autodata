@@ -10,7 +10,7 @@ import utils;
 import math;
 import indirect;
 
-import resource.array;
+import resource.arrays;
 
 /* Views
 Views are an opaque type-generic layer over certain types of Ranges. They bring

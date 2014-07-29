@@ -9,6 +9,8 @@ import services.display: GLenum;
 
 import utils;
 import math;
+import meta;
+import future;
 
 private import services.service;
 
@@ -67,10 +69,13 @@ class Camera (Capture)
 					assert (world !is null);
 				}
 				body {/*...}*/
-					auto captured = world.box_query (view_bounds);
-					if (program) foreach (x; captured)
+					Future!(Dynamic!(Capture[2^^10])) capture;
+					world.box_query (view_bounds, capture);
+					capture.await;
+
+					if (program) foreach (x; capture)
 						program (x);
-					return captured;
+					return capture;
 				}
 		}
 		public {/*☀}*/

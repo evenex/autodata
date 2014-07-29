@@ -11,8 +11,8 @@ import utils;
 import math;
 import meta;
 
-import resource.array;
-import resource.directory;
+import resource.arrays;
+
 /*
 	[RAW DATA (capacity)]
 		↓ array bounds held by resource
@@ -212,7 +212,7 @@ struct Allocator (T, Id = Index)
 					private {/*contract}*/
 						static assert (not (isInputRange!ResourceHandle));
 						static assert (isRandomAccessRange!(typeof(this[])));
-						//static assert (isOutputRange!(ResourceHandle, T));
+						static assert (isOutputRange!(ResourceHandle, T));
 					}
 					public:
 					public {/*[i]}*/
@@ -346,7 +346,8 @@ struct Allocator (T, Id = Index)
 									}
 								else {/*...}*/
 									++length;
-									this[$-1] = that;
+
+									(&this[$-1])[0..1] = (&that)[0..1];
 								}
 							}
 					}
@@ -381,7 +382,7 @@ struct Allocator (T, Id = Index)
 									if (is_allocated)
 										allocator.free (id);
 								}
-						else ~this ()
+						else ~this () nothrow
 							{/*...}*/
 								if (is_allocated)
 									allocator.free (id);
@@ -436,7 +437,7 @@ struct Allocator (T, Id = Index)
 		private {/*data}*/
 			Array!T pool;
 			Dynamic!(Array!Interval) free_list;
-			Directory!(Resource, Id) resources;
+			Associative!(Array!Resource, Id) resources;
 		}
 		invariant () {/*assumptions}*/
 			string violated (lazy string assumption)

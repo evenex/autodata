@@ -103,12 +103,12 @@ template DoubleBuffer (T, uint size)
 		cycle, both threads can immediately continue working after calling 
 		their respective swap functions.
 */
-template TripleBuffer (T, uint size, uint sync_frequency = 4_000)
+template TripleBuffer (T, uint size, uint poll_frequency = 4_000)
 	{/*...}*/
 		import std.datetime: nsecs;
 		import core.thread: Thread, sleep;
 
-		static immutable sync_cycle = (1_000_000_000/sync_frequency).nsecs;
+		static immutable wait_period = (1_000_000_000/poll_frequency).nsecs;
 		final class TripleBuffer
 			{/*...}*/
 				public:
@@ -116,13 +116,13 @@ template TripleBuffer (T, uint size, uint sync_frequency = 4_000)
 					void writer_swap ()
 						{/*...}*/
 							while ((write_index + 2) % 3 != read_index)
-								Thread.sleep (sync_cycle);
+								Thread.sleep (wait_period);
 							(cast()buffer[++write_index %= 3]).clear;
 						}
 					void reader_swap ()
 						{/*...}*/
 							while ((write_index + 1) % 3 != read_index)
-								Thread.sleep (sync_cycle);
+								Thread.sleep (wait_period);
 							++read_index %= 3;
 						}
 				}

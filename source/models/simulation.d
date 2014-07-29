@@ -23,8 +23,8 @@ enum default_capacity = 2^^10;
 struct Aspect (Description)
 	{/*...}*/
 		private {/*imports}*/
-			import resource.directory;
 			import resource.allocator;
+			import resource.arrays;
 		}
 		public:
 		public {/*definitions}*/
@@ -64,8 +64,8 @@ struct Aspect (Description)
 				}
 		}
 		public {/*data}*/
-			Directory!Observable observable;
-			Directory!Writeable  writeable;
+			Ordered!(Array!Observable) observable; // REVIEW
+			Ordered!(Array!Writeable)  writeable; // REVIEW
 
 			Allocators allocators;
 		}
@@ -184,7 +184,7 @@ mixin template Model ()
 			import std.traits;
 			import std.string;
 			import resource.allocator;
-			import resource.directory;
+			import resource.arrays;
 			import resource.view;
 			import utils;
 		}
@@ -265,7 +265,7 @@ mixin template Model ()
 	}
 mixin template Simulation (Models...)
 	{/*...}*/
-		import resource.directory;
+		import resource.arrays;
 		import utils;
 		static assert (not(is(typeof(this))), `Simulation must be mixed in at global scope`);
 
@@ -384,12 +384,12 @@ mixin template Simulation (Models...)
 		__gshared Simulation simulation;
 		mixin AccessLayer!simulation;
 
-		__gshared Directory!Entity entities;
+		__gshared Associative!(Entity, Entity.Id) entities;//REVIEW
 		ulong new_entities;
 
 		shared static this ()
 			{/*...}*/
-				entities = Directory!Entity (128); // XXX
+				entities = typeof(entities)(128); // XXX
 			}
 
 		auto simulate (string name)

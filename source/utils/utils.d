@@ -302,12 +302,15 @@ public {/*debug}*/
 	}
 }
 public {/*move}*/
+	import resource.arrays: is_dynamic_array;
 	/* move all elements in a range (starting at index) up by one position */
 	/* leaving an empty space at the indexed position */
 	void shift_up_from (R)(ref R range, size_t index)
 		if (hasLength!R && is_indexable!R)
 		{/*...}*/
-			++range.length;
+			static if (is_dynamic_array!R)
+				range.grow (1);
+			else ++range.length;
 
 			for (size_t i = range.length-1; i > index; --i)
 				range[i] = range[i-1];
@@ -320,14 +323,16 @@ public {/*move}*/
 			for (auto i = index; i < range.length-1; ++i)
 				range[i] = range[i+1];
 				
-			--range.length;
+			static if (is_dynamic_array!R)
+				range.shrink (1);
+			else --range.length;
 		}
 }
 public {/*containers}*/
 	template PriorityQueue (T)
 		{/*...}*/
 			import std.container: BinaryHeap;
-			alias PriorityQueue = BinaryHeap!(Array!(T), "a > b");
+			alias PriorityQueue = BinaryHeap!(Array!(T), "a > b"); // REVIEW
 		}
 }
 public {/*multithreading}*/

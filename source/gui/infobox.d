@@ -6,7 +6,7 @@ import std.variant;
 
 import resource.view;
 import resource.allocator;
-import resource.directory;
+import resource.arrays;
 
 import tools.scribe;
 import tools.plot;
@@ -145,7 +145,7 @@ struct InfoBox
 		}
 		private:
 		private {/*data}*/
-			Directory!(Element, Element.Id) elements;
+			Associative!(Element[8], Element.Id) elements; // REVIEW
 			void delegate(Box) decoration;
 
 			static immutable margin = 0.01;

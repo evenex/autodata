@@ -9,7 +9,7 @@ import meta;
 
 import resource.view;
 import resource.allocator;
-import resource.directory;
+import resource.arrays;
 
 import services.display;
 import services.collision;
@@ -215,7 +215,7 @@ public {/*models/aspects}*/
 			}
 		__gshared:
 			private {/*resources}*/
-				Directory!(Object, Entity.Id) objects;
+				Associative!(Array!Object, Entity.Id) objects; // REVIEW
 			}
 			static {/*interface}*/
 				auto update ()
@@ -273,7 +273,7 @@ public {/*models/aspects}*/
 				CollisionDynamics!(Entity.Id) collision;
 			}
 			private {/*resources}*/
-				Directory!(Body, Entity.Id) bodies;
+				Associative!(Array!Body, Entity.Id) bodies;
 				Allocator!vec geometry;
 			}
 			static {/*toolkit}*/

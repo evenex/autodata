@@ -13,15 +13,14 @@ import future;
 
 import services.service;
 
-import resource.array;
+import resource.arrays;
 import resource.buffer;
-import resource.directory;
 import resource.allocator;
 import resource.view;
 
 // TODO full conversion to doubles. only openGL really needs 32-bit floats, and we can convert on-the-fly when we write to the output buffer
 // TODO lazy parameters for all ops which move data (like add and append)
-
+// TODO lets no longer manage query results, instead invert the future/promise thing... you give me (the service) an outputbuffer with a flag, and I will fill the output buffer when i get a chance and then raise the flag. then you will know your data has been delivered. DELIVERY, NOT PICKUP. that way, the client can manage the lifetime of its order.
 
 private {/*library}*/
 	struct cp
@@ -42,7 +41,9 @@ private {/*conversions}*/
 		}
 }
 
-private struct UpdateSignal {};
+private struct RequestUpdate {};
+private struct RequestUpload {};
+private struct RequestQuery {};
 
 private immutable MAX_SHAPES = 8;
 
@@ -57,6 +58,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 		}
 		public:
 		public {/*bodies}*/
+			// REFACTOR
 			struct Body
 				{/*...}*/
 					BodyId body_id;
@@ -271,7 +273,6 @@ final class CollisionDynamics (ClientId = size_t): Service
 					ClientId id;
 					CollisionDynamics server;
 					Dynamic!(vec[][MAX_SHAPES]) shapes;
-					Promise!(Body*) promise;
 
 					@property auto geometry ()
 						{/*...}*/
@@ -282,15 +283,25 @@ final class CollisionDynamics (ClientId = size_t): Service
 						{/*...}*/
 							this.id = id;
 							this.server = server;
+							this.velocity = 0;
 						}
 				}
-			@Upload void add (Upload upload)
+			void expedite_uploads ()
+				{/*...}*/
+					buffer.vertices.swap;
+					buffer.uploads.swap;
+					send (RequestUpload ());
+					receive ((bool _){});
+				}
+			@Upload void add (Args...)(Args uploads)
+				if (allSatisfy!(is_type_of!Upload, Args))
 				in {/*...}*/
 					assert (this.is_running, "attempted to add body before starting service");
-					assert (not (upload.id in bodies), `duplicate ids`);
+					foreach (upload; uploads)
+						assert (not (upload.id in bodies), `duplicate ids ` ~upload.id.text);
 				}
 				body {/*...}*/
-					buffer.uploads ~= upload;
+					buffer.uploads ~= uploads.only;
 				}
 			auto new_body (ClientId)(ClientId id)
 				{/*...}*/
@@ -301,6 +312,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 			struct Action {}
 		}
 		public {/*queries}*/
+			// REFACTOR
 			struct BodyInterface
 				{/*...}*/
 					ClientId id;
@@ -342,7 +354,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 							}); 
 						}
 				}
-			auto body_ (ClientId id)
+			auto get_body (ClientId id)
 				{/*...}*/
 					auto result = bodies.index_of (id);
 
@@ -355,12 +367,31 @@ final class CollisionDynamics (ClientId = size_t): Service
 					assert (0, `body ` ~id.text~ ` does not exist`);
 				}
 
+			void expedite_queries ()
+				{/*...}*/
+					buffer.queries.swap;
+					send (RequestQuery ());
+					receive ((bool _){});
+				}
+
 			struct Query
 				{/*...}*/
+					struct Appender (T) 
+						{/*...}*/
+							void delegate(T) append;
+							void delegate() finalize;
+						}
 					struct Box
 						{/*...}*/
 							vec[2] corners;
-							Promise!(View!ClientId) result;
+							Appender!ClientId stream;
+
+							@property void result (bool finished)
+								{/*...}*/
+									if (finished)
+										stream.finalize ();
+									else assert (0);
+								}
 						}
 					struct Ray
 						{/*...}*/
@@ -372,7 +403,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 					struct RayCast
 						{/*...}*/
 							vec[2] ray;
-							Promise!Incidence result;
+							Delivery!Incidence result;
 						}
 					struct RayCastExcluding
 						{/*...}*/
@@ -392,37 +423,35 @@ final class CollisionDynamics (ClientId = size_t): Service
 					double ray_time;
 				}
 
-			Future!(View!ClientId) box_query (vec[2] corners)
+			void box_query (Array)(vec[2] corners, ref Future!Array result)
+				in {/*...}*/
+				static assert (isOutputRange!(Array, ClientId), Array.stringof~ `cant take `~ClientId.stringof);
+					assert (this.is_running, "attempted query before starting service (currently "~this.status.text~")");
+				}
+				body {/*...}*/
+					import std.functional: toDelegate;
+					buffer.queries.box ~= Query.Box (corners, Query.Appender!ClientId (toDelegate (&result.stream.put), toDelegate (&result.finalize)));
+				}
+			void ray_cast (vec[2] ray, ref Future!Incidence result)
 				in {/*...}*/
 					assert (this.is_running, "attempted query before starting service (currently "~this.status.text~")");
 				}
 				body {/*...}*/
-					buffer.queries.box ~= Query.Box (corners);
-					return promise (buffer.queries.box.write.back.result);
+					buffer.queries.ray_cast ~= Query.RayCast (ray, deliver (result));
 				}
-			Future!Incidence ray_cast (vec[2] ray)
+			void ray_query (T)(T id, vec[2] ray, ref Future!Incidence result)
 				in {/*...}*/
 					assert (this.is_running, "attempted query before starting service (currently "~this.status.text~")");
 				}
 				body {/*...}*/
-					buffer.queries.ray_cast ~= Query.RayCast (ray);
-					return promise (buffer.queries.ray_cast.write.back.result);
+					buffer.queries.ray ~= Query.Ray (id, Query.RayCast (ray, deliver (result)));
 				}
-			Future!Incidence ray_query (T)(T id, vec[2] ray)
+			void ray_cast_excluding (T)(T id, vec[2] ray, ref Future!Incidence result)
 				in {/*...}*/
 					assert (this.is_running, "attempted query before starting service (currently "~this.status.text~")");
 				}
 				body {/*...}*/
-					buffer.queries.ray ~= Query.Ray (id, Query.RayCast (ray));
-					return promise (buffer.queries.ray.write.back.result);
-				}
-			Future!Incidence ray_cast_excluding (T)(T id, vec[2] ray)
-				in {/*...}*/
-					assert (this.is_running, "attempted query before starting service (currently "~this.status.text~")");
-				}
-				body {/*...}*/
-					buffer.queries.ray_cast_excluding ~= Query.RayCastExcluding (id, Query.RayCast (ray));
-					return promise (buffer.queries.ray_cast_excluding.write.back.result);
+					buffer.queries.ray_cast_excluding ~= Query.RayCastExcluding (id, Query.RayCast (ray, deliver (result)));
 				}
 		}
 		public {/*update}*/
@@ -431,7 +460,8 @@ final class CollisionDynamics (ClientId = size_t): Service
 					assert (this.is_running, "attempted to update simulation before starting service");
 				}
 				body {/*...}*/
-					send (UpdateSignal ());
+					buffer.swap;
+					send (RequestUpdate ());
 				}
 		}
 		public {/*ctor}*/
@@ -446,6 +476,115 @@ final class CollisionDynamics (ClientId = size_t): Service
 				}
 		}
 		protected:
+		shared void answer_queries ()
+			{/*...}*/
+				static auto get_id (cpShape* shape)
+					{/*...}*/
+						return retrieve (cp.ShapeGetUserData (shape));
+					}
+
+				auto answer (T)(T query)
+					in {/*...}*/
+						static if (is (T == Query.Box))
+							foreach (c; query.corners)
+								assert (c.x == c.x && c.y == c.y);
+					}
+					body {/*...}*/
+						static if (is (T == Query.Ray) || is (T == Query.RayCast))
+							{/*...}*/
+								static if (is (T == Query.Ray))
+									auto id = query.id;
+								else ClientId id;
+
+								auto ray = query.ray;
+
+								auto layers = CP_ALL_LAYERS;
+								auto group = CP_NO_GROUP;
+
+								cpSegmentQueryInfo info;
+
+								if (id != ClientId.init)
+									foreach (shape; bodies[id].shape_ids)
+										cp.ShapeSegmentQuery (shape, ray[0].to_cpv, ray[1].to_cpv, &info);
+								else cp.SpaceSegmentQueryFirst (space, ray[0].to_cpv, ray[1].to_cpv, 
+									layers, group, &info
+								);
+
+								if (info.shape)
+									return Incidence (get_id (info.shape), info.n.vec, info.t);
+								else return Incidence (ClientId.init, 0.vec, 1.0);
+							}
+						else static if (is (T == Query.RayCastExcluding))
+							{/*...}*/
+								auto id = query.id;
+								auto ray = query.ray;
+
+								auto layer = bodies[id].layer;
+								bodies[id].layer = 0x0;
+
+								auto layers = CP_ALL_LAYERS;
+								auto group = CP_NO_GROUP;
+
+								cpSegmentQueryInfo info;
+
+								cp.SpaceSegmentQueryFirst (space, ray[0].to_cpv, ray[1].to_cpv, 
+									layers, group, &info
+								);
+
+								bodies[id].layer = CP_ALL_LAYERS;
+
+								if (info.shape)
+									return Incidence (get_id (info.shape), info.n.vec, info.t);
+								else return Incidence (ClientId.init, 0.vec, 1.0);
+							}
+						else static if (is (T == Query.Box))
+							{/*...}*/
+								auto box = cp.BB (query.corners.bounding_box.bounds_tuple.expand);
+								auto layers = CP_ALL_LAYERS;
+								auto group = CP_NO_GROUP;
+
+								cp.SpaceBBQuery (space, box, layers, group, 
+									(cpShape* shape, void* stream) 
+										{(*cast(Query.Appender!ClientId*) stream).append (get_id (shape));},
+									&query.stream
+								);
+								return true;
+							}
+					}
+
+				void process_queries (string type)()
+					{/*...}*/
+						foreach (ref query; mixin(q{buffer.queries.} ~type~ q{.read[]}))
+							query.result = answer (query);
+					}
+
+				process_queries!`box`;
+				process_queries!`ray`;
+				process_queries!`ray_cast`;
+				process_queries!`ray_cast_excluding`;
+			}
+		shared void process_uploads ()
+			{/*...}*/
+				auto vertex_pool = buffer.vertices.read[];
+
+				foreach (ref upload; buffer.uploads.read[])
+					{/*...}*/
+						with (upload) if (position != position)
+							position = geometry.mean;
+
+						bodies.add (upload.id,
+							Body (
+								space,
+								upload.mass, 
+								upload.position, 
+								upload.velocity, 
+								upload.damping, 
+								upload.id,
+								upload.shapes
+							)
+						);
+					}
+			}
 		@Service shared override {/*interface}*/
 			import dchip.all;
 			bool initialize ()
@@ -456,29 +595,9 @@ final class CollisionDynamics (ClientId = size_t): Service
 				}
 			bool process ()
 				{/*...}*/
-					mixin(profiler);
-					(profiler).checkpoint (&bodies);
-					{/*process uploads}*/
-						buffer.swap;
-						auto vertex_pool = buffer.vertices.read[];
-						foreach (ref upload; buffer.uploads.read[])
-							{/*...}*/
-								with (upload) if (position != position)
-									position = geometry.mean;
-
-								upload.promise = &bodies.add (upload.id, // TODO promise xor interface?
-									Body (
-										space,
-										upload.mass, 
-										upload.position, 
-										upload.velocity, 
-										upload.damping, 
-										upload.id,
-										upload.shapes
-									)
-								)[1];
-							}
-					}
+					std.stdio.stderr.writeln (`wat`);
+					buffer.swap;
+					process_uploads;
 					cp.SpaceStep (space, Δt);
 					++t;
 					{/*postprocess}*/
@@ -486,94 +605,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 							with (dynamic_body) if (damping > 0.0)
 								velocity = velocity*(1.0 - damping);
 					}
-					{/*reply to queries}*/
-						static auto get_id (cpShape* shape)
-							{/*...}*/
-								return retrieve (cp.ShapeGetUserData (shape));
-							}
-
-						auto answer (T)(T query)
-							in {/*...}*/
-								static if (is (T == Query.Box))
-									foreach (c; query.corners)
-										assert (c.x == c.x && c.y == c.y);
-							}
-							body {/*...}*/
-								static if (is (T == Query.Ray) || is (T == Query.RayCast))
-									{/*...}*/
-										static if (is (T == Query.Ray))
-											auto id = query.id;
-										else ClientId id;
-
-										auto ray = query.ray;
-
-										auto layers = CP_ALL_LAYERS;
-										auto group = CP_NO_GROUP;
-
-										cpSegmentQueryInfo info;
-
-										if (id != ClientId.init)
-											foreach (shape; bodies[id].shape_ids)
-												cp.ShapeSegmentQuery (shape, ray[0].to_cpv, ray[1].to_cpv, &info);
-										else cp.SpaceSegmentQueryFirst (space, ray[0].to_cpv, ray[1].to_cpv, 
-											layers, group, &info
-										);
-
-										if (info.shape)
-											return Incidence (get_id (info.shape), info.n.vec, info.t);
-										else return Incidence (ClientId.init, 0.vec, 1.0);
-									}
-								else static if (is (T == Query.Box))
-									{/*...}*/
-										auto i = query_results.length;
-
-										auto box = cp.BB (query.corners.bounding_box.bounds_tuple.expand);
-										auto layers = CP_ALL_LAYERS;
-										auto group = CP_NO_GROUP;
-
-										cp.SpaceBBQuery (space, box, layers, group, 
-											(cpShape* shape, void* results) 
-												{(*cast(Dynamic!(Array!ClientId)*) results) ~= get_id (shape);},
-											&query_results
-										);
-										return view (query_results[i..$]);
-									}
-								else static if (is (T == Query.RayCastExcluding))
-									{/*...}*/
-										auto id = query.id;
-										auto ray = query.ray;
-
-										auto layer = bodies[id].layer;
-										bodies[id].layer = 0x0;
-
-										auto layers = CP_ALL_LAYERS;
-										auto group = CP_NO_GROUP;
-
-										cpSegmentQueryInfo info;
-
-										cp.SpaceSegmentQueryFirst (space, ray[0].to_cpv, ray[1].to_cpv, 
-											layers, group, &info
-										);
-
-										bodies[id].layer = CP_ALL_LAYERS;
-
-										if (info.shape)
-											return Incidence (get_id (info.shape), info.n.vec, info.t);
-										else return Incidence (ClientId.init, 0.vec, 1.0);
-									}
-							}
-
-						query_results.clear;
-						void process_queries (string type)()
-							{/*...}*/
-								foreach (ref query; mixin(q{buffer.queries.} ~type~ q{.read[]}))
-									query.result = answer (query);
-							}
-						process_queries!`box`;
-						process_queries!`ray`;
-						process_queries!`ray_cast`;
-						process_queries!`ray_cast_excluding`;
-					}
+					answer_queries;
 					return true;
 				}
 			bool listen ()
@@ -581,15 +613,29 @@ final class CollisionDynamics (ClientId = size_t): Service
 					// REVIEW ALL
 					bool listening = true;
 
-					auto proceed (UpdateSignal _) 
+					auto proceed (RequestUpdate _) 
 						{/*...}*/
 							listening = false;
+						}
+					auto expedite_queries (RequestQuery _) // maybe belongs with the next function
+						{/*...}*/
+							buffer.queries.swap;
+							answer_queries;
+							reply (true);
+						}
+					auto expedite_uploads (RequestUpload _)
+						{/*...}*/
+							buffer.vertices.swap;
+							buffer.uploads.swap;
+							process_uploads;
+							reply (true);
 						}
 					auto remove (ClientId id)
 						{/*...}*/
 							bodies.remove (id);
 							reply (true); /// REVIEW
 						}
+
 					static if (0) //XXX
 					auto act (Id id, Body.Action action)
 						{/*...}*/
@@ -639,7 +685,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 							else assert (null);
 						}
 
-					receive (&proceed, &remove);
+					receive (&proceed, &expedite_queries, &expedite_uploads, &remove);
 
 					return listening;
 				}
@@ -660,12 +706,8 @@ final class CollisionDynamics (ClientId = size_t): Service
 			mixin AutoInitialize;
 
 			@Initialize!(2^^12) 
-			Directory!(Body, ClientId) 
+			Associative!(Array!Body, ClientId)  // REVIEW
 				bodies;
-
-			@Initialize!(2^^10) 
-			Dynamic!(Array!ClientId) 
-				query_results;
 				
 			@Initialize!(2^^12) 
 			Allocator!vec geometry_memory;
@@ -755,7 +797,7 @@ unittest
 		assert (Body.deduce_shape (pentagon) == Body.Type.polygon);
 		assert (Body.deduce_shape (hexagon) == Body.Type.circle);
 	}
-void main()
+unittest
 	{/*body upload}*/
 		import core.thread;
 		import std.datetime;
@@ -783,9 +825,8 @@ void main()
 			.shape (triangle)
 		);
 
-		auto a = P.body_(0);
-		auto b = P.body_(1);
-
+		auto a = P.get_body (0);
+		auto b = P.get_body (1);
 
 		assert (a.position == vec(1));
 		// static geometry is held at position (0,0) internally
@@ -793,43 +834,79 @@ void main()
 		// but should report its position correctly when queried
 
 		P.update;
-					Thread.sleep (1.seconds); //  TODO
-
-		assert (b.position.x > -1);
-		assert (a.position.x > -1);
-
-		//assert (a.displacement == vec(1));
-		// initial displacement for static bodies must be handled specially TODO i think this is no longer true
-		//assert (b.displacement == vec(-1)); 
-		// to allow client-side geometry to be correctly updated after initialization
-
-		P.update;
-		// the displacement goes to 0 after the next update XXX
-		//assert (b.displacement == vec(0));  XXX
-		// but the position is still reported correctly
-		assert (b.position.x > -1);
-		assert (a.position.x > -1);
+		auto start = Clock.currTime;
+		while (a.position == vec(1))
+			{/*...}*/
+				assert (Clock.currTime - start < 2.seconds, `waited too long for body to update`);
+				Thread.sleep (100.msecs);
+			}
 	}
-unittest
+void main()
 	{/*queries}*/
+		import core.thread;
+		import std.datetime;
+
 		mixin (report_test!`queries`);
 		// TODO all other queries
 
-		auto p = new CollisionDynamics;
+		auto p = new CollisionDynamics!();
 		p.start; scope (exit) p.stop;
 		
 		auto sq = [vec(0),vec(1,0),vec(1),vec(0,1)];
 		auto μ = sq.mean;
 		sq = sq.map!(v => v - μ).array;
-		auto a = p.add_body (CollisionDynamics.Body (vec(0)), sq);
-		auto b = p.add_body (CollisionDynamics.Body (vec(1.49)), sq);
-		auto c = p.add_body (CollisionDynamics.Body (vec(-1.51)), sq);
-		auto d = p.add_body (CollisionDynamics.Body (vec(1000)), sq);
+
+		with (p) add (
+			new_body (0)
+			.mass (1)
+			.position (0.vec)
+			.shape (sq),
+
+			new_body (1)
+			.mass (1)
+			.position (vec(1.49))
+			.shape (sq),
+
+			new_body (2)
+			.mass (1)
+			.position (vec(-1.51))
+			.shape (sq),
+
+			new_body (3)
+			.mass (1)
+			.position (vec(1000))
+			.shape (sq)
+		);
+
+		Dynamic!(ReturnType!(p.box_query)[3]) futures;
+
+		futures ~= p.box_query ([vec(-1),vec(1)]); // BUG probably disallow array literals cause they GC
+		futures ~= p.box_query ([vec(-2),vec(0)]);
+		futures ~= p.box_query ([vec(-3),vec(-2)]);
+
+		// standard query
 		p.update;
-		assert (p.box_query ([vec(-1),vec(1)])		.length == 2); // BUG probably disallow array literals cause they GC
-		assert (p.box_query ([vec(-2),vec(0)])		.length == 2);
-		assert (p.box_query ([vec(-3),vec(-2)])		.length == 1);
-		assert (p.box_query ([vec(999),vec(1001)])	.length == 1);
-		assert (p.box_query ([vec(300),vec(400)])	.length == 0);
-		assert (p.box_query ([vec(-9999),vec(9999)]).length == 4);
+
+		while (not (futures.back.is_ready))
+			Thread.sleep (100.msecs);
+
+		assert (futures[0].length == 2);
+		assert (futures[1].length == 2);
+		assert (futures[2].length == 1);
+
+		futures.clear;
+
+		futures ~= p.box_query ([vec(999),vec(1001)]);
+		futures ~= p.box_query ([vec(300),vec(400)]);
+		futures ~= p.box_query ([vec(-9999),vec(9999)]);
+
+		// expedited query
+		p.expedite_queries;
+
+		while (not (futures.back.is_ready))
+			Thread.sleep (100.msecs);
+
+		assert (futures[0].length == 1);
+		assert (futures[1].length == 0);
+		assert (futures[2].length == 4);
 	}

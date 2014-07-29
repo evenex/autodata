@@ -3,6 +3,7 @@ import std.range;
 
 import utils;
 import meta;
+import math;
 
 /* specify how elements are compared for equivalence
 */

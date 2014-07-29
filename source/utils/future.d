@@ -2,74 +2,192 @@ module future;
 
 import utils;
 
+unittest
+	{/*demo}*/
+		mixin(report_test!`promise`);
+		import std.exception;
+
+		{/*future}*/
+			Future!int future;
+
+			assert (not (future.is_realized));
+
+			future = 6;
+
+			assert (future.is_realized);
+			assert (future == 6);
+			/* cannot realize future twice */
+			assertThrown!Error (future = 1);
+		}
+		{/*promise}*/
+			Future!int future;
+
+			auto promise = .promise (future);
+			assert (not (promise.is_fulfilled));
+			/* cannot read promise before future realization */
+			assertThrown!Error (promise ());
+
+			future = 6;
+
+			assert (promise.is_fulfilled);
+			assert (promise == 6);
+		}
+		{/*delivery}*/
+			Future!int future;
+
+			auto delivery = deliver (future);
+			assert (not (delivery.was_delivered));
+
+			delivery = 6;
+
+			assert (delivery.was_delivered);
+			assert (future.is_realized);
+			assert (future == 6);
+
+			/* cannot realize future twice */
+			assertThrown!Error (future = 1);
+			/* cannot make delivery twice */
+			assertThrown!Error (delivery = 1);
+		}
+	}
+
 struct Future (T)
 	{/*...}*/
 		public:
-		public {/*interface}*/
-			@property bool is_ready () const
+		const @property {/*status}*/
+			bool is_realized ()
 				{/*...}*/
-					return promise.is_fulfilled;
+					return realized;
 				}
-			auto ref opCall ()
+		}
+		public {/*interface}*/
+			void assign (U)(U that)
+				if (__traits(compiles, payload = that))
 				in {/*...}*/
-					assert (this.is_ready);
+					assert (this.is_realized.not, `Future!(` ~T.stringof~ `) has already been realized`);
 				}
 				body {/*...}*/
-					return promise.payload;
+					payload = that;
+					finalize;
 				}
-			alias opCall this;
-		}
-		public {/*ctor}*/
-			this (ref Promise!T promise)
+			auto ref stream ()
 				{/*...}*/
-					this.promise = &promise;
+					return payload;
 				}
+			void finalize ()
+				{/*...}*/
+					realized = true;
+				}
+			void await (uint poll_frequency = 1000)
+				{/*...}*/
+					import core.thread;
+					import std.datetime;
+
+					immutable wait_period = (1_000_000_000/poll_frequency).nsecs;
+
+					while (not (realized))
+						Thread.sleep (wait_period);
+				}
+			auto get () const
+				in {/*...}*/
+					assert (this.is_realized, `attempted to access Future!(` ~T.stringof~ ` before it was realized`);
+				}
+				body {/*...}*/
+					return payload;
+				}
+			alias get this;
+		}
+		public {/*operators}*/
+			alias opCall = get;
+			alias opAssign = assign;
 		}
 		private:
 		private {/*data}*/
-			Promise!T* promise;
+			T payload;
+			bool realized;
 		}
 	}
 struct Promise (T)
 	{/*...}*/
-		T payload;
-		bool is_fulfilled;
-
-		void opAssign (U)(U that)
-			if (__traits(compiles, payload = that))
-			in {/*...}*/
-				assert (not (is_fulfilled));
-			}
-			body {/*...}*/
-				payload = that;
-				is_fulfilled = true;
-			}
+		public:
+		const @property {/*status}*/
+			@property bool is_fulfilled () const
+				{/*...}*/
+					return future.is_realized;
+				}
+		}
+		public {/*interface}*/
+			auto await (uint poll_frequency = 1000)
+				{/*...}*/
+					future.await (poll_frequency);
+				}
+			auto get ()
+				in {/*...}*/
+					assert (this.is_ready, `attempted to access Promise!(` ~T.stringof~ `) before it was fulfilled`);
+				}
+				body {/*...}*/
+					return future.payload;
+				}
+			alias get this;
+		}
+		public {/*operators}*/
+			alias opCall = get;
+		}
+		public {/*ctor}*/
+			this (ref Future!T future)
+				{/*...}*/
+					this.future = &future;
+				}
+		}
+		private:
+		private {/*data}*/
+			Future!T* future;
+		}
 	}
-
-auto promise (T)(ref Promise!T result)
+struct Delivery (T)
 	{/*...}*/
-		return Future!T (result);
+		public:
+		const @property {/*status}*/
+			@property bool was_delivered ()
+				{/*...}*/
+					return future.is_realized;
+				}
+		}
+		public {/*interface}*/
+			void assign (U)(U that)
+				if (not (is (U == typeof(this))))
+				{/*...}*/
+					*future = that;
+				}
+			auto ref stream ()
+				{/*...}*/
+					return future.stream;
+				}
+			void finalize ()
+				{/*...}*/
+					future.finalize;
+				}
+		}
+		public {/*operators}*/
+			alias opAssign = assign;
+		}
+		public {/*ctor}*/
+			this (ref Future!T future)
+				{/*...}*/
+					this.future = &future;
+				}
+		}
+		private:
+		private {/*data}*/
+			Future!T* future;
+		}
 	}
 
-unittest
-	{/*demo}*/
-		mixin(report_test!`future`);
-		import std.exception;
-
-		Promise!int promise;
-
-		auto future = .promise (promise);
-
-		assert (not (promise.is_fulfilled));
-		assert (not (future.is_ready));
-		/* cannot read future before promise fulfillment */
-		assertThrown!Error (future ());
-
-		promise = 6;
-
-		assert (promise.is_fulfilled);
-		assert (future.is_ready);
-		assert (future == 6);
-		/* cannot fulfill promise twice */
-		assertThrown!Error (promise = 1);
+auto promise (T)(ref Future!T future)
+	{/*...}*/
+		return Promise!T (future);
+	}
+auto deliver (T)(ref Future!T future)
+	{/*...}*/
+		return Delivery!T (future);
 	}

@@ -5,18 +5,20 @@ import std.range;
 import std.math;
 
 import resource.view;
-import resource.array;
+import resource.arrays;
 
 import utils; // TODO make views and looks and math public imports?
 import color;
 import math;
 import meta;
+import future;
 
 import services.collision;
 import models.integrator;
 import models.entity;
 
 alias Physics = CollisionDynamics!(Entity.Id);
+alias Incidence = Physics.Incidence;
 
 class Ballistic
 	{/*...}*/
@@ -212,7 +214,11 @@ class Ballistic
 
 							auto x = projectile.position;
 							auto Δx = projectile.velocity * max_duration;
-							auto trace = model.world.ray_cast_excluding (projectile.source, [x, x+Δx]); // BUG turns out, array literals will trigger a heap allocation
+
+							Future!Incidence trace;
+							model.world.ray_cast_excluding (projectile.source, [x, x+Δx], trace); // BUG turns out, array literals will trigger a heap allocation
+							trace.await;
+
 							auto distance_to_impact = Δx.norm * trace.ray_time;
 							this.impact_body = trace.body_id.to!(Entity.Id);
 							this.impact_normal = trace.surface_normal;
@@ -347,7 +353,11 @@ class Ballistic
 
 							auto x = projectile.position;
 							auto Δx = projectile.velocity * max_duration;
-							auto trace = model.world.ray_query (impact.target, [x+Δx, x]);
+
+							Future!Incidence trace;
+							model.world.ray_query (impact.target, [x+Δx, x], trace);
+							trace.await;
+
 							auto distance_to_exit = Δx.norm * (1.0 - trace.ray_time);
 
 							auto ρ = material.density;

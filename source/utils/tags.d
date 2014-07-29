@@ -1,7 +1,5 @@
 module tags;
 
-import resource.directory;
-
 struct Tag 
 	{/*...}*/
 		public:

@@ -89,25 +89,68 @@ public {/*traits}*/
 					|| is_string_param!(T[0])
 				);
 		}
-	/* test if a function behaves syntactically as a comparison */
-	template is_comparison_function (U...)
+	/* test if a function is unary */
+	template is_unary_function (U...)
 		if (U.length == 1)
 		{/*...}*/
 			static if (isSomeFunction!(U[0]))
 				{/*...}*/
 					alias Function = U[0];
-					alias Params = ParameterTypeTuple!(U[0]);
+					alias Params = ParameterTypeTuple!Function;
+
+					static if (Params.length == 1)
+						enum is_unary_function = true;
+					else enum is_unary_function = false;
+				}
+			else enum is_unary_function = false;
+		}
+	/* test if a function is binary */
+	template is_binary_function (U...)
+		if (U.length == 1)
+		{/*...}*/
+			static if (isSomeFunction!(U[0]))
+				{/*...}*/
+					alias Function = U[0];
+					alias Params = ParameterTypeTuple!Function;
 
 					static if (Params.length == 2)
+						enum is_binary_function = true;
+					else enum is_binary_function = false;
+				}
+			else enum is_binary_function = false;
+		}
+	/* test if a function behaves syntactically as a hash */
+	template is_hashing_function (T)
+		{/*...}*/
+			template is_hashing_function (U...)
+				if (U.length == 1)
+				{/*...}*/
+					static if (is_unary_function!(U[0]))
 						{/*...}*/
-							alias T = Params[0];
-							static if (is (T == Params[1]))
-								{/*...}*/
-									alias Return = ReturnType!Function;
-									static if (is (bool: Return) || is (Return: bool))
-										enum is_comparison_function = true;
-									else enum is_comparison_function = false;
-								}
+							alias Function = U[0];
+
+							enum is_hashing_function = 
+								is (ParameterTypeTuple!Function == TypeTuple!T)
+								&& is_comparable!(ReturnType!Function);
+						}
+					else enum is_hashing_function = false;
+				}
+		}
+	/* test if a function behaves syntactically as a comparison */
+	template is_comparison_function (U...)
+		if (U.length == 1)
+		{/*...}*/
+			static if (is_binary_function!(U[0]))
+				{/*...}*/
+					alias Function = U[0];
+					alias Params = ParameterTypeTuple!Function;
+
+					static if (is (Params[0] == Params[1]))
+						{/*...}*/
+							alias Return = ReturnType!Function;
+
+							static if (is (bool: Return) || is (Return: bool))
+								enum is_comparison_function = true;
 							else enum is_comparison_function = false;
 						}
 					else enum is_comparison_function = false;
@@ -154,6 +197,14 @@ public {/*traits}*/
 	template is_accessible (T, string member)
 		{/*...}*/
 			enum is_accessible = mixin(q{__traits(compiles, T.} ~member~ q{)});
+		}
+	/* test if a given type matches another */
+	template is_type_of (T)
+		{/*...}*/
+			template is_type_of (U)
+				{/*...}*/
+					enum is_type_of = is (T == U);
+				}
 		}
 }
 public {/*mixins}*/
@@ -252,39 +303,41 @@ public {/*mixins}*/
 			static assert (is(typeof(this)), `mixin requires host struct`);
 			alias Applied = typeof(range[0]);
 
-			int opApply (scope int delegate(ref Applied) op)
+			int opApply (scope int delegate(ref Applied) op) nothrow
 				{/*...}*/
 					int result;
 
-					foreach (ref element; range)
+					try foreach (ref element; range)
 						{/*...}*/
 							result = op (element);
 
 							if (result) 
 								break;
 						}
+					catch (Exception) assert (0);
 
 					return result;
 				}
-			int opApply (scope int delegate(size_t, ref Applied) op)
+			int opApply (scope int delegate(size_t, ref Applied) op) nothrow
 				{/*...}*/
 					int result;
 
-					foreach (i, ref element; range)
+					try foreach (i, ref element; range)
 						{/*...}*/
 							result = op (i, element);
 
 							if (result) 
 								break;
 						}
+					catch (Exception) assert (0);
 
 					return result;
 				}
-			int opApply (scope int delegate(ref const Applied) op) const
+			int opApply (scope int delegate(ref const Applied) op) const nothrow
 				{/*...}*/
 					return (cast()this).opApply (cast(int delegate(ref Applied)) op);
 				}
-			int opApply (scope int delegate(const size_t, ref const Applied) op) const
+			int opApply (scope int delegate(const size_t, ref const Applied) op) const nothrow
 				{/*...}*/
 					return (cast()this).opApply (cast(int delegate(size_t, ref Applied)) op);
 				}
@@ -317,20 +370,13 @@ public {/*mixins}*/
 	/* apply an array interface over a pointer and length variable 
 	*/
 	mixin template ArrayInterface (alias pointer, alias length)
+		if (is_sliceable!(typeof(pointer)))
 		{/*...}*/
-			public {/*assertions}*/
-				static assert (is_indexable!(typeof(pointer)),
-					`backing struct must support indexing`
-				);
-				static assert (is_sliceable!(typeof(pointer)),
-					`backing struct must support slicing`
-				);
-			}
 			public:
 			public {/*[┄]}*/
-				ref auto opIndex (size_t i) inout
+				ref auto opIndex (size_t i)
 					in {/*...}*/
-						assert (i < length);
+						assert (i < length, `access out of bounds`);
 					}
 					body {/*...}*/
 						return pointer[i];
@@ -369,6 +415,32 @@ public {/*mixins}*/
 						return this[].back;
 					}
 			}
+			const {/*[┄]}*/
+				ref auto opIndex (size_t i)
+					{/*...}*/
+						return (cast()this)[i];
+					}
+				auto opSlice (size_t i, size_t j)
+					{/*...}*/
+						return (cast()this)[i..j];
+					}
+				auto opSlice ()
+					{/*...}*/
+						return (cast()this)[0..$];
+					}
+			}
+			const {/*range}*/
+				ref auto front ()
+					{/*...}*/
+						import std.range;
+						return (cast()this)[].front;
+					}
+				ref auto back ()
+					{/*...}*/
+						import std.range;
+						return (cast()this)[].back;
+					}
+			}
 			public {/*iteration}*/
 				mixin IterateOver!opSlice;
 			}
@@ -401,11 +473,11 @@ public {/*mixins}*/
 			}
 		}
 
-	/* generate a private member function auto_initialize () which automatically initializes all fields tagged Initialize
+	/* generate a member function auto_initialize () which automatically initializes all fields tagged Initialize
 	*/
 	mixin template AutoInitialize ()
 		{/*...}*/
-			private void auto_initialize ()
+			void auto_initialize ()
 				{/*...}*/
 					alias This = typeof(this);
 					foreach (member; __traits(allMembers, This))
@@ -463,11 +535,27 @@ public {/*mixins}*/
 					return symbol~` = cast (typeof (`~symbol~`)) dlsym (library, "`~symbol~`");`;
 				}
 		}
+
+	/* forward constructor calls to recipient
+	*/
+	mixin template ForwardConstructor (alias recipient)
+		{/*...}*/
+			import std.traits: hasMember;
+			static if (hasMember!(typeof(recipient), `__ctor`))
+				this (Args...)(Args args)
+					{/*...}*/
+						recipient = typeof(recipient)(args);
+					}
+			else this (T)(T value)
+					{/*...}*/
+						recipient = value;
+					}
+		}
 }
 public {/*wrappers}*/
 	/* forwards function calls via pointer and returns itself for chaining
 	*/
-	struct Forward (T)
+	struct ChainForward (T)
 		{/*...}*/
 			public mixin(forward_members);
 
@@ -501,180 +589,6 @@ public {/*wrappers}*/
 
 					return code;
 				}
-		}
-
-	/* apply dynamic array functionality over any type which supports array semantics 
-		· the length of the backing array sets the capacity of the dynamic array
-		· if the backing array defines a constructor, the dynamic array inherits it
-		· element destruction can be controlled through the Destruction policy
-	*/
-	struct Dynamic (Array, Destruction destruction = Destruction.deferred)
-		if (hasLength!Array && is_indexable!Array && is_sliceable!Array)
-		{/*...}*/
-			alias T = ElementType!Array;
-			public:
-			public {/*[┄]}*/
-				ref auto opIndex (size_t i) inout
-					in {/*...}*/
-						import std.conv;
-						assert (i < length,
-							i.text ~ ` exceeds Dynamic!(` ~Array.stringof~ `) length ` ~length.text
-						);
-					}
-					body {/*...}*/
-						return array[i];
-					}
-				auto opSlice (size_t i, size_t j)
-					in {/*...}*/
-						assert (i <= j && j <= length);
-					}
-					body {/*...}*/
-						return array[i..j];
-					}
-				auto opSlice ()
-					{/*...}*/
-						return this[0..$];
-					}
-				auto opDollar () const
-					{/*...}*/
-						return length;
-					}
-			}
-			public {/*~=}*/
-				auto opOpAssign (string op: `~`)(ref T item)
-					{/*...}*/
-						++length;
-						this[$-1] = item;
-					}
-				auto opOpAssign (string op: `~`)(lazy T item)
-					{/*...}*/
-						++length;
-						this[$-1] = item;
-					}
-				auto opOpAssign (string op: `~`, R)(R range)
-					if (isForwardRange!R)
-					{/*...}*/
-						auto save = range.save;
-						auto start = this.length;
-						this.length += save.length;
-						range.copy (this[start..$]);
-					}
-			}
-			public {/*range}*/
-				ref auto front ()
-					in {/*...}*/
-						assert (length);
-					}
-					body {/*...}*/
-						return array.front;
-					}
-				ref auto back ()
-					in {/*...}*/
-						assert (length);
-					}
-					body {/*...}*/
-						return array[length - 1];
-					}
-			}
-			public @property {/*}*/
-				auto capacity () const
-					{/*...}*/
-						return array.length;
-					}
-				auto empty () const
-					{/*...}*/
-						return length == 0;
-					}
-			}
-			public {/*clear}*/
-				auto clear ()
-					{/*...}*/
-						static if (destruction == Destruction.immediate)
-							foreach (ref item; this)
-								item.destroy;
-							
-						length = 0;
-					}
-			}
-			public {/*iteration}*/
-				mixin IterateOver!opSlice;
-			}
-			public {/*ctor}*/
-				static if (__traits(hasMember, Array, `__ctor`))
-					this (ParameterTypeTuple!(Array.__ctor) args)
-						{/*...}*/
-							array = Array (args);
-						}
-			}
-			const {/*text}*/
-				auto toString ()
-					{/*...}*/
-						import std.conv;
-
-						static if (__traits(compiles, array.text))
-							return array.text;
-						else return `[` ~T.stringof~ `...]`;
-					}
-				auto text ()
-					{/*...}*/
-						return toString;
-					}
-			}
-			public {/*data}*/
-				size_t length = 0;
-			}
-			private:
-			private {/*data}*/
-				Array array;
-			}
-			invariant () {/*...}*/
-				import std.conv;
-				assert (this.length <= array.length,
-					`Dynamic!(` ~T.stringof~ `) of length ` ~this.length.text~ ` exceeded capacity ` ~array.length.text
-				);
-			}
-		}
-
-	/* specify when elements in Dynamic arrays are destroyed
-	*/
-	enum Destruction 
-		{/*...}*/
-			/* clearing the array calls the destructor for all elements */ // TODO popEnd method?
-			immediate,
-			/* elements are destroyed only if they are overwritten and reassignment is destructive */
-			deferred
-		}
-
-	unittest
-		{/*dynamic array}*/
-			mixin(report_test!`dynamic array`);
-			import std.exception;
-
-			auto S = Array!int (10);
-
-			[0,1,2,3,4,5,6,7,8,9].copy (S[]);
-
-			foreach (j, i; S)
-				assert (i == j);
-
-			auto D = Dynamic!(Array!int) (10);
-			auto E = Dynamic!(int[10])();
-
-			assert (E.length == 0 && D.length == 0);
-			D ~= 1;
-			assert (D.length == 1);
-			E ~= [1,2,3];
-			assert (E.length == 3);
-
-			assert (D[].equal ([1]));
-			assert (E[].equal ([1,2,3]));
-
-			D.clear;
-			assert (D.length == 0);
-
-			D ~= S[];
-			assert (D[].equal (S[]));
-			assertThrown!Error (D ~= S[]);
 		}
 }
 public {/*type processing}*/
@@ -750,6 +664,20 @@ public {/*type processing}*/
 				}
 
 			alias assignable_members = Filter!(is_assignable!T, __traits(allMembers, T));
+		}
+	/* perform search and replace on a typename */
+	string rewrite_type (Type, Find, ReplaceWith)()
+		{/*...}*/
+			import std.algorithm: findSplit;
+
+			string type = Type.stringof;
+			string find = Find.stringof;
+			string repl = ReplaceWith.stringof;
+
+			string left  = findSplit (type, find)[0];
+			string right = findSplit (type, find)[2];
+
+			return left ~ repl ~ right;
 		}
 }
 public {/*code generation}*/

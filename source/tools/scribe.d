@@ -16,7 +16,7 @@ import math;
 import meta;
 
 import resource.allocator;
-import resource.array;
+import resource.arrays;
 
 import services.display;
 
