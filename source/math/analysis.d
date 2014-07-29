@@ -22,7 +22,7 @@ struct Interval (Index)
 				return not (end - start);
 			}
 	}
-pure {/*interval comparison functions}*/
+pure {/*interval comparison predicates}*/
 	bool ends_before_end (T)(Interval!T a, Interval!T b)
 		{/*...}*/
 			return a.end < b.end;
