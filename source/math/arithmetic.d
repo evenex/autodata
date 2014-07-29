@@ -14,7 +14,7 @@ auto subtract (T)(T a, T b)
 	{return a - b;}
 
 /* get an array of natural numbers from 0 to max-1 */
-auto ℕ (uint max)()
+auto ℕ (size_t max)()
 	{/*↓}*/
 		return ℕ (max);
 	}
