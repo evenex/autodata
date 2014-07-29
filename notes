@@ -1,0 +1,73 @@
+Entity Firearm {
+	.name (`ak-47`)
+	Physical.Body {
+		.geometry (Visual.geometry)
+		.mass (7*kilograms)
+		.moment (something)
+	}
+	Visual.Object {
+		.geometry ([...])
+		.tex_coords ([...])
+		.texture (Texture (`ak-47.tga`, [0.vec, 1.vec].bounding_box))
+	}
+	Slot {
+		.label (`magazine`)
+		.reject (Container.Filter.everything)
+		.accept ((Magazine magazine) => magazine.type == Magazine.akm)
+	}
+	Scripts {
+		.action (`fire`, () {
+			if (not (Slot.magazine.empty || Slot.magazine.get.empty))
+				{/*...}*/
+					 auto round = Slot.magazine.get.front;
+					 Slot.magazine.get.popFront;
+					 Ballistic.Launcher.launch (round);
+				}
+			else {/*...}*/
+				Service.Sound.emit (`empty_click_heavy`);
+			}
+		});
+		.action (`eject`, () {
+			if (not (Slot.magazine.empty))
+				{/*...}*/
+					auto magazine = Slot.magazine.front;
+					Slot.magazine.popFront;
+					magazine.position = Physical.Body.position;
+					Physics.enable (magazine);
+				}
+		});
+	}
+	Ballistic.Launcher {
+		.launch_speed (700*meters/seconds)
+	}
+	Economic.Good {
+		.industry (Industry.military)
+		.base_price (200.usd)
+	}
+	Technological.Design {
+		.invention (Date(1947))
+		.design_goals ([
+			`volume fire`
+			`low maintenance`
+		]);
+	}
+	Psychological.Symbol {
+		.tags ([...])
+	}
+	Impact.Lever {
+		.length (Visual.geometry.long_axis)
+		.mass (Physical.Body.mass)
+		.moment (Physical.Body.moment)
+		.hardness (Material.hardness)
+	}
+	Material.Object {
+		.preset (steel)
+		//.density (7000*grams/meter^^3)
+		//.hardness (0.95)
+	}
+}
+
+a Ballistic.Projectile (part of the Ballistic.State) is launched from a Ballistic.Launcher Entity.
+the Ballistic Model uses Physics Service to raytrace and receive an Entity.Id (not a Physics.Body.Id but a custom Id) and looks up the Entity.Id in Material.Objects.
+the Ballistic Model uses the information from Material.Objects to compute its own private resultant State (i.e. the post-impact properties of the Ballistic.Projectile) and then posts and Event notification in the Entity.Events.
+if the Entity has an Aspect in the Medical Model, the Medical Model can then read the Event notification and perform the necessary Medical.State updates that are consistent with Ballistic.Projectile impact.

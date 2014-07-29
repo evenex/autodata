@@ -1,6 +1,6 @@
 {
-	"name": "engine_v8",
-	"description": "TCR engine prototype 8",
+	"name": "engine_v9",
+	"description": "TCR engine prototype 9",
 	"copyright": "Copyright © 2014, evenex_code",
 	"authors": ["evenex_code"],
 	"dependencies": {
@@ -10,10 +10,10 @@
 		"dchip"  		: "~master",
 	},
 	"libs": ["ftgl", "freetype_gl", "scid-dmd"],
-	"importPaths": ["/usr/local/include/d", "./source/"],
+	"importPaths": [],
 	"targetType": "executable",
 	"buildRequirements": ["disallowDeprecations"],
 	"buildOptions": ["debugInfoC", "alwaysStackFrame"],
-	"buildOptions_CRASHES": ["debugInfoC", "inline"],
+	"_buildOptions": ["releaseMode", "optimize", "inline", "noBoundsCheck"],
 	"postBuildCommands": ["echo '<>>'"]
 }

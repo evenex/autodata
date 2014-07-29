@@ -1,4 +1,4 @@
-MODULE_COUNT=$(find -name "*.d" | wc -l)
+MODULE_COUNT=$(find -name "*.d" | grep -v "all" | wc -l)
 LINE_COUNT=$(find \( -name "*.d" \) -exec cat \{} \; | wc -l)
 HEADER="$LINE_COUNT lines across $MODULE_COUNT modules:"
 DASHES=$(seq 2 $(echo "$HEADER" | wc -c))
@@ -7,7 +7,7 @@ echo ""
 echo "$HEADER"
 printf '=%0.s' $DASHES
 echo ""
-find -name "*.d" | grep -o [a-z0-9_]\*[.]d | grep -o [a-z0-9_]\*[.] | tr '.' ' ' | sort
+find -name "*.d" | grep -v "all" | grep -oP \([a-z0-9_]\*[/]\?\)[a-z0-9_]\*[.]d | grep -oP \([a-z0-9_]\*[/]\?\)[a-z0-9_]\*[.] | tr '.' ' ' | sort
 
 PENDING_FIXES=$(grep -rn '\<FIXME\>' ./source/ | grep -v Binary | grep -v freetype-gl | grep -v ode[-]0[.]13  | wc -l)
 if [ "$PENDING_FIXES" -gt "0" ]
@@ -44,11 +44,11 @@ then
 	grep -rn '\<BUG\>' ./source/ | grep -v OUTSIDE | grep -v Binary | grep -v freetype-gl | grep -v ode[-]0[.]13 | tr -d '\t'
 fi
 OUTSIDE_BUGS=$(grep -rn '\<OUTSIDE BUG\>' ./source/ | grep -v Binary | grep -v freetype-gl | grep -v ode[-]0[.]13 | wc -l)
-if [ "$BUGS" -gt "0" ]
+if [ "$OUTSIDE_BUGS" -gt "0" ]
 then
 	printf '=%0.s' $DASHES
 	echo ""
-	if [ "$BUGS" -eq "1" ]
+	if [ "$OUTSIDE_BUGS" -eq "1" ]
 	then
 		TITLE="$OUTSIDE_BUGS OUTSIDE BUG:"
 	else
