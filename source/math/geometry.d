@@ -15,169 +15,9 @@ private {/*import evx}*/
 		Aⁿ, τ, not;
 	import evx.meta:
 		ArrayInterface;
-	import evx.math; // TEMP
+	import evx.math; // REFACTOR
 }
 
-void main (){
-	import std.stdio;
-			import std.exception:
-				assertThrown;
-			import std.range:
-				ElementType;
-
-			static void basic_type (Type)()
-				{/*...}*/
-					alias Vec = Vec2!Type;
-
-					static assert (is (ElementType!Vec == Type));
-
-					Vec a = Vec (î);			
-					Vec b = Vec (ĵ);
-
-					static if (isFloatingPoint!Type)
-						{/*...}*/
-							assert (a.norm == 1);
-							assert (b.norm == 1);
-
-							assert (a.unit == a);
-							assert (b.unit == b);
-						}
-
-					assert (a.abs == a);
-					assert (b.abs == b);
-
-					assert (a.min == 0);
-					assert (b.min == 0);
-
-					assert (a.max == 1);
-					assert (b.max == 1);
-
-					static if (not (isUnsigned!Type))
-						{/*...}*/
-							assert (a.det (b) == 1);
-							assert (b.det (a) == -1);
-						}
-
-					assert (a.dot (b) == 0);
-					assert (b.dot (a) == 0);
-
-					static if (isFloatingPoint!Type)
-						{/*...}*/
-							assert (a.proj (b) == Vec(0));
-							assert (b.proj (a) == Vec(0));
-
-							assert (a.rej (b) == a);
-							assert (b.rej (a) == b);
-						}
-
-					assert (a.approx (a));
-					assert (b.approx (b));
-
-					assert (not (b.approx (a)));
-					assert (not (a.approx (b)));
-
-					static if (not (isUnsigned!Type))
-						{/*...}*/
-							assert (-a == Vec(-1, 0));
-							assert (-b == Vec(0, -1));
-						}
-					
-					assert (+a == a);
-					assert (+b == b);
-
-					assert (a + b == Vec(1));
-					assert (b + a == Vec(1));
-
-					static if (not (isUnsigned!Type))
-						{/*...}*/
-							assert (a - b == Vec(1,-1));
-							assert (b - a == Vec(-1,1));
-						}
-
-					assert (a * b == Vec(0));
-					assert (b * a == Vec(0));
-
-					static if (isFloatingPoint!Type)
-						{/*...}*/
-							assert (a / b == Vec(infinity, 0));
-							assert (b / a == Vec(0, infinity));
-						}
-					else static if (isIntegral!Type) 
-						try {/*...}*/
-							assertThrown!Error (a / b);
-							assertThrown!Error (b / a);
-						} catch (Exception) assert (0);
-				}
-			static void conversion (UpType, DownType)()
-				{/*...}*/
-					auto a = Vec2!UpType (î);
-					
-					assert (Vec2!DownType (a) == Vec2!DownType (î));
-					assert (Vec2!DownType (a) == cast(Vec2!DownType) a);
-				}
-
-			{/*basic types}*/
-				// floating point
-				basic_type!real;
-				basic_type!double;
-				basic_type!float;
-
-				// signed integral
-				basic_type!long;
-				basic_type!int;
-				basic_type!short;
-				basic_type!byte;
-
-				// unsigned integral
-				basic_type!ulong;
-				basic_type!uint;
-				basic_type!ushort;
-				basic_type!ubyte;
-			}
-			{/*conversion}*/
-				conversion!(double, float);
-				conversion!(float, double);
-				conversion!(real, float);
-
-				static assert (not (__traits(compiles, conversion!(real, int))));
-				conversion!(int, real);
-
-				// cannot implicitly convert from signed to unsigned
-				static assert (not (__traits(compiles, conversion!(int, uint))));
-				// such conversion may be accomplished with a cast
-				static assert (__traits(compiles, cast(Vec2!uint)(Vec2!int.init)));
-				// unsigned to signed is ok
-				conversion!(uint, int);
-
-				static assert (not (__traits(compiles, conversion!(int, short))));
-				conversion!(short, int);
-			}
-			{/*units}*/
-				alias Position = Vec2!Meters;
-				alias Velocity = Vec2!(typeof(meters/second));
-
-				auto a = Position (3.meters, 4.meters);
-
-				assert (2*a == Position (6.meters, 8.meters));
-				assert (a*a == typeof(a*a)(9.meter*meters, 16.meter*meters));
-				assert (a/a == 1.vec);
-
-				assert (Velocity (10.meters/second, 7.meters/second) * 0.5.seconds == Position (5.meters, 3.5.meters));
-
-				assert (a.norm == 5.meters);
-				assert (a.unit == vec(0.6, 0.8));
-
-				auto b = 12.meters * a.unit;
-
-				try std.stdio.writeln (a.proj (b));
-				catch (Throwable) assert (0);
-
-				try std.stdio.writeln (a.norm * a.unit);
-				catch (Throwable) assert (0);
-
-				assert (a.proj (b).approx (a.norm * a.unit));
-			}
-		}
 pure nothrow:
 public {/*traits}*/
 	/* test if a type can be used by this library 
@@ -233,14 +73,14 @@ public {/*vectors}*/
 							return Vec2(0);
 						else return Vec2(x/norm, y/norm);
 					}
-				auto unit ()() 
+				auto unit ()()
 					if (is_Unit!T)
 					{/*...}*/
 						auto norm = this.norm;
 
-						if (norm != T(0))
-							return vectorize (x/norm, y/norm);
-						else return vectorize (0 * T(1)/T(1), 0 * T(1)/T(1));
+						if (norm == T(0))
+							return vectorize (T(0)/T(1), T(0)/T(1));
+						else return vectorize (x/norm, y/norm);
 					}
 				Vec2 abs () 
 					{/*...}*/
@@ -280,7 +120,7 @@ public {/*vectors}*/
 						return this.dot (v.unit) * v.unit;
 					}
 				auto rej ()(Vec2 v) 
-					if (isFloatingPoint!T)
+					if (isFloatingPoint!T || is_Unit!T)
 					{/*...}*/
 						return this - this.proj (v);
 					}
@@ -430,7 +270,177 @@ public {/*vectors}*/
 			auto c = a + b;
 			assert (c == 3.vec);
 		}
-		//unittest {/*...}*/
+		unittest {/*...}*/
+			import std.exception:
+				assertThrown;
+			import std.range:
+				ElementType;
+
+			static void basic_type (Type)()
+				{/*...}*/
+					alias Vec = Vec2!Type;
+
+					static assert (is (ElementType!Vec == Type));
+
+					Vec a = Vec (î);			
+					Vec b = Vec (ĵ);
+
+					static if (isFloatingPoint!Type)
+						{/*...}*/
+							assert (a.norm == 1);
+							assert (b.norm == 1);
+
+							assert (a.unit == a);
+							assert (b.unit == b);
+						}
+
+					assert (a.abs == a);
+					assert (b.abs == b);
+
+					assert (a.min == 0);
+					assert (b.min == 0);
+
+					assert (a.max == 1);
+					assert (b.max == 1);
+
+					static if (not (isUnsigned!Type))
+						{/*...}*/
+							assert (a.det (b) == 1);
+							assert (b.det (a) == -1);
+						}
+
+					assert (a.dot (b) == 0);
+					assert (b.dot (a) == 0);
+
+					static if (isFloatingPoint!Type)
+						{/*...}*/
+							assert (a.proj (b) == Vec(0));
+							assert (b.proj (a) == Vec(0));
+
+							assert (a.rej (b) == a);
+							assert (b.rej (a) == b);
+						}
+
+					assert (a.approx (a));
+					assert (b.approx (b));
+
+					assert (not (b.approx (a)));
+					assert (not (a.approx (b)));
+
+					static if (not (isUnsigned!Type))
+						{/*...}*/
+							assert (-a == Vec(-1, 0));
+							assert (-b == Vec(0, -1));
+						}
+					
+					assert (+a == a);
+					assert (+b == b);
+
+					assert (a + b == Vec(1));
+					assert (b + a == Vec(1));
+
+					static if (not (isUnsigned!Type))
+						{/*...}*/
+							assert (a - b == Vec(1,-1));
+							assert (b - a == Vec(-1,1));
+						}
+
+					assert (a * b == Vec(0));
+					assert (b * a == Vec(0));
+
+					static if (isFloatingPoint!Type)
+						{/*...}*/
+							assert (a / b == Vec(infinity, 0));
+							assert (b / a == Vec(0, infinity));
+						}
+					else static if (isIntegral!Type) 
+						try {/*...}*/
+							assertThrown!Error (a / b);
+							assertThrown!Error (b / a);
+						} catch (Exception) assert (0);
+				}
+			static void conversion (UpType, DownType)()
+				{/*...}*/
+					auto a = Vec2!UpType (î);
+					
+					assert (Vec2!DownType (a) == Vec2!DownType (î));
+					assert (Vec2!DownType (a) == cast(Vec2!DownType) a);
+				}
+
+			{/*basic types}*/
+				// floating point
+				basic_type!real;
+				basic_type!double;
+				basic_type!float;
+
+				// signed integral
+				basic_type!long;
+				basic_type!int;
+				basic_type!short;
+				basic_type!byte;
+
+				// unsigned integral
+				basic_type!ulong;
+				basic_type!uint;
+				basic_type!ushort;
+				basic_type!ubyte;
+			}
+			{/*conversion}*/
+				conversion!(double, float);
+				conversion!(float, double);
+				conversion!(real, float);
+
+				static assert (not (__traits(compiles, conversion!(real, int))));
+				conversion!(int, real);
+
+				// cannot implicitly convert from signed to unsigned
+				static assert (not (__traits(compiles, conversion!(int, uint))));
+				// such conversion may be accomplished with a cast
+				static assert (__traits(compiles, cast(Vec2!uint)(Vec2!int.init)));
+				// unsigned to signed is ok
+				conversion!(uint, int);
+
+				static assert (not (__traits(compiles, conversion!(int, short))));
+				conversion!(short, int);
+			}
+			{/*units}*/
+				alias Position = Vec2!Meters;
+				alias Velocity = Vec2!(typeof(meters/second));
+
+				auto a = Position (3.meters, 4.meters);
+
+				assert (+a == a);
+				assert (a-a == Position (0.meters));
+				assert (-a + a == Position (0.meters));
+				assert (2*a == Position (6.meters, 8.meters));
+				assert (a*a == typeof(a*a)(9.meter*meters, 16.meter*meters));
+				assert (a/a == 1.vec);
+
+				assert (a.min == 3.meters);
+				assert (a.max == 4.meters);
+
+				assert (Velocity (10.meters/second, 7.meters/second) * 0.5.seconds == Position (5.meters, 3.5.meters));
+
+				assert (a.norm.approx (5.meters));
+				assert (a.unit.approx (vec(0.6, 0.8)));
+
+				auto b = 12.meters * a.unit;
+				assert (a.dot (b).approx (a.norm * b.norm));
+				assert (a.det (b).approx (0.meters));
+				assert (a.proj (b).approx (a));
+				assert (a.rej (b).approx (Position (0.meters)));
+
+				auto c = a.rotate (π/2);
+				assert (a.dot (c).approx (0.meters));
+				assert (a.det (c).approx (a.norm * c.norm));
+				assert (a.proj (c).approx (Position (0.meters));
+				assert (a.rej (c).approx (a));
+
+				assert (a.bearing_to (c).approx (π/2));
+				assert (a.translate (Position (1.meter, 0.meters)).approx (Position (4.meters)));
+				assert (distance (a, b).approx (7.meters));
+			}
+		}
 
 	/* common vector types 
 	*/
@@ -453,15 +463,16 @@ public {/*vectors}*/
 
 	/* rotate a vector 
 	*/
-	auto rotate (Vec = vec, T = ElementType!Vec)(Vec v, T θ) 
-		if (is (T == ElementType!Vec))
+	auto rotate (Vec, T = ElementType!Vec)(Vec v, T θ) 
+		if (is_vector!Vec && is (T == ElementType!Vec))
 		{/*...}*/
 			return Vec(cos(θ)*v.x-sin(θ)*v.y,  sin(θ)*v.x+cos(θ)*v.y);
 		}
 
 	/* compute the angular difference between two vectors 
 	*/
-	auto bearing_to (Vec = vec)(Vec a, Vec b)
+	auto bearing_to (Vec)(Vec a, Vec b)
+		if (is_vector!Vec)
 		{/*...}*/
 			auto δ = b-a;
 			auto θ = acos (δ.unit.dot (î.Vec));
@@ -469,11 +480,16 @@ public {/*vectors}*/
 				θ *= -1;
 			return θ;
 		}
-		unittest {/*TODO*/}
+		unittest {/*...}*/
+			assert (î.vec.bearing_to (ĵ.vec).approx (π/2));
+			assert (ĵ.vec.bearing_to (î.vec).approx (-π/2));
+			assert (vec (-1,-1).bearing_to (0.vec).approx (π/4));
+		}
 
 	/* compute the distance between two points 
 	*/
-	auto distance (Vec = vec)(Vec a, Vec b)
+	auto distance (Vec)(Vec a, Vec b)
+		if (is_vector!Vec)
 		{/*...}*/
 			return (a-b).norm;
 		}
@@ -517,7 +533,34 @@ public {/*polygons}*/
 		{/*...}*/
 			return 0.5 * abs (Σ (polygon.adjacent_pairs.map!(v => v[0].det (v[1]))));
 		}
-		unittest {/*TODO*/}
+		unittest {/*...}*/
+			assert (square (1).area.approx (1));
+			assert (square (2).area.approx (4));
+			assert (circle (1).area.approx (π));
+			assert (circle (2).area.approx (4*π));
+
+			// http://www.mathsisfun.com/geometry/area-irregular-polygons.html
+			auto irregular = [
+				vec(2.66, 4.71),
+				vec(5, 3.5),
+				vec(3.63, 2.52),
+				vec(4, 1.6),
+				vec(1.9, 1),
+				vec(0.72, 2.28)
+			];
+			auto known_area = 8.3593;
+			assert (irregular.area.approx (known_area));
+
+			import evx.units;
+			auto sq_meters = meter*meters;
+
+			assert (square (2.meters).area.approx (4 * sq_meters));
+			assert (circle (1.meter).area.approx (π * sq_meters));
+			assert (
+				irregular.map!(v => vectorize (v[0].meters, v[1].meters))
+				.area.approx (known_area * sq_meters)
+			);
+		}
 
 	/* reflect a polygon over a "direction" axis passing through its centroid 
 	*/
@@ -532,7 +575,14 @@ public {/*polygons}*/
 
 			return geometry.map!(v => (v-c)*p+c);
 		}
-		unittest {/*TODO*/}
+		unittest {/*...}*/
+			assert (square.flip!`vertical` == square);
+			assert (square.flip!`horizontal` == square);
+
+			auto triangle = [-î.vec, î.vec, ĵ.vec];
+			assert (triangle.flip!`horizontal` == triangle);
+			assert (triangle.flip!`vertical` == [-î.vec, î.vec, -ĵ.vec];
+		}
 
 	/* translate a polygon by a vector 
 	*/
@@ -559,6 +609,11 @@ public {/*polygons}*/
 			auto c = geometry.mean;
 			return geometry.map!(v => (v-c)*scale + c);
 		}
+
+	unittest {/*polygons with units}*/
+		static assert (__traits(compiles, square (1.meter)));
+		static assert (__traits(compiles, circle (1.meter)));
+	}
 }
 public {/*axis-aligned bounding boxes}*/
 	/* an axis-aligned bounding box 
@@ -748,7 +803,13 @@ public {/*axis-aligned bounding boxes}*/
 				mixin ArrayInterface!(verts, length);
 			}
 		}
-		unittest {/*TODO*/}
+		unittest {/*...}*/
+			// TODO bounding box tests
+			// TODO corners: τ(`upper`, `top`, `hi`), τ(`lower`, `bottom`, `lo`);
+			// TODO extents: get/set left, right, bottom, top
+			// TODO dimensions: get/set width, height
+			// TODO offset_to, move_to
+		}
 
 	/* compute the bounding box of a polygon 
 	*/
@@ -783,5 +844,8 @@ public {/*axis-aligned bounding boxes}*/
 				 ex_c = exterior.mean;
 			auto s = exterior.dimensions / interior.dimensions;
 			return inner.map!(v => (v - in_c) * s + ex_c);
+		}
+		unittest {/*...}*/
+			// TODO into_bounding_box_of test
 		}
 }

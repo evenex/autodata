@@ -7,12 +7,30 @@ private {/*import evx}*/
 
 pure nothrow:
 
+public import std.math: approx = approxEqual;
+
+/* a.approx (b) && b.approx (c) && ...
+*/
+bool all_approx_equal (Args...)(Args args)
+	if (Args.length > 1)
+	{/*...}*/
+		foreach (i,_; args[0..$-1])
+			if (not (args[i].approx (args[i+1])))
+				return false;
+		return true;
+	}
+
 struct Interval (Index)
 	{/*...}*/
 		Index start;
 		Index end;
 
 		pure nothrow const:
+		bool overlaps ()(const Interval that)
+			{/*...}*/
+				//TODO interval overlap
+				static assert (0);
+			}
 		@property length ()
 			{/*...}*/
 				return end - start;

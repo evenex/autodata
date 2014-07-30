@@ -1,5 +1,7 @@
 module evx.math;
 
+// REVIEW auto ref performance
+
 private {/*import std}*/
 	import std.algorithm: 
 		map,
