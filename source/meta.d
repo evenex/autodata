@@ -104,7 +104,6 @@ public {/*mixins}*/
 			static assert (is(typeof(this)), `mixin requires host struct`);
 			alias Applied = typeof(range[0]);
 
-			// REVIEW opApply can't be pure even if op doesn't modify anything but its own scope... need a policy for this
 			/* so these are all templated, so they don't block the compilation of pure structs
 				but will still generate a compiler error if foreach is attempted on it
 				which is kind of shitty.. after all, if i can do it with a for-loop, and opApply
@@ -112,7 +111,7 @@ public {/*mixins}*/
 				the delegate is modifying some variable in its scope. that should still be considered pure,
 				somehow
 			*/
-			int opApply ()(scope int delegate(ref Applied) op) // REVIEW purify delegates?
+			int opApply ()(scope int delegate(auto ref Applied) op)
 				{/*...}*/
 					int result;
 
@@ -126,7 +125,7 @@ public {/*mixins}*/
 
 					return result;
 				}
-			int opApply ()(scope int delegate(size_t, ref Applied) op)
+			int opApply ()(scope int delegate(size_t, auto ref Applied) op)
 				{/*...}*/
 					int result;
 
@@ -140,15 +139,33 @@ public {/*mixins}*/
 
 					return result;
 				}
-			int opApply ()(scope int delegate(ref const Applied) op) const
+			int opApply ()(scope int delegate(const auto ref Applied) op) const
 				{/*...}*/
 					return (cast()this).opApply (cast(int delegate(ref Applied)) op);
 				}
-			int opApply ()(scope int delegate(const size_t, ref const Applied) op) const
+			int opApply ()(scope int delegate(const size_t, const auto ref Applied) op) const
 				{/*...}*/
 					return (cast()this).opApply (cast(int delegate(size_t, ref Applied)) op);
 				}
 		}
+	unittest {/*...}*/ // REVIEW
+		struct Test {int[4] x; mixin IterateOver!x;}
+
+		static assert (isIterable!Test);
+
+		auto t = Test ([1,2,3,4]);
+
+		auto sum = 0;
+		foreach (i; t)
+			sum += i;
+
+		assert (sum == 10);
+
+		foreach (ref i; t)
+			i = sum;
+
+		assert (Test == Test ([10, 10, 10, 10]));
+	}
 
 	/* forward opCmp (<,>,<=,>=) 
 	*/
@@ -156,23 +173,27 @@ public {/*mixins}*/
 		{/*...}*/
 			static assert (is(typeof(this)), `mixin requires host struct`);
 
-			public {/*opCmp}*/
-				int opCmp (ref const typeof(this) that) const nothrow
-					{/*...}*/
-						const string name = __traits(identifier, member);
-						mixin(q{
-							return compare (this.} ~name~ q{, that.} ~name~ q{);
-						});
-					}
-				int opCmp (const typeof(this) that) const nothrow
-					{/*...}*/
-						const string name = __traits(identifier, member);
-						mixin(q{
-							return compare (this.} ~name~ q{, that.} ~name~ q{);
-						});
-					}
-			}
+			int opCmp ()(auto ref const typeof(this) that) const
+				{/*...}*/
+					enum name = __traits(identifier, member);
+					mixin(q{
+						return compare (this.} ~name~ q{, that.} ~name~ q{);
+					});
+				}
 		}
+	unittest {/*...}*/
+		struct Test {int x; mixin CompareBy!x;}
+
+		assert (Test(1) < Test(2));
+		assert (Test(1) <= Test(2));
+		assert (not (Test(1) > Test(2)));
+		assert (not (Test(1) >= Test(2)));
+
+		assert (not (Test(1) < Test(1)));
+		assert (not (Test(1) > Test(1)));
+		assert (Test(1) <= Test(1));
+		assert (Test(1) >= Test(1));
+	}
 
 	/* apply an array interface over a pointer and length variable 
 	*/

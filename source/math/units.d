@@ -16,8 +16,6 @@ private {/*import std}*/
 	import std.algorithm:
 		zip,sort, 
 		countUntil;
-	import std.math:
-		abs;
 }
 private {/*import evx}*/
 	import evx.utils: 
@@ -28,6 +26,10 @@ private {/*import evx}*/
 		add, subtract;
 	import evx.traits: 
 		is_numerical_param;
+	import evx.meta:
+		CompareBy;
+
+	import evx.math;
 
 	version (unittest) 
 	import evx.utils: report_test;
@@ -50,10 +52,10 @@ unittest
 		assert (w == 3.meters/second);
 
 		static assert (is (typeof(meter/meter) == Scalar));
-		assert (meter/meter == 1.0);
+		assert (x/x == 1.0);
 
-		assert (x.power!2 == 100.meter*meter);
-		assert (x.power!(-2) == 1.0 / (100.meter*meter));
+		assert (x.power!2 == 100.meter*meters);
+		assert (x.power!(-1) == 1.0 / 10.meters);
 		assert (x.power!0 == 1.0);
 	}
 
@@ -119,7 +121,24 @@ public {/*force}*/
 
 	auto newton (Scalar scalar = 1)
 		{/*...}*/
-			return kilogram*meter/second/second;
+			return scalar * kilogram*meter/second/second;
+		}
+}
+public {/*frequency}*/
+	alias Hertz = ReturnType!hertz;
+
+	auto hertz (Scalar scalar = 1)
+		{/*...}*/
+			return scalar * 1.0/second;
+		}
+}
+
+public:
+public {/*traits}*/
+	template is_Unit (T...)
+		if (T.length == 1)
+		{/*...}*/
+			enum is_Unit = __traits(compiles, T[0].UnitTrait);
 		}
 }
  
@@ -129,15 +148,28 @@ private {/*unit}*/
 		if (allSatisfy!(Or!(is_Dimension, is_numerical_param), T))
 		{/*...}*/
 			public nothrow:
-			pure const {/*math overloads}*/
-				auto abs ()
+			pure const {/*math}*/
+				auto opDispatch (string op)()
 					{/*...}*/
-						return Unit (scalar.abs);
+						mixin(q{
+							static if (__traits(compiles, Unit (} ~op~ q{ (scalar))))
+								return Unit (} ~op~ q{ (scalar));
+							else static assert (0);
+						});
 					}
-				auto opCmp (Unit that)
+				auto opDispatch (string op)(const auto ref Unit unit)
 					{/*...}*/
-						return compare (this.scalar, that.scalar);
+						mixin(q{
+							static if (__traits(compiles, Unit (this.scalar.} ~op~ q{ (unit.scalar))))
+								return Unit (this.scalar.} ~op~ q{ (unit.scalar));
+							else static if (__traits(compiles, this.scalar.} ~op~ q{ (unit.scalar)))
+								return this.scalar.} ~op~ q{ (unit.scalar);
+							else static assert (0);
+						});
 					}
+			}
+			pure const {/*comparison}*/
+				mixin CompareBy!const_scalar;
 			}
 			pure const {/*operators}*/
 				auto opUnary (string op)()
@@ -163,13 +195,21 @@ private {/*unit}*/
 										});
 										return ret;
 									}
-								else {/*...}*/
-									Unit ret;
-									mixin(q{
-										ret.scalar = this.scalar } ~ op ~ q{ rhs;
-									});
-									return ret;
-								}
+								else static if (isNumeric!U)
+									{/*...}*/
+										Unit ret;
+
+										mixin(q{
+											ret.scalar = this.scalar } ~op~ q{ rhs;
+										});
+
+										return ret;
+									}
+								else static if (__traits(compiles, rhs.opBinaryRight!op (this)))
+									{/*...}*/
+										return rhs.opBinaryRight!op (this);
+									}
+								else static assert (0, `incompatible types for ` ~Unit.stringof~ ` ` ~op~ ` ` ~U.stringof);
 							}
 						else static if (op == `+` || op == `-`)
 							{/*...}*/
@@ -314,6 +354,11 @@ private {/*unit}*/
 				{/*...}*/
 					scalar = value;
 				}
+
+			pure const @property Scalar const_scalar ()
+				{/*...}*/
+					return cast(const)scalar;
+				}
 		}
 }
 private {/*base dimensions}*/
@@ -410,11 +455,6 @@ private {/*traits}*/
 		if (T.length == 1)
 		{/*...}*/
 			enum is_Dimension = __traits(compiles, T[0].DimensionTrait);
-		}
-	template is_Unit (T...)
-		if (T.length == 1)
-		{/*...}*/
-			enum is_Unit = __traits(compiles, T[0].UnitTrait);
 		}
 	template is_equivalent_Unit (T, U)
 		if (allSatisfy!(is_Unit, T, U))

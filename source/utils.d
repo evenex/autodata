@@ -37,13 +37,13 @@ public {/*misc}*/
 	alias Not = templateNot;
 
 	/* simulate opCmp */
-	int compare (T,U)(T a, U b)
+	int compare (T,U)(T a, U b) pure nothrow
 		{/*...}*/
-			if (a < b)
-				return -1;
-			else if (a > b)
-				return 1;
-			else return 0;
+			static if (__traits(compiles, a.opCmp (b)))
+				return a.opCmp (b);
+			else static if (allSatisfy!(isNumeric, T, U))
+				return cast(int)(a - b);
+			else static assert (0, `can't compare ` ~T.stringof~ ` with ` ~U.stringof);
 		}
 }
 public {/*debug}*/
@@ -308,14 +308,14 @@ pure nothrow {/*algorithm}*/
 				{/*...}*/
 					while (not (range.empty))
 						{/*...}*/
-							func (accumulator, range.front);
+							accumulator = func (accumulator, range.front);
 							range.popFront;
 						}
 				}
 			else if (isIterable!R)
 				{/*...}*/
-					foreach (ref element; range)
-						func (accumulator, element);
+					foreach (element; range)
+						accumulator = func (accumulator, element);
 				}
 			else static assert (0, `reduce cannot iterate or traverse ` ~R.stringof);
 

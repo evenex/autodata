@@ -98,60 +98,60 @@ mixin template NormalizedInvariance ()
 					}
 			}
 	}
-unittest {/*...}*/
-	struct Test
-		{/*...}*/
-			float a;
+	unittest {/*...}*/
+		struct Test
+			{/*...}*/
+				float a;
 
-			@(Normalized.full) 
-			double b;
+				@(Normalized.full) 
+				double b;
 
-			@(Normalized.positive)
-			real c;
+				@(Normalized.positive)
+				real c;
 
-			@Normalized
-			real d;
+				@Normalized
+				real d;
 
-			mixin NormalizedInvariance;
+				mixin NormalizedInvariance;
 
-			void test (){}
-		}
+				void test (){}
+			}
 
 
-	auto t = Test (0.0, 0.0, 0.0, 0.0);
+		auto t = Test (0.0, 0.0, 0.0, 0.0);
 
-	bool thrown;
+		bool thrown;
 
-	void attempt (void delegate() action)
-		{try {action(); t.test;} catch (Throwable) {thrown = true;}}
+		void attempt (void delegate() action)
+			{try {action(); t.test;} catch (Throwable) {thrown = true;}}
 
-	attempt ({t.a = 9.0;});
-	assert (not (thrown));
+		attempt ({t.a = 9.0;});
+		assert (not (thrown));
 
-	attempt ({t.b = 1.0;});
-	assert (not (thrown));
+		attempt ({t.b = 1.0;});
+		assert (not (thrown));
 
-	attempt ({t.b = 1.1;});
-	assert (thrown);
-	thrown = false;
+		attempt ({t.b = 1.1;});
+		assert (thrown);
+		thrown = false;
 
-	attempt ({t.b = -1.0;});
-	assert (not (thrown));
+		attempt ({t.b = -1.0;});
+		assert (not (thrown));
 
-	attempt ({t.c = -1.0;});
-	assert (thrown);
-	thrown = false;
+		attempt ({t.c = -1.0;});
+		assert (thrown);
+		thrown = false;
 
-	attempt ({t.c = 1.0;});
-	assert (not (thrown));
+		attempt ({t.c = 1.0;});
+		assert (not (thrown));
 
-	attempt ({t.d = 1.01;});
-	assert (thrown);
-	thrown = false;
+		attempt ({t.d = 1.01;});
+		assert (thrown);
+		thrown = false;
 
-	attempt ({t.d = 1.0;});
-	assert (not (thrown));
+		attempt ({t.d = 1.0;});
+		assert (not (thrown));
 
-	attempt ({t.d = -1.0;});
-	assert (not (thrown));
-}
+		attempt ({t.d = -1.0;});
+		assert (not (thrown));
+	}

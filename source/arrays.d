@@ -22,6 +22,8 @@ import evx.meta;
 import evx.math;
 import search;
 
+import std.range;
+
 unittest
 	{/*dynamic}*/
 		mixin(report_test!`dynamic array`);
@@ -47,7 +49,7 @@ unittest
 				assert (x.length == 3);
 				assertThrown!Error (x.grow (cap));
 
-				assert (x[].sum == 6);
+				assert (x.sum == 6);
 
 				x[0] = 2;
 				x[1] = 4;

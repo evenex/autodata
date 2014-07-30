@@ -13,7 +13,8 @@ auto add (T)(T a, T b)
 auto subtract (T)(T a, T b) 
 	{return a - b;}
 
-/* get an array of natural numbers from 0 to max-1 */
+/* get an array of natural numbers from 0 to max-1 
+*/
 auto ℕ (size_t max)()
 	{/*↓}*/
 		return ℕ (max);
@@ -25,17 +26,18 @@ auto ℕ (T)(T count)
 			.map!(n => cast(T)n)
 			.take (count.to!size_t);
 	}
-/* compute the product of a sequence */
+
+/* compute the product of a sequence 
+*/
 auto Π (T)(auto ref T sequence)
 	{/*...}*/
 		return sequence.reduce!((Π,x) => Π*x);
 	}
-/* compute the sum of a sequence */
-auto Σ (T)(auto ref T sequence)
-	{/*...}*/
-		return sequence.sum;
-	}
+
+/* compute the sum of a sequence 
+*/
 auto sum (T)(auto ref T sequence)
 	{/*...}*/
 		return sequence.reduce!((Σ,x) => Σ+x);
 	}
+alias Σ = sum;

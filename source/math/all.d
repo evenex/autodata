@@ -37,4 +37,8 @@ public:
 	import evx.arithmetic; // unittest
 	import evx.ordering; // unittest
 
-void main (){}
+
+/*
+	REVIEW func ({do stuff; return that;}()); TOTALLY ENCAPSULATED!!!
+
+*/
