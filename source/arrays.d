@@ -49,7 +49,7 @@ unittest
 				assert (x.length == 3);
 				assertThrown!Error (x.grow (cap));
 
-				assert (x.sum == 6);
+				assert (x.sum == 6); // REVIEW why does this compile? sum -> reduce -> foreach -> impure but reduce == pure so it should give a compiler error!
 
 				x[0] = 2;
 				x[1] = 4;
