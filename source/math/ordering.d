@@ -22,7 +22,7 @@ bool all_equal (Args...)(Args args)
 
 /* ¬(a < b || b < a) ⇒ a == b
 */
-template antisymmetrically_equivalent (alias compare, T, U)(auto ref in T a, auto ref in U b)
+bool antisymmetrically_equivalent (alias compare, T, U)(auto ref in T a, auto ref in U b)
 	if (__traits(compiles, compare (a, b)))
 	{/*...}*/
 		return not (compare (a,b) || compare (b,a));

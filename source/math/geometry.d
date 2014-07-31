@@ -2,6 +2,7 @@ module evx.geometry;
 
 private {/*import std}*/
 	import std.algorithm: 
+		copy,
 		canFind,
 		setIntersection;
 	import std.traits: 
@@ -9,6 +10,8 @@ private {/*import std}*/
 		Unqual, EnumMembers;
 	import std.conv:
 		to;
+	import std.range:
+		ElementType;
 }
 private {/*import evx}*/
 	import evx.utils: 
@@ -33,8 +36,9 @@ public {/*traits}*/
 		{/*...}*/
 			const T vector = T.init;
 
-			return __traits(compiles, 
-
+			static if (is (T.is_basis_vector == enum))
+				return true;
+			else return __traits(compiles, 
 				(-vector.x, -vector.y),
 				(+vector.x, +vector.y),
 
@@ -273,8 +277,6 @@ public {/*vectors}*/
 		unittest {/*...}*/
 			import std.exception:
 				assertThrown;
-			import std.range:
-				ElementType;
 
 			static void basic_type (Type)()
 				{/*...}*/
@@ -426,28 +428,20 @@ public {/*vectors}*/
 
 				auto b = 12.meters * a.unit;
 				assert (a.dot (b).approx (a.norm * b.norm));
-				assert (a.det (b).approx (0.meters));
+				assert (a.det (b).approx (0.square_meters));
 				assert (a.proj (b).approx (a));
 				assert (a.rej (b).approx (Position (0.meters)));
 
 				auto c = a.rotate (π/2);
-				assert (a.dot (c).approx (0.meters));
+				assert (a.dot (c).approx (0.square_meters));
 				assert (a.det (c).approx (a.norm * c.norm));
-				assert (a.proj (c).approx (Position (0.meters));
+				assert (a.proj (c).approx (Position (0.meters)));
 				assert (a.rej (c).approx (a));
 
 				assert (a.bearing_to (c).approx (π/2));
-				assert (a.translate (Position (1.meter, 0.meters)).approx (Position (4.meters)));
 				assert (distance (a, b).approx (7.meters));
 			}
 		}
-
-	/* common vector types 
-	*/
-	alias vec  = Vec2!double;
-	alias fvec = Vec2!float;
-	alias ivec = Vec2!int;
-	alias uvec = Vec2!uint;
 
 	/* convenience ctor 
 	*/
@@ -456,15 +450,70 @@ public {/*vectors}*/
 			return Vec2!(Unqual!T) (x,y);
 		}
 
-	/* standard basis vectors 
+	/* basis vectors 
+		
 	*/
-	alias î = Aⁿ!(1,0);
-	alias ĵ = Aⁿ!(0,1);
+	struct BasisVector (real base_x, real base_y)
+		{/*...}*/
+			enum is_basis_vector;
+
+			/* most restricted type must be assigned, otherwise sign-safety mechanism in Vec2 will block compilation 
+			*/
+			static if (base_x % 1.0 == 0.0 && base_y % 1.0 == 0.0)
+				{/*U is integral}*/
+					static if (base_x >= 0 && base_y >= 0)
+						alias U = ulong;
+					else alias U = long;
+				}
+			else alias U = real;
+				
+			static immutable x = cast(U)base_x;
+			static immutable y = cast(U)base_y;
+
+			static auto opDispatch (string op)()
+				{/*...}*/
+					static if (mixin(q{is (} ~op~ q{)}))
+						{/*...}*/
+							mixin(q{
+								alias Construct = } ~op~ q{;
+							});
+
+							static if (__traits(compiles, Construct (x,y)))
+								return Construct (x, y);
+							else static if (__traits(compiles, Construct (x)))
+								return vectorize (Construct (x), Construct (y));
+							else pragma (msg, `couldn't construct anything from ` ~op);
+						}
+					else mixin(q{
+						return vectorize (x.} ~op~ q{, y.} ~op~ q{);
+					});
+				}
+		}
+
+	/* standard basis 
+	*/
+	immutable î = BasisVector!(1,0)();
+	immutable ĵ = BasisVector!(0,1)();
+	unittest {/*...}*/
+		static assert (î.vec == vec(1,0));
+		static assert (ĵ.vec == vec(0,1));
+		
+		import evx.units;
+		static assert (î.meters == Vec2!Meters (1.meter, 0.meters));
+		static assert (ĵ.meters == Vec2!Meters (0.meters, 1.meter));
+	}
+
+	/* common vector types 
+	*/
+	alias vec  = Vec2!double;
+	alias fvec = Vec2!float;
+	alias ivec = Vec2!int;
+	alias uvec = Vec2!uint;
 
 	/* rotate a vector 
 	*/
-	auto rotate (Vec, T = ElementType!Vec)(Vec v, T θ) 
-		if (is_vector!Vec && is (T == ElementType!Vec))
+	auto rotate (Vec, T)(Vec v, T θ) 
+		if (is_vector!Vec && isFloatingPoint!T)
 		{/*...}*/
 			return Vec(cos(θ)*v.x-sin(θ)*v.y,  sin(θ)*v.x+cos(θ)*v.y);
 		}
@@ -474,8 +523,8 @@ public {/*vectors}*/
 	auto bearing_to (Vec)(Vec a, Vec b)
 		if (is_vector!Vec)
 		{/*...}*/
-			auto δ = b-a;
-			auto θ = acos (δ.unit.dot (î.Vec));
+			auto δ = (b-a);
+			auto θ = acos (δ.unit.dot (Vec(î).unit));
 			if (δ.y < 0.0)
 				θ *= -1;
 			return θ;
@@ -552,13 +601,12 @@ public {/*polygons}*/
 			assert (irregular.area.approx (known_area));
 
 			import evx.units;
-			auto sq_meters = meter*meters;
 
-			assert (square (2.meters).area.approx (4 * sq_meters));
-			assert (circle (1.meter).area.approx (π * sq_meters));
+			assert (square (2.meters).area.approx (4.square_meters));
+			assert (circle (1.meter).area.approx (π.square_meters));
 			assert (
 				irregular.map!(v => vectorize (v[0].meters, v[1].meters))
-				.area.approx (known_area * sq_meters)
+				.area.approx (known_area.square_meters)
 			);
 		}
 
@@ -581,7 +629,7 @@ public {/*polygons}*/
 
 			auto triangle = [-î.vec, î.vec, ĵ.vec];
 			assert (triangle.flip!`horizontal` == triangle);
-			assert (triangle.flip!`vertical` == [-î.vec, î.vec, -ĵ.vec];
+			assert (triangle.flip!`vertical` == [-î.vec, î.vec, -ĵ.vec]);
 		}
 
 	/* translate a polygon by a vector 
@@ -683,22 +731,34 @@ public {/*axis-aligned bounding boxes}*/
 				}
 				@property {/*set}*/
 					void left (double x)
-						{/*...}*/
+						in {/*...}*/
+							assert (x < right);
+						}
+						body {/*...}*/
 							verts[0].x = x;
 							verts[3].x = x;
 						}
 					void right (double x)
-						{/*...}*/
+						in {/*...}*/
+							assert (x > left);
+						}
+						body {/*...}*/
 							verts[1].x = x;
 							verts[2].x = x;
 						}
 					void top (double y)
-						{/*...}*/
+						in {/*...}*/
+							assert (y > bottom);
+						}
+						body {/*...}*/
 							verts[2].y = y;
 							verts[3].y = y;
 						}
 					void bottom (double y)
-						{/*...}*/
+						in {/*...}*/
+							assert (y < top);
+						}
+						body {/*...}*/
 							verts[0].y = y;
 							verts[1].y = y;
 						}
@@ -794,6 +854,7 @@ public {/*axis-aligned bounding boxes}*/
 					verts[] = [low_left, low_left + vec(dims.x,0), hi_right, low_left + vec(0,dims.y)]; // REVIEW can i assign to a range this way? is it faster or slower than std.algo.copy?
 				}
 
+			private:
 			private {/*range}*/
 				@property auto length () const
 					{/*...}*/
@@ -804,10 +865,39 @@ public {/*axis-aligned bounding boxes}*/
 			}
 		}
 		unittest {/*...}*/
-			// TODO bounding box tests
-			// TODO corners: τ(`upper`, `top`, `hi`), τ(`lower`, `bottom`, `lo`);
-			// TODO extents: get/set left, right, bottom, top
-			// TODO dimensions: get/set width, height
+			import evx.analysis: all_approx_equal;
+
+			auto box = bounding_box (circle (1.0));
+
+			assert (all_approx_equal (box.upper_left, box.top_left, box.hi_left));
+			assert (all_approx_equal (box.upper_right, box.top_right, box.hi_right));
+
+			assert (all_approx_equal (box.lower_left, box.bottom_left, box.lo_left));
+			assert (all_approx_equal (box.lower_right, box.bottom_right, box.lo_right));
+
+			assert (box.left.approx (-0.5));
+			assert (box.right.approx (0.5));
+			assert (box.top.approx (0.5));
+			assert (box.bottom.approx (-0.5));
+
+			assert (box.width.approx (1.0));
+			assert (box.height.approx (1.0));
+
+			box.left = 0.0;
+			assert (box.left == 0.0);
+
+			box.right = 0.1;
+			assert (box.right == 0.1);
+
+			box.top = 100;
+			assert (box.top == 100);
+
+			box.bottom = -100;
+			assert (bot.bottom == -100);
+
+			assert (box.width.approx (0.1));
+			assert (box.height.approx (200));
+
 			// TODO offset_to, move_to
 		}
 
@@ -849,3 +939,4 @@ public {/*axis-aligned bounding boxes}*/
 			// TODO into_bounding_box_of test
 		}
 }
+void main (){}

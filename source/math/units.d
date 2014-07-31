@@ -91,7 +91,11 @@ public {/*space}*/
 		}
 	auto kilometer (Scalar scalar = 1)
 		{/*...}*/
-			return scalar*1000.meter;
+			return scalar * 1000.meter;
+		}
+	auto square_meters (Scalar scalar = 1)
+		{/*...}*/
+			return scalar * meter*meters;
 		}
 }
 public {/*time}*/

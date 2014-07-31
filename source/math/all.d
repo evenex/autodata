@@ -1,34 +1,9 @@
 module evx.math;
 
-// REVIEW auto ref performance
-
-private {/*import std}*/
-	import std.algorithm: 
-		map,
-		copy,
-		canFind,
-		setIntersection;
-	import std.traits: 
-		isFloatingPoint, isIntegral, isUnsigned,
-		Unqual, EnumMembers;
-	import std.mathspecial:
-		normalDistributionInverse;
-	import std.random:
-		uniform;
-	import std.conv:
-		to, text;
-}
-private {/*import evx}*/
-	import evx.utils: 
-		Aⁿ, τ, not,
-		reduce;
-	import evx.meta:
-		ArrayInterface, IterateOver;
-}
-
 // REVIEW & REFACTOR
 public: 
 	import std.math;
+	import std.algorithm: min, max, map;
 	import evx.constants;
 	import evx.units;
 	import evx.geometry; // unittest
