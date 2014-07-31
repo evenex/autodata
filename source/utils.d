@@ -12,7 +12,7 @@ import std.datetime;
 import std.string;
 import std.ascii;
 import std.concurrency;
-import std.conv: to;
+import std.conv;
 import resource.arrays: is_dynamic_array;
 
 import evx.meta;
@@ -296,30 +296,61 @@ pure nothrow {/*algorithm}*/
 		}
 
 	/* nothrow replacement for std.algorithm.reduce */
-	auto reduce (alias func, R)(auto ref R range)
+	template reduce (functions...)
+		if (functions.length > 0)
 		{/*...}*/
-			Unqual!(ElementType!R) accumulator;
-
-			static if (__traits(compiles, accumulator = 0))
-				accumulator = 0;
-
-			// FUTURE static if (isRandomAccess) try to block and parallelize... or foreach (x; parallel(r))?
-			static if (isInputRange!R)
+			auto reduce (R)(auto ref R range) // BUG needs to handle multiple functions
+				if (isInputRange!R)
 				{/*...}*/
-					while (not (range.empty))
+					static if (functions.length == 1)
+						alias Accumulator = typeof(functions[0] (range.front, range.front));
+					else {/*alias Accumulator}*/
+						string generate_accumulator ()
+							{/*...}*/
+								string code;
+
+								foreach (i, f; functions)
+									code ~= q{typeof(functions[} ~i.text~ q{] (range.front, range.front)), };
+
+								return q{Tuple!(} ~code[0..$-2]~ q{)};
+							}
+
+						mixin(q{
+							alias Accumulator = } ~generate_accumulator~ q{;
+						});
+					}
+
+					auto initialize ()
 						{/*...}*/
-							accumulator = func (accumulator, range.front);
-							range.popFront;
-						}
-				}
-			else if (isIterable!R)
-				{/*...}*/
-					foreach (element; range)
-						accumulator = func (accumulator, element);
-				}
-			else static assert (0, `reduce cannot iterate or traverse ` ~R.stringof);
+							Accumulator accumulator;
 
-			return accumulator;
+							void zero_init (T)(auto ref T element)
+								{element = 0;}
+
+							static if (functions.length == 1)
+								{/*...}*/
+									static if (__traits(compiles, zero_init (accumulator)))
+										zero_init (accumulator);
+								}
+							else foreach (i, f; functions)
+								static if (__traits(compiles, zero_init (accumulator[i])))
+									zero_init (accumulator[i]);
+
+							return accumulator;
+						}
+
+					// FUTURE static if (isRandomAccess) try to block and parallelize... or foreach (x; parallel(r))?
+					auto accumulator = initialize;
+					for (; not (range.empty); range.popFront)
+						{/*...}*/
+							static if (functions.length == 1)
+								accumulator = functions[0] (accumulator, range.front);
+							else foreach (i, f; functions)
+								accumulator[i] = functions[i] (accumulator[i], range.front);
+						}
+
+					return accumulator;
+				}
 		}
 }
 public {/*containers}*/

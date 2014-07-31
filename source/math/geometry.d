@@ -9,8 +9,9 @@ private {/*import std}*/
 		isFloatingPoint, isIntegral, isUnsigned,
 		Unqual, EnumMembers;
 	import std.conv:
-		to;
+		to, text;
 	import std.range:
+		repeat,
 		ElementType;
 }
 private {/*import evx}*/
@@ -615,11 +616,12 @@ public {/*polygons}*/
 	auto flip (string direction, T)(T geometry)
 		if (is_geometric!T && (direction == `vertical` || direction == `horizontal`))
 		{/*...}*/
+			alias Vector = ElementType!T;
 			auto c = geometry.mean;
 
 			static if (direction == `vertical`)
-				auto p = ElementType!T(1,-1);
-			else auto p = ElementType!T(-1,1);
+				auto p = Vector (1, -1) / ElementType!Vector (1.0);
+			else auto p = Vector (-1, 1) / ElementType!Vector (1.0);
 
 			return geometry.map!(v => (v-c)*p+c);
 		}
@@ -630,6 +632,12 @@ public {/*polygons}*/
 			auto triangle = [-î.vec, î.vec, ĵ.vec];
 			assert (triangle.flip!`horizontal` == triangle);
 			assert (triangle.flip!`vertical` == [-î.vec, î.vec, -ĵ.vec]);
+
+			import evx.units;
+			auto triangle2 = [-î.meters, î.meters, ĵ.meters];
+
+			assert (triangle2.flip!`horizontal` == triangle2);
+			assert (triangle2.flip!`vertical` == [-î.meters, î.meters, -ĵ.meters]);
 		}
 
 	/* translate a polygon by a vector 
@@ -799,35 +807,6 @@ public {/*axis-aligned bounding boxes}*/
 						}
 				}
 			}
-			@property {/*alignment}*/
-				vec offset_to (Alignment alignment, Box outer)
-					{/*...}*/
-						const string enumerate_alignment_cases ()
-							{/*...}*/
-								alias AlignEnum = typeof(Alignment.center);
-
-								string code;
-								foreach (position; EnumMembers!AlignEnum)
-									{/*...}*/
-										const pos = position.to!string;
-										code ~= q{case }~pos~q{: return outer.}~pos~q{ - this.}~pos~q{;};
-									}
-
-								return code;
-							}
-
-						final switch (alignment)
-							{/*...}*/
-								with (Alignment) 
-									mixin(enumerate_alignment_cases);
-							}
-					}
-				auto move_to (vec x)
-					{/*...}*/
-						auto c = verts[].mean;
-						return verts[].map!(v => v-c+x).copy (verts[]);
-					}
-			}
 			@property {/*tuples}*/
 				auto vertex_tuple ()
 					{/*...}*/
@@ -842,7 +821,10 @@ public {/*axis-aligned bounding boxes}*/
 
 			this (T)(T geometry)
 				if (is_geometric!T)
-				{/*...}*/
+				in {/*...}*/
+					assert (geometry.length > 1);
+				}
+				body {/*...}*/
 					auto result = geometry.reduce!(
 						(a,b) => vec(min (a.x, b.x), min (a.y, b.y)),
 						(a,b) => vec(max (a.x, b.x), max (a.y, b.y))
@@ -897,8 +879,6 @@ public {/*axis-aligned bounding boxes}*/
 
 			assert (box.width.approx (0.1));
 			assert (box.height.approx (200));
-
-			// TODO offset_to, move_to
 		}
 
 	/* compute the bounding box of a polygon 
@@ -921,6 +901,48 @@ public {/*axis-aligned bounding boxes}*/
 			top_left,		top_center, 	top_right,
 			center_left, 	center, 		center_right,
 			bottom_left,	bottom_center,	bottom_right
+		}
+
+	/* compute the offset from a point in one bounding box to the corresponding point in another
+	*/
+	vec offset_to (Box from, Alignment alignment, Box to)
+		{/*...}*/
+			const string enumerate_alignment_cases ()
+				{/*...}*/
+					string code;
+
+					foreach (position; EnumMembers!Alignment)
+						{/*...}*/
+							immutable pos = position.text;
+
+							code ~= q{
+								case } ~pos~ q{: return to.} ~pos~ q{ - from.} ~pos~ q{;
+							};
+						}
+
+					return code;
+				}
+
+			final switch (alignment)
+				{/*...}*/
+					with (Alignment) 
+						mixin(enumerate_alignment_cases);
+				}
+		}
+		unittest {/*...}*/
+			//TODO
+		}
+
+	/* moves a bounding box so that a given alignment point on it has the given position
+	*/
+	auto move_to (Box box, Alignment alignment, vec position)
+		{/*...}*/
+			auto offset = box.offset_to (alignment, bounding_box(position.repeat (2)));
+
+			return box.verts[].map!(v => v + offset).copy (box.verts[]);
+		}
+		unittest {/*...}*/
+		//	TODO
 		}
 
 	/* scale and translate the inner polygon to fit inside the outer polygon's bounding box 
