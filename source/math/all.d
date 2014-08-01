@@ -20,9 +20,3 @@ public {/*disambiguation}*/
 	alias abs = evx.units.abs;
 	alias approx = evx.units.approx;
 }
-
-
-/*
-	REVIEW func ({do stuff; return that;}()); TOTALLY ENCAPSULATED!!!
-
-*/

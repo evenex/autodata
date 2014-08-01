@@ -1,15 +1,381 @@
 module evx.meta;
 
-// REFACTOR
-import std.traits;
-import std.typetuple;
-import std.range;
+import std.traits:
+	isIterable,
+	isFunctionPointer, functionLinkage;
+//import std.typetuple;
+import std.range:
+	empty;
 
-import evx.utils; // REVIEW
-import evx.traits; // REVIEW
+import evx.utils:
+	not,
+	compare;
 
-public {/*mixins}*/
-	/* a unique (up to the host type) identifier 
+import evx.traits:
+	is_type,
+	is_indexable, is_sliceable;
+
+pure nothrow:
+public {/*forwarding}*/
+	/* forward opApply (foreach) 
+	*/
+	mixin template IterateOver (alias range)
+		{/*...}*/
+			static assert (is(typeof(this)), `mixin requires host struct`);
+			alias Applied = typeof(range[0]);
+
+			/* so these are all templated, so they don't block the compilation of pure structs
+				but will still generate a compiler error if foreach is attempted on it
+				which is kind of shitty.. after all, if i can do it with a for-loop, and opApply
+				itself doesn't modify anything, then the only thing stopping me is the fact that
+				the delegate is modifying some variable in its scope. that should still be considered pure,
+				somehow
+			*/
+			int opApply (scope int delegate(ref Applied) op)
+				{/*...}*/
+					int result;
+
+					try foreach (ref element; range)
+						{/*...}*/
+							result = op (element);
+
+							if (result) 
+								break;
+						}
+					catch (Exception) assert (0);
+
+					return result;
+				}
+			int opApply (scope int delegate(size_t, ref Applied) op)
+				{/*...}*/
+					int result;
+
+					try foreach (i, ref element; range)
+						{/*...}*/
+							result = op (i, element);
+
+							if (result) 
+								break;
+						}
+					catch (Exception) assert (0);
+
+					return result;
+				}
+			int opApply (scope int delegate(const ref Applied) op) const
+				{/*...}*/
+					return (cast()this).opApply (cast(int delegate(ref Applied)) op);
+				}
+			int opApply (scope int delegate(const size_t, const ref Applied) op) const
+				{/*...}*/
+					return (cast()this).opApply (cast(int delegate(size_t, ref Applied)) op);
+				}
+		}
+		unittest {/*...}*/
+			import std.conv: to;
+
+			debug struct Test {int[4] x; pure nothrow: mixin IterateOver!x;}
+
+			static assert (isIterable!Test);
+
+			auto t = Test ([1,2,3,4]);
+
+			foreach (i; t)
+				i = 0;
+
+			assert (not (t == Test ([0,0,0,0])));
+
+			auto sum = 0;
+			foreach (i; t)
+				sum += i;
+
+			assert (sum == 10);
+
+			foreach (ref i; t)
+				i = sum;
+
+			assert (t == Test ([10, 10, 10, 10]));
+
+			foreach (i, ref j; t)
+				j = i.to!int + 1;
+
+			assert (t == Test([1,2,3,4]));
+		}
+
+	/* forward opCmp (<,>,<=,>=) 
+	*/
+	mixin template CompareBy (alias member)
+		{/*...}*/
+			static assert (is(typeof(this)), `mixin requires host struct`);
+
+			int opCmp ()(auto ref const typeof(this) that) const
+				{/*...}*/
+					enum name = __traits(identifier, member);
+					mixin(q{
+						return compare (this.} ~name~ q{, that.} ~name~ q{);
+					});
+				}
+		}
+		unittest {/*...}*/
+			debug struct Test {int x; mixin CompareBy!x;}
+
+			assert (Test(1) < Test(2));
+			assert (Test(1) <= Test(2));
+			assert (not (Test(1) > Test(2)));
+			assert (not (Test(1) >= Test(2)));
+
+			assert (not (Test(1) < Test(1)));
+			assert (not (Test(1) > Test(1)));
+			assert (Test(1) <= Test(1));
+			assert (Test(1) >= Test(1));
+		}
+
+	/* forward constructor calls to recipient 
+	*/
+	mixin template ForwardConstructor (alias recipient)
+		{/*...}*/
+			import std.traits: hasMember;
+			static if (hasMember!(typeof(recipient), `__ctor`))
+				this (Args...)(Args args)
+					{/*...}*/
+						recipient = typeof(recipient)(args);
+					}
+			else this (T)(T value)
+					{/*...}*/
+						recipient = value;
+					}
+		}
+		unittest {/*...}*/
+			debug static struct Test {int a; pure nothrow: this (int a) {this.a = -a;}}
+			debug static struct Ctor {Test t; pure nothrow: mixin ForwardConstructor!t;}
+
+			auto x = Ctor (12);
+			assert (x.t.a == -12);
+		}
+
+	/* forward function calls via pointer and returns itself for chaining 
+	*/
+	struct ChainForwarding (T)
+		{/*...}*/
+			public pure nothrow:
+			mixin(forward_members);
+
+			private:
+			T* to_build;
+			static string forward_members ()
+				{/*...}*/
+					string code;
+
+					foreach (member; __traits(allMembers, T))
+						{/*...}*/
+							static if (member.empty || member == `__ctor`)
+								continue;
+							else {/*...}*/
+								string forward = q{to_build.} ~member~ q{ (args)};
+
+								code ~= q{
+									auto } ~member~ q{ (Args...)(scope lazy Args args)
+										}`{`q{
+											static if (__traits(compiles, } ~forward~ q{))
+												}`{`q{
+													} ~forward~ q{;
+													return this;
+												}`}`q{
+											else static assert (0, } `"`~member~ ` cannot be forwarded"`q{);
+										}`}`q{
+								};
+							}
+						}
+
+					return code;
+				}
+		}
+	
+	/* convenience function for ChainForwarding 
+	*/
+	auto forward_to (T)(ref T lvalue)
+		{/*...}*/
+			return ChainForwarding!T (&lvalue);
+		}
+		unittest {/*...}*/
+			debug static struct Test 
+				{/*...}*/
+					int _x, _y, _z; 
+
+					pure nothrow:
+					@property x (int x)
+						{_x = x;}
+					@property y (int y)
+						{_y = y;}
+					@property z (int z)
+						{_z = z;}
+				}
+
+			Test t;
+
+			forward_to (t)
+				.x(1)
+				.y(2)
+				.z(3);
+
+			assert (t._x == 1);
+			assert (t._y == 2);
+			assert (t._z == 3);
+		}
+}
+public {/*initialization}*/
+	/* generate a member function auto_initialize () which automatically initializes all fields tagged Initialize
+	*/
+	mixin template AutoInitialize ()
+		{/*...}*/
+			void auto_initialize ()
+				{/*...}*/
+					alias This = typeof(this);
+					foreach (member; __traits(allMembers, This))
+						static if (__traits(compiles, __traits(getMember, This, member)))
+							static if (not (is_type!(__traits(getMember, This, member))))
+								foreach (Attribute; __traits(getAttributes, __traits(getMember, This, member)))
+									static if (__traits(compiles, Attribute.is_initializer))
+										{/*...}*/
+											static if (is (typeof(__traits(getMember, This, member)) == class))
+												__traits(getMember, This, member) = new typeof(__traits(getMember, This, member))(Attribute.Args);
+											else static if (is (typeof(__traits(getMember, This, member)) == struct))
+												__traits(getMember, This, member) = typeof(__traits(getMember, This, member))(Attribute.Args);
+											else static assert (0);
+										}
+				}
+		}
+
+	/* specify field constructor parameters at the point of field declaration 
+	*/
+	struct Initialize (CtorArgs...)
+		{/*...}*/
+			alias Args = CtorArgs;
+			enum is_initializer;
+		}
+		unittest {/*...}*/
+			import std.c.stdlib: 
+				malloc, free;
+
+			debug static struct Test
+				{/*...}*/
+					static struct Inner {int x, y; pure nothrow this (int x, int y) {this.x = x; this.y = y;}}
+					static struct Malloced
+						{/*...}*/
+							int* mem; 
+
+							pure nothrow:
+
+							this (int size)
+								{mem = cast(int*)malloc(size);}
+							~this ()
+								{/*...}*/
+									if (mem) free (mem);
+								}
+						}
+
+					pure nothrow:
+
+					mixin AutoInitialize;
+					@Initialize!(666, 42) Inner i1;
+					@Initialize!(101, 99) Inner i2;
+					@Initialize!(1024) Malloced m;
+
+					this (typeof(null)){auto_initialize;}
+				}
+
+			auto t = Test (null);
+
+			assert (t.i1.x == 666);
+			assert (t.i1.y == 42);
+			assert (t.i2.x == 101);
+			assert (t.i2.y == 99);
+
+			assert (t.m.mem !is null);
+			*t.m.mem = 9001;
+			assert (t.m.mem[0] == 9001);
+		}
+
+	/* enable mixin load_dynamic_library!"libname"
+		which attempts to link all member extern (C) function pointers with the specified lib
+		when mixed into a member function (typically the constructor) of a type 
+	*/
+	mixin template DynamicLibrary (string library)
+		{/*...}*/
+			//static assert (is(typeof(this)), `mixin requires host struct`);
+
+			static private {/*code generation}*/
+				string generate_library_loader ()
+					{/*...}*/
+						string signature = q{
+							void load_} ~library~ q{ ()
+						};
+
+						string code = q{
+							import std.c.linux.linux;
+
+							void* library = dlopen (} `"`~library~`"` q{, RTLD_NOW);
+						};
+
+						foreach (symbol; __traits (allMembers, typeof(this)))
+							static if (not (symbol.empty))
+						{} static if (0)
+								static if (isFunctionPointer!(__traits (getMember, typeof(this), symbol)))
+								// BUG HERE ^^^ once we do this, we get D linkage
+									static if (functionLinkage!(__traits (getMember, typeof(this), symbol)) == "C")
+										code ~= q{
+											} ~symbol~ q{ = cast (typeof (} ~symbol~ q{)) dlsym (library, } `"`~symbol~`"` q{);
+											assert (} ~symbol~ q{, "couldn't load symbol "} `"`~symbol~`"` q{"from library "} `"`~library~`"` q{);
+										};
+
+						return signature~ `{` ~code~ `}`;
+					}
+			}
+
+			mixin(generate_library_loader);
+		}
+		void main () {/*...}*/
+			static struct GSLVector
+				{/*...}*/
+					size_t size = 3;
+					size_t stride = 1;
+					double* data = null;
+					void* block = null;
+					int owner = 0;
+				}
+			debug static struct Test
+				{/*...}*/
+					mixin DynamicLibrary!`gsl`;
+
+					pure nothrow:
+
+					this (typeof(null))
+						{/*...}*/
+							try {}//load_gsl;
+							catch (Exception ex) assert (0, ex.msg);
+						}
+
+					extern (C) int function (GSLVector* a, const GSLVector* b) pure nothrow gsl_vector_add;
+					pragma(msg, functionLinkage!gsl_vector_add);
+				}
+
+			auto x = Test (null);
+
+			double[3] 	v = [1,2,3],
+						w = [4,5,6];
+
+			GSLVector g_v, g_w;
+
+			g_v.data = v.ptr;
+			g_w.data = w.ptr;
+
+			assert (x.gsl_vector_add !is null);
+			x.gsl_vector_add (&g_v, &g_w);
+
+			assert (v == [5,7,9]);
+		}
+}
+public {/*type construction}*/
+	/* generate Id, a unique (up to host type) identifier type 
 	*/
 	mixin template TypeUniqueId (uint bit = 64)
 		{/*...}*/
@@ -37,19 +403,7 @@ public {/*mixins}*/
 				}
 		}
 
-	/* separate Types and Names into eponymous TypeTuples 
-	*/
-	mixin template DeclarationSplitter (Args...)
-		{/*...}*/
-			private import std.typetuple: Filter;
-
-			alias Types = Filter!(is_type, Args);
-			alias Names = Filter!(is_string_param, Args);
-			static assert (Types.length == Names.length, `type/name mismatch`);
-			static assert (Types.length + Names.length == Args.length, `extraneous template parameters`);
-		}
-
-	/* generate getters and this-returning setters for a set of declared fields 
+	/* generate getters and chainable setters for a set of member declarations 
 	*/
 	mixin template Builder (Args...)
 		{/*...}*/
@@ -65,8 +419,6 @@ public {/*mixins}*/
 					{/*...}*/
 						static string command_getter_setter (string name)()
 							{/*...}*/
-								import std.typetuple;
-
 								alias Type = Types[staticIndexOf!(name, Names)];
 								return q{
 									@property auto ref }~name~q{ (}~Type.stringof~q{ value)
@@ -88,7 +440,9 @@ public {/*mixins}*/
 					}
 				static string command_data_declaration ()
 					{/*...}*/
-						import std.typecons;
+						import std.typecons:
+							staticMap,
+							alignForSize;
 
 						template prepend_underscore (string name)
 							{enum prepend_underscore = `_`~name;}
@@ -96,104 +450,6 @@ public {/*mixins}*/
 					}
 			}
 		}
-
-	/* forward opApply (foreach) 
-	*/
-	mixin template IterateOver (alias range)
-		{/*...}*/
-			static assert (is(typeof(this)), `mixin requires host struct`);
-			alias Applied = typeof(range[0]);
-
-			/* so these are all templated, so they don't block the compilation of pure structs
-				but will still generate a compiler error if foreach is attempted on it
-				which is kind of shitty.. after all, if i can do it with a for-loop, and opApply
-				itself doesn't modify anything, then the only thing stopping me is the fact that
-				the delegate is modifying some variable in its scope. that should still be considered pure,
-				somehow
-			*/
-			int opApply ()(scope int delegate(auto ref Applied) op)
-				{/*...}*/
-					int result;
-
-					foreach (ref element; range)
-						{/*...}*/
-							result = op (element);
-
-							if (result) 
-								break;
-						}
-
-					return result;
-				}
-			int opApply ()(scope int delegate(size_t, auto ref Applied) op)
-				{/*...}*/
-					int result;
-
-					foreach (i, ref element; range)
-						{/*...}*/
-							result = op (i, element);
-
-							if (result) 
-								break;
-						}
-
-					return result;
-				}
-			int opApply ()(scope int delegate(const auto ref Applied) op) const
-				{/*...}*/
-					return (cast()this).opApply (cast(int delegate(ref Applied)) op);
-				}
-			int opApply ()(scope int delegate(const size_t, const auto ref Applied) op) const
-				{/*...}*/
-					return (cast()this).opApply (cast(int delegate(size_t, ref Applied)) op);
-				}
-		}
-	unittest {/*...}*/ // REVIEW
-		struct Test {int[4] x; mixin IterateOver!x;}
-
-		static assert (isIterable!Test);
-
-		auto t = Test ([1,2,3,4]);
-
-		auto sum = 0;
-		foreach (i; t)
-			sum += i;
-
-		assert (sum == 10);
-
-		foreach (ref i; t)
-			i = sum;
-
-		assert (Test == Test ([10, 10, 10, 10]));
-	}
-
-	/* forward opCmp (<,>,<=,>=) 
-	*/
-	mixin template CompareBy (alias member)
-		{/*...}*/
-			static assert (is(typeof(this)), `mixin requires host struct`);
-
-			int opCmp ()(auto ref const typeof(this) that) const
-				{/*...}*/
-					enum name = __traits(identifier, member);
-					mixin(q{
-						return compare (this.} ~name~ q{, that.} ~name~ q{);
-					});
-				}
-		}
-	unittest {/*...}*/
-		struct Test {int x; mixin CompareBy!x;}
-
-		assert (Test(1) < Test(2));
-		assert (Test(1) <= Test(2));
-		assert (not (Test(1) > Test(2)));
-		assert (not (Test(1) >= Test(2)));
-
-		assert (not (Test(1) < Test(1)));
-		assert (not (Test(1) > Test(1)));
-		assert (Test(1) <= Test(1));
-		assert (Test(1) >= Test(1));
-	}
 
 	/* apply an array interface over a pointer and length variable 
 	*/
@@ -231,7 +487,7 @@ public {/*mixins}*/
 						assert (length);
 					}
 					body {/*...}*/
-						import std.range;
+						import std.range: front;
 						return this[].front;
 					}
 				ref auto back ()
@@ -239,7 +495,7 @@ public {/*mixins}*/
 						assert (length);
 					}
 					body {/*...}*/
-						import std.range;
+						import std.range: back;
 						return this[].back;
 					}
 			}
@@ -260,12 +516,12 @@ public {/*mixins}*/
 			const {/*range}*/
 				ref auto front ()
 					{/*...}*/
-						import std.range;
+						import std.range: front;
 						return (cast()this)[].front;
 					}
 				ref auto back ()
 					{/*...}*/
-						import std.range;
+						import std.range: back;
 						return (cast()this)[].back;
 					}
 			}
@@ -303,136 +559,10 @@ public {/*mixins}*/
 					}
 			}
 		}
-
-	/* generate a member function auto_initialize () which automatically initializes all fields tagged Initialize
-	*/
-	mixin template AutoInitialize ()
-		{/*...}*/
-			void auto_initialize ()
-				{/*...}*/
-					alias This = typeof(this);
-					foreach (member; __traits(allMembers, This))
-						static if (__traits(compiles, __traits(getMember, This, member)))
-							static if (not (is_type!(__traits(getMember, This, member))))
-								foreach (Attribute; __traits(getAttributes, __traits(getMember, This, member)))
-									static if (__traits(compiles, Attribute.is_initializer))
-										{/*...}*/
-											static if (is (typeof(__traits(getMember, This, member)) == class))
-												__traits(getMember, This, member) = new typeof(__traits(getMember, This, member))(Attribute.Args);
-											else static if (is (typeof(__traits(getMember, This, member)) == struct))
-												__traits(getMember, This, member) = typeof(__traits(getMember, This, member))(Attribute.Args);
-											else static assert (0);
-										}
-				}
-		}
-
-	/* specify field constructor parameters at the point of field declaration 
-	*/
-	struct Initialize (CtorArgs...)
-		{/*...}*/
-			alias Args = CtorArgs;
-			enum is_initializer;
-		}
-
-	/* enable mixin load_dynamic_library!"libname"
-		which attempts to link all member extern (C) function pointers with the specified lib
-		when mixed into a member function (typically the constructor) of a type 
-	*/
-	mixin template DynamicLibraryLoader () // REFACTOR
-		{/*...}*/
-			static const string load_dynamic_library (string library) ()
-				{/*...}*/
-					return `mixin(load_dynamic_symbols!(typeof (this), "`~library~`"));`;
-				}
-			static const string load_dynamic_symbols (caller_T, string library) ()
-				{/*...}*/
-					string command = q{
-						import std.c.linux.linux;
-						void* library = dlopen ("`~library~`", RTLD_NOW);
-					};
-
-					foreach (symbol; __traits (allMembers, caller_T))
-						{/*...}*/
-							const string load_symbol = q{mixin(load_dynamic_symbol!}`"` ~symbol~ `"`q{);};
-							const string enforce_symbol = `enforce (`~symbol~`, "couldn't load symbol `~symbol~` from library `~library~`");`;
-
-							static if (isFunctionPointer!(__traits (getMember, caller_T, symbol)))
-								static if (functionLinkage!(__traits (getMember, caller_T, symbol)) == "C")
-									command ~= load_symbol ~ enforce_symbol;
-						}
-					return `{` ~command~ `}`;
-				}
-			static const string load_dynamic_symbol (string symbol) ()
-				{/*...}*/
-					return symbol~` = cast (typeof (`~symbol~`)) dlsym (library, "`~symbol~`");`;
-				}
-		}
-
-	/* forward constructor calls to recipient
-	*/
-	mixin template ForwardConstructor (alias recipient)
-		{/*...}*/
-			import std.traits: hasMember;
-			static if (hasMember!(typeof(recipient), `__ctor`))
-				this (Args...)(Args args)
-					{/*...}*/
-						recipient = typeof(recipient)(args);
-					}
-			else this (T)(T value)
-					{/*...}*/
-						recipient = value;
-					}
-		}
 }
-public {/*wrappers}*/
-	/* forwards function calls via pointer and returns itself for chaining
+public {/*type extraction}*/
+	/* extract an array of identifiers for members of T which match the given UDA tag 
 	*/
-	struct ChainForward (T)
-		{/*...}*/
-			public mixin(forward_members);
-
-			private:
-
-			T* to_build;
-			static string forward_members ()
-				{/*...}*/
-					string code;
-
-					foreach (member; __traits(allMembers, T))
-						{/*...}*/
-							static if (member.empty || member == `__ctor`)
-								continue;
-							else {/*...}*/
-								string forward = q{to_build.} ~member~ q{ (args)};
-
-								code ~= q{
-									auto } ~member~ q{ (Args...)(scope lazy Args args)
-										}`{`q{
-											static if (__traits(compiles, } ~forward~ q{))
-												}`{`q{
-													} ~forward~ q{;
-													return this;
-												}`}`q{
-											else static assert (0, } `"`~member~ ` cannot be forwarded"`q{);
-										}`}`q{
-								};
-							}
-						}
-
-					return code;
-				}
-		}
-}
-public {/*type processing}*/
-	template pointer_to (T)
-		{/*...}*/
-			alias pointer_to = T*;
-		}
-	template array_of (T)
-		{/*...}*/
-			alias array_of = T[];
-		}
-	/* create a tuple of all members of a type that have a given alias attribute tag */
 	template collect_members (T, alias attribute)
 		{/*...}*/
 			immutable string[] collect_members ()
@@ -447,17 +577,13 @@ public {/*type processing}*/
 								return members[0] ~ collect!(members[1..$]);
 							else return collect!(members[1..$]);
 						}
+
 					return collect!(__traits (allMembers, T));
 				}
 		}
-	/* convert any kind of tuple to its corresponding TypeTuple */
-	template types_of (T...)
-		{/*...}*/
-			static if (__traits(compiles, typeof(T)))
-				alias types_of = typeof(T);
-			else alias types_of = T;
-		}
-	/* build a TypeTuple of all nested structs and classes defined within T */
+
+	/* build a TypeTuple of all nested struct and class definitions within T 
+	*/
 	template get_substructs (T)
 		{/*...}*/
 			private template get_substruct (T)
@@ -484,7 +610,9 @@ public {/*type processing}*/
 				staticMap!(get_substruct!T, __traits(allMembers, T))
 			);
 		}
-	/* build a string tuple of all assignable members of T */
+
+	/* build a string tuple of all assignable members of T 
+	*/
 	template assignable_members (T)
 		{/*...}*/
 			private template is_assignable (T)
@@ -497,7 +625,33 @@ public {/*type processing}*/
 
 			alias assignable_members = Filter!(is_assignable!T, __traits(allMembers, T));
 		}
-	/* perform search and replace on a typename */
+}
+public {/*type processing}*/
+	/* T → T* 
+	*/
+	template pointer_to (T)
+		{/*...}*/
+			alias pointer_to = T*;
+		}
+
+	/* T → T[] 
+	*/
+	template array_of (T)
+		{/*...}*/
+			alias array_of = T[];
+		}
+
+	/* convert any kind of tuple to its corresponding TypeTuple 
+	*/
+	template types_of (T...)
+		{/*...}*/
+			static if (__traits(compiles, typeof(T)))
+				alias types_of = typeof(T);
+			else alias types_of = T;
+		}
+
+	/* perform search and replace on a typename 
+	*/
 	string rewrite_type (Type, Find, ReplaceWith)()
 		{/*...}*/
 			import std.algorithm: findSplit;
@@ -513,7 +667,8 @@ public {/*type processing}*/
 		}
 }
 public {/*code generation}*/
-	/* declare variables according to format (see unittest) */
+	/* declare variables according to format (see unittest) 
+	*/
 	static string autodeclare (Params...)() 
 		if (Params.length > 0)
 		{/*...}*/
@@ -554,12 +709,17 @@ public {/*code generation}*/
 				code ~= T.stringof~` `~prefix~`_`~to!string(i)~suffix;
 			return code;
 		}
-		unittest {/*autodeclare}*/
+		unittest {/*demo}*/
+			// declarations are formatted by prefixes and suffixes and numbered by parameter order
 			static assert (autodeclare!(int, byte, `x`)			== q{int x_0; byte x_1; });
+
+			// suffixes are distinguished from prefixes by the presence of punctuation marks
 			static assert (autodeclare!(int, byte, `x`, `, `) 	== q{int x_0, byte x_1, });
 			static assert (autodeclare!(int, byte, char, `:: `)	== q{int _0:: byte _1:: char _2:: });
 		}
-	/* apply a predicate to a series of rvalues */
+
+	/* apply a dot predicate to a series of identifiers 
+	*/
 	static string apply_to_each (string op, Names...)()
 		if (allSatisfy!(is_string_param, Names))
 		{/*...}*/
@@ -571,5 +731,17 @@ public {/*code generation}*/
 				};
 
 			return code;
+		}
+
+	/* separate Types and Names into eponymous TypeTuples 
+	*/
+	mixin template DeclarationSplitter (Args...)
+		{/*...}*/
+			private import std.typetuple: Filter;
+
+			alias Types = Filter!(is_type, Args);
+			alias Names = Filter!(is_string_param, Args);
+			static assert (Types.length == Names.length, `type/name mismatch`);
+			static assert (Types.length + Names.length == Args.length, `extraneous template parameters`);
 		}
 }
