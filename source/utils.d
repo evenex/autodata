@@ -16,6 +16,7 @@ import std.conv;
 import resource.arrays: is_dynamic_array;
 
 import evx.meta;
+import evx.functional: zip;// map; BUG nocompile
 
 debug = profiler;
 
@@ -26,17 +27,18 @@ public {/*misc}*/
 		{/*...}*/
 			return !value;
 		}
-	const bool not (alias predicate, T)(const T value)
+	const bool not (alias predicate, Args...)(const Args args)
 		if (isSomeFunction!predicate)
 		{/*...}*/
-			return not (predicate (value));
+			return not (predicate (args));
 		}
 
 	alias And = templateAnd;
 	alias Or  = templateOr;
 	alias Not = templateNot;
 
-	/* simulate opCmp */
+	/* simulate opCmp 
+	*/
 	int compare (T,U)(T a, U b) pure nothrow
 		{/*...}*/
 			static if (__traits(compiles, a.opCmp (b)))
@@ -45,6 +47,16 @@ public {/*misc}*/
 				return cast(int)(a - b);
 			else static assert (0, `can't compare ` ~T.stringof~ ` with ` ~U.stringof);
 		}
+
+	/* readability-enhancing tag for non-const sections or members in a series of consts. 
+		will not override const label (const:)
+	*/
+	enum vary;
+
+	/* readability-enhancing tag for non-pure sections or functions in a series of pures. 
+		will not override pure label (pure:)
+	*/
+	enum imp;
 }
 public {/*debug}*/
 	/* warning exception */
@@ -294,64 +306,6 @@ pure nothrow {/*algorithm}*/
 				range.shrink (1);
 			else --range.length;
 		}
-
-	/* nothrow replacement for std.algorithm.reduce */
-	template reduce (functions...)
-		if (functions.length > 0)
-		{/*...}*/
-			auto reduce (R)(auto ref R range) // BUG needs to handle multiple functions
-				if (isInputRange!R)
-				{/*...}*/
-					static if (functions.length == 1)
-						alias Accumulator = typeof(functions[0] (range.front, range.front));
-					else {/*alias Accumulator}*/
-						string generate_accumulator ()
-							{/*...}*/
-								string code;
-
-								foreach (i, f; functions)
-									code ~= q{typeof(functions[} ~i.text~ q{] (range.front, range.front)), };
-
-								return q{Tuple!(} ~code[0..$-2]~ q{)};
-							}
-
-						mixin(q{
-							alias Accumulator = } ~generate_accumulator~ q{;
-						});
-					}
-
-					auto initialize ()
-						{/*...}*/
-							Accumulator accumulator;
-
-							void zero_init (T)(auto ref T element)
-								{element = 0;}
-
-							static if (functions.length == 1)
-								{/*...}*/
-									static if (__traits(compiles, zero_init (accumulator)))
-										zero_init (accumulator);
-								}
-							else foreach (i, f; functions)
-								static if (__traits(compiles, zero_init (accumulator[i])))
-									zero_init (accumulator[i]);
-
-							return accumulator;
-						}
-
-					// FUTURE static if (isRandomAccess) try to block and parallelize... or foreach (x; parallel(r))?
-					auto accumulator = initialize;
-					for (; not (range.empty); range.popFront)
-						{/*...}*/
-							static if (functions.length == 1)
-								accumulator = functions[0] (accumulator, range.front);
-							else foreach (i, f; functions)
-								accumulator[i] = functions[i] (accumulator[i], range.front);
-						}
-
-					return accumulator;
-				}
-		}
 }
 public {/*containers}*/
 	template PriorityQueue (T)
@@ -400,7 +354,8 @@ public {/*tuples}*/
 	template Aⁿ (T...) {alias Aⁿ = T;}
 }
 public {/*ranges}*/
-	/* construct a ForwardRange out of a range of ranges such that the inner ranges appear concatenated */
+	/* construct a ForwardRange out of a range of ranges such that the inner ranges appear concatenated 
+	*/
 	struct Contigious (R)
 		if (allSatify!(And!(is_indexable, Not!isForwardRange), R, ElementType!R))
 		{/*...}*/
@@ -487,7 +442,8 @@ public {/*ranges}*/
 		assert (A.contigious.sum == 21);
 	}
 
-	/* traverse a range with elements rotated left by some number of positions */
+	/* traverse a range with elements rotated left by some number of positions 
+	*/
 	auto rotate_elements (R)(R range, long positions = 1)
 		{/*...}*/
 			auto n = range.length;
@@ -495,10 +451,19 @@ public {/*ranges}*/
 			assert (i > 0);
 			return range.cycle[i..n+i];
 		}
-	/* pair each element with its successor in the range, pairing the last element with the first */
+
+	/* pair each element with its successor in the range, pairing the last element with the first 
+	*/
 	auto adjacent_pairs (R)(R range)
 		{/*...}*/
 			return range.zip (range.rotate_elements);
+		}
+
+	/* test if an attempted slice will be within some bounds 
+	*/
+	bool slice_within_bounds (size_t i, size_t j, size_t length) pure nothrow
+		{/*...}*/
+			return i <= j && j <= length && i < length;
 		}
 }
 public {/*indices}*/

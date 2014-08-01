@@ -16,7 +16,8 @@ private {/*import std}*/
 }
 private {/*import evx}*/
 	import evx.utils: 
-		Aⁿ, τ, not;
+		τ, not, vary,
+		adjacent_pairs;
 	import evx.meta:
 		ArrayInterface;
 	import evx.math; // REFACTOR
@@ -67,7 +68,7 @@ public {/*vectors}*/
 				T norm (uint p = 2)() 
 					if (is_Unit!T)
 					{/*...}*/
-						return T (vectorize (x/T(1), y/T(1)).norm!p);
+						return T (vectorize (x.to_scalar, y.to_scalar).norm!p);
 					}
 				Vec2 unit ()() 
 					if (isFloatingPoint!T)
@@ -83,7 +84,7 @@ public {/*vectors}*/
 					{/*...}*/
 						auto norm = this.norm;
 
-						if (norm == T(0))
+						if (norm.to_scalar == 0)
 							return vectorize (T(0)/T(1), T(0)/T(1));
 						else return vectorize (x/norm, y/norm);
 					}
@@ -434,6 +435,7 @@ public {/*vectors}*/
 				assert (a.rej (b).approx (Position (0.meters)));
 
 				auto c = a.rotate (π/2);
+				assert (c.approx (Position (-4.meters, 3.meters)));
 				assert (a.dot (c).approx (0.square_meters));
 				assert (a.det (c).approx (a.norm * c.norm));
 				assert (a.proj (c).approx (Position (0.meters)));
@@ -524,16 +526,20 @@ public {/*vectors}*/
 	auto bearing_to (Vec)(Vec a, Vec b)
 		if (is_vector!Vec)
 		{/*...}*/
-			auto δ = (b-a);
-			auto θ = acos (δ.unit.dot (Vec(î).unit));
-			if (δ.y < 0.0)
-				θ *= -1;
-			return θ;
+			static if (is_Unit!(ElementType!Vec))
+				return atan2 (
+					a.det (b).to_scalar,
+					a.dot (b).to_scalar
+				);
+			else return atan2 (
+				a.det (b),
+				a.dot (b)
+			);
 		}
 		unittest {/*...}*/
 			assert (î.vec.bearing_to (ĵ.vec).approx (π/2));
 			assert (ĵ.vec.bearing_to (î.vec).approx (-π/2));
-			assert (vec (-1,-1).bearing_to (0.vec).approx (π/4));
+			assert (vec(1,-1).bearing_to (î.vec).approx (π/4));
 		}
 
 	/* compute the distance between two points 
@@ -547,8 +553,8 @@ public {/*vectors}*/
 public {/*polygons}*/
 	/* shape generators 
 	*/
-	auto square (Vec = vec, T = ElementType!Vec)(T side = 1.0, Vec center = 0.Vec)
-		if (is (T == ElementType!Vec))
+	auto square (T, Vec = vec)(const T side = 1, const Vec center = Vec(0))
+		if (isNumeric!T)
 		in {/*...}*/
 			assert (side > 0.0);
 		}
@@ -556,8 +562,8 @@ public {/*polygons}*/
 			return [vec(1,1), vec(-1,1), vec(-1,-1), vec(1,-1)]
 				.map!(v => v*side/2 + center);
 		}
-	auto circle (uint samples = 24, Vec = vec, T = ElementType!Vec)(T radius = 1.0, Vec center = 0.Vec)
-		if (is (T == ElementType!Vec))
+	auto circle (uint samples = 24, Vec = vec, T = ElementType!Vec)(const T radius = 1, const Vec center = Vec(0))
+		if (isNumeric!T)
 		in {/*...}*/
 			assert (radius > 0.0, "circle radius must be positive");
 		}
@@ -567,12 +573,27 @@ public {/*polygons}*/
 				.map!(v => radius*v + center);
 		}
 
+	/* dimensioned shape generators
+	*/
+	auto square (T, Vec = vec)(const T side, const Vec center = Vec(0))
+		if (is_Unit!T)
+		{/*...}*/
+			return square (side.to_scalar, center)
+				.map!(v => vectorize (T(v.x), T(v.y)));
+		}
+	auto circle (uint samples = 24, Vec = vec, T = ElementType!Vec)(const T radius, const Vec center = Vec(0))
+		if (is_Unit!T)
+		{/*...}*/
+			return circle!samples (radius.to_scalar, center)
+				.map!(v => vectorize (T(v.x), T(v.y)));
+		}
+
 	/* get the distance of a polygon's furthest point from its centroid 
 	*/
 	auto radius (T)(T geometry)
 		if (is_geometric!T)
 		{/*...}*/
-			 auto c = geometry.mean;
+			 auto c = geometry.mean; // TODO see if this triggers a compiler warning - can't access mutable from pure
 			 return geometry.map!(v => (v-c).norm).reduce!max;
 		}
 
@@ -583,7 +604,7 @@ public {/*polygons}*/
 		{/*...}*/
 			return 0.5 * abs (Σ (polygon.adjacent_pairs.map!(v => v[0].det (v[1]))));
 		}
-		unittest {/*...}*/
+		static if (0) void main() {/*...}*/ // TODO got this far..
 			assert (square (1).area.approx (1));
 			assert (square (2).area.approx (4));
 			assert (circle (1).area.approx (π));
@@ -674,10 +695,10 @@ public {/*polygons}*/
 public {/*axis-aligned bounding boxes}*/
 	/* an axis-aligned bounding box 
 	*/
-	struct Box
+	struct Box // TODO unit-safe
 		{/*...}*/
-			pure nothrow:
-			@property {/*corners}*/
+			pure nothrow @property:
+			const {/*corners}*/
 				vec opDispatch (string op)()
 					if (op.canFind (`left`, `center`, `right`))
 					{/*...}*/
@@ -718,8 +739,8 @@ public {/*axis-aligned bounding boxes}*/
 						return requested_point / length;
 					}
 			}
-			@property {/*extents}*/
-				@property {/*get}*/
+			@vary {/*extents}*/
+				const {/*get}*/
 					auto left ()
 						{/*...}*/
 							return this.hi_left.x;
@@ -737,7 +758,7 @@ public {/*axis-aligned bounding boxes}*/
 							return this.low_left.y;
 						}
 				}
-				@property {/*set}*/
+				@vary {/*set}*/
 					void left (double x)
 						in {/*...}*/
 							assert (x < right);
@@ -772,8 +793,8 @@ public {/*axis-aligned bounding boxes}*/
 						}
 				}
 			}
-			@property {/*dimensions}*/
-				@property {/*get}*/
+			@vary {/*dimensions}*/
+				const {/*get}*/
 					auto width ()
 						{/*...}*/
 							return right-left;
@@ -787,7 +808,7 @@ public {/*axis-aligned bounding boxes}*/
 							return vec(width, height);
 						}
 				}
-				@property {/*set}*/
+				@vary {/*set}*/
 					void width (double w)
 						{/*...}*/
 							auto Δw = w - this.width;
@@ -807,7 +828,7 @@ public {/*axis-aligned bounding boxes}*/
 						}
 				}
 			}
-			@property {/*tuples}*/
+			const {/*tuples}*/
 				auto vertex_tuple ()
 					{/*...}*/
 						alias v = verts;
@@ -930,19 +951,41 @@ public {/*axis-aligned bounding boxes}*/
 				}
 		}
 		unittest {/*...}*/
-			//TODO
+			auto compute_offset (Alignment alignment)
+				{return circle (1).bounding_box.offset_to (alignment, circle (2).bounding_box);}
+
+			assert (compute_offset (center) 		==	0.vec);
+			assert (compute_offset (top_right) 		== 	1.vec);
+			assert (compute_offset (bottom_left) 	== -1.vec);
+
+			assert (compute_offset (center_right) 	== 	î.vec);
+			assert (compute_offset (top_center) 	== 	ĵ.vec);
+			assert (compute_offset (center_left) 	== -î.vec);
+			assert (compute_offset (bottom_center) 	== -ĵ.vec);
 		}
 
 	/* moves a bounding box so that a given alignment point on it has the given position
 	*/
 	auto move_to (Box box, Alignment alignment, vec position)
 		{/*...}*/
-			auto offset = box.offset_to (alignment, bounding_box(position.repeat (2)));
+			immutable offset = box.offset_to (alignment, bounding_box(position.repeat (2)));
 
 			return box.verts[].map!(v => v + offset).copy (box.verts[]);
 		}
 		unittest {/*...}*/
-		//	TODO
+			auto a = square (1).bounding_box;
+
+			assert (a.center.approx (0.vec));
+
+			a.move_to (Alignment.center, ĵ.vec);
+			assert (a.center.approx (ĵ.vec));
+
+			a.move_to (Alignment.top_center, ĵ.vec);
+			assert (a.center.approx (ĵ.vec / 2));
+			assert (a.bottom_center.approx (0.vec));
+
+			a.move_to (Alignment.top_right, 1.vec);
+			assert (a.bottom_left.approx (0.vec));
 		}
 
 	/* scale and translate the inner polygon to fit inside the outer polygon's bounding box 
@@ -950,15 +993,20 @@ public {/*axis-aligned bounding boxes}*/
 	auto into_bounding_box_of (T1, T2)(auto ref T1 inner, auto ref T2 outer)
 		if (allSatisfy!(is_geometric, T1, T2))
 		{/*...}*/
-			auto interior = inner.bounding_box,
+			immutable interior = inner.bounding_box,
 				 exterior = outer.bounding_box;
-			auto in_c = interior.mean, 
-				 ex_c = exterior.mean;
-			auto s = exterior.dimensions / interior.dimensions;
+			immutable in_c = interior.center, 
+				 ex_c = exterior.center;
+			immutable s = exterior.dimensions / interior.dimensions;
 			return inner.map!(v => (v - in_c) * s + ex_c);
 		}
 		unittest {/*...}*/
-			// TODO into_bounding_box_of test
+			auto a = square (1);
+			auto b = square (0.5).map!(v => v * vec(2.0, 1.0));
+
+			auto c = a.into_bounding_box_of (b);
+
+			assert (c.bounding_box.width.approx (1.0));
+			assert (c.bounding_box.height.approx (0.5));
 		}
 }
-void main (){}

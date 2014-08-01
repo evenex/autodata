@@ -2,6 +2,11 @@ module evx.ordering;
 
 pure nothrow:
 
+/* the set¹ of natural numbers 
+	1. actually a subset of cardinality 2⁶⁴
+*/
+immutable ℕ = 0.sequence!((a,b) => a + b);
+
 /* a < b 
 */ 
 bool less_than (T)(auto ref in T a, auto ref in T b)
@@ -20,7 +25,7 @@ bool all_equal (Args...)(Args args)
 		return true;
 	}
 
-/* ¬(a < b || b < a) ⇒ a == b
+/* ¬(a < b || b < a) ⇒ a == b 
 */
 bool antisymmetrically_equivalent (alias compare, T, U)(auto ref in T a, auto ref in U b)
 	if (__traits(compiles, compare (a, b)))

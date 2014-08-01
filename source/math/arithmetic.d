@@ -1,31 +1,25 @@
 module evx.arithmetic;
 
+private {/*import std}*/
+	import std.traits:
+		isIntegral;
+
+	import std.conv:
+		to;
+}
 private {/*import evx}*/
-	import evx.utils: reduce;
+	import evx.functional:
+		map, reduce;
 }
 
 pure nothrow:
 
-/* ctfe-able arithmetic predicates
+/* ctfe-able arithmetic predicates 
 */
 auto add (T)(T a, T b) 
 	{return a + b;}
 auto subtract (T)(T a, T b) 
 	{return a - b;}
-
-/* get an array of natural numbers from 0 to max-1 
-*/
-auto ℕ (size_t max)()
-	{/*↓}*/
-		return ℕ (max);
-	}
-auto ℕ (T)(T count)
-	if (isIntegral!T)
-	{/*...}*/
-		return sequence!((i,n) => i[0]+n)(0)
-			.map!(n => cast(T)n)
-			.take (count.to!size_t);
-	}
 
 /* compute the product of a sequence 
 */

@@ -173,7 +173,7 @@ private {/*unit}*/
 					}
 			}
 			pure const {/*comparison}*/
-				mixin CompareBy!const_scalar;
+				mixin CompareBy!to_scalar;
 			}
 			pure const {/*operators}*/
 				auto opUnary (string op)()
@@ -339,6 +339,12 @@ private {/*unit}*/
 						catch (Exception) assert (0);
 					}
 			}
+			const @property  {/*conversion}*/
+				Scalar to_scalar ()
+					{/*...}*/
+						return scalar;
+					}
+			}
 
 			private:
 			private {/*...}*/
@@ -359,10 +365,6 @@ private {/*unit}*/
 					scalar = value;
 				}
 
-			pure const @property Scalar const_scalar ()
-				{/*...}*/
-					return cast(const)scalar;
-				}
 		}
 }
 private {/*base dimensions}*/
