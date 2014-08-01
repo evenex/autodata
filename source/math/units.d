@@ -145,6 +145,21 @@ public {/*traits}*/
 			enum is_Unit = __traits(compiles, T[0].UnitTrait);
 		}
 }
+public {/*math}*/
+	auto abs (T)(const T quantity)
+		{/*...}*/
+			static if (is_Unit!T)
+				return quantity.abs;
+			else return std.math.abs (quantity);
+		}
+	auto approx (T, U)(const T a, const U b)
+	//	if (allSatisfy!(is_Unit, T, U) || __traits(compiles, evx.analysis.approx (a,b))) TODO
+		{/*...}*/
+			static if (is_Unit!T && is_Unit!U)
+				return evx.analysis.approx (a.scalar, b.scalar);
+			else return evx.analysis.approx (a, b);
+		}
+}
  
 private:
 private {/*unit}*/
@@ -161,13 +176,13 @@ private {/*unit}*/
 							else static assert (0);
 						});
 					}
-				auto opDispatch (string op)(const auto ref Unit unit)
+				auto opDispatch (string op)(const auto ref Unit that)
 					{/*...}*/
 						mixin(q{
-							static if (__traits(compiles, Unit (this.scalar.} ~op~ q{ (unit.scalar))))
-								return Unit (this.scalar.} ~op~ q{ (unit.scalar));
-							else static if (__traits(compiles, this.scalar.} ~op~ q{ (unit.scalar)))
-								return this.scalar.} ~op~ q{ (unit.scalar);
+							static if (__traits(compiles, Unit (this.scalar.} ~op~ q{ (that.scalar))))
+								return Unit (this.scalar.} ~op~ q{ (that.scalar));
+							else static if (__traits(compiles, this.scalar.} ~op~ q{ (that.scalar)))
+								return this.scalar.} ~op~ q{ (that.scalar);
 							else static assert (0);
 						});
 					}
@@ -312,7 +327,7 @@ private {/*unit}*/
 
 							static auto to_superscript (U)(U num)
 								{/*...}*/
-									uint n = .abs(num).to!uint;
+									uint n = abs(num).to!uint;
 									if (n < 3)
 										{/*...}*/
 											if (n == 1)
@@ -339,7 +354,7 @@ private {/*unit}*/
 						catch (Exception) assert (0);
 					}
 			}
-			const @property  {/*conversion}*/
+			pure const @property {/*conversion}*/
 				Scalar to_scalar ()
 					{/*...}*/
 						return scalar;

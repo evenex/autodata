@@ -16,8 +16,10 @@ public:
 	import evx.ordering; // unittest
 
 public {/*disambiguation}*/
-	alias map = evx.functional.map; // BUG why the conflict? i'm not importing map from std.algorithm...
-	alias reduce = evx.functional.reduce; // BUG why the conflict? i'm not importing reduce from std.algorithm...
+	alias map = evx.functional.map;
+	alias reduce = evx.functional.reduce;
+	alias abs = evx.units.abs;
+	alias approx = evx.units.approx;
 }
 
 

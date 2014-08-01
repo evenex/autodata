@@ -1,13 +1,55 @@
 module evx.analysis;
 
+private {/*import std}*/
+	import std.math: 
+		approxEqual;
+
+	import std.typetuple: 
+		allSatisfy,
+		staticMap;
+
+	import std.traits: 
+		isNumeric;
+
+	import std.range:
+		isForwardRange, hasLength,
+		ElementType;
+}
 private {/*import evx}*/
 	import evx.utils:
-		not;
+		not, And;
+
+	import evx.meta:
+		is_indexable;
 }
 
 pure nothrow:
 
-public import std.math: approx = approxEqual;
+template has_approximate_equality (T)
+	{/*...}*/
+		enum has_approximate_equality = __traits(compiles,
+			T.init.approxEqual (T.init)
+		);
+	}
+
+auto approx (T, U)(const T a, const U b)
+	if (allSatisfy!(And!(is_indexable, hasLength), T, U) || allSatisfy!(has_approximate_equality, T, U))
+	{/*...}*/
+		static if (isForwardRange!T)
+			{/*...}*/
+				static assert (allSatisfy!(has_approximate_equality, staticMap!(ElementType, T, U)));
+				
+				if (a.length != b.length)
+					return false;
+
+				foreach (i; 0..a.length)
+					if (not (a[i].approx (b[i])))
+						return false;
+
+				return true;
+			}
+		else return approxEqual (a,b);
+	}
 
 /* a.approx (b) && b.approx (c) && ...
 */

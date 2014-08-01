@@ -2,7 +2,7 @@ module evx.functional; // TODO this is more like evx.range... but map and reduce
 
 private {/*import std}*/
 	import std.range:
-		front, popFront, empty, back, popBack,
+		front, popFront, empty, back, popBack, put,
 		isInputRange, isForwardRange, isBidirectionalRange, isOutputRange,
 		hasLength,
 		ElementType;
@@ -39,7 +39,7 @@ public {/*map}*/
 			pure nothrow:
 			static if (is_indexable!R)
 				{/*...}*/
-					auto ref opIndex (size_t i)
+					auto ref opIndex (size_t i) inout
 						in {/*...}*/
 							static if (hasLength!R)
 								assert (i < range.length);
@@ -71,7 +71,7 @@ public {/*map}*/
 			@property:
 			static if (isInputRange!R)
 				{/*...}*/
-					auto ref front ()
+					auto ref front () inout
 						in {/*...}*/
 							assert (not (empty));
 						}
@@ -85,7 +85,7 @@ public {/*map}*/
 						body {/*...}*/
 							range.popFront;
 						}
-					bool empty ()
+					bool empty () inout
 						{/*...}*/
 							return range.empty;
 						}
@@ -258,7 +258,7 @@ public {/*zip}*/
 								range.put (element[i]);
 						}
 
-					//static assert (isOutputRange!ZipResult); BUG
+					static assert (.isOutputRange!(ZipResult, ZipTuple));
 				}
 			static if (allSatisfy!(hasLength, Ranges))
 				{/*...}*/
@@ -419,8 +419,7 @@ public {/*reduce}*/
 		}
 }
 public {/*sequence}*/
-	/* TODO
-	*/
+	/* TODO */
 	struct Sequence (alias func, T)
 		if (isNumeric!T)
 		{/*...}*/
@@ -478,8 +477,7 @@ public {/*sequence}*/
 			}
 		}
 
-	/* TODO
-	*/
+	/* TODO */
 	struct FiniteSequence (alias func, T)
 		if (isNumeric!T)
 		{/*...}*/
@@ -583,8 +581,7 @@ public {/*sequence}*/
 			}
 		}
 	
-	/* TODO
-	*/
+	/* TODO */
 	auto sequence (alias func, T)(T initial)
 		{/*...}*/
 			return Sequence!(func, T)(initial);

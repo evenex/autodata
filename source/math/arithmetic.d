@@ -2,7 +2,11 @@ module evx.arithmetic;
 
 private {/*import std}*/
 	import std.traits:
-		isIntegral;
+		isNumeric, isIntegral,
+		FieldTypeTuple;
+	
+	import std.typetuple:
+		staticMap;
 
 	import std.conv:
 		to;
@@ -13,6 +17,32 @@ private {/*import evx}*/
 }
 
 pure nothrow:
+
+/* returns unity (1) for a given type 
+*/
+auto unity (T)()
+	{/*...}*/
+		static if (isNumeric!T)
+			return cast(T) 1;
+		else static if (__traits(compiles, T(1)))
+			return T(1);
+		else static if (__traits(compiles, T(staticMap!(unity, FieldTypeTuple!T))))
+			return T(staticMap!(unity, FieldTypeTuple!T));
+		else static assert (0, `can't compute unity for ` ~T.stringof);
+	}
+
+/* returns zero (0) for a given type 
+*/
+auto zero (T)()
+	{/*...}*/
+		static if (isNumeric!T)
+			return cast(T) 0;
+		else static if (__traits(compiles, T(0)))
+			return T(0);
+		else static if (__traits(compiles, T(staticMap!(zero, FieldTypeTuple!T))))
+			return T(staticMap!(zero, FieldTypeTuple!T));
+		else static assert (0, `can't compute zero for ` ~T.stringof);
+	}
 
 /* ctfe-able arithmetic predicates 
 */

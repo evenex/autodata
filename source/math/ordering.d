@@ -1,11 +1,15 @@
 module evx.ordering;
 
+private {/*import evx}*/
+	import evx.functional: sequence;
+}
+
 pure nothrow:
 
 /* the set¹ of natural numbers 
 	1. actually a subset of cardinality 2⁶⁴
 */
-immutable ℕ = 0.sequence!((a,b) => a + b);
+immutable ℕ = 0.sequence!((n,i) => n + i);
 
 /* a < b 
 */ 

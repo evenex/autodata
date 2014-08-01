@@ -16,7 +16,7 @@ import std.conv;
 import resource.arrays: is_dynamic_array;
 
 import evx.meta;
-import evx.functional: zip;// map; BUG nocompile
+import evx.functional: zip, map;
 
 debug = profiler;
 

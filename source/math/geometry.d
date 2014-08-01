@@ -18,8 +18,10 @@ private {/*import evx}*/
 	import evx.utils: 
 		τ, not, vary,
 		adjacent_pairs;
+
 	import evx.meta:
 		ArrayInterface;
+
 	import evx.math; // REFACTOR
 }
 
@@ -76,7 +78,7 @@ public {/*vectors}*/
 						auto norm = this.norm;
 
 						if (norm == 0)
-							return Vec2(0);
+							return zero!Vec2;
 						else return Vec2(x/norm, y/norm);
 					}
 				auto unit ()()
@@ -85,7 +87,7 @@ public {/*vectors}*/
 						auto norm = this.norm;
 
 						if (norm.to_scalar == 0)
-							return vectorize (T(0)/T(1), T(0)/T(1));
+							return vectorize (zero!T, zero!T);
 						else return vectorize (x/norm, y/norm);
 					}
 				Vec2 abs () 
@@ -553,7 +555,7 @@ public {/*vectors}*/
 public {/*polygons}*/
 	/* shape generators 
 	*/
-	auto square (T, Vec = vec)(const T side = 1, const Vec center = Vec(0))
+	auto square (T = double, Vec = vec)(const T side = unity!T, const Vec center = zero!Vec)
 		if (isNumeric!T)
 		in {/*...}*/
 			assert (side > 0.0);
@@ -562,14 +564,14 @@ public {/*polygons}*/
 			return [vec(1,1), vec(-1,1), vec(-1,-1), vec(1,-1)]
 				.map!(v => v*side/2 + center);
 		}
-	auto circle (uint samples = 24, Vec = vec, T = ElementType!Vec)(const T radius = 1, const Vec center = Vec(0))
+	auto circle (uint samples = 24, Vec = vec, T = ElementType!Vec)(const T radius = unity!T, const Vec center = zero!Vec)
 		if (isNumeric!T)
 		in {/*...}*/
 			assert (radius > 0.0, "circle radius must be positive");
 		}
 		body {/*...}*/
-			return ℕ!samples.map!(i => 2*π*i/samples)
-				.map!(t => Vec(cos(t), sin(t)))
+			return ℕ[0..samples].map!(i => 2*π*i/samples) 
+				.map!(t => Vec(cos(t), sin(t))) // XXX PERFECT case for uniform constructor syntax here
 				.map!(v => radius*v + center);
 		}
 
@@ -593,8 +595,13 @@ public {/*polygons}*/
 	auto radius (T)(T geometry)
 		if (is_geometric!T)
 		{/*...}*/
-			 auto c = geometry.mean; // TODO see if this triggers a compiler warning - can't access mutable from pure
-			 return geometry.map!(v => (v-c).norm).reduce!max;
+			 immutable c = geometry.mean;
+
+			 return geometry[].map!(v => (v-c).norm).reduce!max;
+		}
+		unittest {/*...}*/
+			assert (circle.radius == 1.0);			
+			assert (square.radius.approx (SQRT2/2));
 		}
 
 	/* get the area of a polygon 
@@ -604,11 +611,11 @@ public {/*polygons}*/
 		{/*...}*/
 			return 0.5 * abs (Σ (polygon.adjacent_pairs.map!(v => v[0].det (v[1]))));
 		}
-		static if (0) void main() {/*...}*/ // TODO got this far..
+		unittest {/*...}*/
 			assert (square (1).area.approx (1));
 			assert (square (2).area.approx (4));
-			assert (circle (1).area.approx (π));
-			assert (circle (2).area.approx (4*π));
+			assert (circle!100 (1).area.approx (π));
+			assert (circle!100 (2).area.approx (4*π));
 
 			// http://www.mathsisfun.com/geometry/area-irregular-polygons.html
 			auto irregular = [
@@ -622,12 +629,10 @@ public {/*polygons}*/
 			auto known_area = 8.3593;
 			assert (irregular.area.approx (known_area));
 
-			import evx.units;
-
 			assert (square (2.meters).area.approx (4.square_meters));
-			assert (circle (1.meter).area.approx (π.square_meters));
+			assert (circle!100 (1.meter).area.approx (π.square_meters));
 			assert (
-				irregular.map!(v => vectorize (v[0].meters, v[1].meters))
+				irregular.map!(v => vectorize (v.x.meters, v.y.meters))
 				.area.approx (known_area.square_meters)
 			);
 		}
@@ -638,27 +643,45 @@ public {/*polygons}*/
 		if (is_geometric!T && (direction == `vertical` || direction == `horizontal`))
 		{/*...}*/
 			alias Vector = ElementType!T;
-			auto c = geometry.mean;
+			alias one = unity!(ElementType!Vector);
 
 			static if (direction == `vertical`)
-				auto p = Vector (1, -1) / ElementType!Vector (1.0);
-			else auto p = Vector (-1, 1) / ElementType!Vector (1.0);
+				immutable w = Vector (one, -one) / one;
+			else immutable w = Vector (-one, one) / one;
 
-			return geometry.map!(v => (v-c)*p+c);
+			immutable c = geometry.mean;
+
+			return geometry[].map!(v => (v - c) * w + c);
 		}
 		unittest {/*...}*/
-			assert (square.flip!`vertical` == square);
-			assert (square.flip!`horizontal` == square);
+			import std.range: 
+				retro,
+				equal;
 
-			auto triangle = [-î.vec, î.vec, ĵ.vec];
-			assert (triangle.flip!`horizontal` == triangle);
-			assert (triangle.flip!`vertical` == [-î.vec, î.vec, -ĵ.vec]);
+			assert (not (square.flip!`vertical`.equal (square)));
+			assert (square.flip!`vertical`.bounding_box[]
+				.equal (square.bounding_box[])
+			);
+
+			assert (not (square.flip!`horizontal`.equal (square)));
+			assert (square.flip!`horizontal`.bounding_box[]
+				.equal (square.bounding_box[])
+			);
+
+			auto triangle = [-î.vec, ĵ.vec, î.vec];
+			assert (triangle.flip!`horizontal`.equal (triangle.retro));
+
+			assert (triangle.flip!`vertical`
+				.approx ([-î.vec, -ĵ.vec, î.vec].map!(v => v + vec(0, 2.0/3)))
+			);
 
 			import evx.units;
-			auto triangle2 = [-î.meters, î.meters, ĵ.meters];
+			auto triangle2 = [-î.meters, ĵ.meters, î.meters];
 
-			assert (triangle2.flip!`horizontal` == triangle2);
-			assert (triangle2.flip!`vertical` == [-î.meters, î.meters, -ĵ.meters]);
+			assert (triangle2.flip!`horizontal`.equal (triangle2.retro));
+			assert (triangle2.flip!`vertical`
+				.approx ([-î.meters, -ĵ.meters, î.meters].map!(v => v + vectorize (0.meters, 2.0.meters/3)))
+			);
 		}
 
 	/* translate a polygon by a vector 
@@ -687,7 +710,7 @@ public {/*polygons}*/
 			return geometry.map!(v => (v-c)*scale + c);
 		}
 
-	unittest {/*polygons with units}*/
+	unittest {/*with evx.units}*/
 		static assert (__traits(compiles, square (1.meter)));
 		static assert (__traits(compiles, circle (1.meter)));
 	}
@@ -695,11 +718,11 @@ public {/*polygons}*/
 public {/*axis-aligned bounding boxes}*/
 	/* an axis-aligned bounding box 
 	*/
-	struct Box // TODO unit-safe
+	struct Box (T)
 		{/*...}*/
 			pure nothrow @property:
 			const {/*corners}*/
-				vec opDispatch (string op)()
+				Vec opDispatch (string op)()
 					if (op.canFind (`left`, `center`, `right`))
 					{/*...}*/
 						immutable upper = τ(`upper`, `top`, `hi`);
@@ -729,7 +752,8 @@ public {/*axis-aligned bounding boxes}*/
 						else pragma (msg, `Error: Box.`~op~` failed to compile`);
 
 						auto length = 0;
-						auto requested_point = 0.vec;
+						auto requested_point = zero!Vec;
+
 						foreach (i; setIntersection (horizontal, vertical))
 							{/*...}*/
 								++length;
@@ -759,7 +783,7 @@ public {/*axis-aligned bounding boxes}*/
 						}
 				}
 				@vary {/*set}*/
-					void left (double x)
+					void left (T x)
 						in {/*...}*/
 							assert (x < right);
 						}
@@ -767,7 +791,7 @@ public {/*axis-aligned bounding boxes}*/
 							verts[0].x = x;
 							verts[3].x = x;
 						}
-					void right (double x)
+					void right (T x)
 						in {/*...}*/
 							assert (x > left);
 						}
@@ -775,7 +799,7 @@ public {/*axis-aligned bounding boxes}*/
 							verts[1].x = x;
 							verts[2].x = x;
 						}
-					void top (double y)
+					void top (T y)
 						in {/*...}*/
 							assert (y > bottom);
 						}
@@ -783,7 +807,7 @@ public {/*axis-aligned bounding boxes}*/
 							verts[2].y = y;
 							verts[3].y = y;
 						}
-					void bottom (double y)
+					void bottom (T y)
 						in {/*...}*/
 							assert (y < top);
 						}
@@ -805,23 +829,23 @@ public {/*axis-aligned bounding boxes}*/
 						}
 					auto dimensions ()
 						{/*...}*/
-							return vec(width, height);
+							return Vec(width, height);
 						}
 				}
 				@vary {/*set}*/
-					void width (double w)
+					void width (T w)
 						{/*...}*/
 							auto Δw = w - this.width;
 							this.left  = this.left  - Δw/2;
 							this.right = this.right + Δw/2;
 						}
-					void height (double h)
+					void height (T h)
 						{/*...}*/
 							auto Δh = h - this.height;
 							this.top 	= this.top 	  + Δh/2;
 							this.bottom = this.bottom - Δh/2;
 						}
-					void dimensions (vec dims)
+					void dimensions (Vec dims)
 						{/*...}*/
 							width = dims.x;
 							height = dims.y;
@@ -840,37 +864,42 @@ public {/*axis-aligned bounding boxes}*/
 					}
 			}
 
-			this (T)(T geometry)
-				if (is_geometric!T)
+			this (R)(R geometry)
+				if (is_geometric!R && is (ElementType!R == Vec))
 				in {/*...}*/
 					assert (geometry.length > 1);
 				}
 				body {/*...}*/
 					auto result = geometry.reduce!(
-						(a,b) => vec(min (a.x, b.x), min (a.y, b.y)),
-						(a,b) => vec(max (a.x, b.x), max (a.y, b.y))
+						(a,b) => Vec(min (a.x, b.x), min (a.y, b.y)),
+						(a,b) => Vec(max (a.x, b.x), max (a.y, b.y))
 					);
-					vec low_left = result[0];
-					vec hi_right = result[1];
+					Vec low_left = result[0];
+					Vec hi_right = result[1];
 
-					vec dims = (low_left - hi_right).abs;
-					verts[] = [low_left, low_left + vec(dims.x,0), hi_right, low_left + vec(0,dims.y)]; // REVIEW can i assign to a range this way? is it faster or slower than std.algo.copy?
+					Vec dims = (low_left - hi_right).abs;
+					verts[] = [low_left, low_left + Vec(dims.x, zero!T), hi_right, low_left + Vec(zero!T, dims.y)];
 				}
 
 			private:
+			private {/*defs}*/
+				alias Vec = Vec2!T;
+			}
 			private {/*range}*/
 				@property auto length () const
 					{/*...}*/
 						return verts.length;
 					}
-				private vec[4] verts;
+
+				private Vec[4] verts;
+
 				mixin ArrayInterface!(verts, length);
 			}
 		}
 		unittest {/*...}*/
 			import evx.analysis: all_approx_equal;
 
-			auto box = bounding_box (circle (1.0));
+			auto box = bounding_box (circle (1));
 
 			assert (all_approx_equal (box.upper_left, box.top_left, box.hi_left));
 			assert (all_approx_equal (box.upper_right, box.top_right, box.hi_right));
@@ -878,13 +907,13 @@ public {/*axis-aligned bounding boxes}*/
 			assert (all_approx_equal (box.lower_left, box.bottom_left, box.lo_left));
 			assert (all_approx_equal (box.lower_right, box.bottom_right, box.lo_right));
 
-			assert (box.left.approx (-0.5));
-			assert (box.right.approx (0.5));
-			assert (box.top.approx (0.5));
-			assert (box.bottom.approx (-0.5));
+			assert (box.left.approx (-1));
+			assert (box.right.approx (1));
+			assert (box.top.approx (1));
+			assert (box.bottom.approx (-1));
 
-			assert (box.width.approx (1.0));
-			assert (box.height.approx (1.0));
+			assert (box.width.approx (2));
+			assert (box.height.approx (2));
 
 			box.left = 0.0;
 			assert (box.left == 0.0);
@@ -896,7 +925,7 @@ public {/*axis-aligned bounding boxes}*/
 			assert (box.top == 100);
 
 			box.bottom = -100;
-			assert (bot.bottom == -100);
+			assert (box.bottom == -100);
 
 			assert (box.width.approx (0.1));
 			assert (box.height.approx (200));
@@ -910,9 +939,9 @@ public {/*axis-aligned bounding boxes}*/
 			assert (geometry.length > 1);
 		}
 		body {/*...}*/
-			static if (is (T == Box))
+			static if (is (T == Box!U, U))
 				return geometry;
-			else return Box (geometry);
+			else return Box!(ElementType!(ElementType!T)) (geometry);
 		}
 
 	/* enum to specify a bounding box alignment 
@@ -924,9 +953,9 @@ public {/*axis-aligned bounding boxes}*/
 			bottom_left,	bottom_center,	bottom_right
 		}
 
-	/* compute the offset from a point in one bounding box to the corresponding point in another
+	/* compute the offset from a point in one bounding box to the corresponding point in another 
 	*/
-	vec offset_to (Box from, Alignment alignment, Box to)
+	auto offset_to (T)(Box!T from, Alignment alignment, Box!T to)
 		{/*...}*/
 			const string enumerate_alignment_cases ()
 				{/*...}*/
@@ -951,22 +980,25 @@ public {/*axis-aligned bounding boxes}*/
 				}
 		}
 		unittest {/*...}*/
-			auto compute_offset (Alignment alignment)
+			auto compute_offset (Alignment alignment) pure nothrow
 				{return circle (1).bounding_box.offset_to (alignment, circle (2).bounding_box);}
+			
+			with (Alignment)
+				{/*...}*/
+					assert (compute_offset (center) 		==	0.vec);
+					assert (compute_offset (top_right) 		== 	1.vec);
+					assert (compute_offset (bottom_left) 	== -1.vec);
 
-			assert (compute_offset (center) 		==	0.vec);
-			assert (compute_offset (top_right) 		== 	1.vec);
-			assert (compute_offset (bottom_left) 	== -1.vec);
-
-			assert (compute_offset (center_right) 	== 	î.vec);
-			assert (compute_offset (top_center) 	== 	ĵ.vec);
-			assert (compute_offset (center_left) 	== -î.vec);
-			assert (compute_offset (bottom_center) 	== -ĵ.vec);
+					assert (compute_offset (center_right) 	== 	î.vec);
+					assert (compute_offset (top_center) 	== 	ĵ.vec);
+					assert (compute_offset (center_left) 	== -î.vec);
+					assert (compute_offset (bottom_center) 	== -ĵ.vec);
+				}
 		}
 
-	/* moves a bounding box so that a given alignment point on it has the given position
+	/* moves a bounding box so that a given alignment point on it has the given position 
 	*/
-	auto move_to (Box box, Alignment alignment, vec position)
+	auto move_to (T)(ref Box!T box, Alignment alignment, Vec2!T position)
 		{/*...}*/
 			immutable offset = box.offset_to (alignment, bounding_box(position.repeat (2)));
 
@@ -998,7 +1030,8 @@ public {/*axis-aligned bounding boxes}*/
 			immutable in_c = interior.center, 
 				 ex_c = exterior.center;
 			immutable s = exterior.dimensions / interior.dimensions;
-			return inner.map!(v => (v - in_c) * s + ex_c);
+
+			return inner[].map!(v => (v - in_c) * s + ex_c);
 		}
 		unittest {/*...}*/
 			auto a = square (1);
@@ -1009,4 +1042,29 @@ public {/*axis-aligned bounding boxes}*/
 			assert (c.bounding_box.width.approx (1.0));
 			assert (c.bounding_box.height.approx (0.5));
 		}
+
+	unittest {/*with evx.units}*/
+		import evx.units;
+
+		alias Pos = Vec2!Meters;
+
+		auto box = [Pos(0.meters, 1.meter), Pos(1.meter, 0.meters)].bounding_box;
+
+		assert (box.top_left == Pos(0.meters, 1.meter));
+		assert (box.bottom_right == Pos(1.meter, 0.meters));
+
+		assert (box.center == Pos(0.5.meters, 0.5.meters));
+
+		auto compute_offset (Alignment alignment) pure nothrow
+			{return circle (1.meter).bounding_box.offset_to (alignment, circle (2.meters).bounding_box);}
+
+		alias Pos = Vec2!Meters;
+		
+		with (Alignment)
+			{/*...}*/
+				assert (compute_offset (center) 		==	zero!Pos);
+				assert (compute_offset (top_right) 		== 	unity!Pos);
+				assert (compute_offset (bottom_left) 	==  -unity!Pos);
+			}
+	}
 }
