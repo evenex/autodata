@@ -1,4 +1,4 @@
-module evx.functional; // TODO this is more like evx.range... but map and reduce are sorta functional
+module evx.functional;
 
 private {/*import std}*/
 	import std.range:
@@ -419,7 +419,8 @@ public {/*reduce}*/
 		}
 }
 public {/*sequence}*/
-	/* TODO */
+	/* an infinite sequence defined by a generating function of the form f(T, size_t) 
+	*/
 	struct Sequence (alias func, T)
 		if (isNumeric!T)
 		{/*...}*/
@@ -477,7 +478,8 @@ public {/*sequence}*/
 			}
 		}
 
-	/* TODO */
+	/* a finite subsequence of some Sequence 
+	*/
 	struct FiniteSequence (alias func, T)
 		if (isNumeric!T)
 		{/*...}*/
@@ -581,7 +583,8 @@ public {/*sequence}*/
 			}
 		}
 	
-	/* TODO */
+	/* build an infinite sequence from an index-based generating function and an initial value 
+	*/
 	auto sequence (alias func, T)(T initial)
 		{/*...}*/
 			return Sequence!(func, T)(initial);

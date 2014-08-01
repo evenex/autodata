@@ -16,13 +16,15 @@ private {/*import std}*/
 }
 private {/*import evx}*/
 	import evx.utils: 
-		τ, not, vary,
+		vary,
+		τ, not,
 		adjacent_pairs;
 
 	import evx.meta:
 		ArrayInterface;
 
-	import evx.math; // REFACTOR
+	import evx.math:
+		abs, min, max;
 }
 
 pure nothrow:
@@ -96,11 +98,11 @@ public {/*vectors}*/
 					}
 				T min () 
 					{/*...}*/
-						return std.algorithm.min (x, y);
+						return .min (x, y);
 					}
 				T max () 
 					{/*...}*/
-						return std.algorithm.max (x, y);
+						return .max (x, y);
 					}
 				T front ()
 					{/*...}*/

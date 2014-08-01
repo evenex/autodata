@@ -19,6 +19,7 @@ private {/*import evx}*/
 pure nothrow:
 
 /* returns unity (1) for a given type 
+	if T cannot be constructed from 1, then unity recursively attempts to call a constructor with unity for all field types
 */
 auto unity (T)()
 	{/*...}*/
@@ -32,6 +33,7 @@ auto unity (T)()
 	}
 
 /* returns zero (0) for a given type 
+	if T cannot be constructed from 1, then zero recursively attempts to call a constructor with zero for all field types
 */
 auto zero (T)()
 	{/*...}*/
@@ -53,14 +55,14 @@ auto subtract (T)(T a, T b)
 
 /* compute the product of a sequence 
 */
-auto Π (T)(auto ref T sequence)
+auto Π (R)(R sequence)
 	{/*...}*/
 		return sequence.reduce!((Π,x) => Π*x);
 	}
 
 /* compute the sum of a sequence 
 */
-auto sum (T)(auto ref T sequence)
+auto sum (R)(R sequence)
 	{/*...}*/
 		return sequence.reduce!((Σ,x) => Σ+x);
 	}

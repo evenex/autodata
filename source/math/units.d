@@ -153,7 +153,6 @@ public {/*math}*/
 			else return std.math.abs (quantity);
 		}
 	auto approx (T, U)(const T a, const U b)
-	//	if (allSatisfy!(is_Unit, T, U) || __traits(compiles, evx.analysis.approx (a,b))) TODO
 		{/*...}*/
 			static if (is_Unit!T && is_Unit!U)
 				return evx.analysis.approx (a.scalar, b.scalar);
