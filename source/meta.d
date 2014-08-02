@@ -29,7 +29,7 @@ public {/*forwarding}*/
 				which is kind of shitty.. after all, if i can do it with a for-loop, and opApply
 				itself doesn't modify anything, then the only thing stopping me is the fact that
 				the delegate is modifying some variable in its scope. that should still be considered pure,
-				somehow
+				somehow REVIEW no longer templated... Does it still break?
 			*/
 			int opApply (scope int delegate(ref Applied) op)
 				{/*...}*/
@@ -344,7 +344,7 @@ public {/*initialization}*/
 				}
 			debug static struct Test
 				{/*...}*/
-					mixin DynamicLibrary!`gsl`;
+					mixin DynamicLibrary!`gsl`; // REVIEW if this is mixed in below the function ptrs it will work
 
 					pure nothrow:
 
@@ -402,6 +402,9 @@ public {/*type construction}*/
 					mixin CompareBy!id;
 				}
 		}
+/*TODO*/ unittest {
+// generate some ID's and make sure they are unique
+}
 
 	/* generate getters and chainable setters for a set of member declarations 
 	*/
@@ -450,6 +453,7 @@ public {/*type construction}*/
 					}
 			}
 		}
+//TODO build a builder
 
 	/* apply an array interface over a pointer and length variable 
 	*/
@@ -559,6 +563,7 @@ public {/*type construction}*/
 					}
 			}
 		}
+//TODO make an interfaced array... Malloced, static
 }
 public {/*type extraction}*/
 	/* extract an array of identifiers for members of T which match the given UDA tag 
@@ -581,6 +586,7 @@ public {/*type extraction}*/
 					return collect!(__traits (allMembers, T));
 				}
 		}
+//TODO collect udas ... Strings types whatever
 
 	/* build a TypeTuple of all nested struct and class definitions within T 
 	*/
@@ -610,6 +616,7 @@ public {/*type extraction}*/
 				staticMap!(get_substruct!T, __traits(allMembers, T))
 			);
 		}
+//TODO define some nested classes and structs and pull em out
 
 	/* build a string tuple of all assignable members of T 
 	*/
@@ -625,6 +632,7 @@ public {/*type extraction}*/
 
 			alias assignable_members = Filter!(is_assignable!T, __traits(allMembers, T));
 		}
+//TODO unittest
 }
 public {/*type processing}*/
 	/* T → T* 
@@ -649,6 +657,7 @@ public {/*type processing}*/
 				alias types_of = typeof(T);
 			else alias types_of = T;
 		}
+// TODO test
 
 	/* perform search and replace on a typename 
 	*/
@@ -665,6 +674,7 @@ public {/*type processing}*/
 
 			return left ~ repl ~ right;
 		}
+//TODO test
 }
 public {/*code generation}*/
 	/* declare variables according to format (see unittest) 
@@ -732,6 +742,7 @@ public {/*code generation}*/
 
 			return code;
 		}
+//TODO apply some nested function to a bunch of ints
 
 	/* separate Types and Names into eponymous TypeTuples 
 	*/
