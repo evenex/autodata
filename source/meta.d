@@ -1,11 +1,13 @@
 module evx.meta;
 
-import std.traits:
-	isIterable,
-	isFunctionPointer, functionLinkage;
-//import std.typetuple;
-import std.range:
-	empty;
+private {/*import std}*/
+	import std.traits:
+		isIterable,
+		isFunctionPointer, functionLinkage;
+
+	import std.range:
+		empty;
+}
 
 import evx.utils:
 	not,
@@ -333,7 +335,7 @@ public {/*initialization}*/
 
 			mixin(generate_library_loader);
 		}
-		void main () {/*...}*/
+		unittest /*TODO*/ {/*...}*/
 			static struct GSLVector
 				{/*...}*/
 					size_t size = 3;

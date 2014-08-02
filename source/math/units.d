@@ -13,7 +13,7 @@ private {/*import std}*/
 	import std.range: 
 		empty;
 	import std.algorithm:
-		sort, 
+		zip, sort,
 		countUntil;
 }
 private {/*import evx}*/
@@ -28,15 +28,10 @@ private {/*import evx}*/
 	import evx.meta:
 		CompareBy;
 
-	import evx.math; // REVIEWl
-
-	version (unittest) 
-	import evx.utils: report_test; // TODO deprecate.
+	import evx.math; // REVIEW
 }
 unittest
 	{/*demo}*/
-		mixin(report_test!`units`);
-
 		auto x = 10.meters;
 		auto y = 5.seconds;
 

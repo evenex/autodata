@@ -171,7 +171,7 @@ public {/*debug}*/
 				}
 		}
 	/* report the status of a unit test */
-	template report_test (string name)
+	deprecated template report_test (string name)
 		{/*...}*/
 			const string report_test = `
 				{

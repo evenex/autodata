@@ -356,36 +356,21 @@ public {/*reduce}*/
 						{/*...}*/
 							Accumulator accumulator;
 
-							template can_zero_init (T...)
+							template can_zero (T...)
 								if (T.length == 1)
-								{/*...}*/
-									enum can_zero_init = __traits(compiles, zero_init (accumulator));
-								}
+								{enum can_zero = __traits(compiles, zero!Accumulator);}
 
-							void zero_init (T)(ref T element)
-								{element = 0;}
-
-							void front_init (T)(ref T element)
-								{element = range.front;}
-
-							static if (functions.length == 1)
+							static if (can_zero!Accumulator)
+								accumulator = zero!Accumulator;
+							else static if (functions.length == 1)
 								{/*init value}*/
-									static if (can_zero_init!Accumulator)
-										zero_init (accumulator);
-									else {/*front_init}*/
-										front_init (accumulator);
-										range.popFront;
-									}
-								}
-							else {/*init tuple}*/
-								static if (allSatisfy!(can_zero_init, Accumulator))
-									foreach (i, f; functions)
-										zero_init (accumulator[i]);
-								else {/*front_init}*/
-									foreach (i, f; functions)
-										front_init (accumulator[i]);
+									accumulator = range.front;
 									range.popFront;
 								}
+							else {/*init tuple}*/
+								foreach (i, f; functions)
+									accumulator[i] = range.front;
+								range.popFront;
 							}
 
 							return accumulator;

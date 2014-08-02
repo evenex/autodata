@@ -1,77 +1,36 @@
 module evx.traits;
 
+private {/*import std}*/
+	import std.typetuple:
+		allSatisfy, anySatisfy;
+
+	import std.traits:
+		isSomeFunction,
+		hasMember;
+}
+private {/*import evx}*/
+	import evx.utils:
+		not;
+}
+
 public {/*type identification}*/
-//TODO rewrite away type_T bullshit
-	/* test if type has a field 
+	/* test if a template argument is a type 
 	*/
-	template has_field (T, field_T, string name) // TODO deprecate
+	template is_type (T...) if (T.length == 1)
 		{/*...}*/
-			const bool has_field ()
-				{/*...}*/
-					static if (hasMember!(T, name))
-						{/*...}*/
-							mixin(q{alias Field = typeof (T.}~name~q{);});
-							return is (field_T : Field);
-						}
-					else return false;
-				}
+			const bool is_type = is (T[0]);
 		}
 
-	/* for each of reference_T's fields, test if Type has a compatible field 
+	/* test if a template argument is an aliased symbol 
 	*/
-	template has_fields (Type, reference_T) //TODO rename ... Or deprecate
+	template is_alias (T...) if (T.length == 1)
 		{/*...}*/
-			const bool has_fields ()
-				{/*...}*/
-					foreach (member; __traits (allMembers, reference_T))
-						{/*...}*/
-							const bool is_function = isSomeFunction!(mixin(`reference_T.`~member));
-							static if (is_function)
-								continue;
-							else {/*...}*/
-								const bool has_no_type = !is (typeof (mixin(`reference_T.`~member)));
-								static if (has_no_type)
-									continue;
-								else {/*...}*/
-									alias Field = typeof (mixin(`reference_T.`~member));
-									static if (has_field!(Type, Field, member))
-										continue;
-									else return false;
-								}
-							}
-
-						}
-					return true;
-				}
+			const bool is_alias = __traits(compiles, typeof (T[0])) 
+				&& not (
+					is_numerical_param!(T[0])
+					|| is_string_param!(T[0])
+				);
 		}
-
-	/* test if a member has an attribute 
-	*/
-	template has_attribute (T, string member, Attribute...)
-		if (Attribute.length == 1)
-		{/*...}*/
-			static if (member == `this`)
-				enum has_attribute = false;
-			else const bool has_attribute ()
-				{/*...}*/
-
-					static if (is_type!(Attribute[0]))
-						alias query = Attribute[0];
-					else immutable query = Attribute[0];
-
-					foreach (attribute; mixin(q{__traits (getAttributes, T.} ~member~ q{)}))
-						{/*...}*/
-							static if (allSatisfy!(is_type, attribute, query))
-								return is (query == attribute);
-							else static if (not (anySatisfy!(is_type, attribute, query)))
-								return query == attribute;
-							else continue;
-						}
-
-					return false;
-				}
-		}
-//TODO unittest all possible attribute types
 
 	/* test if a template argument is a number 
 	*/
@@ -89,24 +48,6 @@ public {/*type identification}*/
 			else const bool is_string_param = false;
 		}
 
-	/* test if a template argument is a type 
-	*/
-	template is_type (T...) if (T.length == 1)
-		{/*...}*/
-			const bool is_type = is (T[0]); //&& not (anySatisfy!(Or!(is_alias, is_numerical_param, is_string_param), T)); REVIEW
-		}
-
-	/* test if a template argument is an aliased symbol 
-	*/
-	template is_alias (T...) if (T.length == 1)
-		{/*...}*/
-			const bool is_alias = __traits(compiles, typeof (T[0])) 
-				&& not (
-					is_numerical_param!(T[0])
-					|| is_string_param!(T[0])
-				);
-		}
-
 	/* test if a given type matches another 
 	*/
 	template is_type_of (T)
@@ -115,6 +56,85 @@ public {/*type identification}*/
 				{/*...}*/
 					enum is_type_of = is (T == U);
 				}
+		}
+
+	/* test if type has a field with a given type and name
+	*/
+	template has_field (T, Field, string name)
+		{/*...}*/
+			static if (hasMember!(T, name))
+				enum has_field = is (Field : typeof(__traits(getMember, T, name)));
+			else enum has_field = false;
+		}
+
+	/* test if a member has an attribute 
+	*/
+	template has_attribute (T, string member, Attribute...)
+		if (Attribute.length == 1)
+		{/*...}*/
+			static if (member == `this`)
+				enum has_attribute = false;
+			else const bool has_attribute ()
+				{/*...}*/
+
+					static if (is_type!(Attribute[0]))
+						alias query = Attribute[0];
+					else immutable query = Attribute[0];
+
+					foreach (attribute; __traits (getAttributes, __traits(getMember, T, member)))
+						{/*...}*/
+							static if (allSatisfy!(is_type, attribute, query))
+								return is (query == attribute);
+							else static if (not (anySatisfy!(is_type, attribute, query)))
+								return query == attribute;
+							else continue;
+						}
+
+					return false;
+				}
+		}
+		unittest {/*...}*/
+			static struct Test {@Test int x; @(`test`) int y; @(666) int z;}
+
+			static assert (has_attribute!(Test, `x`, Test));
+			static assert (has_attribute!(Test, `y`, `test`));
+			static assert (has_attribute!(Test, `z`, 666));
+		}
+
+	/* for each of T's fields, test if U has a compatible field 
+	*/
+	template is_embeddable_in (T, U)
+		{/*...}*/
+			const bool is_embeddable_in ()
+				{/*...}*/
+					foreach (member; __traits (allMembers, T))
+						{/*...}*/
+							static if (isSomeFunction!(__traits(getMember, T, member)))
+								continue;
+							else {/*...}*/
+								static if (not (is (typeof (__traits(getMember, T, member)))))
+									continue;
+								else {/*...}*/
+									alias Field = typeof (__traits(getMember, T, member));
+
+									static if (has_field!(U, Field, member))
+										continue;
+									else return false;
+								}
+							}
+
+						}
+					return true;
+				}
+		}
+		unittest {/*...}*/
+			struct T1 {int x; int y; int z;}
+			struct T2 {int x; int y; int z;}
+			struct T3 {long x; long y; long z;}
+
+			static assert (is_embeddable_in!(T1, T2));
+			static assert (is_embeddable_in!(T1, T3));
+			static assert (not (is_embeddable_in!(T3, T1)));
 		}
 }
 public {/*type capabilities}*/
