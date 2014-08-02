@@ -3,41 +3,35 @@ module evx.meta;
 private {/*import std}*/
 	import std.traits:
 		isIterable,
-		isFunctionPointer, functionLinkage;
+		isFunctionPointer, functionLinkage,
+		Unqual;
 
 	import std.range:
 		empty;
 }
+private {/*import evx}*/
+	import evx.utils:
+		not,
+		compare;
 
-import evx.utils:
-	not,
-	compare;
-
-import evx.traits:
-	is_type,
-	is_indexable, is_sliceable;
+	import evx.traits:
+		is_type, is_string_param,
+		is_indexable, is_sliceable;
+}
 
 pure nothrow:
 public {/*forwarding}*/
 	/* forward opApply (foreach) 
 	*/
-	mixin template IterateOver (alias range)
+	mixin template IterateOver (alias container)
 		{/*...}*/
 			static assert (is(typeof(this)), `mixin requires host struct`);
-			alias Applied = typeof(range[0]);
 
-			/* so these are all templated, so they don't block the compilation of pure structs
-				but will still generate a compiler error if foreach is attempted on it
-				which is kind of shitty.. after all, if i can do it with a for-loop, and opApply
-				itself doesn't modify anything, then the only thing stopping me is the fact that
-				the delegate is modifying some variable in its scope. that should still be considered pure,
-				somehow REVIEW no longer templated... Does it still break?
-			*/
-			int opApply (scope int delegate(ref Applied) op)
+			int opApply (scope int delegate(ref typeof(container[0])) op)
 				{/*...}*/
 					int result;
 
-					try foreach (ref element; range)
+					try foreach (ref element; container)
 						{/*...}*/
 							result = op (element);
 
@@ -48,11 +42,11 @@ public {/*forwarding}*/
 
 					return result;
 				}
-			int opApply (scope int delegate(size_t, ref Applied) op)
+			int opApply (scope int delegate(size_t, ref typeof(container[0])) op)
 				{/*...}*/
 					int result;
 
-					try foreach (i, ref element; range)
+					try foreach (i, ref element; container)
 						{/*...}*/
 							result = op (i, element);
 
@@ -63,13 +57,13 @@ public {/*forwarding}*/
 
 					return result;
 				}
-			int opApply (scope int delegate(const ref Applied) op) const
+			int opApply (scope int delegate(const ref typeof(container[0])) op) const
 				{/*...}*/
-					return (cast()this).opApply (cast(int delegate(ref Applied)) op);
+					return (cast()this).opApply (cast(int delegate(ref typeof(container[0]))) op);
 				}
-			int opApply (scope int delegate(const size_t, const ref Applied) op) const
+			int opApply (scope int delegate(const size_t, const ref Unqual!(typeof(container[0]))) op) const
 				{/*...}*/
-					return (cast()this).opApply (cast(int delegate(size_t, ref Applied)) op);
+					return (cast()this).opApply (cast(int delegate(size_t, ref Unqual!(typeof(container[0])))) op);
 				}
 		}
 		unittest {/*...}*/
@@ -297,45 +291,50 @@ public {/*initialization}*/
 			assert (t.m.mem[0] == 9001);
 		}
 
-	/* enable mixin load_dynamic_library!"libname"
-		which attempts to link all member extern (C) function pointers with the specified lib
-		when mixed into a member function (typically the constructor) of a type 
+	/* generate a member load_library function which automatically looks up member extern (C) function pointer identifiers in linked C libraries  
+		FUNCTION POINTERS MUST BE DECLARED ABOVE THE MIXIN (OUTSIDE BUG)
+		if the function is not found, the program will halt. otherwise, the function pointer is set to the library function
 	*/
-	mixin template DynamicLibrary (string library)
+	mixin template DynamicLibrary ()
 		{/*...}*/
-			//static assert (is(typeof(this)), `mixin requires host struct`);
+			static assert (is(typeof(this)), `mixin requires host struct`);
 
 			static private {/*code generation}*/
 				string generate_library_loader ()
 					{/*...}*/
 						string signature = q{
-							void load_} ~library~ q{ ()
+							void load_library ()
 						};
 
 						string code = q{
 							import std.c.linux.linux;
-
-							void* library = dlopen (} `"`~library~`"` q{, RTLD_NOW);
 						};
 
 						foreach (symbol; __traits (allMembers, typeof(this)))
 							static if (not (symbol.empty))
-						{} static if (0)
 								static if (isFunctionPointer!(__traits (getMember, typeof(this), symbol)))
-								// BUG HERE ^^^ once we do this, we get D linkage
 									static if (functionLinkage!(__traits (getMember, typeof(this), symbol)) == "C")
 										code ~= q{
-											} ~symbol~ q{ = cast (typeof (} ~symbol~ q{)) dlsym (library, } `"`~symbol~`"` q{);
-											assert (} ~symbol~ q{, "couldn't load symbol "} `"`~symbol~`"` q{"from library "} `"`~library~`"` q{);
+											} ~symbol~ q{ = cast (typeof (} ~symbol~ q{)) dlsym (null, } `"`~symbol~`"` q{);
+											assert (} ~symbol~ q{, "couldn't load C library function "} `"`~symbol~`"` q{);
 										};
 
-						return signature~ `{` ~code~ `}`;
+						string nothrow_block = q{
+							import std.conv: text;
+
+							try }`{`q{
+								} ~code~ q{
+							}`}`q{
+							catch (Exception ex) assert (0, ex.file ~ ex.line.text ~ ex.msg ~ ex.info.text);
+						};
+
+						return signature~ `{` ~nothrow_block~ `}`;
 					}
 			}
 
 			mixin(generate_library_loader);
 		}
-		unittest /*TODO*/ {/*...}*/
+		unittest {/*...}*/
 			static struct GSLVector
 				{/*...}*/
 					size_t size = 3;
@@ -346,18 +345,14 @@ public {/*initialization}*/
 				}
 			debug static struct Test
 				{/*...}*/
-					mixin DynamicLibrary!`gsl`; // REVIEW if this is mixed in below the function ptrs it will work
-
 					pure nothrow:
 
-					this (typeof(null))
-						{/*...}*/
-							try {}//load_gsl;
-							catch (Exception ex) assert (0, ex.msg);
-						}
+					extern (C) int function (GSLVector* a, const GSLVector* b) gsl_vector_add;
 
-					extern (C) int function (GSLVector* a, const GSLVector* b) pure nothrow gsl_vector_add;
-					pragma(msg, functionLinkage!gsl_vector_add);
+					mixin DynamicLibrary;
+
+					this (typeof(null))
+						{load_library;}
 				}
 
 			auto x = Test (null);
@@ -377,9 +372,10 @@ public {/*initialization}*/
 		}
 }
 public {/*type construction}*/
+	enum IMPURE;
 	/* generate Id, a unique (up to host type) identifier type 
 	*/
-	mixin template TypeUniqueId (uint bit = 64)
+	@IMPURE mixin template TypeUniqueId (uint bit = 64)
 		{/*...}*/
 			static assert (is(typeof(this)), `mixin requires host struct`);
 
@@ -389,6 +385,7 @@ public {/*type construction}*/
 						{/*...}*/
 							return typeof(this) (++generator);
 						}
+
 					private {/*data}*/
 						static if (bit == 64)
 							ulong id;
@@ -401,12 +398,21 @@ public {/*type construction}*/
 						else static assert (0);
 						__gshared typeof(id) generator;
 					}
-					mixin CompareBy!id;
+
+					pure nothrow mixin CompareBy!id;
 				}
 		}
-/*TODO*/ unittest {
-// generate some ID's and make sure they are unique
-}
+		unittest {
+			debug {/*TypeUniqueId.create cannot be made pure}*/
+				struct Test { mixin TypeUniqueId; }
+
+				auto x = Test.Id.create;
+
+				assert (x == x);
+				assert (x != Test.Id.create);
+				assert (Test.Id.create != Test.Id.create);
+			}
+		}
 
 	/* generate getters and chainable setters for a set of member declarations 
 	*/
@@ -424,16 +430,19 @@ public {/*type construction}*/
 					{/*...}*/
 						static string command_getter_setter (string name)()
 							{/*...}*/
+								import std.typetuple: staticIndexOf;
+
 								alias Type = Types[staticIndexOf!(name, Names)];
+
 								return q{
-									@property auto ref }~name~q{ (}~Type.stringof~q{ value)
+									@property auto ref } ~name~ q{ (} ~Type.stringof~ q{ value)
 										}`{`q{
-											_}~name~q{ = value;
+											_}~ name ~q{ = value;
 											return this;
 										}`}`q{
-									@property auto ref }~name~q{ ()
+									@property auto ref } ~name~ q{ ()
 										}`{`q{
-											return _}~name~q{;
+											return _} ~name~ q{;
 										}`}`q{
 								};
 							}
@@ -451,11 +460,34 @@ public {/*type construction}*/
 
 						template prepend_underscore (string name)
 							{enum prepend_underscore = `_`~name;}
+
 						return alignForSize!Types ([staticMap!(prepend_underscore, Names)]);
 					}
 			}
 		}
-//TODO build a builder
+		unittest {/*...}*/
+			struct Test
+				{/*...}*/
+					pure nothrow mixin Builder!(
+						int, `a`,
+						int, `b`,
+						int, `c`,
+						int, `d`,
+					);
+				}
+
+			Test x;
+
+			x	.a (1)
+				.b (2)
+				.c (3)
+				.d (4);
+
+			assert (x.a == 1);
+			assert (x.b == 2);
+			assert (x.c == 3);
+			assert (x.d == 4);
+		}
 
 	/* apply an array interface over a pointer and length variable 
 	*/
@@ -485,6 +517,27 @@ public {/*type construction}*/
 				auto opDollar () const
 					{/*...}*/
 						return length;
+					}
+			}
+			public {/*=}*/
+				auto opSliceAssign (U)(auto ref U that, size_t i, size_t j)
+					in {/*...}*/
+						import std.range: hasLength;
+
+						static if (hasLength!U)
+							assert (that.length == j-i, `length mismatch for range assignment`);
+					}
+					body {/*...}*/
+						static if (is_indexable!U)
+							foreach (k, ref x; this[i..j])
+								x = that[k];
+						else static if (isInputRange!U)
+							for (auto X = this[]; not (X.empty); X.popFront, that.popFront)
+								X.front = that.front;
+					}
+				auto opSliceAssign (U)(auto ref U that)
+					{/*...}*/
+						return this[0..$] = that;
 					}
 			}
 			public {/*range}*/
@@ -543,13 +596,15 @@ public {/*type construction}*/
 						import std.traits: PointerTarget;
 
 						static if (__traits(compiles, this[].text))
-							return this[].text;
+							try return this[].text;
+							catch (Exception) assert (0);
 						else static if (__traits(compiles, this[0].text))
 							{/*...}*/
 								string output;
 
-								foreach (element; 0..length)
+								try foreach (element; 0..length)
 									output ~= element.text ~ `, `;
+								catch (Exception) assert (0);
 
 								if (output.empty)
 									return `[]`;
@@ -565,7 +620,67 @@ public {/*type construction}*/
 					}
 			}
 		}
-//TODO make an interfaced array... Malloced, static
+		unittest {/*...}*/
+			import std.c.stdlib:
+				malloc, free;
+
+			import std.range:
+				equal;
+
+			debug struct Array
+				{/*...}*/
+					int* mem;
+					int size;
+
+					nothrow:
+
+					this (int size)
+						{/*...}*/
+							this.size = size;
+							this.mem = cast(int*)malloc (size * int.sizeof);
+						}
+
+					pure mixin ArrayInterface!(mem, size);
+				}
+			debug struct SArray
+				{/*...}*/
+					int[4] mem;
+					enum size = 4;
+					pure nothrow mixin ArrayInterface!(mem, size);
+				}
+
+			debug auto a = Array (4);
+			SArray b;
+			int[4] c;
+
+			a[0] = 1;
+			assert (a[0] == 1);
+
+			a[1..4] = [2,3,4];
+			assert (a[0..4].equal ([1,2,3,4]));
+			assert (a[0..$].equal ([1,2,3,4]));
+			assert (a[].equal ([1,2,3,4]));
+
+			b[0..$] = a[];
+			assert (b[0] == a[0]);
+			assert (b[1] == a[1]);
+			assert (b[2] == a[2]);
+			assert (b[3] == a[3]);
+			assert (b[0..1].equal (a[0..1]));
+			assert (b[1..3].equal (a[1..3]));
+			assert (b[2..$].equal (a[2..$]));
+			assert (b[].equal (a[]));
+
+			c[] = b[];
+			assert (c[0] == a[0]);
+			assert (c[1] == a[1]);
+			assert (c[2] == a[2]);
+			assert (c[3] == a[3]);
+			assert (c[0..1].equal (a[0..1]));
+			assert (c[1..3].equal (a[1..3]));
+			assert (c[2..$].equal (a[2..$]));
+			assert (c[].equal (a[]));
+		}
 }
 public {/*type extraction}*/
 	/* extract an array of identifiers for members of T which match the given UDA tag 
@@ -588,7 +703,11 @@ public {/*type extraction}*/
 					return collect!(__traits (allMembers, T));
 				}
 		}
-//TODO collect udas ... Strings types whatever
+		void main () {/*...}*/
+			enum Tag; // TODO left off here
+
+			
+		}
 
 	/* build a TypeTuple of all nested struct and class definitions within T 
 	*/
@@ -604,9 +723,9 @@ public {/*type extraction}*/
 							static if (member.empty)
 								enum get_substruct = 0;
 							
-							else static if (mixin(q{is (}~name~q{)})
+							else static if (mixin(q{is (} ~name~ q{)})
 								&& is_accessible!(T, member)
-								&& not (mixin(q{is (}~name~q{ == T)}))
+								&& not (mixin(q{is (} ~name~ q{ == T)}))
 							) mixin(q{
 								alias get_substruct = T.} ~member~ q{;
 							});

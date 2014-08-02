@@ -5,7 +5,7 @@ private {/*import std}*/
 		allSatisfy, anySatisfy;
 
 	import std.traits:
-		isSomeFunction,
+		isSomeFunction, isSomeString,
 		hasMember;
 }
 private {/*import evx}*/
@@ -94,11 +94,28 @@ public {/*type identification}*/
 				}
 		}
 		unittest {/*...}*/
-			static struct Test {@Test int x; @(`test`) int y; @(666) int z;}
+			enum Tag;
+			immutable value = 666;
+
+			static struct Test
+				{/*...}*/
+					@Test int x;
+					@(`test`) int y;
+					@Tag int z;
+
+					@(666) int u;
+					@value int v;
+				}
 
 			static assert (has_attribute!(Test, `x`, Test));
 			static assert (has_attribute!(Test, `y`, `test`));
-			static assert (has_attribute!(Test, `z`, 666));
+			static assert (has_attribute!(Test, `z`, Tag));
+
+			// value-types compare by value, not label
+			static assert (has_attribute!(Test, `u`, 666));
+			static assert (has_attribute!(Test, `u`, value));
+			static assert (has_attribute!(Test, `v`, 666));
+			static assert (has_attribute!(Test, `v`, value));
 		}
 
 	/* for each of T's fields, test if U has a compatible field 
