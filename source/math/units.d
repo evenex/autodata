@@ -8,13 +8,12 @@ private {/*import std}*/
 		staticIndexOf,
 		Filter;
 	import std.traits:
-		isIntegral,
-		isNumeric,
+		isNumeric, isIntegral,
 		ReturnType;
 	import std.range: 
 		empty;
 	import std.algorithm:
-		zip,sort, 
+		sort, 
 		countUntil;
 }
 private {/*import evx}*/
@@ -29,10 +28,10 @@ private {/*import evx}*/
 	import evx.meta:
 		CompareBy;
 
-	import evx.math;
+	import evx.math; // REVIEWl
 
 	version (unittest) 
-	import evx.utils: report_test;
+	import evx.utils: report_test; // TODO deprecate.
 }
 unittest
 	{/*demo}*/
