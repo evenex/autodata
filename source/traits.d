@@ -1,9 +1,10 @@
 module evx.traits;
 
 public {/*type identification}*/
+//TODO rewrite away type_T bullshit
 	/* test if type has a field 
 	*/
-	template has_field (T, field_T, string name)
+	template has_field (T, field_T, string name) // TODO deprecate
 		{/*...}*/
 			const bool has_field ()
 				{/*...}*/
@@ -18,7 +19,7 @@ public {/*type identification}*/
 
 	/* for each of reference_T's fields, test if Type has a compatible field 
 	*/
-	template has_fields (Type, reference_T)
+	template has_fields (Type, reference_T) //TODO rename ... Or deprecate
 		{/*...}*/
 			const bool has_fields ()
 				{/*...}*/
@@ -70,6 +71,7 @@ public {/*type identification}*/
 					return false;
 				}
 		}
+//TODO unittest all possible attribute types
 
 	/* test if a template argument is a number 
 	*/
