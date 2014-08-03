@@ -381,10 +381,9 @@ public {/*initialization}*/
 		}
 }
 public {/*type construction}*/
-	enum IMPURE;
 	/* generate Id, a unique (up to host type) identifier type 
 	*/
-	@IMPURE mixin template TypeUniqueId (uint bit = 64)
+	@imp mixin template TypeUniqueId (uint bit = 64)
 		{/*...}*/
 			static assert (is(typeof(this)), `mixin requires host struct`);
 
