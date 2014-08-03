@@ -704,9 +704,10 @@ public {/*type extraction}*/
 				}
 		}
 		void main () {/*...}*/
-			enum Tag; // TODO left off here
+			enum Tag;
+			struct Test {@Tag int x; @Tag int y; int z;}
 
-			
+			static assert (collect_members!(Test, Tag) == [`x`, `y`]);
 		}
 
 	/* build a TypeTuple of all nested struct and class definitions within T 
@@ -717,8 +718,7 @@ public {/*type extraction}*/
 				{/*...}*/
 					template get_substruct (string member)
 						{/*...}*/
-							import std.range;
-							static immutable name = q{T.} ~member;
+							immutable name = q{T.} ~member;
 
 							static if (member.empty)
 								enum get_substruct = 0;
@@ -737,7 +737,11 @@ public {/*type extraction}*/
 				staticMap!(get_substruct!T, __traits(allMembers, T))
 			);
 		}
-//TODO define some nested classes and structs and pull em out
+		unittest {/*...}*/
+			struct Test {enum a = 0; int b = 0; struct InnerStruct {} class InnerClass {}}
+
+			static assert (is (get_subtructs!T == TypeTuple!(Test.InnerStruct, Test.InnerClass)));
+		}
 
 	/* build a string tuple of all assignable members of T 
 	*/
@@ -753,7 +757,11 @@ public {/*type extraction}*/
 
 			alias assignable_members = Filter!(is_assignable!T, __traits(allMembers, T));
 		}
-//TODO unittest
+		unittest {/*...}*/
+			struct Test {int a; const int b; immutable int c; enum d = 0; int e (){return 1;}}
+
+			static assert (assignable_members!Test == TypeTuple!(`a`, `b`));
+		}
 }
 public {/*type processing}*/
 	/* T → T* 
@@ -778,11 +786,21 @@ public {/*type processing}*/
 				alias types_of = typeof(T);
 			else alias types_of = T;
 		}
-// TODO test
+		unittest {/*...}*/
+			import evx.utils: τ;
+
+			alias T1 = TypeTuple!(int, int, int);
+			alias T2 = Tuple!(short, ubyte);
+			immutable x = τ(99, 'a');
+
+			static assert (types_of!T1 == TypeTuple!(int, int, int));
+			static assert (types_of!T2 == TypeTuple!(short, ubyte));
+			static assert (types_of!x == TypeTuple!(int, char));
+		}
 
 	/* perform search and replace on a typename 
 	*/
-	string rewrite_type (Type, Find, ReplaceWith)()
+	string replace_template (Type, Find, ReplaceWith)()
 		{/*...}*/
 			import std.algorithm: findSplit;
 
@@ -795,7 +813,15 @@ public {/*type processing}*/
 
 			return left ~ repl ~ right;
 		}
-//TODO test
+		unittest {/*...}*/
+			alias T1 = TypeTuple!string;
+
+			mixin(q{
+				alias T2 = replace_template!(T1, string, int);
+			});
+
+			static assert (is (T2 == TypeTuple!int));
+		}
 }
 public {/*code generation}*/
 	/* declare variables according to format (see unittest) 
@@ -852,18 +878,34 @@ public {/*code generation}*/
 	/* apply a dot predicate to a series of identifiers 
 	*/
 	static string apply_to_each (string op, Names...)()
-		if (allSatisfy!(is_string_param, Names))
+		if (allSatisfy!(is_alias, Names))
 		{/*...}*/
 			string code;
 
 			foreach (name; Names)
 				code ~= q{
-					} ~ name ~ q{.} ~ op ~ q{;
+					} ~ __traits(identifier, name) ~ op ~ q{;
 				};
 
 			return code;
 		}
-//TODO apply some nested function to a bunch of ints
+		unittest {/*...}*/
+			int a = 0, b = 1, c = 2, d = 3;
+
+			mixin(apply_to_each!(`++`, a, b, c, d);
+
+			assert (a == 1);
+			assert (b == 2);
+			assert (c == 3);
+			assert (d == 4);
+
+			mixin(apply_to_each!(`*= -1`, a, b, c, d));
+
+			assert (a == -1);
+			assert (b == -2);
+			assert (c == -3);
+			assert (d == -4);
+		}
 
 	/* separate Types and Names into eponymous TypeTuples 
 	*/
