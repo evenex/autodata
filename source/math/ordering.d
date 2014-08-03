@@ -1,7 +1,18 @@
 module evx.ordering;
 
+private {/*import std}*/
+	import std.typetuple:
+		allSatisfy;
+
+	import std.traits:
+		isNumeric;
+}
 private {/*import evx}*/
-	import evx.functional: sequence;
+	import evx.functional:
+		sequence;
+
+	import evx.logic:
+		not;
 }
 
 pure nothrow:
@@ -13,7 +24,7 @@ immutable ℕ = 0.sequence!((n,i) => n + i);
 
 /* a < b 
 */ 
-bool less_than (T)(auto ref in T a, auto ref in T b)
+bool less_than (T)(inout T a, inout T b)
 	{/*...}*/
 		return a < b;
 	}
@@ -44,7 +55,7 @@ bool antisymmetrically_equivalent (T,U)(auto ref in T a, auto ref in U b)
 
 /* emulate opCmp 
 */
-int opCmp (T,U)(T a, U b)
+int compare (T,U)(T a, U b)
 	{/*...}*/
 		static if (__traits(compiles, a.opCmp (b)))
 			return a.opCmp (b);

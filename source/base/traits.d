@@ -6,7 +6,8 @@ private {/*import std}*/
 
 	import std.traits:
 		isSomeFunction, isSomeString,
-		hasMember;
+		hasMember,
+		ParameterTypeTuple, ReturnType;
 }
 private {/*import evx}*/
 	import evx.logic:

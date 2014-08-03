@@ -21,9 +21,6 @@ private {/*import evx}*/
 	import evx.logic:
 		not, And;
 
-	import evx.ordering:
-		opCmp;
-
 	import evx.utils:
 		imp;
 
@@ -119,10 +116,12 @@ public {/*forwarding}*/
 
 			int opCmp ()(auto ref const typeof(this) that) const
 				{/*...}*/
+					import evx.ordering: compare;
+
 					enum name = __traits(identifier, member);
 
 					mixin(q{
-						return .opCmp (this.} ~name~ q{, that.} ~name~ q{);
+						return compare (this.} ~name~ q{, that.} ~name~ q{);
 					});
 				}
 		}

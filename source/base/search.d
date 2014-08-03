@@ -1,12 +1,22 @@
-// REVIEW & REFACTOR
+module evx.search;
 
-import std.traits;
-import std.range;
+import std.traits:
+	hasMember,
+	ParameterTypeTuple;
 
-import evx.utils;
-import evx.meta;
-import evx.math;
+import std.range:
+	empty,
+	hasLength, 
+	isSorted;
 
+import evx.traits:
+	is_comparison_function,
+	is_indexable;
+
+import evx.ordering:
+	antisymmetrically_equivalent, less_than;
+
+pure nothrow:
 
 /* specify how elements are compared for equivalence
 */
@@ -71,7 +81,6 @@ template binary_search (alias compare, Equivalence equivalence = Equivalence.int
 						}
 				else bool equal_to (ref const T that)
 					{/*...}*/
-						import math : antisymmetrically_equivalent;
 						return element.antisymmetrically_equivalent!compare (that);
 					}
 
@@ -94,3 +103,29 @@ template binary_search (alias compare, Equivalence equivalence = Equivalence.int
 				else return BinarySearchResult!T (null, min);
 			}
 	}
+
+unittest {/*...}*/
+	auto x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+	auto result = x.binary_search (1);
+	assert (result.position == 0);
+	assert (result.found == &x[0]);
+
+	result = x.binary_search (8);
+	assert (result.position == 7);
+	assert (result.found == &x[7]);
+}
+unittest {/*...}*/
+	import evx.meta: CompareBy;
+
+	debug struct Test {int x; mixin CompareBy!x;}
+	auto S = [Test(1), Test(2), Test(3), Test(4), Test(5), Test(6), Test(7), Test(8), Test(9), Test(10)];
+
+	auto result = S.binary_search (Test(1));
+	assert (result.position == 0);
+	assert (result.found == &S[0]);
+
+	result = S.binary_search (Test(5));
+	assert (result.position == 4);
+	assert (result.found == &S[4]);
+}

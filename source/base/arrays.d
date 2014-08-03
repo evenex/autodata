@@ -20,7 +20,7 @@ private {/*import}*/
 import evx.utils;
 import evx.meta;
 import evx.math;
-import search;
+import evx.search;
 
 import std.range;
 
