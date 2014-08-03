@@ -20,10 +20,11 @@ private {/*import std}*/
 private {/*import evx}*/
 	import evx.utils:
 		not, And,
-		compare;
+		compare,
+		imp;
 
 	import evx.traits:
-		is_type, is_string_param,
+		is_type, is_string_param, is_alias,
 		is_indexable, is_sliceable,
 		has_attribute;
 }
@@ -792,26 +793,6 @@ public {/*type processing}*/
 			alias array_of = T[];
 		}
 
-	/* convert any kind of tuple to its corresponding TypeTuple 
-	*/
-	template types_of (T...)
-		{/*...}*/
-			static if (__traits(compiles, typeof(T)))
-				alias types_of = typeof(T);
-			else alias types_of = T;
-		}
-		void main () {/*...}*/
-			import evx.utils: τ;
-
-			alias T1 = TypeTuple!(int, int, int);
-			alias T2 = Tuple!(short, ubyte);
-			immutable x = τ(99, 'a');
-
-			static assert (is (types_of!T1 == TypeTuple!(int, int, int)));
-			static assert (is (types_of!T2 == TypeTuple!(short, ubyte)));
-			static assert (is (types_of!x == TypeTuple!(int, char)));
-		}
-
 	/* perform search and replace on a typename 
 	*/
 	string replace_template (Type, Find, ReplaceWith)()
@@ -828,19 +809,19 @@ public {/*type processing}*/
 			return left ~ repl ~ right;
 		}
 		unittest {/*...}*/
-			alias T1 = TypeTuple!string;
+			alias T1 = Tuple!string;
 
 			mixin(q{
-				alias T2 = replace_template!(T1, string, int);
+				alias T2 = } ~replace_template!(T1, string, int)~ q{;
 			});
 
-			static assert (is (T2 == TypeTuple!int));
+			static assert (is (T2 == Tuple!int));
 		}
 }
 public {/*code generation}*/
 	/* declare variables according to format (see unittest) 
 	*/
-	static string autodeclare (Params...)() 
+	string autodeclare (Params...)() 
 		if (Params.length > 0)
 		{/*...}*/
 			alias Types = Filter!(is_type, Params);
@@ -891,14 +872,14 @@ public {/*code generation}*/
 
 	/* apply a dot predicate to a series of identifiers 
 	*/
-	static string apply_to_each (string op, Names...)()
-		if (allSatisfy!(is_alias, Names))
+	string apply_to_each (string op, Names...)()
+		if (allSatisfy!(is_string_param, Names))
 		{/*...}*/
 			string code;
 
 			foreach (name; Names)
 				code ~= q{
-					} ~ __traits(identifier, name) ~ op ~ q{;
+					} ~name~ op ~ q{;
 				};
 
 			return code;
@@ -906,14 +887,14 @@ public {/*code generation}*/
 		unittest {/*...}*/
 			int a = 0, b = 1, c = 2, d = 3;
 
-			mixin(apply_to_each!(`++`, a, b, c, d));
+			mixin(apply_to_each!(`++`, `a`, `b`, `c`, `d`));
 
 			assert (a == 1);
 			assert (b == 2);
 			assert (c == 3);
 			assert (d == 4);
 
-			mixin(apply_to_each!(`*= -1`, a, b, c, d));
+			mixin(apply_to_each!(`*= -1`, `a`, `b`, `c`, `d`));
 
 			assert (a == -1);
 			assert (b == -2);

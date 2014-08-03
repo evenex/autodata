@@ -1,20 +1,42 @@
 module evx.utils;
 
 // REVIEW & REFACTOR
-//import std.traits;
-//import std.typecons;
-//import std.typetuple;
-//import std.container;
-//import std.algorithm;
-//import std.math;
-//import std.range;
-//import std.datetime;
-//import std.string;
-//import std.ascii;
-//import std.concurrency;
-//import std.conv;
+private {/*import std}*/
+	//import std.traits;
+
+	import std.typecons:
+		Tuple, tuple;
+
+	import std.typetuple:
+		templateAnd, templateOr, templateNot;
+
+	//import std.container;
+	//import std.algorithm;
+	//import std.math;
+	import std.range:
+		repeat;
+
+	import std.datetime:
+		Clock, SysTime;
+
+	import std.stdio:
+		stderr, writeln;
+
+	//import std.string;
+	//import std.ascii;
+	import std.concurrency:
+		Tid, thisTid;
+
+	import std.conv:
+		text;
+}
+
+pure nothrow:
+
 //import resource.arrays: is_dynamic_array;
 
+import evx.math:
+	Interval;
 //import evx.meta;
 //import evx.functional: zip, map;
 
@@ -30,7 +52,7 @@ public {/*misc}*/
 		
 	const bool not (alias predicate, Args...)(const Args args)
 		if (isSomeFunction!predicate)
-		{/*...}*/;9
+		{/*...}*/
 			return not (predicate (args));
 		}
 
@@ -155,7 +177,7 @@ debug {/*}*/
 	/* suppress stderr while in scope */
 	template error_suppression (int line = __LINE__)
 		{/*...}*/
-			const string error_suppression ()
+			debug auto error_suppression ()
 				{/*...}*/
 					const string ID = __LINE__.text;
 		
@@ -177,6 +199,7 @@ debug {/*}*/
 						}`}`q{
 					};
 				}
+			else enum error_suppression = ``;
 		}
 		
 	/* write information about the thread environment to the output */
@@ -184,6 +207,8 @@ debug {/*}*/
 	struct Profiler
 		{/*...}*/
 			enum ExitStatus {success, failure}
+
+			pure nothrow:
 			
 			public:
 			public {/*interface}*/
@@ -194,11 +219,12 @@ debug {/*}*/
 					
 				void end (ExitStatus exit_status)
 					{/*...}*/
-						debug (profiler)
+						debug (profiler) try
 							{/*...}*/
 								this.exit_time = Clock.currTime;
 								this.exit_status = exit_status;
 							}
+						catch (Exception) assert (0);
 					}
 					
 				void checkpoint (T...)(T marks)
@@ -217,14 +243,15 @@ debug {/*}*/
 			public {/*~}*/
 				~this ()
 					{/*...}*/
-						debug (profiler) // REVIEW do we need debug
+						debug (profiler) try
 							{/*...}*/
-								import std.stdio;
 								stderr.writeln (profiler_exit_indent,
 									exit_status == ExitStatus.failure? `FAILED!`:``, 
 									`ex(` ~tid_string~`): `, func_name, ` after `, exit_time-entry_time);
+
 								stderr.flush;
 							}
+						catch (Exception) assert (0);
 					}
 			}
 			private:
@@ -238,7 +265,7 @@ debug {/*}*/
 			private {/*☀}*/
 				this (string func_name)
 					{/*...}*/
-						debug (profiler)
+						debug (profiler) try
 							{/*...}*/
 								import std.stdio;
 								this.func_name = func_name;
@@ -246,6 +273,7 @@ debug {/*}*/
 								this.last_check = entry_time;
 								stderr.writeln (profiler_enter_indent, `in(` ~tid_string~ `): `, func_name, ` at `, entry_time.toISOExtString["2014-05-15".length..$]);
 							}
+						catch (Exception) assert (0);
 					}
 				@disable this ();
 			}
@@ -259,13 +287,13 @@ debug {/*}*/
 			};
 		}
 	public {/*formatting}*/
-		string profiler_enter_indent ()
+		auto profiler_enter_indent ()
 			{/*...}*/
-				return '\t'.repeat (indent++).array;
+				debug return '\t'.repeat (indent++);
 			}
-		string profiler_exit_indent ()
+		auto profiler_exit_indent ()
 			{/*...}*/
-				return '\t'.repeat (--indent).array;
+				debug return '\t'.repeat (--indent);
 			}
 	}
 	private {/*formatting}*/
@@ -307,16 +335,19 @@ public {/*containers}*/
 }
 public {/*multithreading}*/
 	/* get the thread id of the current thread as a string truncated to some digits */
-	const string tid_string (bool owner = false, uint digits = 4)(Tid to_translate = Tid.init) // REVIEW
+	auto tid_string (bool owner = false, uint digits = 4)(Tid to_translate = Tid.init) // REVIEW
 		{/*...}*/
-			static if (owner)
-				auto tid = ownerTid;
-			else auto tid = thisTid;
-			
-			if (to_translate != Tid.init)
-				tid = to_translate;
+			debug try {/*...}*/
+				static if (owner)
+					auto tid = ownerTid;
+				else auto tid = thisTid;
 				
-			return (*cast(ulong*) &tid).text [$-digits..$];
+				if (to_translate != Tid.init)
+					tid = to_translate;
+					
+				return (*cast(ulong*) &tid).text [$-digits..$];
+			}
+			catch (Exception) assert (0);
 		}
 }
 public {/*tuple}*/

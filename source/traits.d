@@ -18,25 +18,38 @@ public {/*type identification}*/
 	*/
 	template is_type (T...) if (T.length == 1)
 		{/*...}*/
-			const bool is_type = is (T[0]);
+			enum is_type = is (T[0]);
 		}
 
 	/* test if a template argument is an aliased symbol 
 	*/
 	template is_alias (T...) if (T.length == 1)
 		{/*...}*/
-			const bool is_alias = __traits(compiles, typeof (T[0])) 
-				&& not (
-					is_numerical_param!(T[0])
-					|| is_string_param!(T[0])
+			enum is_alias = __traits(compiles, typeof (T[0])) 
+				&& (
+					not (
+						is_numerical_param!(T[0])
+						|| is_string_param!(T[0])
+					) || __traits(compiles, &T[0])
 				);
+		}
+		unittest {/*...}*/
+			static assert (not (is_alias!int));
+			static assert (not (is_alias!`hello`));
+			static assert (not (is_alias!666));
+
+			int x;
+			static assert (is_alias!x);
+
+			int y () {return 1;}
+			static assert (is_alias!y);
 		}
 
 	/* test if a template argument is a number 
 	*/
 	template is_numerical_param (T...) if (T.length == 1)
 		{/*...}*/
-			const bool is_numerical_param = __traits(compiles, T[0] == 0);
+			enum is_numerical_param = __traits(compiles, T[0] == 0);
 		}
 
 	/* test if a template argument is a string 
@@ -44,8 +57,8 @@ public {/*type identification}*/
 	template is_string_param (T...) if (T.length == 1)
 		{/*...}*/
 			static if (__traits(compiles, typeof(T[0])))
-					const bool is_string_param = isSomeString!(typeof(T[0]));
-			else const bool is_string_param = false;
+					enum is_string_param = isSomeString!(typeof(T[0]));
+			else enum is_string_param = false;
 		}
 
 	/* test if a given type matches another 
