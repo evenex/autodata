@@ -17,14 +17,16 @@ private {/*import std}*/
 		countUntil;
 }
 private {/*import evx}*/
-	import evx.utils: 
-		not, 
-		compare,
+	import evx.logic: 
+		not,
 		Or;
+
 	import evx.arithmetic:
 		add, subtract;
+
 	import evx.traits: 
 		is_numerical_param;
+
 	import evx.meta:
 		CompareBy;
 

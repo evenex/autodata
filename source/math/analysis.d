@@ -16,7 +16,7 @@ private {/*import std}*/
 		ElementType;
 }
 private {/*import evx}*/
-	import evx.utils:
+	import evx.logic:
 		not, And;
 
 	import evx.meta:

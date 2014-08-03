@@ -21,11 +21,13 @@ private {/*import std}*/
 		isNumeric, isFloatingPoint, isIntegral, isUnsigned;
 }
 private {/*import evx}*/
-	import evx.utils:
-		not,
+	import evx.logic:
+		not;
+
+	import evx.range:
 		slice_within_bounds;
 
-	import evx.meta:
+	import evx.traits:
 		is_indexable, is_sliceable;
 }
 

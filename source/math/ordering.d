@@ -41,3 +41,14 @@ bool antisymmetrically_equivalent (T,U)(auto ref in T a, auto ref in U b)
 	{/*...}*/
 		return not (a < b || b < a);
 	}
+
+/* emulate opCmp 
+*/
+int opCmp (T,U)(T a, U b)
+	{/*...}*/
+		static if (__traits(compiles, a.opCmp (b)))
+			return a.opCmp (b);
+		else static if (allSatisfy!(isNumeric, T, U))
+			return cast(int)(a - b);
+		else static assert (0, `can't compare ` ~T.stringof~ ` with ` ~U.stringof);
+	}

@@ -16,8 +16,12 @@ private {/*import std}*/
 }
 private {/*import evx}*/
 	import evx.utils: 
-		vary,
-		τ, not,
+		τ, vary;
+
+	import evx.logic: 
+		not;
+
+	import evx.range:
 		adjacent_pairs;
 
 	import evx.meta:
