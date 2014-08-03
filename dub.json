@@ -9,7 +9,7 @@
 		"derelict-ft"  	: "~master",
 		"dchip"  		: "~master",
 	},
-	"libs": ["ftgl", "freetype_gl", "scid-dmd"],
+	"libs": ["ftgl", "freetype_gl", "gsl", "gslcblas"],
 	"importPaths": [],
 	"targetType": "executable",
 	"buildRequirements": ["disallowDeprecations"],

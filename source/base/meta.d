@@ -598,7 +598,7 @@ public {/*type construction}*/
 					}
 			}
 			public {/*iteration}*/
-				static if (is(IterateOver)) // REVIEW does this work?
+				static if (is(IterateOver))
 					mixin IterateOver!opSlice;
 			}
 			const {/*text}*/
@@ -693,6 +693,10 @@ public {/*type construction}*/
 			assert (c[1..3].equal (a[1..3]));
 			assert (c[2..$].equal (a[2..$]));
 			assert (c[].equal (a[]));
+
+			// since IterateOver is defined, the ArrayInterface is equipped with iteration
+			foreach (x; a) {}
+			foreach (x; b) {}
 		}
 }
 public {/*type extraction}*/

@@ -72,18 +72,14 @@ public debug {/*}*/
 			else string error_suppression = ``;
 		}
 
-	/* get the thread id of the current thread as a string truncated to some digits */
-	auto tid_string (bool owner = false, uint digits = 4)(Tid to_translate = Tid.init) // REVIEW
+	/* get the thread id of the current thread as a string truncated to some digits 
+	*/
+	auto tid_string (uint digits = 4)()
 		{/*...}*/
 			debug try {/*...}*/
-				static if (owner)
-					auto tid = ownerTid;
-				else auto tid = thisTid;
+				auto tid = thisTid;
 				
-				if (to_translate != Tid.init)
-					tid = to_translate;
-					
-				return (*cast(ulong*) &tid).text [$-digits..$];
+				return (*cast(ulong*) &tid).text[$-digits..$];
 			}
 			catch (Exception) assert (0);
 		}

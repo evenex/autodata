@@ -3,18 +3,25 @@ module evx.units;
 private {/*import std}*/
 	import std.conv:
 		to, text;
+
 	import std.typetuple:
 		allSatisfy,
 		staticIndexOf,
 		Filter;
+
 	import std.traits:
 		isNumeric, isIntegral,
 		ReturnType;
+
 	import std.range: 
 		empty;
+
 	import std.algorithm:
 		zip, sort,
 		countUntil;
+
+	import std.math: 
+		std_abs = abs;
 }
 private {/*import evx}*/
 	import evx.logic: 
@@ -29,8 +36,6 @@ private {/*import evx}*/
 
 	import evx.meta:
 		CompareBy;
-
-	import evx.math; // REVIEW
 }
 unittest
 	{/*demo}*/
@@ -146,7 +151,7 @@ public {/*math}*/
 		{/*...}*/
 			static if (is_Unit!T)
 				return quantity.abs;
-			else return std.math.abs (quantity);
+			else return std_abs (quantity);
 		}
 	auto approx (T, U)(const T a, const U b)
 		{/*...}*/

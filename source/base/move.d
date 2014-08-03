@@ -12,6 +12,8 @@ private {/*import evx}*/
 		is_dynamic_array;
 }
 
+pure nothrow:
+
 /* move all elements in a range (starting at index) up by one position 
  leaving an empty space at the indexed position */
 void shift_up_from (R)(ref R range, size_t index)

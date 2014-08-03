@@ -74,15 +74,17 @@ template binary_search (alias compare, Equivalence equivalence = Equivalence.int
 				long min = 0;
 				long max = range.length;
 
-				static if (hasMember!(T, `opEquals`) && equivalence != Equivalence.antisymmetric) // REVIEW hasMember => traits(compiles, T.init == T.init) ?
+				static if (equivalence is Equivalence.intrinsic)
 					bool equal_to (ref const T that)
 						{/*...}*/
 							 return element == that;
 						}
-				else bool equal_to (ref const T that)
-					{/*...}*/
-						return element.antisymmetrically_equivalent!compare (that);
-					}
+				else static if (equivalence is Equivalence.antisymmetric)
+					bool equal_to (ref const T that)
+						{/*...}*/
+							return element.antisymmetrically_equivalent!compare (that);
+						}
+				else static assert (0);
 
 				while (min < max)
 					{/*...}*/

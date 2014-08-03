@@ -46,7 +46,7 @@ struct Contigious (R)
 		}
 		private:
 		private {/*data}*/
-			size_t i, j; // TODO private
+			size_t i, j;
 			R ranges;
 		}
 	}
