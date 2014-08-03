@@ -2,21 +2,30 @@ module evx.meta;
 
 private {/*import std}*/
 	import std.traits:
-		isIterable,
+		isIterable, isAssignable, isMutable,
 		isFunctionPointer, functionLinkage,
 		Unqual;
+
+	import std.typetuple:
+		allSatisfy,
+		TypeTuple,
+		Filter;
+
+	import std.typecons:
+		Tuple;
 
 	import std.range:
 		empty;
 }
 private {/*import evx}*/
 	import evx.utils:
-		not,
+		not, And,
 		compare;
 
 	import evx.traits:
 		is_type, is_string_param,
-		is_indexable, is_sliceable;
+		is_indexable, is_sliceable,
+		has_attribute;
 }
 
 pure nothrow:
@@ -703,7 +712,7 @@ public {/*type extraction}*/
 					return collect!(__traits (allMembers, T));
 				}
 		}
-		void main () {/*...}*/
+		unittest {/*...}*/
 			enum Tag;
 			struct Test {@Tag int x; @Tag int y; int z;}
 
@@ -751,7 +760,13 @@ public {/*type extraction}*/
 				{/*...}*/
 					template is_assignable (string member)
 						{/*...}*/
-							enum is_assignable = isAssignable!(typeof(__traits(getMember, T, member)));
+							enum is_assignable = __traits(compiles,
+								(T type) {/*...}*/
+									mixin(q{
+										type.} ~member~ q{ = typeof(type.} ~member~ q{).init;
+									});
+								}
+							);
 						}
 				}
 
@@ -760,7 +775,7 @@ public {/*type extraction}*/
 		unittest {/*...}*/
 			struct Test {int a; const int b; immutable int c; enum d = 0; int e (){return 1;}}
 
-			static assert (assignable_members!Test == TypeTuple!(`a`, `b`));
+			static assert (assignable_members!Test == TypeTuple!`a`);
 		}
 }
 public {/*type processing}*/
@@ -786,16 +801,16 @@ public {/*type processing}*/
 				alias types_of = typeof(T);
 			else alias types_of = T;
 		}
-		unittest {/*...}*/
+		void main () {/*...}*/
 			import evx.utils: τ;
 
 			alias T1 = TypeTuple!(int, int, int);
 			alias T2 = Tuple!(short, ubyte);
 			immutable x = τ(99, 'a');
 
-			static assert (types_of!T1 == TypeTuple!(int, int, int));
-			static assert (types_of!T2 == TypeTuple!(short, ubyte));
-			static assert (types_of!x == TypeTuple!(int, char));
+			static assert (is (types_of!T1 == TypeTuple!(int, int, int)));
+			static assert (is (types_of!T2 == TypeTuple!(short, ubyte)));
+			static assert (is (types_of!x == TypeTuple!(int, char)));
 		}
 
 	/* perform search and replace on a typename 
@@ -892,7 +907,7 @@ public {/*code generation}*/
 		unittest {/*...}*/
 			int a = 0, b = 1, c = 2, d = 3;
 
-			mixin(apply_to_each!(`++`, a, b, c, d);
+			mixin(apply_to_each!(`++`, a, b, c, d));
 
 			assert (a == 1);
 			assert (b == 2);

@@ -709,7 +709,7 @@ public {/*polygons}*/
 		if (is_geometric!T1 && __traits(compiles, geometry.front * scale))
 		{/*...}*/
 			auto c = geometry.mean;
-			return geometry.map!(v => (v-c)*scale + c);
+			return geometry.map!(v => (v-c) * scale + c);
 		}
 
 	unittest {/*with evx.units}*/
