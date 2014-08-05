@@ -385,7 +385,7 @@ public {/*initialization}*/
 			assert (v == [5,7,9]);
 		}
 }
-public {/*type construction}*/
+public {/*construction}*/
 	/* generate Id, a unique (up to host type) identifier type 
 	*/
 	@imp mixin template TypeUniqueId (uint bit = 64)
@@ -433,39 +433,77 @@ public {/*type construction}*/
 		{/*...}*/
 			static assert (is(typeof(this)), `mixin requires host struct`);
 
-			mixin DeclarationSplitter!Args;
+			private {/*import std}*/
+				import std.traits:
+					isDelegate, isFunctionPointer;
+			}
+			private {/*import evx}*/
+				import evx.traits:
+					is_type, is_string_param;
+				import evx.meta:
+					ParameterSplitter;
+			}
 
-			mixin(command_property_declaration);
-			mixin(command_data_declaration);
+			mixin ParameterSplitter!(
+				q{Types}, is_type, 
+				q{Names}, is_string_param, 
+				Args
+			);
 
-			private {/*code generation}*/
-				static string command_property_declaration ()
+			mixin(builder_property_declaration);
+			mixin(builder_data_declaration);
+
+			static {/*code generation}*/
+				string builder_property_declaration ()
 					{/*...}*/
-						static string command_getter_setter (string name)()
+						static string builder_getter_setter (string name)()
 							{/*...}*/
 								import std.typetuple: staticIndexOf;
 
 								alias Type = Types[staticIndexOf!(name, Names)];
 
-								return q{
+								string setter = q{
 									@property auto ref } ~name~ q{ (} ~Type.stringof~ q{ value)
 										}`{`q{
 											_}~ name ~q{ = value;
 											return this;
 										}`}`q{
-									@property auto ref } ~name~ q{ ()
+								};
+
+								static if (not (isDelegate!Type || isFunctionPointer!Type))
+									setter ~= q{
+										auto ref } ~name~ q{ (Args...)(Args args)
+											}`{`q{
+												_}~ name ~q{ = } ~Type.stringof~ q{ (args);
+												return this;
+											}`}`q{
+									};
+
+								static if (isDelegate!Type || isFunctionPointer!Type)
+									string getter = q{
+										@property } ~name~ q{ ()
+											}`{`q{
+												return _} ~name~ q{ ();
+											}`}`q{
+									};
+								else string getter = q{
+									@property } ~name~ q{ ()
 										}`{`q{
 											return _} ~name~ q{;
 										}`}`q{
 								};
+
+								return getter ~ setter;
 							}
 
 						string code;
+
 						foreach (name; Names)
-							code ~= command_getter_setter!name;
+							code ~= builder_getter_setter!name;
+
 						return code;
 					}
-				static string command_data_declaration ()
+				string builder_data_declaration ()
 					{/*...}*/
 						import std.typecons:
 							staticMap,
@@ -500,6 +538,8 @@ public {/*type construction}*/
 			assert (x.b == 2);
 			assert (x.c == 3);
 			assert (x.d == 4);
+
+			// TODO unittest builder for correct function ptr & delegate behavior
 		}
 
 	/* apply an array interface over a pointer and length variable 
@@ -699,7 +739,7 @@ public {/*type construction}*/
 			foreach (x; b) {}
 		}
 }
-public {/*type extraction}*/
+public {/*extraction}*/
 	/* extract an array of identifiers for members of T which match the given UDA tag 
 	*/
 	template collect_members (T, alias attribute)
@@ -786,7 +826,15 @@ public {/*type extraction}*/
 			static assert (assignable_members!Test == TypeTuple!`a`);
 		}
 }
-public {/*type processing}*/
+public {/*processing}*/
+	template type_of (T...)
+		if (T.length == 1)
+		{/*...}*/
+			static if (is(T[0]))
+				alias type_of = T[0];
+			else alias type_of = typeof(T[0]);
+		}
+
 	/* T → T* 
 	*/
 	template pointer_to (T)
@@ -878,7 +926,7 @@ public {/*code generation}*/
 			static assert (autodeclare!(int, byte, char, `:: `)	== q{int _0:: byte _1:: char _2:: });
 		}
 
-	/* apply a dot predicate to a series of identifiers 
+	/* apply a suffix operation to a series of identifiers 
 	*/
 	string apply_to_each (string op, Names...)()
 		if (allSatisfy!(is_string_param, Names))
@@ -912,13 +960,72 @@ public {/*code generation}*/
 
 	/* separate Types and Names into eponymous TypeTuples 
 	*/
-	mixin template DeclarationSplitter (Args...)
+	mixin template ParameterSplitter (string first, alias first_pred, string second, alias second_pred, Args...)
 		{/*...}*/
 			private import std.typetuple: Filter;
 
-			alias Types = Filter!(is_type, Args);
-			alias Names = Filter!(is_string_param, Args);
-			static assert (Types.length == Names.length, `type/name mismatch`);
-			static assert (Types.length + Names.length == Args.length, `extraneous template parameters`);
+			mixin(q{
+				alias } ~first~ q{ = Filter!(first_pred, Args);
+				alias } ~second~ q{ = Filter!(second_pred, Args);
+				static assert (} ~first~ q{.length == } ~second~ q{.length, }`"` ~first~`/`~second~ ` length mismatch"`q{);
+				static assert (} ~first~ q{.length + } ~second~ q{.length == Args.length, `extraneous template parameters`);
+			});
+		}
+
+	/* group a set of policy names with their default values 
+	*/
+	struct Policies (NamesAndDefaults...)
+		{/*...}*/
+			mixin ParameterSplitter!(
+				q{PolicyNames}, is_string_param, 
+				q{PolicyDefaults}, Not!(Or!(is_type, is_string_param)),
+				NamesAndDefaults
+			);
+
+			alias PolicyTypes = staticMap!(type_of, PolicyDefaults);
+		}
+
+	/* declare a set of policies using a list of assignments, using defaults wherever a policy is not assigned 
+		this template allows the setting and overriding of default policies, based on policy type, without regard to template parameter order
+	*/
+	mixin template PolicyAssignment (Policies, AssignedPolicies...)
+		{/*...}*/
+			static assert (is(typeof(this)), `mixin requires host struct`);
+
+			static string generate_policy_assignments ()
+				{/*...}*/
+					alias AssignedTypes = staticMap!(type_of, AssignedPolicies);
+
+					string code;
+
+					with (Policies) foreach (i,_; PolicyNames)
+						{/*...}*/
+							static if (staticIndexOf!(PolicyTypes[i], AssignedTypes) >= 0)
+								{/*...}*/
+									immutable j  = staticIndexOf!(PolicyTypes, AssignedTypes);
+
+									code ~= q{
+										alias } ~PolicyNames[i]~ q{ = } ~PolicyTypes[i].stringof~`.`~AssignedPolicies[j].text~ q{;
+									};
+								}
+							else code ~= q{
+								alias } ~PolicyNames[i]~ q{ = } ~PolicyTypes[i].stringof~`.`~PolicyDefaults[i].text~ q{;
+							};
+						}
+
+					return code;
+				}
+
+			mixin(generate_policy_assignments);
+		}
+		unittest {/*...}*/
+			enum Policy {A, B}
+
+			static struct Test (Args...)
+				{mixin PolicyAssignment!(Policies!(`policy`, Policy.A), Args);}
+
+			static assert (Test!().policy == Policy.A);
+			static assert (Test!(Policy.A).policy == Policy.A);
+			static assert (Test!(Policy.B).policy == Policy.B);
 		}
 }

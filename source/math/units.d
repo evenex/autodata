@@ -65,104 +65,7 @@ pure nothrow:
 alias Scalar = double;
 
 public:
-public {/*mass}*/
-	alias Kilograms = ReturnType!kilogram;
-	alias Grams = ReturnType!gram;
-	alias kilograms = kilogram;
-	alias grams = gram;
-
-	auto kilogram (Scalar scalar = 1)
-		{/*...}*/
-			return Unit!(Mass, 1)(scalar);
-		}
-	auto gram (Scalar scalar = 1)
-		{/*...}*/
-			return (scalar/1000).kilogram;
-		}
-}
-public {/*space}*/
-	alias Meters = ReturnType!meter;
-	alias Kilometers = ReturnType!kilometer;
-	alias meters = meter;
-	alias kilometers = kilometer;
-
-	auto meter (Scalar scalar = 1)
-		{/*...}*/
-			return Unit!(Space, 1)(scalar);
-		}
-	auto kilometer (Scalar scalar = 1)
-		{/*...}*/
-			return scalar * 1000.meter;
-		}
-	auto square_meters (Scalar scalar = 1)
-		{/*...}*/
-			return scalar * meter*meters;
-		}
-}
-public {/*time}*/
-	alias Seconds = ReturnType!second;
-	alias Minutes = ReturnType!minute;
-	alias Hours = ReturnType!hour;
-	alias seconds = second;
-	alias minutes = minute;
-	alias hours = hour;
-
-	auto second (Scalar scalar = 1)
-		{/*...}*/
-			return Unit!(Time, 1)(scalar);
-		}
-	auto minute (Scalar scalar = 1)
-		{/*...}*/
-			return Unit!(Time, 1)(scalar/60.0);
-		}
-	auto hour (Scalar scalar = 1)
-		{/*...}*/
-			return Unit!(Time, 1)(scalar/3600.0);
-		}
-}
-public {/*force}*/
-	alias Newtons = ReturnType!newton;
-	alias newtons = newton;
-
-	auto newton (Scalar scalar = 1)
-		{/*...}*/
-			return scalar * kilogram*meter/second/second;
-		}
-}
-public {/*frequency}*/
-	alias Hertz = ReturnType!hertz;
-
-	auto hertz (Scalar scalar = 1)
-		{/*...}*/
-			return scalar * 1.0/second;
-		}
-}
-
-public:
-public {/*traits}*/
-	template is_Unit (T...)
-		if (T.length == 1)
-		{/*...}*/
-			enum is_Unit = __traits(compiles, T[0].UnitTrait);
-		}
-}
-public {/*math}*/
-	auto abs (T)(const T quantity)
-		{/*...}*/
-			static if (is_Unit!T)
-				return quantity.abs;
-			else return std_abs (quantity);
-		}
-	auto approx (T, U)(const T a, const U b)
-		{/*...}*/
-			static if (is_Unit!T && is_Unit!U)
-				return evx.analysis.approx (a.scalar, b.scalar);
-			else return evx.analysis.approx (a, b);
-		}
-}
- 
-private:
-private {/*unit}*/
+public {/*unit}*/
 	struct Unit (T...)
 		if (allSatisfy!(Or!(is_Dimension, is_numerical_param), T))
 		{/*...}*/
@@ -379,10 +282,9 @@ private {/*unit}*/
 				{/*...}*/
 					scalar = value;
 				}
-
 		}
 }
-private {/*base dimensions}*/
+public {/*base dimensions}*/
 	struct Mass
 		{/*...}*/
 			enum DimensionTrait;
@@ -396,6 +298,127 @@ private {/*base dimensions}*/
 			enum DimensionTrait;
 		}
 }
+
+public:
+public {/*mass}*/
+	alias Kilograms = ReturnType!kilogram;
+	alias Grams = ReturnType!gram;
+	alias kilograms = kilogram;
+	alias grams = gram;
+
+	auto kilogram (Scalar scalar = 1)
+		{/*...}*/
+			return Unit!(Mass, 1)(scalar);
+		}
+	auto gram (Scalar scalar = 1)
+		{/*...}*/
+			return (scalar/1000).kilogram;
+		}
+}
+public {/*space}*/
+	alias Meters = ReturnType!meter;
+	alias Kilometers = ReturnType!kilometer;
+	alias Millimeters = ReturnType!millimeter;
+
+	alias meters = meter;
+	alias kilometers = kilometer;
+	alias millimeters = millimeter;
+
+	auto meter (Scalar scalar = 1)
+		{/*...}*/
+			return Unit!(Space, 1)(scalar);
+		}
+	auto kilometer (Scalar scalar = 1)
+		{/*...}*/
+			return scalar * 1000.meter;
+		}
+	auto millimeter (Scalar scalar = 1)
+		{/*...}*/
+			return scalar * 0.001.meter;
+		}
+
+	auto square_meters (Scalar scalar = 1)
+		{/*...}*/
+			return scalar * meter*meters;
+		}
+}
+public {/*time}*/
+	alias Seconds = ReturnType!second;
+	alias Minutes = ReturnType!minute;
+	alias Hours = ReturnType!hour;
+	alias seconds = second;
+	alias minutes = minute;
+	alias hours = hour;
+
+	auto second (Scalar scalar = 1)
+		{/*...}*/
+			return Unit!(Time, 1)(scalar);
+		}
+	auto minute (Scalar scalar = 1)
+		{/*...}*/
+			return Unit!(Time, 1)(scalar/60.0);
+		}
+	auto hour (Scalar scalar = 1)
+		{/*...}*/
+			return Unit!(Time, 1)(scalar/3600.0);
+		}
+}
+public {/*force}*/
+	alias Newtons = ReturnType!newton;
+	alias newtons = newton;
+
+	auto newton (Scalar scalar = 1)
+		{/*...}*/
+			return scalar * kilogram*meter/second/second;
+		}
+}
+public {/*torque/moment}*/
+	alias NewtonMeters = ReturnType!newton_meter;
+	alias newton_meters = newton_meter;
+
+	auto newton_meter (Scalar scalar = 1)
+		{/*...}*/
+			return scalar * newton*meter;
+		}
+}
+public {/*frequency}*/
+	alias Hertz = ReturnType!hertz;
+	alias Kilohertz = ReturnType!kilohertz;
+
+	auto hertz (Scalar scalar = 1)
+		{/*...}*/
+			return scalar * 1.0/second;
+		}
+	auto kilohertz (Scalar scalar = 1)
+		{/*...}*/
+			return scalar * 1000.0/second;
+		}
+}
+
+public:
+public {/*traits}*/
+	template is_Unit (T...)
+		if (T.length == 1)
+		{/*...}*/
+			enum is_Unit = __traits(compiles, T[0].UnitTrait);
+		}
+}
+public {/*math}*/
+	auto abs (T)(const T quantity)
+		{/*...}*/
+			static if (is_Unit!T)
+				return quantity.abs;
+			else return std_abs (quantity);
+		}
+	auto approx (T, U)(const T a, const U b)
+		{/*...}*/
+			static if (is_Unit!T && is_Unit!U)
+				return evx.analysis.approx (a.scalar, b.scalar);
+			else return evx.analysis.approx (a, b);
+		}
+}
+ 
+private:
 private {/*code generation}*/
 	auto combine_dimension (alias op, T, U)()
 		if (allSatisfy!(is_Unit, T, U))

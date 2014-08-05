@@ -24,7 +24,7 @@ immutable ℕ = 0.sequence!((n,i) => n + i);
 
 /* a < b 
 */ 
-bool less_than (T)(inout T a, inout T b)
+bool less_than (T)(const T a, const T b)
 	{/*...}*/
 		return a < b;
 	}
@@ -42,12 +42,12 @@ bool all_equal (Args...)(Args args)
 
 /* ¬(a < b || b < a) ⇒ a == b 
 */
-bool antisymmetrically_equivalent (alias compare, T, U)(auto ref in T a, auto ref in U b)
+bool antisymmetrically_equivalent (alias compare, T, U)(const T a, const U b)
 	if (__traits(compiles, compare (a, b)))
 	{/*...}*/
 		return not (compare (a,b) || compare (b,a));
 	}
-bool antisymmetrically_equivalent (T,U)(auto ref in T a, auto ref in U b)
+bool antisymmetrically_equivalent (T,U)(const T a, const U b)
 	if (__traits(compiles, a < b))
 	{/*...}*/
 		return not (a < b || b < a);

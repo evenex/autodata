@@ -1,323 +1,263 @@
 module evx.arrays;
 
-private {/*import}*/
+private {/*import std}*/
 	import std.traits: 
 		ReturnType;
+
 	import std.range: 
 		ElementType, 
 		isOutputRange;
+
 	import std.typetuple: 
 		anySatisfy, allSatisfy;
+
 	import std.typecons: 
 		Tuple;
+
 	import std.conv: 
 		text;
+
 	import std.c.stdlib: 
 		malloc, free;
 }
-
-// REVIEW & REFACTOR
-import evx.utils;
-import evx.meta;
-import evx.math;
-import evx.search;
-
-import std.range;
-
-unittest
-	{/*dynamic}*/
-		mixin(report_test!`dynamic array`);
-
-		void basic_usage (Array)()
-			{/*...}*/
-				import std.exception: assertThrown;
-
-				auto x = Dynamic!Array ([1,2,3]);
-				auto cap = x.capacity;
-
-				assert (x[].equal ([1,2,3]));
-
-				x.clear;
-				assert (x.empty);
-				assert (x.length == 0);
-
-				x.grow (1);
-				assert (x.empty.not);
-				assert (x.length == 1);
-
-				x.grow (2);
-				assert (x.length == 3);
-				assertThrown!Error (x.grow (cap));
-
-				assert (x.sum == 6); // REVIEW why does this compile? sum -> reduce -> foreach -> impure but reduce == pure so it should give a compiler error!
-
-				x[0] = 2;
-				x[1] = 4;
-				x[2] = 6;
-
-				assert (x[].sum == 12);
-
-				x.shrink (1);
-				assert (x.empty.not);
-				assert (x.length == 2);
-				assertThrown!Error (x.shrink (3));
-
-				x.clear;
-				assert (x.empty);
-				assert (x.capacity == cap);
-			}
-
-		basic_usage!(int[3]);
-		basic_usage!(Array!int);
-		basic_usage!(int[]);
-
-		{/*destruction policy}*/
-			static bool destroyed = false;
-			struct Test {~this () {destroyed = true;}}
-
-			auto y = Dynamic!(Test[1], Destruction.deferred)();
-			y.grow (1);
-			assert (not (destroyed));
-			y.shrink (1);
-			assert (not (destroyed));
-
-			auto z = Dynamic!(Test[1], Destruction.immediate)();
-			z.grow (1);
-			assert (not (destroyed));
-			z.shrink (1);
-			assert (destroyed);
-		}
+private {/*import evx}*/
 }
-unittest
-	{/*appendable}*/
-		mixin(report_test!`appendable array`);
 
-		void basic_usage (Array)()
+version (benchmarked)
+	{/*...}*/
+		void print_results (R)(size_t test_size, string[] test_names, ref R results)
 			{/*...}*/
-				auto x = Appendable!Array ([-1,-2,-3]);
+				import std.math: round;
 
-				assert (x[].equal ([-1,-2,-3]));
-				x.clear;
+				auto minimum = results[]
+					.map!(r => r.length)
+					.reduce!min;
 
-				x ~= 1;
-				assert (x.length == 1);
-				x.put (only (2,3));
-				assert (x.length == 3);
-				assert (x[].equal ([1,2,3]));
-				assert (x.length == x.capacity);
-
-				x.clear;
-				assert (x.length == 0);
-
-				x.append (12);
-				assert (x[0] == 12);
-
-				x.shrink (1);
-
-				static assert (not (__traits(compiles, x.ref_append (1))));
-				static assert (__traits(compiles, x.lazy_append (1)));
-				int y = 1;
-				static assert (__traits(compiles, x.ref_append (y)));
-				static assert (__traits(compiles, x.lazy_append (y)));
+				writeln (test_size.text~ `: `,
+					zip (test_names, results[])
+						.sort!((a,b) => a[1] < b[1])
+						.map!(a => a[0]~ ` ` ~((100*a[1].length.to!double/minimum).round/100).text[0..min(5,$)]~ ``)
+				);
 			}
 
-		basic_usage!(Dynamic!(int[]));
-		basic_usage!(Dynamic!(int[3]));
-		basic_usage!(Dynamic!(Array!int));
+		unittest
+			{/*dynamic array allocation/destruction}*/
+				void fixed   (size_t test_size)() {auto x = Dynamic!(int[test_size])();}
+				void malloc  (size_t test_size)() {auto x = Dynamic!(Array!int)(test_size);}
+				void gc_heap (size_t test_size)() {auto x = Dynamic!(int[])(new int[test_size]);}
 
-		basic_usage!(int[]);
-		basic_usage!(int[3]);
-		basic_usage!(Array!int);
+				void run_benchmarks (size_t size)()
+					{/*...}*/
+						import std.datetime: benchmark;
 
-		{/*destruction policy}*/
-			static bool destroyed = false;
-			struct Test
-				{/*...}*/
-					bool temp = true;
-					~this () {if (not (temp)) destroyed = true;}
-					this(this) {assert (0, `array does not copy the input`);}
-				}
+						auto tests = [`fixed`, `malloc`, `gc_heap`];
+						auto results = benchmark!(
+							fixed!size, malloc!size, gc_heap!size,
+						)(1000);
 
-			immutable not_temp = false;
+						print_results (size, tests, results);
+					}
+				import std.typecons: staticIota;
 
-			auto x = Appendable!(Dynamic!(Test[1], Destruction.deferred))();
-			x ~= Test (not_temp);
-			assert (not (destroyed), `array does not destroy or copy the input`);
-			x.clear;
-			assert (not (destroyed));
-
-			auto y = Appendable!(Dynamic!(Test[1], Destruction.immediate))();
-			y ~= Test (not_temp);
-			assert (not (destroyed));
-			y.clear;
-			assert (destroyed);
-		}
-	}
-unittest
-	{/*ordered}*/
-		import std.exception: assertThrown;
-		mixin(report_test!`ordered array`);
-
-		void basic_usage (Array, Args...)(Args args)
-			{/*...}*/
-				auto x = Array (args);
-				static assert (not (__traits(compiles, x.grow (1))));
-				static assert (__traits(compiles, x.shrink (1)));
-
-				x.clear;
-				assert (x.empty);
-
-				x.insert (7);
-				x.insert (1);
-				x.insert (-99);
-				assert (x[].equal ([-99, 1, 7]));
-
-				x.remove (-99);
-				assert (x[].equal ([1, 7]));
-
-				x.remove_at (1);
-				assert (x[].equal ([1]));
-
-				x.clear;
-				assert (x.empty, `failed to clear ` ~Array.stringof);
+				writeln (`n_elements: [fastest..slowest]`);
+				foreach (i; staticIota!(2,14))
+					run_benchmarks!(2^^i);
 			}
-		void initial_sort_and_basic_usage (Array, Args...)(Args args)
-			{/*...}*/
-				auto x = Array (args);
-				assert (x[].equal (args.sort));
+		unittest
+			{/*appendable array comparison}*/
+				static void run_sequential_benchmarks (int size)()
+					{/*...}*/
+						static void append_to_mine ()
+							{/*...}*/
+								auto x = Appendable!(Array!int)(size);
 
-				basic_usage!Array (args);
+								foreach (i; 0..size)
+									x ~= i;
+							}
+						static void append_to_theirs ()
+							{/*...}*/
+								auto x = new int[size];
+
+								foreach (i; 0..size)
+									x ~= i;
+							}
+
+						import std.datetime: benchmark;
+
+						auto tests = [`mine`, `theirs`];
+						auto results = benchmark!(
+							append_to_mine,
+							append_to_theirs,
+						)(10_000);
+
+						print_results (size, tests, results);
+					}
+				static void run_chunked_benchmarks (int size, int block_size)()
+					{/*...}*/
+						static void append_to_mine ()
+							{/*...}*/
+								auto x = Appendable!(Array!int)(size);
+
+								foreach (i; 0..size/block_size)
+									x ~= iota (block_size*i, block_size*(i+1));
+							}
+						static void append_to_theirs_by_copy ()
+							{/*...}*/
+								int[] x;
+
+								foreach (i; 0..size/block_size)
+									{/*...}*/
+										x.length += block_size;
+										iota (block_size*i, block_size*(i+1)).copy (x[$-block_size..$]);
+									}
+							}
+						static void append_to_theirs_by_array ()
+							{/*...}*/
+								int[] x;
+
+								foreach (i; 0..size/block_size)
+									x ~= iota (block_size*i, block_size*(i+1)).array;
+							}
+
+						import std.datetime: benchmark;
+
+						auto tests = [`mine`, `theirs (copy)`, `theirs (array)`];
+						auto results = benchmark!(
+							append_to_mine,
+							append_to_theirs_by_copy,
+							append_to_theirs_by_array,
+						)(100);
+
+						print_results (size, tests, results);
+					}
+				import std.typecons: staticIota;
+
+				writeln (`sequential: [fastest..slowest]`);
+				foreach (i; staticIota!(2,16))
+					run_sequential_benchmarks!(2^^i);
+
+				foreach (j; staticIota!(0,3))
+					{/*...}*/
+						writeln (`chunked[` ~(10^^j).text~ `]: [fastest..slowest]`);
+						foreach (i; staticIota!(8,12))
+							run_chunked_benchmarks!(2^^i, 10^^j);
+					}
+
 			}
-		void custom_comparator (Array, Args...)(Args args)
-			{/*...}*/
-				auto x = Array (args);
-				assert (x[].equal (args.sort!(Array.compare)));
+		unittest
+			{/*associative array comparison}*/
+				import std.datetime: benchmark;
+				void test_insert (int size)()
+					{/*...}*/
+						void test_mine_insert ()
+							{/*...}*/
+								auto mine = Associative!(Array!int, int)(size);
+
+								foreach (i; 0..size)
+									mine.insert (i, i^^2);
+							}
+						void test_theirs_insert ()
+							{/*...}*/
+								int[int] theirs;
+
+								foreach (i; 0..size)
+									theirs[i] = i^^2;
+							}
+
+						auto tests = [`mine_insert`, `theirs_insert`];
+						auto results = benchmark!(
+							test_mine_insert,
+							test_theirs_insert,
+						)(10_000);
+
+						print_results (size, tests, results);
+					}
+				void test_get (int size)()
+					{/*...}*/
+						void test_mine_get ()
+							{/*...}*/
+								auto mine = Associative!(Array!int, int)(size);
+
+								foreach (i; 0..size)
+									mine.insert (i, i+ 2);
+								foreach (_; 0..10)
+									foreach (i; 0..size)
+										mine.get (i);
+							}
+						void test_theirs_get ()
+							{/*...}*/
+								int[int] theirs;
+
+								foreach (i; 0..size)
+									theirs[i] = i^^2;
+								foreach (_; 0..10)
+									foreach (i; 0..size)
+										if (theirs[i] == i^^2)
+											continue;
+							}
+
+						auto tests = [`mine_get`, `theirs_get`];
+						auto results = benchmark!(
+							test_mine_get,
+							test_theirs_get,
+						)(10_000);
+
+						print_results (size, tests, results);
+					}
+				void test_remove (int size)()
+					{/*...}*/
+						void test_mine_remove ()
+							{/*...}*/
+								auto mine = Associative!(Array!int, int)(size);
+
+								foreach (i; 0..size)
+									mine.insert (i, i^^2);
+								foreach (_; 0..10)
+									foreach (i; 0..size)
+										mine.remove (i);
+							}
+						void test_theirs_remove ()
+							{/*...}*/
+								int[int] theirs;
+
+								foreach (i; 0..size)
+									theirs[i] = i^^2;
+
+								foreach (_; 0..10)
+									foreach (i; 0..size)
+										theirs.remove (i);
+							}
+
+						auto tests = [`mine_remove`, `theirs_remove`];
+						auto results = benchmark!(
+							test_mine_remove,
+							test_theirs_remove,
+						)(10_000);
+
+						print_results (size, tests, results);
+					}
+
+				import std.typecons: staticIota;
+				foreach (i; staticIota!(0, 10))
+					test_insert!(2^^i);
+				foreach (i; staticIota!(0, 10))
+					test_get!(2^^i);
+				foreach (i; staticIota!(0, 10))
+					test_remove!(2^^i);
 			}
-
-		initial_sort_and_basic_usage!(Ordered!(int[3]))([3,2,1]);
-		initial_sort_and_basic_usage!(Ordered!(Array!int))([3,2,1]);
-		initial_sort_and_basic_usage!(Ordered!(int[]))([3,2,1]);
-
-		basic_usage!(Ordered!(Array!int))(4);
-
-		custom_comparator!(Ordered!(Array!int, (int a, int b) => b < a))([1,2,3]);
-	}
-unittest
-	{/*associative}*/
-		import std.exception: assertThrown;
-		mixin(report_test!`associative array`);
-
-		void test (Array, Args...)(Args ctor_args)
-			if (is (ElementType!Array == int))
-			{/*...}*/
-				auto x = Associative!(Array, char)(ctor_args);
-
-				x.insert ('a', 1);
-
-				assert (x.size == 1);
-				assert (x.contains ('a'));
-				assert ('a' in x);
-
-				assert (x.get ('a') == 1);
-
-				assert (not (x.contains ('b')));
-				assert (x.find ('b') == null);
-				assertThrown!Error (x.get ('b'));
-
-				x.insert ('b', 6);
-				assert (x.contains ('b'));
-				assert (x.find ('b') != null);
-				assert (*x.find ('b') == 6);
-				assert (x.get ('b') == 6);
-
-				assert (x.size == 2);
-
-				x.remove ('a');
-				assert (x.size == 1);
-
-				assert (not ('a' in x));
-				assert ('b' in x);
-
-				x.clear;
-				assert (x.size == 0);
-				assert (not ('b' in x));
-			}
-		
-		{/*key}*/
-			test!(int[8]);
-			test!(int[])(8);
-			test!(Array!int)(8);
-		}
-		{/*internal hash}*/
-			struct Test
-				{/*...}*/
-					size_t root;
-					@property size_t toHash () const nothrow
-						{/*...}*/
-							return root^^2;
-						}
-				}
-			Associative!(Test[4]) x;
-
-			x.insert (Test (2));
-			x.insert (only (
-				Test(3), Test (4)
-			));
-
-			assert (x.size == 3);
-			assert (4 in x);
-			assert (9 in x);
-			assert (16 in x);
-
-			assertThrown!Error (x.insert (Test (2)));
-			assertThrown!Error (x.remove (7));
-
-			x.remove (9);
-
-			assert (x.size == 2);
-			assert (not (9 in x));
-
-			x.clear;
-		}
-		{/*external hash}*/
-			struct NoHash
-				{string word;}
-
-			static auto hash (ref NoHash x)
-				{return x.word.length;}
-
-			auto x = Associative!(NoHash[3], hash)();
-
-			x.insert (NoHash (`one`));
-			assertThrown!Error (x.insert (NoHash (`two`)));
-			x.insert (NoHash (`three`));
-		}
-		{/*destruction policy}*/
-			static bool destroyed = false;
-			struct Destroyer 
-				{/*...}*/
-					bool temp = true;
-					~this () {if (not (temp)) destroyed = true;}
-				}
-
-			immutable not_temp = false;
-
-			Associative!(Dynamic!(Destroyer[1], Destruction.deferred), int) x;
-			x.insert (0, Destroyer (not_temp));
-			assert (not (destroyed));
-			x.remove (0);
-			assert (not (destroyed));
-
-			Associative!(Dynamic!(Destroyer[1], Destruction.immediate), int) y;
-			y.insert (0, Destroyer (not_temp));
-			assert (not (destroyed));
-			y.remove (0);
-			assert (destroyed);
-		}
 	}
 
-public:
-///////////////
+// REVIEW usage of copy vs move vs swap
+
+// REFACTOR
+	import evx.utils;
+	import evx.meta;
+	import evx.math;
+	import evx.search;
+	import evx.logic;
+	import evx.traits;
+
+	import std.range;
 
 public {/*traits}*/
 	template is_array (T)
@@ -385,16 +325,19 @@ public {/*policies}*/
 		}
 }
 
-///////////////
+pure nothrow: // TODO into the arrays
 
-struct Dynamic (Array, Destruction destruction = Destruction.deferred) // TODO some kinda meta tool to pull Destruction and Reallocation out of (Policies...) and provide default definitions if they don't exist
-/* something like... 
-				XXX!(
-					Destruction, `destruction`, Destruction.deferred,
-					Reallocation, `reallocation`, Reallocation.forbidden,
-				
-*/
+/**/ // TODO DOC
+struct Dynamic (Array, PolicyList...)
 	{/*...}*/
+		private mixin PolicyAssignment!(
+			Policies!(
+				`destruction`, Destruction.deferred,
+				`reallocation`, Reallocation.forbidden
+			),
+			PolicyList
+		);
+
 		public:
 		public {/*[‥]}*/
 			mixin ArrayInterface!(array, dynamic_length);
@@ -402,22 +345,39 @@ struct Dynamic (Array, Destruction destruction = Destruction.deferred) // TODO s
 		public {/*mutation}*/
 			void grow (size_t n)
 				in {/*...}*/
-					assert (dynamic_length + n <= capacity, `array capacity ` ~capacity.text~ ` exceeded during ` ~n.text~ ` allocation`);
+					static if (reallocation is Reallocation.forbidden)
+						assert (dynamic_length + n <= capacity, `array capacity ` ~capacity.text~ ` exceeded during ` ~n.text~ ` allocation`);
 				}
 				body {/*...}*/
+					static if (reallocation is Reallocation.permitted)
+						{/*...}*/
+							if (dynamic_length + n <= capacity)
+								{/*...}*/
+									static if (supports_reallocation!Array)
+										array.reallocate (capacity * 2);
+									else static if (isDynamicArray!Array)
+										array.length *= 2;
+									else static assert (0,
+										`cannot reallocate ` ~Array.tostring
+									);
+								}
+						}
+
 					dynamic_length += n;
 				}
+
 			void shrink (size_t n)
 				in {/*...}*/
 					assert (n <= dynamic_length);
 				}
 				body {/*...}*/
-					static if (destruction == Destruction.immediate)
+					static if (destruction is Destruction.immediate)
 						foreach (ref item; this[$-n..$])
 							item.destroy;
 						
 					dynamic_length -= n;
 				}
+
 			void clear ()
 				{/*...}*/
 					shrink (length);
@@ -428,10 +388,12 @@ struct Dynamic (Array, Destruction destruction = Destruction.deferred) // TODO s
 				{/*...}*/
 					return dynamic_length;
 				}
+
 			size_t capacity ()
 				{/*...}*/
 					return array.length;
 				}
+				
 			bool empty ()
 				{/*...}*/
 					return length == 0;
@@ -441,16 +403,17 @@ struct Dynamic (Array, Destruction destruction = Destruction.deferred) // TODO s
 			this (R)(auto ref R range)
 				if (isInputRange!R)
 				{/*...}*/
-					static if (__traits(compiles, typeof(array)(range)))
-						array = typeof(array)(range);
+					static if (__traits(compiles, Array (range)))
+						array = Array (range);
 					else array = range;
 
 					dynamic_length = array.length;
 				}
+
 			this (Args...)(auto ref Args args)
 				{/*...}*/
-					static if (__traits(compiles, typeof(array)(args)))
-						array = typeof(array)(args);
+					static if (__traits(compiles, Array (args)))
+						array = Array (args);
 					else array = args;
 				}
 		}
@@ -461,7 +424,71 @@ struct Dynamic (Array, Destruction destruction = Destruction.deferred) // TODO s
 		}
 		static assert (is_dynamic_array!Dynamic);
 	}
+	unittest {/*...}*/
+		mixin(report_test!`dynamic array`);
 
+		void basic_usage (Array)()
+			{/*...}*/
+				import std.exception: assertThrown;
+
+				auto x = Dynamic!Array ([1,2,3]);
+				auto cap = x.capacity;
+
+				assert (x[].equal ([1,2,3]));
+
+				x.clear;
+				assert (x.empty);
+				assert (x.length == 0);
+
+				x.grow (1);
+				assert (x.empty.not);
+				assert (x.length == 1);
+
+				x.grow (2);
+				assert (x.length == 3);
+				assertThrown!Error (x.grow (cap));
+
+				assert (x.sum == 6); // REVIEW why does this compile? sum -> reduce -> foreach -> impure but reduce == pure so it should give a compiler error!
+
+				x[0] = 2;
+				x[1] = 4;
+				x[2] = 6;
+
+				assert (x[].sum == 12);
+
+				x.shrink (1);
+				assert (x.empty.not);
+				assert (x.length == 2);
+				assertThrown!Error (x.shrink (3));
+
+				x.clear;
+				assert (x.empty);
+				assert (x.capacity == cap);
+			}
+
+		basic_usage!(int[3]);
+		basic_usage!(Array!int);
+		basic_usage!(int[]);
+
+		{/*destruction policy}*/
+			static bool destroyed = false;
+			struct Test {~this () {destroyed = true;}}
+
+			auto y = Dynamic!(Test[1], Destruction.deferred)();
+			y.grow (1);
+			assert (not (destroyed));
+			y.shrink (1);
+			assert (not (destroyed));
+
+			auto z = Dynamic!(Test[1], Destruction.immediate)();
+			z.grow (1);
+			assert (not (destroyed));
+			z.shrink (1);
+			assert (destroyed);
+		}
+	}
+
+/**/ // TODO DOC
 struct Appendable (Array)
 	if (__traits(compiles, Dynamic!Array)
 	&& not (is_ordered_array!Array))
@@ -518,7 +545,7 @@ struct Appendable (Array)
 
 					array.grow (saved.length);
 
-					range.copy (array[start..$]);
+					range.copy (array[start..$]); // XXX
 				}
 		}
 		public {/*ctor}*/
@@ -529,7 +556,72 @@ struct Appendable (Array)
 		}
 		static assert (isOutputRange!(Appendable, T));
 	}
+	unittest {/*...}*/
+			mixin(report_test!`appendable array`);
 
+			void basic_usage (Array)()
+				{/*...}*/
+					auto x = Appendable!Array ([-1,-2,-3]);
+
+					assert (x[].equal ([-1,-2,-3]));
+					x.clear;
+
+					x ~= 1;
+					assert (x.length == 1);
+					x.put (only (2,3));
+					assert (x.length == 3);
+					assert (x[].equal ([1,2,3]));
+					assert (x.length == x.capacity);
+
+					x.clear;
+					assert (x.length == 0);
+
+					x.append (12);
+					assert (x[0] == 12);
+
+					x.shrink (1);
+
+					static assert (not (__traits(compiles, x.ref_append (1))));
+					static assert (__traits(compiles, x.lazy_append (1)));
+					int y = 1;
+					static assert (__traits(compiles, x.ref_append (y)));
+					static assert (__traits(compiles, x.lazy_append (y)));
+				}
+
+			basic_usage!(Dynamic!(int[]));
+			basic_usage!(Dynamic!(int[3]));
+			basic_usage!(Dynamic!(Array!int));
+
+			basic_usage!(int[]);
+			basic_usage!(int[3]);
+			basic_usage!(Array!int);
+
+			{/*destruction policy}*/
+				static bool destroyed = false;
+				struct Test
+					{/*...}*/
+						bool temp = true;
+						~this () {if (not (temp)) destroyed = true;}
+						this(this) {assert (0, `array does not copy the input`);}
+					}
+
+				immutable not_temp = false;
+
+				auto x = Appendable!(Dynamic!(Test[1], Destruction.deferred))();
+				x ~= Test (not_temp);
+				assert (not (destroyed), `array does not destroy or copy the input`);
+				x.clear;
+				assert (not (destroyed));
+
+				auto y = Appendable!(Dynamic!(Test[1], Destruction.immediate))();
+				y ~= Test (not_temp);
+				assert (not (destroyed));
+				y.clear;
+				assert (destroyed);
+			}
+		}
+
+/**/ // TODO DOC
 struct Ordered (Array, Sorting...)
 	if ((__traits(compiles, Dynamic!Array)
 		&& not (is_appendable_array!Array)
@@ -603,9 +695,9 @@ struct Ordered (Array, Sorting...)
 			this (R)(R range)
 				if (isInputRange!R)
 				{/*...}*/
-					static if (appears_manually_allocated!(typeof(array)))
+					static if (appears_manually_allocated!Array)
 						{/*allocate}*/
-							array = typeof(array)(range.length);
+							array = Array (range.length);
 						}
 					else static if (isDynamicArray!Array)
 						{/*copy and clear}*/
@@ -619,7 +711,7 @@ struct Ordered (Array, Sorting...)
 				}
 			this (Args...)(Args args)
 				{/*...}*/
-					array = typeof(array)(args);
+					array = Array (args);
 				}
 		}
 		private:
@@ -637,7 +729,56 @@ struct Ordered (Array, Sorting...)
 		}
 		static assert (isOutputRange!(Ordered, T));
 	}
+	unittest {/*...}*/
+			import std.exception: assertThrown;
+			mixin(report_test!`ordered array`);
 
+			void basic_usage (Array, Args...)(Args args)
+				{/*...}*/
+					auto x = Array (args);
+					static assert (not (__traits(compiles, x.grow (1))));
+					static assert (__traits(compiles, x.shrink (1)));
+
+					x.clear;
+					assert (x.empty);
+
+					x.insert (7);
+					x.insert (1);
+					x.insert (-99);
+					assert (x[].equal ([-99, 1, 7]));
+
+					x.remove (-99);
+					assert (x[].equal ([1, 7]));
+
+					x.remove_at (1);
+					assert (x[].equal ([1]));
+
+					x.clear;
+					assert (x.empty, `failed to clear ` ~Array.stringof);
+				}
+			void initial_sort_and_basic_usage (Array, Args...)(Args args)
+				{/*...}*/
+					auto x = Array (args);
+					assert (x[].equal (args.sort));
+
+					basic_usage!Array (args);
+				}
+			void custom_comparator (Array, Args...)(Args args)
+				{/*...}*/
+					auto x = Array (args);
+					assert (x[].equal (args.sort!(Array.compare)));
+				}
+
+			initial_sort_and_basic_usage!(Ordered!(int[3]))([3,2,1]);
+			initial_sort_and_basic_usage!(Ordered!(Array!int))([3,2,1]);
+			initial_sort_and_basic_usage!(Ordered!(int[]))([3,2,1]);
+
+			basic_usage!(Ordered!(Array!int))(4);
+
+			custom_comparator!(Ordered!(Array!int, (int a, int b) => b < a))([1,2,3]);
+		}
+
+/**/ // TODO DOC
 struct Associative (Array, Lookup...)
 	if ((__traits(compiles, Dynamic!Array)
 		&& not (anySatisfy!(Or!(is_appendable_array, is_ordered_array), Array))
@@ -891,15 +1032,140 @@ struct Associative (Array, Lookup...)
 			);
 		}
 	}
+	unittest {/*...}*/
+			import std.exception: assertThrown;
+			mixin(report_test!`associative array`);
+
+			void test (Array, Args...)(Args ctor_args)
+				if (is (ElementType!Array == int))
+				{/*...}*/
+					auto x = Associative!(Array, char)(ctor_args);
+
+					x.insert ('a', 1);
+
+					assert (x.size == 1);
+					assert (x.contains ('a'));
+					assert ('a' in x);
+
+					assert (x.get ('a') == 1);
+
+					assert (not (x.contains ('b')));
+					assert (x.find ('b') == null);
+					assertThrown!Error (x.get ('b'));
+
+					x.insert ('b', 6);
+					assert (x.contains ('b'));
+					assert (x.find ('b') != null);
+					assert (*x.find ('b') == 6);
+					assert (x.get ('b') == 6);
+
+					assert (x.size == 2);
+
+					x.remove ('a');
+					assert (x.size == 1);
+
+					assert (not ('a' in x));
+					assert ('b' in x);
+
+					x.clear;
+					assert (x.size == 0);
+					assert (not ('b' in x));
+				}
+			
+			{/*key}*/
+				test!(int[8]);
+				test!(int[])(8);
+				test!(Array!int)(8);
+			}
+			{/*internal hash}*/
+				struct Test
+					{/*...}*/
+						size_t root;
+						@property size_t toHash () const nothrow
+							{/*...}*/
+								return root^^2;
+							}
+					}
+				Associative!(Test[4]) x;
+
+				x.insert (Test (2));
+				x.insert (only (
+					Test(3), Test (4)
+				));
+
+				assert (x.size == 3);
+				assert (4 in x);
+				assert (9 in x);
+				assert (16 in x);
+
+				assertThrown!Error (x.insert (Test (2)));
+				assertThrown!Error (x.remove (7));
+
+				x.remove (9);
+
+				assert (x.size == 2);
+				assert (not (9 in x));
+
+				x.clear;
+			}
+			{/*external hash}*/
+				struct NoHash
+					{string word;}
+
+				static auto hash (ref NoHash x)
+					{return x.word.length;}
+
+				auto x = Associative!(NoHash[3], hash)();
+
+				x.insert (NoHash (`one`));
+				assertThrown!Error (x.insert (NoHash (`two`)));
+				x.insert (NoHash (`three`));
+			}
+			{/*destruction policy}*/
+				static bool destroyed = false;
+				struct Destroyer 
+					{/*...}*/
+						bool temp = true;
+						~this () {if (not (temp)) destroyed = true;}
+					}
+
+				immutable not_temp = false;
+
+				Associative!(Dynamic!(Destroyer[1], Destruction.deferred), int) x;
+				x.insert (0, Destroyer (not_temp));
+				assert (not (destroyed));
+				x.remove (0);
+				assert (not (destroyed));
+
+				Associative!(Dynamic!(Destroyer[1], Destruction.immediate), int) y;
+				y.insert (0, Destroyer (not_temp));
+				assert (not (destroyed));
+				y.remove (0);
+				assert (destroyed);
+			}
+		}
 
 ///////////////
 
-struct Array (T)
+/**/ // TODO DOC
+struct Array (T, Reallocation reallocation = Reallocation.forbidden)
 	{/*...}*/
 		T* ptr;
 		const size_t length;
 
 		mixin ArrayInterface!(ptr, length);
+
+		static if (reallocation is Reallocation.permitted)
+			void reallocate (size_t new_length)
+				{/*...}*/
+					auto new_ptr = cast(T*)malloc (new_length * T.sizeof);
+
+					this[].move (new_ptr[0..length]); // XXX
+
+					free (this.ptr);
+
+					this.ptr = new_ptr;
+				}
 
 		this (size_t length)
 			{/*...}*/
@@ -914,7 +1180,7 @@ struct Array (T)
 
 				ptr = cast(T*)malloc (length * T.sizeof);
 
-				range.copy (this[]);
+				range.copy (this[]); // XXX
 			}
 		~this ()
 			{/*...}*/
@@ -931,228 +1197,9 @@ private {/*traits}*/
 		{/*...}*/
 			enum appears_manually_allocated = __traits(compiles, T (size_t.init));
 		}
+
+	template supports_reallocation (T)
+		{/*...}*/
+			enum supports_reallocation = __traits(compiles, (){T array; array.reallocate (size_t.init);});
+		}
 }
-
-version (benchmarked)
-	{/*...}*/
-		static void print_results (R)(size_t test_size, string[] test_names, ref R results)
-			{/*...}*/
-				import std.math: round;
-
-				auto minimum = results[]
-					.map!(r => r.length)
-					.reduce!min;
-
-				writeln (test_size.text~ `: `,
-					zip (test_names, results[])
-						.sort!((a,b) => a[1] < b[1])
-						.map!(a => a[0]~ ` ` ~((100*a[1].length.to!double/minimum).round/100).text[0..min(5,$)]~ ``)
-				);
-			}
-
-		unittest
-			{/*dynamic array allocation/destruction}*/
-				void fixed   (size_t test_size)() {auto x = Dynamic!(int[test_size])();}
-				void malloc  (size_t test_size)() {auto x = Dynamic!(Array!int)(test_size);}
-				void gc_heap (size_t test_size)() {auto x = Dynamic!(int[])(new int[test_size]);}
-
-				void run_benchmarks (size_t size)()
-					{/*...}*/
-						import std.datetime: benchmark;
-
-						auto tests = [`fixed`, `malloc`, `gc_heap`];
-						auto results = benchmark!(
-							fixed!size, malloc!size, gc_heap!size,
-						)(1000);
-
-						print_results (size, tests, results);
-					}
-				import std.typecons: staticIota;
-
-				writeln (`n_elements: [fastest..slowest]`);
-				foreach (i; staticIota!(2,14))
-					run_benchmarks!(2^^i);
-			}
-		unittest
-			{/*appendable array comparison}*/
-				static void run_sequential_benchmarks (int size)()
-					{/*...}*/
-						static void append_to_mine ()
-							{/*...}*/
-								auto x = Appendable!(Array!int)(size);
-
-								foreach (i; 0..size)
-									x ~= i;
-							}
-						static void append_to_theirs ()
-							{/*...}*/
-								auto x = new int[size];
-
-								foreach (i; 0..size)
-									x ~= i;
-							}
-
-						import std.datetime: benchmark;
-
-						auto tests = [`mine`, `theirs`];
-						auto results = benchmark!(
-							append_to_mine,
-							append_to_theirs,
-						)(10_000);
-
-						print_results (size, tests, results);
-					}
-				static void run_chunked_benchmarks (int size, int block_size)()
-					{/*...}*/
-						static void append_to_mine ()
-							{/*...}*/
-								auto x = Appendable!(Array!int)(size);
-
-								foreach (i; 0..size/block_size)
-									x ~= iota (block_size*i, block_size*(i+1));
-							}
-						static void append_to_theirs_by_copy ()
-							{/*...}*/
-								int[] x;
-
-								foreach (i; 0..size/block_size)
-									{/*...}*/
-										x.length += block_size;
-										iota (block_size*i, block_size*(i+1)).copy (x[$-block_size..$]);
-									}
-							}
-						static void append_to_theirs_by_array ()
-							{/*...}*/
-								int[] x;
-
-								foreach (i; 0..size/block_size)
-									x ~= iota (block_size*i, block_size*(i+1)).array;
-							}
-
-						import std.datetime: benchmark;
-
-						auto tests = [`mine`, `theirs (copy)`, `theirs (array)`];
-						auto results = benchmark!(
-							append_to_mine,
-							append_to_theirs_by_copy,
-							append_to_theirs_by_array,
-						)(100);
-
-						print_results (size, tests, results);
-					}
-				import std.typecons: staticIota;
-
-				writeln (`sequential: [fastest..slowest]`);
-				foreach (i; staticIota!(2,16))
-					run_sequential_benchmarks!(2^^i);
-
-				foreach (j; staticIota!(0,3))
-					{/*...}*/
-						writeln (`chunked[` ~(10^^j).text~ `]: [fastest..slowest]`);
-						foreach (i; staticIota!(8,12))
-							run_chunked_benchmarks!(2^^i, 10^^j);
-					}
-
-			}
-		unittest
-			{/*associative array comparison}*/
-				import std.datetime: benchmark;
-				void test_insert (int size)()
-					{/*...}*/
-						void test_mine_insert ()
-							{/*...}*/
-								auto mine = Associative!(Array!int, int)(size);
-
-								foreach (i; 0..size)
-									mine.insert (i, i^^2);
-							}
-						void test_theirs_insert ()
-							{/*...}*/
-								int[int] theirs;
-
-								foreach (i; 0..size)
-									theirs[i] = i^^2;
-							}
-
-						auto tests = [`mine_insert`, `theirs_insert`];
-						auto results = benchmark!(
-							test_mine_insert,
-							test_theirs_insert,
-						)(10_000);
-
-						print_results (size, tests, results);
-					}
-				void test_get (int size)()
-					{/*...}*/
-						void test_mine_get ()
-							{/*...}*/
-								auto mine = Associative!(Array!int, int)(size);
-
-								foreach (i; 0..size)
-									mine.insert (i, i+ 2);
-								foreach (_; 0..10)
-									foreach (i; 0..size)
-										mine.get (i);
-							}
-						void test_theirs_get ()
-							{/*...}*/
-								int[int] theirs;
-
-								foreach (i; 0..size)
-									theirs[i] = i^^2;
-								foreach (_; 0..10)
-									foreach (i; 0..size)
-										if (theirs[i] == i^^2)
-											continue;
-							}
-
-						auto tests = [`mine_get`, `theirs_get`];
-						auto results = benchmark!(
-							test_mine_get,
-							test_theirs_get,
-						)(10_000);
-
-						print_results (size, tests, results);
-					}
-				void test_remove (int size)()
-					{/*...}*/
-						void test_mine_remove ()
-							{/*...}*/
-								auto mine = Associative!(Array!int, int)(size);
-
-								foreach (i; 0..size)
-									mine.insert (i, i^^2);
-								foreach (_; 0..10)
-									foreach (i; 0..size)
-										mine.remove (i);
-							}
-						void test_theirs_remove ()
-							{/*...}*/
-								int[int] theirs;
-
-								foreach (i; 0..size)
-									theirs[i] = i^^2;
-
-								foreach (_; 0..10)
-									foreach (i; 0..size)
-										theirs.remove (i);
-							}
-
-						auto tests = [`mine_remove`, `theirs_remove`];
-						auto results = benchmark!(
-							test_mine_remove,
-							test_theirs_remove,
-						)(10_000);
-
-						print_results (size, tests, results);
-					}
-
-				import std.typecons: staticIota;
-				foreach (i; staticIota!(0, 10))
-					test_insert!(2^^i);
-				foreach (i; staticIota!(0, 10))
-					test_get!(2^^i);
-				foreach (i; staticIota!(0, 10))
-					test_remove!(2^^i);
-			}
-	}

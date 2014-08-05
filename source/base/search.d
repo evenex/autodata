@@ -48,7 +48,7 @@ struct BinarySearchResult (T)
 */
 auto binary_search (R, T = ElementType!R)(R range, T element)
 	{/*...}*/
-		return range.binary_search!(less_than!T)(element);
+		return range.binary_search!less_than (element);
 	}
 
 /* perform a custom policy-based binary search.
