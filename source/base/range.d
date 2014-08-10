@@ -4,8 +4,8 @@ module evx.range;
 import evx.logic: And, Not, not;
 import evx.traits: is_indexable;
 import std.typetuple: allSatisfy;
-import std.range: ElementType, isForwardRange;
-import evx.functional: map;
+import std.range: ElementType, isForwardRange, cycle;
+import evx.functional: map, zip;
 import evx.arithmetic: sum;
 
 pure nothrow:

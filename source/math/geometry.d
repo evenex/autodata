@@ -2,7 +2,7 @@ module evx.geometry;
 
 private {/*import std}*/
 	import std.algorithm: 
-		copy, map, zip, // BUG my map is pure so it won't work in Vector... yet
+		copy, min, max,
 		canFind, countUntil,
 		setIntersection;
 
@@ -20,6 +20,9 @@ private {/*import std}*/
 		repeat,
 		isInputRange,
 		ElementType;
+
+	import std.math:
+		atan2, SQRT2;
 }
 private {/*import evx}*/
 	import evx.utils: 
@@ -28,16 +31,29 @@ private {/*import evx}*/
 	import evx.traits: 
 		is_sliceable, is_type_of;
 
-	import evx.logic: 
-		not;
-
 	import evx.range:
 		adjacent_pairs;
 
 	import evx.meta:
 		ArrayInterface;
 
-	import evx.math;
+	import evx.functional:
+		map, zip, reduce;
+
+	import evx.logic: 
+		not;
+
+	import evx.ordinal:
+		ℕ;
+
+	import evx.arithmetic: 
+		Σ;
+
+	import evx.statistics: 
+		mean;
+
+	import evx.vectors;
+	import evx.units;
 }
 
 pure nothrow:
@@ -118,8 +134,8 @@ public {/*vectors}*/ // TODO this needs to be a separate module at this point
 		static assert (ĵ.vec == vec(0,1));
 		
 		import evx.units;
-		static assert (î.meters == Vec2!Meters (1.meter, 0.meters));
-		static assert (ĵ.meters == Vec2!Meters (0.meters, 1.meter));
+		static assert (î.meters == Vector!(2, Meters) (1.meter, 0.meters));
+		static assert (ĵ.meters == Vector!(2, Meters) (0.meters, 1.meter));
 	}
 
 	/* common vector types 
@@ -153,6 +169,8 @@ public {/*vectors}*/ // TODO this needs to be a separate module at this point
 			);
 		}
 		unittest {/*...}*/
+			pragma (msg, __traits(compiles, bearing_to (î.vec, ĵ.vec)));
+			pragma (msg, __traits(compiles, î.vec.bearing_to (ĵ.vec)));
 			assert (î.vec.bearing_to (ĵ.vec).approx (π/2));
 			assert (ĵ.vec.bearing_to (î.vec).approx (-π/2));
 			assert (vec(1,-1).bearing_to (î.vec).approx (π/4));
@@ -191,13 +209,13 @@ public {/*polygons}*/
 
 	/* dimensioned shape generators
 	*/
-	auto square (T, Vec = vec)(const T side, const Vec center = Vec(0))
+	auto square (T, Vec = vec)(const T side, const Vec center = zero!Vec)
 		if (is_Unit!T)
 		{/*...}*/
 			return square (side.to_scalar, center)
 				.map!(v => vector (T(v.x), T(v.y)));
 		}
-	auto circle (uint samples = 24, Vec = vec, T = ElementType!Vec)(const T radius, const Vec center = Vec(0))
+	auto circle (uint samples = 24, Vec = vec, T = ElementType!Vec)(const T radius, const Vec center = zero!Vec)
 		if (is_Unit!T)
 		{/*...}*/
 			return circle!samples (radius.to_scalar, center)
@@ -223,7 +241,10 @@ public {/*polygons}*/
 	auto area (R)(R polygon)
 		if (is_geometric!R)
 		{/*...}*/
-			return 0.5 * abs (Σ (polygon.adjacent_pairs.map!(v => v[0].det (v[1]))));
+			return 0.5 * Σ (polygon
+				.adjacent_pairs
+				.map!(v => v[0].det (v[1]))
+			).abs;
 		}
 		unittest {/*...}*/
 			assert (square (1).area.approx (1));
@@ -497,7 +518,7 @@ public {/*axis-aligned bounding boxes}*/
 
 			private:
 			private {/*defs}*/
-				alias Vec = Vec2!T;
+				alias Vec = Vector!(2, T);
 			}
 			private {/*range}*/
 				@property auto length () const
@@ -612,7 +633,7 @@ public {/*axis-aligned bounding boxes}*/
 
 	/* moves a bounding box so that a given alignment point on it has the given position 
 	*/
-	auto move_to (T)(ref Box!T box, Alignment alignment, Vec2!T position)
+	auto move_to (T)(ref Box!T box, Alignment alignment, Vector!(2, T) position)
 		{/*...}*/
 			immutable offset = box.offset_to (alignment, bounding_box(position.repeat (2)));
 
@@ -660,7 +681,7 @@ public {/*axis-aligned bounding boxes}*/
 	unittest {/*with evx.units}*/
 		import evx.units;
 
-		alias Pos = Vec2!Meters;
+		alias Pos = Vector!(2, Meters);
 
 		auto box = [Pos(0.meters, 1.meter), Pos(1.meter, 0.meters)].bounding_box;
 
@@ -671,8 +692,6 @@ public {/*axis-aligned bounding boxes}*/
 
 		auto compute_offset (Alignment alignment) pure nothrow
 			{return circle (1.meter).bounding_box.offset_to (alignment, circle (2.meters).bounding_box);}
-
-		alias Pos = Vec2!Meters;
 		
 		with (Alignment)
 			{/*...}*/

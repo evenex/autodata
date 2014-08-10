@@ -49,7 +49,7 @@ public {/*map}*/
 			pure nothrow:
 			static if (is_indexable!R)
 				{/*...}*/
-					auto ref opIndex (size_t i) inout
+					auto ref opIndex (size_t i)
 						in {/*...}*/
 							static if (hasLength!R)
 								assert (i < range.length);
@@ -81,7 +81,7 @@ public {/*map}*/
 			@property:
 			static if (isInputRange!R)
 				{/*...}*/
-					auto ref front () inout
+					auto ref front ()
 						in {/*...}*/
 							assert (not (empty));
 						}
@@ -95,7 +95,7 @@ public {/*map}*/
 						body {/*...}*/
 							range.popFront;
 						}
-					bool empty () inout
+					bool empty () const
 						{/*...}*/
 							return range.empty;
 						}
@@ -113,7 +113,7 @@ public {/*map}*/
 				}
 			static if (isBidirectionalRange!R)
 				{/*...}*/
-					auto ref back () inout
+					auto ref back ()
 						in {/*...}*/
 							assert (not (empty));
 						}
@@ -174,7 +174,7 @@ public {/*zip}*/
 			pure nothrow:
 			static if (allSatisfy!(is_indexable, Ranges))
 				{/*...}*/
-					auto ref opIndex (size_t i) inout
+					auto ref opIndex (size_t i)
 						in {/*...}*/
 							static if (hasLength!ZipResult)
 								assert (i < length);
@@ -205,7 +205,7 @@ public {/*zip}*/
 
 			static if (allSatisfy!(isInputRange, Ranges))
 				@property {/*...}*/
-					auto ref front () inout
+					auto ref front ()
 						in {/*...}*/
 							assert (not (empty));
 						}
@@ -229,7 +229,7 @@ public {/*zip}*/
 				}
 			static if (allSatisfy!(isForwardRange, Ranges))
 				@property {/*...}*/
-					auto save () inout
+					auto save ()
 						{/*...}*/
 							return this;
 						}
@@ -238,7 +238,7 @@ public {/*zip}*/
 				}
 			static if (allSatisfy!(isBidirectionalRange, Ranges))
 				@property {/*...}*/
-					auto ref back () inout
+					auto ref back ()
 						in {/*...}*/
 							assert (not (empty));
 						}
@@ -302,16 +302,14 @@ public {/*zip}*/
 			private {/*defs}*/
 				alias ZipTuple = Tuple!(staticMap!(Unqual, staticMap!(ElementType, Ranges))); 
 
-				auto zip_with (string op, Args...)(Args args) inout
+				auto zip_with (string op, Args...)(Args args)
 					{/*...}*/
-						auto zip_copy = this;
-
 						static code ()
 							{/*...}*/
 								string code;
 // TODO instead of slicing all the ranges, we should just keep 1 or 2 iterators, and save all the range interaction for opIndex
 								foreach (r; 0..Ranges.length)
-									code ~= q{zip_copy.ranges[} ~r.text~ q{] } ~op~ q{, };
+									code ~= q{ranges[} ~r.text~ q{]} ~op~ q{, };
 
 								return code;
 							}
@@ -431,7 +429,7 @@ public {/*sequence}*/
 		if (is_binary_function!(func!(int, int)))
 		{/*...}*/
 			pure nothrow:
-			inout {/*[i]}*/
+			public {/*[i]}*/
 				auto opIndex (size_t i)
 					{/*...}*/
 						return func (initial, i);
@@ -439,12 +437,17 @@ public {/*sequence}*/
 
 				static assert (is_indexable!Sequence);
 			}
-			inout {/*[i..j]}*/
-				auto opSlice () inout
+			public {/*[i..j]}*/
+				auto opSlice ()
 					{/*...}*/
 						return save;
 					}
-				auto opSlice (size_t i, size_t j) inout
+				auto opSlice (size_t i, size_t j)
+					{/*...}*/
+						return FiniteSequence!(func, T)(initial, i, j);
+					}
+
+				auto opSlice (size_t i, size_t j) immutable
 					{/*...}*/
 						return FiniteSequence!(func, T)(initial, i, j);
 					}
@@ -455,16 +458,19 @@ public {/*sequence}*/
 					{/*...}*/
 						initial = initial + unity!T;
 					}
-				auto front () inout
+				auto front ()
 					{/*...}*/
 						return func (initial, 0);
 					}
-				enum empty = false;
+				auto empty ()
+					{/*...}*/
+						return false;
+					}
 				// TODO sequence needs to be revamped so we can take $ = inf so ℕ[x..$] will give us ℕ starting at x
 
 				static assert (isInputRange!Sequence);
 			}
-			inout @property {/*ForwardRange}*/
+			@property {/*ForwardRange}*/
 				auto save ()
 					{/*...}*/
 						return this;
@@ -491,7 +497,7 @@ public {/*sequence}*/
 		if (is_binary_function!(func!(int, int)))
 		{/*...}*/
 			pure nothrow:
-			inout {/*[i]}*/
+			public {/*[i]}*/
 				auto opIndex (size_t i)
 					in {/*...}*/
 						assert (i + start < start + length);
@@ -502,7 +508,7 @@ public {/*sequence}*/
 
 				static assert (is_indexable!FiniteSequence);
 			}
-			inout {/*[i..j]}*/
+			public {/*[i..j]}*/
 				auto opSlice ()
 					{/*...}*/
 						return save;
@@ -525,21 +531,21 @@ public {/*sequence}*/
 					body {/*...}*/
 						++start;
 					}
-				auto front () inout
+				auto front ()
 					in {/*...}*/
 						assert (not (empty));
 					}
 					body {/*...}*/
 						return func (initial, start);
 					}
-				auto empty () inout
+				auto empty () const
 					{/*...}*/
 						return this.length == 0;
 					}
 				static assert (isInputRange!FiniteSequence);
 
 			}
-			inout @property {/*ForwardRange}*/
+			@property {/*ForwardRange}*/
 				auto save ()
 					{/*...}*/
 						return this;
@@ -555,7 +561,7 @@ public {/*sequence}*/
 					body {/*...}*/
 						--end;
 					}
-				auto back () inout
+				auto back ()
 					in {/*...}*/
 						assert (not (empty));
 					}
@@ -604,5 +610,8 @@ public {/*sequence}*/
 			assert (ℕ[4..9].equal ([4,5,6,7,8]));
 			assert (ℕ[4..9][1..4].equal ([5,6,7]));
 			assert (ℕ[4..9][1..4][1] == 6);
+
+	//		foreach (i, n; ℕ[0..10]) // TODO
+	//			assert (n == i);
 		}
 }

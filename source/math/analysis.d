@@ -1,58 +1,89 @@
 module evx.analysis;
 
 private {/*import std}*/
+	import std.algorithm: 
+		min, max;
+
 	import std.math: 
-		approxEqual;
+		abs;
 
 	import std.typetuple: 
 		allSatisfy,
 		staticMap;
 
 	import std.traits: 
-		isNumeric;
+		isNumeric, hasMember,
+		CommonType;
 
 	import std.range:
-		isForwardRange, hasLength,
+		isInputRange, isForwardRange, hasLength,
 		ElementType;
 
 	import std.conv:
 		text;
 }
 private {/*import evx}*/
+	import evx.functional:
+		zip;
+
 	import evx.logic:
-		not, And;
+		not, And, Or, Not;
 
 	import evx.algebra:
 		zero;
 
-	import evx.meta:
-		is_indexable;
+	import evx.arithmetic:
+		supports_arithmetic;
+
+	import evx.traits:
+		is_indexable, is_comparable;
 }
 
 immutable infinity = real.infinity;
 
 pure nothrow:
 public {/*comparison}*/
-	/* test if a type supports approximate equality comparison 
+	/* test if a type overloads approximate equality comparison 
 	*/
-	template has_approximate_equality (T)
+	template overloads_approx (T)
 		{/*...}*/
-			enum has_approximate_equality = __traits(compiles,
-				T.init.approxEqual (T.init)
-			);
+			enum overloads_approx = hasMember!(T, `approx`);
 		}
-
+	
 	/* test if a number or range is approximately equal to another 
 	*/
-	auto approx (T, U)(const T a, const U b)
+	auto approx (T,U)(T a, U b)
+		if (allSatisfy!(isInputRange, T, U) && allSatisfy!(Or!(isNumeric, overloads_approx), CommonType!(staticMap!(ElementType, T, U))))
 		{/*...}*/
-			return approxEqual (a,b);
+			alias C = CommonType!(staticMap!(ElementType, T, U));
+
+			foreach (τ; zip (a,b))
+				if (τ[0].approx (τ[1]))
+					continue;
+				else return false;
+
+			return true;
+		}
+	auto approx (T,U)(T a, U b, real relative_tolerance = 1e-5)
+		if (allSatisfy!(isNumeric, T, U))
+		{/*...}*/
+			alias V = CommonType!(T,U);
+
+			auto abs_a = abs (a);
+			auto abs_b = abs (b);
+
+			if (abs_a + abs_b < relative_tolerance)
+				return true;
+
+			auto ε = max (abs_a, abs_b) * relative_tolerance;
+
+			return abs (a-b) < ε;			
 		}
 
 	/* a.approx (b) && b.approx (c) && ...
 	*/
 	bool all_approx_equal (Args...)(Args args)
-		if (Args.length > 1 && allSatisfy!(has_approximate_equality, Args))
+		if (Args.length > 1 && allSatisfy!(Or!(isNumeric, overloads_approx), Args))
 		{/*...}*/
 			foreach (i,_; args[0..$-1])
 				if (not (args[i].approx (args[i+1])))

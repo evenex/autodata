@@ -21,7 +21,7 @@ private {/*import std}*/
 		countUntil;
 
 	import std.math: 
-		std_abs = abs;
+		abs;
 }
 private {/*import evx}*/
 	import evx.logic: 
@@ -36,6 +36,9 @@ private {/*import evx}*/
 
 	import evx.meta:
 		CompareBy;
+
+	import evx.analysis:
+		approx;
 }
 unittest
 	{/*demo}*/
@@ -71,6 +74,15 @@ public {/*unit}*/
 		{/*...}*/
 			public nothrow:
 			pure const {/*math}*/
+				auto abs ()
+					{/*...}*/
+						return Unit (.abs (this.scalar));
+					}
+				auto approx (Unit a)
+					{/*...}*/
+						return this.scalar.approx (a.scalar);
+					}
+
 				auto opDispatch (string op)()
 					{/*...}*/
 						mixin(q{
@@ -112,9 +124,13 @@ public {/*unit}*/
 											auto ret = combine_dimension!(add, Unit, U);
 										else auto ret = combine_dimension!(subtract, Unit, U);
 
-										mixin(q{
-											ret.scalar = this.scalar } ~ op ~ q{ rhs.scalar;
+										static if (is_Unit!(typeof(ret))) mixin(q{
+											ret.scalar = this.scalar } ~op~ q{ rhs.scalar;
+										}); else mixin(q{
+											ret = this.scalar } ~op~ q{ rhs.scalar;
 										});
+
+
 										return ret;
 									}
 								else static if (isNumeric!U)
@@ -140,7 +156,7 @@ public {/*unit}*/
 									{/*...}*/
 										Unit ret;
 										mixin(q{
-											ret.scalar = this.scalar} ~ op ~ q{ rhs.scalar;
+											ret.scalar = this.scalar} ~op~ q{ rhs.scalar;
 										});
 										return ret;
 									}
@@ -230,7 +246,7 @@ public {/*unit}*/
 
 							static auto to_superscript (U)(U num)
 								{/*...}*/
-									uint n = abs(num).to!uint;
+									uint n = .abs(num).to!uint;
 									if (n < 3)
 										{/*...}*/
 											if (n == 1)
@@ -277,10 +293,15 @@ public {/*unit}*/
 			enum UnitTrait;
 			alias Dimension = T;
 
-			this (T)(T value)
-				if (isNumeric!T)
+			this (U)(U value)
+				if (isNumeric!U)
 				{/*...}*/
 					scalar = value;
+				}
+
+			this (Unit quantity)
+				{/*...}*/
+					this.scalar = quantity.scalar;
 				}
 		}
 }
@@ -421,26 +442,13 @@ public {/*traits}*/
 	template is_Unit (T...)
 		if (T.length == 1)
 		{/*...}*/
-			enum is_Unit = __traits(compiles, T[0].UnitTrait);
+			alias U = T[0];
+			enum is_Unit = is (U.UnitTrait == enum);
 		}
 	template is_Dimension (T...)
 		if (T.length == 1)
 		{/*...}*/
 			enum is_Dimension = __traits(compiles, T[0].DimensionTrait);
-		}
-}
-public {/*math}*/
-	auto abs (T)(const T quantity)
-		{/*...}*/
-			static if (is_Unit!T)
-				return quantity.abs;
-			else return std_abs (quantity);
-		}
-	auto approx (T, U)(const T a, const U b)
-		{/*...}*/
-			static if (is_Unit!T && is_Unit!U)
-				return evx.analysis.approx (a.scalar, b.scalar);
-			else return evx.analysis.approx (a, b);
 		}
 }
  
@@ -556,11 +564,5 @@ private {/*traits}*/
 
 					return true;
 				}
-		}
-}
-private {/*forwarding}*/
-	auto ref Scalar scalar ()(auto ref Scalar s)
-		{/*...}*/
-			return s;
 		}
 }
