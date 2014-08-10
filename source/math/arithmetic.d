@@ -5,64 +5,72 @@ private {/*import std}*/
 		isNumeric, isIntegral,
 		FieldTypeTuple;
 	
+	import std.range:
+		isInputRange;
+
 	import std.typetuple:
 		staticMap;
+
+	import std.typecons:
+		Tuple;
 
 	import std.conv:
 		to;
 }
 private {/*import evx}*/
+	import evx.utils:
+		τ;
+
 	import evx.functional:
 		map, reduce;
 }
 
 pure nothrow:
 
-/* returns unity (1) for a given type 
-	if T cannot be constructed from 1, then unity recursively attempts to call a constructor with unity for all field types
+/* test whether a type is capable of addition, subtraction, multiplication and division 
 */
-auto unity (T)()
+template supports_arithmetic (T)
 	{/*...}*/
-		static if (isNumeric!T)
-			return cast(T) 1;
-		else static if (__traits(compiles, T(1)))
-			return T(1);
-		else static if (__traits(compiles, T(staticMap!(unity, FieldTypeTuple!T))))
-			return T(staticMap!(unity, FieldTypeTuple!T));
-		else static assert (0, `can't compute unity for ` ~T.stringof);
-	}
-
-/* returns zero (0) for a given type 
-	if T cannot be constructed from 1, then zero recursively attempts to call a constructor with zero for all field types
-*/
-auto zero (T)()
-	{/*...}*/
-		static if (isNumeric!T)
-			return cast(T) 0;
-		else static if (__traits(compiles, T(0)))
-			return T(0);
-		else static if (__traits(compiles, T(staticMap!(zero, FieldTypeTuple!T))))
-			return T(staticMap!(zero, FieldTypeTuple!T));
-		else static assert (0, `can't compute zero for ` ~T.stringof);
+		enum supports_arithmetic = __traits(compiles,
+			{T x, y; static assert (__traits(compiles, x+y, x-y, x*y, x/y));}
+		);
 	}
 
 /* ctfe-able arithmetic predicates 
 */
-auto add (T)(T a, T b) 
+auto add (T,U)(T a, U b) 
 	{return a + b;}
-auto subtract (T)(T a, T b) 
+auto subtract (T,U)(T a, U b) 
 	{return a - b;}
+auto multiply (T,U)(T a, U b) 
+	{return a * b;}
+auto divide (T,U)(T a, U b) 
+	{return a / b;}
+
+/* mappable arithmetic predicates 
+*/
+auto add (T,U)(Tuple!(T,U) τ)
+	{return τ[0] + τ[1];}
+auto subtract (T,U)(Tuple!(T,U) τ)
+	{return τ[0] - τ[1];}
+auto multiply (T,U)(Tuple!(T,U) τ)
+	{return τ[0] * τ[1];}
+auto divide (T,U)(Tuple!(T,U) τ)
+	{return τ[0] / τ[1];}
 
 /* compute the product of a sequence 
 */
-auto Π (R)(R sequence)
+auto product (R)(R sequence)
+	if (isInputRange!R)
 	{/*...}*/
 		return sequence.reduce!((Π,x) => Π*x);
 	}
+alias Π = product;
 
 /* compute the sum of a sequence 
 */
 auto sum (R)(R sequence)
+	if (isInputRange!R)
 	{/*...}*/
 		return sequence.reduce!((Σ,x) => Σ+x);
 	}

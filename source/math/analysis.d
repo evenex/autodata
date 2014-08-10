@@ -14,10 +14,16 @@ private {/*import std}*/
 	import std.range:
 		isForwardRange, hasLength,
 		ElementType;
+
+	import std.conv:
+		text;
 }
 private {/*import evx}*/
 	import evx.logic:
 		not, And;
+
+	import evx.algebra:
+		zero;
 
 	import evx.meta:
 		is_indexable;
@@ -39,28 +45,14 @@ public {/*comparison}*/
 	/* test if a number or range is approximately equal to another 
 	*/
 	auto approx (T, U)(const T a, const U b)
-		if (allSatisfy!(And!(is_indexable, hasLength), T, U) || allSatisfy!(has_approximate_equality, T, U))
 		{/*...}*/
-			static if (isForwardRange!T)
-				{/*...}*/
-					static assert (allSatisfy!(has_approximate_equality, staticMap!(ElementType, T, U)));
-					
-					if (a.length != b.length)
-						return false;
-
-					foreach (i; 0..a.length)
-						if (not (a[i].approx (b[i])))
-							return false;
-
-					return true;
-				}
-			else return approxEqual (a,b);
+			return approxEqual (a,b);
 		}
 
 	/* a.approx (b) && b.approx (c) && ...
 	*/
 	bool all_approx_equal (Args...)(Args args)
-		if (Args.length > 1)
+		if (Args.length > 1 && allSatisfy!(has_approximate_equality, Args))
 		{/*...}*/
 			foreach (i,_; args[0..$-1])
 				if (not (args[i].approx (args[i+1])))
@@ -81,13 +73,13 @@ public {/*intervals}*/
 	struct Interval (Index)
 		{/*...}*/
 			pure nothrow:
-			@property length ()
+			const @property length ()
 				{/*...}*/
 					return end - start;
 				}
 			const @property empty ()
 				{/*...}*/
-					return end - start == 0;
+					return end - start == zero!Index;
 				}
 			const @property start ()
 				{/*...}*/
@@ -104,6 +96,11 @@ public {/*intervals}*/
 			@property end (Index i)
 				{/*...}*/
 					bounds[1] = i;
+				}
+			this (Index start, Index end)
+				{/*...}*/
+					this.start = start;
+					this.end = end;
 				}
 
 			private:
@@ -133,7 +130,7 @@ public {/*intervals}*/
 
 	auto interval (T)(T start, T end)
 		{/*...}*/
-			return Interval!T ([start, end]);
+			return Interval!T (start, end);
 		}
 		unittest {/*...}*/
 			import std.exception: assertThrown;
@@ -232,60 +229,63 @@ public {/*normalization}*/
 				}
 		}
 		unittest {/*...}*/
-			struct Test
-				{/*...}*/
-					float a;
+			debug {/*...}*/
+				struct Test
+					{/*...}*/
+						float a;
 
-					@(Normalized.full) 
-					double b;
+						@(Normalized.full) 
+						double b;
 
-					@(Normalized.positive)
-					real c;
+						@(Normalized.positive)
+						real c;
 
-					@Normalized
-					real d;
+						@Normalized
+						real d;
 
-					mixin NormalizedInvariance;
+						mixin NormalizedInvariance;
 
-					void test (){}
-				}
+						void test (){}
+					}
 
 
-			auto t = Test (0.0, 0.0, 0.0, 0.0);
+				auto t = Test (0.0, 0.0, 0.0, 0.0);
 
-			bool thrown;
+				bool thrown;
 
-			void attempt (void delegate() action)
-				{try {action(); t.test;} catch (Throwable) {thrown = true;}}
+				void attempt (void delegate() action) nothrow
+					{try {action(); t.test;} catch (Throwable) {thrown = true;}}
 
-			attempt ({t.a = 9.0;});
-			assert (not (thrown));
+				attempt ({t.a = 9.0;});
+				assert (not (thrown));
 
-			attempt ({t.b = 1.0;});
-			assert (not (thrown));
+				attempt ({t.b = 1.0;});
+				assert (not (thrown));
 
-			attempt ({t.b = 1.1;});
-			assert (thrown);
-			thrown = false;
+				attempt ({t.b = 1.1;});
+				assert (thrown);
+				thrown = false;
 
-			attempt ({t.b = -1.0;});
-			assert (not (thrown));
+				attempt ({t.b = -1.0;});
+				assert (not (thrown));
 
-			attempt ({t.c = -1.0;});
-			assert (thrown);
-			thrown = false;
+				attempt ({t.c = -1.0;});
+				assert (thrown);
+				thrown = false;
 
-			attempt ({t.c = 1.0;});
-			assert (not (thrown));
+				attempt ({t.c = 1.0;});
+				assert (not (thrown));
 
-			attempt ({t.d = 1.01;});
-			assert (thrown);
-			thrown = false;
+				attempt ({t.d = 1.01;});
+				assert (thrown);
+				thrown = false;
 
-			attempt ({t.d = 1.0;});
-			assert (not (thrown));
+				attempt ({t.d = 1.0;});
+				assert (not (thrown));
 
-			attempt ({t.d = -1.0;});
-			assert (not (thrown));
+				attempt ({t.d = -1.0;});
+				assert (not (thrown));
+			}			
 		}
+
 }

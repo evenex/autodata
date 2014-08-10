@@ -18,20 +18,28 @@ private {/*import std}*/
 		Tuple;
 
 	import std.traits:
-		isNumeric, isFloatingPoint, isIntegral, isUnsigned;
+		isNumeric, isFloatingPoint, isIntegral, isUnsigned,
+		Unqual;
 }
 private {/*import evx}*/
 	import evx.logic:
 		not;
 
+	import evx.algebra:
+		unity;
+
 	import evx.range:
 		slice_within_bounds;
 
 	import evx.traits:
-		is_indexable, is_sliceable;
+		is_indexable, is_sliceable,
+		is_binary_function;
+
+	import evx.utils; // BUG doesnt like selective Indices import..
 }
 
 pure nothrow:
+// REVIEW inout/const/etc AND UNITTEST
 
 public {/*map}*/
 	/* nothrow replacement for std.algorithm.MapResult 
@@ -54,11 +62,11 @@ public {/*map}*/
 				}
 			static if (is_sliceable!R)
 				{/*...}*/
-					auto opSlice ()()
+					auto opSlice ()
 						{/*...}*/
 							return save;
 						}
-					auto opSlice ()(size_t i, size_t j)
+					auto opSlice (size_t i, size_t j)
 						in {/*...}*/
 							static if (hasLength!R)
 								assert (slice_within_bounds (i, j, length));
@@ -105,7 +113,7 @@ public {/*map}*/
 				}
 			static if (isBidirectionalRange!R)
 				{/*...}*/
-					auto ref back ()
+					auto ref back () inout
 						in {/*...}*/
 							assert (not (empty));
 						}
@@ -166,7 +174,7 @@ public {/*zip}*/
 			pure nothrow:
 			static if (allSatisfy!(is_indexable, Ranges))
 				{/*...}*/
-					auto ref opIndex (size_t i)
+					auto ref opIndex (size_t i) inout
 						in {/*...}*/
 							static if (hasLength!ZipResult)
 								assert (i < length);
@@ -186,22 +194,18 @@ public {/*zip}*/
 					auto opSlice (size_t i, size_t j)
 						in {/*...}*/
 							static if (hasLength!ZipResult)
-								assert (slice_within_bounds (i, j, length));
+								assert (slice_within_bounds (slice.start + i, slice.start + j, slice.length));
 						}
 						body {/*...}*/
-							auto zip_result = ZipResult ();
-
-							foreach (r, range; ranges)
-								zip_result.ranges[r] = range[i..j];
+							return ZipResult (ranges, Indices (slice.start + i, slice.start + j));
 						}
 
 					static assert (is_sliceable!ZipResult);
 				}
 
-			@property:
 			static if (allSatisfy!(isInputRange, Ranges))
-				{/*...}*/
-					auto ref front ()
+				@property {/*...}*/
+					auto ref front () inout
 						in {/*...}*/
 							assert (not (empty));
 						}
@@ -216,7 +220,7 @@ public {/*zip}*/
 							foreach (ref range; ranges)
 								range.popFront;
 						}
-					bool empty ()
+					bool empty () const
 						{/*...}*/
 							return ranges[0].empty;
 						}
@@ -224,8 +228,8 @@ public {/*zip}*/
 					static assert (isInputRange!ZipResult);
 				}
 			static if (allSatisfy!(isForwardRange, Ranges))
-				{/*...}*/
-					auto save ()
+				@property {/*...}*/
+					auto save () inout
 						{/*...}*/
 							return this;
 						}
@@ -233,8 +237,8 @@ public {/*zip}*/
 					static assert (isForwardRange!ZipResult);
 				}
 			static if (allSatisfy!(isBidirectionalRange, Ranges))
-				{/*...}*/
-					auto ref back ()
+				@property {/*...}*/
+					auto ref back () inout
 						in {/*...}*/
 							assert (not (empty));
 						}
@@ -253,7 +257,7 @@ public {/*zip}*/
 					static assert (isBidirectionalRange!ZipResult);
 				}
 			static if (allSatisfy!(isOutputRange, Ranges))
-				{/*...}*/
+				@property {/*...}*/
 					void put ()(auto ref ZipTuple element)
 						{/*...}*/
 							foreach (i, ref range; ranges)
@@ -263,8 +267,8 @@ public {/*zip}*/
 					static assert (.isOutputRange!(ZipResult, ZipTuple));
 				}
 			static if (allSatisfy!(hasLength, Ranges))
-				{/*...}*/
-					@property length () const
+				@property {/*...}*/
+					auto length () const
 						{/*...}*/
 							return ranges[0].length;
 						}
@@ -284,22 +288,37 @@ public {/*zip}*/
 					body {/*...}*/
 						this.ranges = ranges;
 					}
+
+				this (Ranges ranges, Indices slice) // XXX
+					body {/*...}*/
+						this (ranges);
+						this.slice = slice;
+					}
 			}
 			private {/*data}*/
 				Ranges ranges;
+				Indices slice;
 			}
 			private {/*defs}*/
-				alias ZipTuple = Tuple!(staticMap!(ElementType, Ranges)); 
+				alias ZipTuple = Tuple!(staticMap!(Unqual, staticMap!(ElementType, Ranges))); 
 
-				auto zip_with (string op, Args...)(Args args)
+				auto zip_with (string op, Args...)(Args args) inout
 					{/*...}*/
-						auto zip_tuple = ZipTuple ();
+						auto zip_copy = this;
 
-						foreach (r, ref range; ranges) mixin(q{
-							zip_tuple[r] = range} ~op~ q{;
+						static code ()
+							{/*...}*/
+								string code;
+// TODO instead of slicing all the ranges, we should just keep 1 or 2 iterators, and save all the range interaction for opIndex
+								foreach (r; 0..Ranges.length)
+									code ~= q{zip_copy.ranges[} ~r.text~ q{] } ~op~ q{, };
+
+								return code;
+							}
+
+						mixin(q{
+							return ZipTuple (} ~code[0..$-2]~ q{);
 						});
-
-						return zip_tuple;
 					}
 
 				template isOutputRange (R)
@@ -409,7 +428,7 @@ public {/*sequence}*/
 	/* an infinite sequence defined by a generating function of the form f(T, size_t) 
 	*/
 	struct Sequence (alias func, T)
-		if (isNumeric!T)
+		if (is_binary_function!(func!(int, int)))
 		{/*...}*/
 			pure nothrow:
 			inout {/*[i]}*/
@@ -434,13 +453,14 @@ public {/*sequence}*/
 			@property {/*InputRange}*/
 				auto popFront ()
 					{/*...}*/
-						++initial;
+						initial = initial + unity!T;
 					}
 				auto front () inout
 					{/*...}*/
 						return func (initial, 0);
 					}
 				enum empty = false;
+				// TODO sequence needs to be revamped so we can take $ = inf so ℕ[x..$] will give us ℕ starting at x
 
 				static assert (isInputRange!Sequence);
 			}
@@ -468,7 +488,7 @@ public {/*sequence}*/
 	/* a finite subsequence of some Sequence 
 	*/
 	struct FiniteSequence (alias func, T)
-		if (isNumeric!T)
+		if (is_binary_function!(func!(int, int)))
 		{/*...}*/
 			pure nothrow:
 			inout {/*[i]}*/
@@ -577,7 +597,7 @@ public {/*sequence}*/
 			return Sequence!(func, T)(initial);
 		}
 		unittest {/*...}*/
-			import evx.ordering: ℕ;
+			import evx.ordinal: ℕ;
 			import std.range: equal;
 
 			assert (ℕ[0..10].equal ([0,1,2,3,4,5,6,7,8,9]));

@@ -13,7 +13,7 @@ import evx.traits:
 	is_comparison_function,
 	is_indexable;
 
-import evx.ordering:
+import evx.ordinal:
 	antisymmetrically_equivalent, less_than;
 
 pure nothrow:
@@ -48,7 +48,7 @@ struct BinarySearchResult (T)
 */
 auto binary_search (R, T = ElementType!R)(R range, T element)
 	{/*...}*/
-		return range.binary_search!less_than (element);
+		return range.binary_search!(less_than!T) (element);
 	}
 
 /* perform a custom policy-based binary search.

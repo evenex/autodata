@@ -1,11 +1,19 @@
 module evx.range;
 
+//REFACTOR imports
+import evx.logic: And, Not, not;
+import evx.traits: is_indexable;
+import std.typetuple: allSatisfy;
+import std.range: ElementType, isForwardRange;
+import evx.functional: map;
+import evx.arithmetic: sum;
+
 pure nothrow:
 
 /* construct a ForwardRange out of a range of ranges such that the inner ranges appear concatenated 
 */
 struct Contigious (R)
-	if (allSatify!(And!(is_indexable, Not!isForwardRange), R, ElementType!R))
+	if (allSatisfy!(is_indexable, R, ElementType!R) && not (isForwardRange!(ElementType!R)))
 	{/*...}*/
 		pure nothrow:
 

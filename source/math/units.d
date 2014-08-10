@@ -144,7 +144,7 @@ public {/*unit}*/
 										});
 										return ret;
 									}
-								else static assert (0, `attempt to linearly combine non-equivalent `
+								else static assert (0, `attempted linear combination of non-equivalent `
 									~ Unit.stringof ~ ` and ` ~ U.stringof
 								);
 							}
@@ -159,7 +159,7 @@ public {/*unit}*/
 							{/*...}*/
 								auto ret = reciprocate_dimension!Unit;
 
-								ret.scalar = lhs / this.scalar;
+								ret.scalar = lhs.to!Scalar / this.scalar;
 									
 								return ret;
 							}
@@ -297,12 +297,15 @@ public {/*base dimensions}*/
 		{/*...}*/
 			enum DimensionTrait;
 		}
+	struct Current
+		{/*...}*/
+			enum DimensionTrait;
+		}
 }
 
 public:
 public {/*mass}*/
 	alias Kilograms = ReturnType!kilogram;
-	alias Grams = ReturnType!gram;
 	alias kilograms = kilogram;
 	alias grams = gram;
 
@@ -312,13 +315,11 @@ public {/*mass}*/
 		}
 	auto gram (Scalar scalar = 1)
 		{/*...}*/
-			return (scalar/1000).kilogram;
+			return scalar * kilogram/1000;
 		}
 }
 public {/*space}*/
 	alias Meters = ReturnType!meter;
-	alias Kilometers = ReturnType!kilometer;
-	alias Millimeters = ReturnType!millimeter;
 
 	alias meters = meter;
 	alias kilometers = kilometer;
@@ -339,16 +340,15 @@ public {/*space}*/
 
 	auto square_meters (Scalar scalar = 1)
 		{/*...}*/
-			return scalar * meter*meters;
+			return scalar * meter.pow!2;
 		}
 }
 public {/*time}*/
 	alias Seconds = ReturnType!second;
-	alias Minutes = ReturnType!minute;
-	alias Hours = ReturnType!hour;
 	alias seconds = second;
 	alias minutes = minute;
 	alias hours = hour;
+	alias milliseconds = millisecond;
 
 	auto second (Scalar scalar = 1)
 		{/*...}*/
@@ -356,11 +356,24 @@ public {/*time}*/
 		}
 	auto minute (Scalar scalar = 1)
 		{/*...}*/
-			return Unit!(Time, 1)(scalar/60.0);
+			return scalar * 60.seconds;
 		}
 	auto hour (Scalar scalar = 1)
 		{/*...}*/
-			return Unit!(Time, 1)(scalar/3600.0);
+			return scalar * 60.minutes;
+		}
+	auto millisecond (Scalar scalar = 1)
+		{/*...}*/
+			return scalar * second/1000;
+		}
+}
+public {/*current}*/
+	alias Amperes = ReturnType!ampere;
+	alias amperes = ampere;
+
+	auto ampere (Scalar scalar = 1)
+		{/*...}*/
+			return Unit!(Current, 1)(scalar);
 		}
 }
 public {/*force}*/
@@ -383,7 +396,6 @@ public {/*torque/moment}*/
 }
 public {/*frequency}*/
 	alias Hertz = ReturnType!hertz;
-	alias Kilohertz = ReturnType!kilohertz;
 
 	auto hertz (Scalar scalar = 1)
 		{/*...}*/
@@ -394,6 +406,15 @@ public {/*frequency}*/
 			return scalar * 1000.0/second;
 		}
 }
+public {/*voltage}*/
+	alias Volts = ReturnType!volt;
+	alias volts = volt;
+
+	auto volt (Scalar scalar = 1)
+		{/*...}*/
+			return scalar * kilogram * meters.pow!2 * seconds.pow!(-3) * amperes.pow!(-1);
+		}
+}
 
 public:
 public {/*traits}*/
@@ -401,6 +422,11 @@ public {/*traits}*/
 		if (T.length == 1)
 		{/*...}*/
 			enum is_Unit = __traits(compiles, T[0].UnitTrait);
+		}
+	template is_Dimension (T...)
+		if (T.length == 1)
+		{/*...}*/
+			enum is_Dimension = __traits(compiles, T[0].DimensionTrait);
 		}
 }
 public {/*math}*/
@@ -423,31 +449,37 @@ private {/*code generation}*/
 	auto combine_dimension (alias op, T, U)()
 		if (allSatisfy!(is_Unit, T, U))
 		{/*...}*/
-			static auto code ()()
+			static code ()
 				{/*...}*/
 					alias TDim = Filter!(is_Dimension, T.Dimension);
 					alias TPow = Filter!(is_numerical_param, T.Dimension);
 					alias UDim = Filter!(is_Dimension, U.Dimension);
 					alias UPow = Filter!(is_numerical_param, U.Dimension);
 
-					string code;
+					string[] dims;
 
 					foreach (i, Dim; TDim)
 						{/*...}*/
 							const auto j = staticIndexOf!(Dim, UDim);
+
 							static if (j >= 0)
 								{/*...}*/
 									static if (op (TPow[i], UPow[j]) != 0)
-										code ~= Dim.stringof ~ q{, } ~ op (TPow[i], UPow[j]).text ~ q{, };
+										dims ~= Dim.stringof ~ q{, } ~ op (TPow[i], UPow[j]).text ~ q{, };
 								}
-							else code ~= Dim.stringof ~ q{, } ~ TPow[i].text ~ q{, };
+							else dims ~= Dim.stringof ~ q{, } ~ TPow[i].text ~ q{, };
 						}
 					foreach (i, Dim; UDim)
 						{/*...}*/
 							const auto j = staticIndexOf!(Dim, TDim);
 							static if (j < 0)
-								code ~= Dim.stringof ~ q{, } ~ op (0, UPow[i]).text ~ q{, };
+								dims ~= Dim.stringof ~ q{, } ~ op (0, UPow[i]).text ~ q{, };
 						}
+
+					string code;
+
+					foreach (dim; dims.sort!((s,t) => s[0] < t[0]))
+						code ~= dim;
 
 					return code;
 				}
@@ -495,11 +527,6 @@ private {/*code generation}*/
 		}
 }
 private {/*traits}*/
-	template is_Dimension (T...)
-		if (T.length == 1)
-		{/*...}*/
-			enum is_Dimension = __traits(compiles, T[0].DimensionTrait);
-		}
 	template is_equivalent_Unit (T, U)
 		if (allSatisfy!(is_Unit, T, U))
 		{/*...}*/

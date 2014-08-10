@@ -2,32 +2,37 @@ module evx.meta;
 
 private {/*import std}*/
 	import std.traits:
-		isIterable, isAssignable, isMutable,
+		isIterable, isAssignable, isMutable, isBuiltinType,
 		isFunctionPointer, functionLinkage,
 		Unqual;
+			
 
 	import std.typetuple:
-		allSatisfy,
+		allSatisfy, anySatisfy,
 		TypeTuple,
-		Filter;
+		staticMap, staticIndexOf, Filter;
 
 	import std.typecons:
 		Tuple;
 
 	import std.range:
-		empty;
+		empty,
+		array;
+
+	import std.conv:
+		text;
 }
 private {/*import evx}*/
 	import evx.logic:
-		not, And;
+		not, And, Or, Not;
 
 	import evx.utils:
 		imp;
 
 	import evx.traits:
-		is_type, is_string_param, is_alias,
+		is_type, is_string_param, is_numerical_param, is_alias,
 		is_indexable, is_sliceable,
-		has_attribute;
+		has_attribute, is_accessible;
 }
 
 pure nothrow:
@@ -116,7 +121,7 @@ public {/*forwarding}*/
 
 			int opCmp ()(auto ref const typeof(this) that) const
 				{/*...}*/
-					import evx.ordering: compare;
+					import evx.ordinal: compare;
 
 					enum name = __traits(identifier, member);
 
@@ -470,7 +475,7 @@ public {/*construction}*/
 										}`}`q{
 								};
 
-								static if (not (isDelegate!Type || isFunctionPointer!Type))
+								static if (not (isDelegate!Type || isFunctionPointer!Type || isBuiltinType!Type)) // TODO we can get rid of isBuiltinType with UCS
 									setter ~= q{
 										auto ref } ~name~ q{ (Args...)(Args args)
 											}`{`q{
@@ -481,13 +486,13 @@ public {/*construction}*/
 
 								static if (isDelegate!Type || isFunctionPointer!Type)
 									string getter = q{
-										@property } ~name~ q{ ()
+										inout @property } ~name~ q{ ()
 											}`{`q{
 												return _} ~name~ q{ ();
 											}`}`q{
 									};
 								else string getter = q{
-									@property } ~name~ q{ ()
+									inout @property } ~name~ q{ ()
 										}`{`q{
 											return _} ~name~ q{;
 										}`}`q{
@@ -644,28 +649,29 @@ public {/*construction}*/
 			const {/*text}*/
 				auto toString ()
 					{/*...}*/
-						import std.conv: text;
-						import std.range: empty, ElementType;
-						import std.traits: PointerTarget;
+						debug try {/*...}*/
+							import std.conv: text, to;
+							import std.range: empty, ElementType;
+							import std.traits: PointerTarget;
 
-						static if (__traits(compiles, this[].text))
-							try return this[].text;
-							catch (Exception) assert (0);
-						else static if (__traits(compiles, this[0].text))
-							{/*...}*/
-								string output;
+							static if (__traits(compiles, this[].text))
+								return this[].text;
+							else static if (__traits(compiles, this[0].text))
+								{/*...}*/
+									string output;
 
-								try foreach (element; 0..length)
-									output ~= element.text ~ `, `;
-								catch (Exception) assert (0);
+									foreach (element; 0..length)
+										output ~= element.text ~ `, `;
 
-								if (output.empty)
-									return `[]`;
-								else return `[` ~output[0..$-2]~ `]`;
-							}
-						else static if (is (typeof(pointer) == T*, T))
-							return `[` ~PointerTarget!(typeof(pointer)).stringof~ `...]`;
-						else return `[` ~ElementType!(typeof(pointer)).stringof~ `...]`;
+									if (output.empty)
+										return `[]`;
+									else return `[` ~output[0..$-2]~ `]`;
+								}
+							else static if (is (typeof(pointer) == T*, T))
+								return `[` ~PointerTarget!(typeof(pointer)).stringof~ `...]`;
+							else return `[` ~ElementType!(typeof(pointer)).stringof~ `...]`;
+						}
+						catch (Exception) assert (0);
 					}
 				auto text ()
 					{/*...}*/
@@ -797,7 +803,8 @@ public {/*extraction}*/
 		unittest {/*...}*/
 			struct Test {enum a = 0; int b = 0; struct InnerStruct {} class InnerClass {}}
 
-			static assert (is (get_subtructs!T == TypeTuple!(Test.InnerStruct, Test.InnerClass)));
+			foreach (i, T; TypeTuple!(Test.InnerStruct, Test.InnerClass))
+				static assert (staticIndexOf!(T, get_substructs!Test) == i);
 		}
 
 	/* build a string tuple of all assignable members of T 
@@ -913,8 +920,11 @@ public {/*code generation}*/
 			else static assert (0);
 
 			string code;
-			foreach (i, T; Types)
-				code ~= T.stringof~` `~prefix~`_`~to!string(i)~suffix;
+
+			try foreach (i, T; Types)
+				code ~= T.stringof~` `~prefix~`_`~i.text~suffix;
+			catch (Exception) assert (0);
+
 			return code;
 		}
 		unittest {/*demo}*/
@@ -1002,7 +1012,7 @@ public {/*code generation}*/
 						{/*...}*/
 							static if (staticIndexOf!(PolicyTypes[i], AssignedTypes) >= 0)
 								{/*...}*/
-									immutable j  = staticIndexOf!(PolicyTypes, AssignedTypes);
+									immutable j  = staticIndexOf!(PolicyTypes[i], AssignedTypes);
 
 									code ~= q{
 										alias } ~PolicyNames[i]~ q{ = } ~PolicyTypes[i].stringof~`.`~AssignedPolicies[j].text~ q{;

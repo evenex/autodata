@@ -20,8 +20,11 @@ private {/*import std}*/
 		text;
 }
 private {/*import evx}*/
+	import evx.meta:
+		CompareBy;
+
 	import evx.math:
-		Interval;
+		zero, Interval;
 }
 
 pure nothrow:

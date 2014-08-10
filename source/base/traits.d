@@ -17,14 +17,16 @@ private {/*import evx}*/
 public {/*type identification}*/
 	/* test if a template argument is a type 
 	*/
-	template is_type (T...) if (T.length == 1)
+	template is_type (T...) 
+		if (T.length == 1)
 		{/*...}*/
 			enum is_type = is (T[0]);
 		}
 
 	/* test if a template argument is an aliased symbol 
 	*/
-	template is_alias (T...) if (T.length == 1)
+	template is_alias (T...) 
+		if (T.length == 1)
 		{/*...}*/
 			enum is_alias = __traits(compiles, typeof (T[0])) 
 				&& (
@@ -48,21 +50,23 @@ public {/*type identification}*/
 
 	/* test if a template argument is a number 
 	*/
-	template is_numerical_param (T...) if (T.length == 1)
+	template is_numerical_param (T...) 
+		if (T.length == 1)
 		{/*...}*/
 			enum is_numerical_param = __traits(compiles, T[0] == 0);
 		}
 
 	/* test if a template argument is a string 
 	*/
-	template is_string_param (T...) if (T.length == 1)
+	template is_string_param (T...) 
+		if (T.length == 1)
 		{/*...}*/
 			static if (__traits(compiles, typeof(T[0])))
 					enum is_string_param = isSomeString!(typeof(T[0]));
 			else enum is_string_param = false;
 		}
 
-	/* test if a given type matches another 
+	/* generate a predicate to test if a given type matches another 
 	*/
 	template is_type_of (T)
 		{/*...}*/
@@ -72,7 +76,7 @@ public {/*type identification}*/
 				}
 		}
 
-	/* test if type has a field with a given type and name
+	/* test if type has a field with a given type and name 
 	*/
 	template has_field (T, Field, string name)
 		{/*...}*/
@@ -130,6 +134,21 @@ public {/*type identification}*/
 			static assert (has_attribute!(Test, `u`, value));
 			static assert (has_attribute!(Test, `v`, 666));
 			static assert (has_attribute!(Test, `v`, value));
+		}
+
+	/* generate a predicate to test if a type defines a given enum 
+	*/
+	template has_trait (string trait)
+		{/*...}*/
+			template has_trait (T...)
+				if (T.length == 1)
+				{/*...}*/
+					alias U = T[0];
+
+					mixin(q{
+						enum has_trait = is (U.} ~trait~ q{ == enum);
+					});
+				}
 		}
 
 	/* for each of T's fields, test if U has a compatible field 

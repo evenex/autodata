@@ -2,21 +2,31 @@ module evx.geometry;
 
 private {/*import std}*/
 	import std.algorithm: 
-		copy,
-		canFind,
+		copy, map, zip, // BUG my map is pure so it won't work in Vector... yet
+		canFind, countUntil,
 		setIntersection;
+
 	import std.traits: 
 		isFloatingPoint, isIntegral, isUnsigned,
 		Unqual, EnumMembers;
+
+	import std.typetuple:
+		allSatisfy;
+
 	import std.conv:
 		to, text;
+
 	import std.range:
 		repeat,
+		isInputRange,
 		ElementType;
 }
 private {/*import evx}*/
 	import evx.utils: 
-		τ, vary;
+		τ, vary, Aⁿ;
+
+	import evx.traits: 
+		is_sliceable, is_type_of;
 
 	import evx.logic: 
 		not;
@@ -27,8 +37,7 @@ private {/*import evx}*/
 	import evx.meta:
 		ArrayInterface;
 
-	import evx.math:
-		abs, min, max;
+	import evx.math;
 }
 
 pure nothrow:
@@ -59,408 +68,7 @@ public {/*traits}*/
 			);
 		}
 }
-public {/*vectors}*/
-	/* generic vector type 
-	*/
-	struct Vec2 (T)
-		{/*...}*/
-			struct {T x, y;}
-
-			public nothrow:
-			pure const @property {/*}*/
-				T norm (uint p = 2)() 
-					if (isFloatingPoint!T)
-					{/*...}*/
-						return (x^^p + y^^p) ^^ (1.0/p);
-					}
-				T norm (uint p = 2)() 
-					if (is_Unit!T)
-					{/*...}*/
-						return T (vectorize (x.to_scalar, y.to_scalar).norm!p);
-					}
-				Vec2 unit ()() 
-					if (isFloatingPoint!T)
-					{/*...}*/
-						auto norm = this.norm;
-
-						if (norm == 0)
-							return zero!Vec2;
-						else return Vec2(x/norm, y/norm);
-					}
-				auto unit ()()
-					if (is_Unit!T)
-					{/*...}*/
-						auto norm = this.norm;
-
-						if (norm.to_scalar == 0)
-							return vectorize (zero!T, zero!T);
-						else return vectorize (x/norm, y/norm);
-					}
-				Vec2 abs () 
-					{/*...}*/
-						return Vec2(x.abs, y.abs);
-					}
-				T min () 
-					{/*...}*/
-						return .min (x, y);
-					}
-				T max () 
-					{/*...}*/
-						return .max (x, y);
-					}
-				T front ()
-					{/*...}*/
-						return x;
-					}
-				T back ()
-					{/*...}*/
-						return y;
-					}
-			}
-			pure const {/*geometry}*/
-				auto det (V)(V v) 
-					if (is_vector!V)
-					{/*...}*/
-						return x*v.y - y*v.x;
-					}
-				auto dot (V)(V v) 
-					if (is_vector!V)
-					{/*...}*/
-						return x*v.x + y*v.y;
-					}
-				auto proj ()(Vec2 v) 
-					if (isFloatingPoint!T || is_Unit!T)
-					{/*...}*/
-						return this.dot (v.unit) * v.unit;
-					}
-				auto rej ()(Vec2 v) 
-					if (isFloatingPoint!T || is_Unit!T)
-					{/*...}*/
-						return this - this.proj (v);
-					}
-			}
-			pure const {/*comparison}*/
-				bool approx (U)(U rhs)
-					if (is_vector!U)
-					{/*...}*/
-						return x.approxEqual (rhs.x) && y.approxEqual (rhs.y);
-					}
-				bool opEquals (U)(U that)
-					if (is_vector!U)
-					{/*...}*/
-						return this.x == that.x && this.y == that.y;
-					}
-			}
-			pure const {/*arithmetic}*/
-				auto opUnary (string op)() 
-					{/*...}*/
-						mixin(q{
-							return Vec2 (} ~op~ q{ x, } ~op~ q{y);
-						});
-					}
-				auto opBinary (string op, U)(U rhs) 
-					{/*...}*/
-						static if (is_vector!U)
-							{/*...}*/
-								static if (op is `/` && isIntegral!T)
-									assert (rhs.x * rhs.y != 0, `can't divide ` ~T.stringof~ ` by 0`);
-									
-								mixin(q{
-									return vectorize (x } ~op~ q{ rhs.x, y } ~op~ q{ rhs.y);
-								});
-							}
-						else static if (__traits(compiles, mixin(q{x } ~op~ q{ rhs})))
-							{/*...}*/
-								static if (op is `/` && isIntegral!T)
-									assert (rhs != 0, `can't divide ` ~T.stringof~ `by 0`);
-
-								mixin(q{
-									return vectorize (x } ~op~ q{ rhs, y } ~op~ q{ rhs);
-								});
-							}
-						else static assert (null, `incompatible types for operation: `
-							~Vec2.stringof~` `~op~` `~U.stringof
-						);
-					}
-				auto opBinaryRight (string op, U)(U lhs) 
-					{/*...}*/
-						static if (is_vector!U) mixin(q{
-							return Vec2(lhs) } ~op~ q{ this;
-						}); else mixin(q{
-							return this } ~op~ q{ lhs;
-						});
-					}
-			}
-			pure const {/*conversion}*/
-				U opCast (U)()
-					{/*...}*/
-						U ret;
-
-						static if (__traits(compiles, ret.x == this.x))
-							{/*...}*/
-								ret.x = this.x;
-								ret.y = this.y;
-								return ret;
-							}
-						else static assert (null, `incompatible types for cast: `
-							~Vec2.stringof~` to ` ~U.stringof
-						);
-					}
-			}
-			pure {/*assignment}*/
-				Vec2 opOpAssign (string op, U) (U rhs) 
-					{/*...}*/
-						mixin(q{
-							this = this } ~op~ q{ rhs;
-						});
-
-						return this;
-					}
-				Vec2 opAssign (U)(U rhs)
-					{/*...}*/
-						static if (is_vector!U)
-							{/*...}*/
-								this.x = rhs.x;
-								this.y = rhs.y;
-							}
-						else static if (is (U:T))
-							{/*...}*/
-								this.x = rhs;
-								this.y = rhs;
-							}
-						else static assert (null, `incompatible types for operation: `
-							~Vec2.stringof~` = `~U.stringof
-						);
-						return this;
-					}
-			}
-			pure {/*ctor}*/
-				this (U)(U that)
-					{/*...}*/
-						static if (is_vector!U)
-							{/*...}*/
-								static if (isUnsigned!T)
-									static assert (isUnsigned!(typeof(U.x)),
-										`automatic conversion from signed to unsigned is disallowed`
-									);
-
-								this.x = that.x;
-								this.y = that.y;
-
-								return this;
-							}
-						else static assert (null, `incompatible type for construction: `
-							~Vec2.stringof~` from `~U.stringof
-						);
-					}
-				this (T x, T y)
-					{/*...}*/
-						this.x = x;
-						this.y = y;
-					}
-				this (T s)
-					{/*...}*/
-						this.x = this.y = s;
-					}
-			}
-			static assert (is_vector!Vec2);
-		}
-		unittest {/*demo}*/
-			vec a = 1;
-			vec b = 2;
-
-			a += 1;
-			assert (a == 2.vec);
-
-			a += b;
-			assert (a == 4.vec);
-
-			a /= b;
-			assert (a == 2.vec);
-
-			a /= 2;
-			assert (a == 1.vec);
-
-			auto c = a + b;
-			assert (c == 3.vec);
-		}
-		unittest {/*...}*/
-			import std.exception:
-				assertThrown;
-
-			static void basic_type (Type)()
-				{/*...}*/
-					alias Vec = Vec2!Type;
-
-					static assert (is (ElementType!Vec == Type));
-
-					Vec a = Vec (î);			
-					Vec b = Vec (ĵ);
-
-					static if (isFloatingPoint!Type)
-						{/*...}*/
-							assert (a.norm == 1);
-							assert (b.norm == 1);
-
-							assert (a.unit == a);
-							assert (b.unit == b);
-						}
-
-					assert (a.abs == a);
-					assert (b.abs == b);
-
-					assert (a.min == 0);
-					assert (b.min == 0);
-
-					assert (a.max == 1);
-					assert (b.max == 1);
-
-					static if (not (isUnsigned!Type))
-						{/*...}*/
-							assert (a.det (b) == 1);
-							assert (b.det (a) == -1);
-						}
-
-					assert (a.dot (b) == 0);
-					assert (b.dot (a) == 0);
-
-					static if (isFloatingPoint!Type)
-						{/*...}*/
-							assert (a.proj (b) == Vec(0));
-							assert (b.proj (a) == Vec(0));
-
-							assert (a.rej (b) == a);
-							assert (b.rej (a) == b);
-						}
-
-					assert (a.approx (a));
-					assert (b.approx (b));
-
-					assert (not (b.approx (a)));
-					assert (not (a.approx (b)));
-
-					static if (not (isUnsigned!Type))
-						{/*...}*/
-							assert (-a == Vec(-1, 0));
-							assert (-b == Vec(0, -1));
-						}
-					
-					assert (+a == a);
-					assert (+b == b);
-
-					assert (a + b == Vec(1));
-					assert (b + a == Vec(1));
-
-					static if (not (isUnsigned!Type))
-						{/*...}*/
-							assert (a - b == Vec(1,-1));
-							assert (b - a == Vec(-1,1));
-						}
-
-					assert (a * b == Vec(0));
-					assert (b * a == Vec(0));
-
-					static if (isFloatingPoint!Type)
-						{/*...}*/
-							assert (a / b == Vec(infinity, 0));
-							assert (b / a == Vec(0, infinity));
-						}
-					else static if (isIntegral!Type) 
-						try {/*...}*/
-							assertThrown!Error (a / b);
-							assertThrown!Error (b / a);
-						} catch (Exception) assert (0);
-				}
-			static void conversion (UpType, DownType)()
-				{/*...}*/
-					auto a = Vec2!UpType (î);
-					
-					assert (Vec2!DownType (a) == Vec2!DownType (î));
-					assert (Vec2!DownType (a) == cast(Vec2!DownType) a);
-				}
-
-			{/*basic types}*/
-				// floating point
-				basic_type!real;
-				basic_type!double;
-				basic_type!float;
-
-				// signed integral
-				basic_type!long;
-				basic_type!int;
-				basic_type!short;
-				basic_type!byte;
-
-				// unsigned integral
-				basic_type!ulong;
-				basic_type!uint;
-				basic_type!ushort;
-				basic_type!ubyte;
-			}
-			{/*conversion}*/
-				conversion!(double, float);
-				conversion!(float, double);
-				conversion!(real, float);
-
-				static assert (not (__traits(compiles, conversion!(real, int))));
-				conversion!(int, real);
-
-				// cannot implicitly convert from signed to unsigned
-				static assert (not (__traits(compiles, conversion!(int, uint))));
-				// such conversion may be accomplished with a cast
-				static assert (__traits(compiles, cast(Vec2!uint)(Vec2!int.init)));
-				// unsigned to signed is ok
-				conversion!(uint, int);
-
-				static assert (not (__traits(compiles, conversion!(int, short))));
-				conversion!(short, int);
-			}
-			{/*units}*/
-				alias Position = Vec2!Meters;
-				alias Velocity = Vec2!(typeof(meters/second));
-
-				auto a = Position (3.meters, 4.meters);
-
-				assert (+a == a);
-				assert (a-a == Position (0.meters));
-				assert (-a + a == Position (0.meters));
-				assert (2*a == Position (6.meters, 8.meters));
-				assert (a*a == typeof(a*a)(9.meter*meters, 16.meter*meters));
-				assert (a/a == 1.vec);
-
-				assert (a.min == 3.meters);
-				assert (a.max == 4.meters);
-
-				assert (Velocity (10.meters/second, 7.meters/second) * 0.5.seconds == Position (5.meters, 3.5.meters));
-
-				assert (a.norm.approx (5.meters));
-				assert (a.unit.approx (vec(0.6, 0.8)));
-
-				auto b = 12.meters * a.unit;
-				assert (a.dot (b).approx (a.norm * b.norm));
-				assert (a.det (b).approx (0.square_meters));
-				assert (a.proj (b).approx (a));
-				assert (a.rej (b).approx (Position (0.meters)));
-
-				auto c = a.rotate (π/2);
-				assert (c.approx (Position (-4.meters, 3.meters)));
-				assert (a.dot (c).approx (0.square_meters));
-				assert (a.det (c).approx (a.norm * c.norm));
-				assert (a.proj (c).approx (Position (0.meters)));
-				assert (a.rej (c).approx (a));
-
-				assert (a.bearing_to (c).approx (π/2));
-				assert (distance (a, b).approx (7.meters));
-			}
-		}
-
-	/* convenience ctor 
-	*/
-	auto vectorize (T)(T x, T y)
-		{/*...}*/
-			return Vec2!(Unqual!T) (x,y);
-		}
-
+public {/*vectors}*/ // TODO this needs to be a separate module at this point
 	/* basis vectors 
 		
 	*/
@@ -492,11 +100,11 @@ public {/*vectors}*/
 							static if (__traits(compiles, Construct (x,y)))
 								return Construct (x, y);
 							else static if (__traits(compiles, Construct (x)))
-								return vectorize (Construct (x), Construct (y));
+								return vector (Construct (x), Construct (y));
 							else pragma (msg, `couldn't construct anything from ` ~op);
 						}
 					else mixin(q{
-						return vectorize (x.} ~op~ q{, y.} ~op~ q{);
+						return vector (x.} ~op~ q{, y.} ~op~ q{);
 					});
 				}
 		}
@@ -516,10 +124,10 @@ public {/*vectors}*/
 
 	/* common vector types 
 	*/
-	alias vec  = Vec2!double;
-	alias fvec = Vec2!float;
-	alias ivec = Vec2!int;
-	alias uvec = Vec2!uint;
+	alias vec  = Vector!(2, double);
+	alias fvec = Vector!(2, float);
+	alias ivec = Vector!(2, int);
+	alias uvec = Vector!(2, uint);
 
 	/* rotate a vector 
 	*/
@@ -587,13 +195,13 @@ public {/*polygons}*/
 		if (is_Unit!T)
 		{/*...}*/
 			return square (side.to_scalar, center)
-				.map!(v => vectorize (T(v.x), T(v.y)));
+				.map!(v => vector (T(v.x), T(v.y)));
 		}
 	auto circle (uint samples = 24, Vec = vec, T = ElementType!Vec)(const T radius, const Vec center = Vec(0))
 		if (is_Unit!T)
 		{/*...}*/
 			return circle!samples (radius.to_scalar, center)
-				.map!(v => vectorize (T(v.x), T(v.y)));
+				.map!(v => vector (T(v.x), T(v.y)));
 		}
 
 	/* get the distance of a polygon's furthest point from its centroid 
@@ -638,7 +246,7 @@ public {/*polygons}*/
 			assert (square (2.meters).area.approx (4.square_meters));
 			assert (circle!100 (1.meter).area.approx (π.square_meters));
 			assert (
-				irregular.map!(v => vectorize (v.x.meters, v.y.meters))
+				irregular.map!(v => vector (v.x.meters, v.y.meters))
 				.area.approx (known_area.square_meters)
 			);
 		}
@@ -686,7 +294,7 @@ public {/*polygons}*/
 
 			assert (triangle2.flip!`horizontal`.equal (triangle2.retro));
 			assert (triangle2.flip!`vertical`
-				.approx ([-î.meters, -ĵ.meters, î.meters].map!(v => v + vectorize (0.meters, 2.0.meters/3)))
+				.approx ([-î.meters, -ĵ.meters, î.meters].map!(v => v + vector (0.meters, 2.0.meters/3)))
 			);
 		}
 
