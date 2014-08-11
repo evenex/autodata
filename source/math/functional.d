@@ -375,22 +375,12 @@ public {/*reduce}*/
 						{/*...}*/
 							Accumulator accumulator;
 
-							template can_zero (T...)
-								if (T.length == 1)
-								{enum can_zero = __traits(compiles, zero!Accumulator);}
+							static if (functions.length == 1)
+								accumulator = range.front;
+							else foreach (i, f; functions)
+								accumulator[i] = range.front;
 
-							static if (can_zero!Accumulator)
-								accumulator = zero!Accumulator;
-							else static if (functions.length == 1)
-								{/*init value}*/
-									accumulator = range.front;
-									range.popFront;
-								}
-							else {/*init tuple}*/
-								foreach (i, f; functions)
-									accumulator[i] = range.front;
-								range.popFront;
-							}
+							range.popFront;
 
 							return accumulator;
 						}
@@ -399,12 +389,10 @@ public {/*reduce}*/
 					auto accumulator = initialize;
 
 					for (; not (range.empty); range.popFront)
-						{/*accumulate}*/
-							static if (functions.length == 1)
-								accumulator = functions[0] (accumulator, range.front);
-							else foreach (i, f; functions)
-								accumulator[i] = functions[i] (accumulator[i], range.front);
-						}
+						static if (functions.length == 1)
+							accumulator = functions[0] (accumulator, range.front);
+						else foreach (i, f; functions)
+							accumulator[i] = functions[i] (accumulator[i], range.front);
 
 					return accumulator;
 				}

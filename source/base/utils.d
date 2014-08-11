@@ -34,10 +34,10 @@ debug = profiler;
 public debug {/*}*/
 	/* pure nothrow writeln 
 	*/
-	auto pure_nothrow_output (Args...)(lazy Args args)
+	auto pure_nothrow_output (Args...)(Args args)
 		{/*...}*/
 			import std.stdio;
-			debug try writeln (args);
+			debug try stderr.writeln (args);
 			catch (Exception) assert (0);
 		}
 		
