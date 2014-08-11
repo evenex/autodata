@@ -110,6 +110,7 @@ public {/*intervals}*/
 				{/*...}*/
 					return end - start == zero!Index;
 				}
+
 			const @property start ()
 				{/*...}*/
 					return bounds[0];
@@ -118,6 +119,7 @@ public {/*intervals}*/
 				{/*...}*/
 					return bounds[1];
 				}
+
 			@property start (Index i)
 				{/*...}*/
 					bounds[0] = i;
@@ -126,6 +128,10 @@ public {/*intervals}*/
 				{/*...}*/
 					bounds[1] = i;
 				}
+
+			alias min = start;
+			alias max = end;
+
 			this (Index start, Index end)
 				{/*...}*/
 					bounds[0] = start;
