@@ -37,7 +37,11 @@ public debug {/*}*/
 	auto pure_nothrow_output (Args...)(Args args)
 		{/*...}*/
 			import std.stdio;
-			debug try stderr.writeln (args);
+			debug try {/*...}*/
+				foreach (arg; args)
+					stderr.write (arg, ` `);
+				stderr.writeln;
+			}
 			catch (Exception) assert (0);
 		}
 		
