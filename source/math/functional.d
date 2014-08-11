@@ -4,7 +4,6 @@ private {/*import std}*/
 	import std.range:
 		front, popFront, empty, back, popBack, put,
 		isInputRange, isForwardRange, isBidirectionalRange, isOutputRange,
-		hasLength,
 		ElementType;
 		
 	import std.conv:
@@ -19,9 +18,12 @@ private {/*import std}*/
 
 	import std.traits:
 		isNumeric, isFloatingPoint, isIntegral, isUnsigned,
-		Unqual;
+		Unqual, CommonType;
 }
 private {/*import evx}*/
+	import evx.meta:
+		IndexTypes;
+
 	import evx.logic:
 		not;
 
@@ -32,52 +34,52 @@ private {/*import evx}*/
 		slice_within_bounds;
 
 	import evx.traits:
-		is_indexable, is_sliceable,
+		is_indexable, is_sliceable, has_length,
 		is_binary_function;
 
 	import evx.utils; // BUG doesnt like selective Indices import..
 }
 
-pure nothrow:
-// REVIEW inout/const/etc AND UNITTEST
-
+//pure 
+nothrow:
+// REVIEW pure and nothrow
+// REFACTOR made a mess of map and zip
 public {/*map}*/
 	/* nothrow replacement for std.algorithm.MapResult 
 	*/
 	struct MapResult (alias func, R)
 		{/*...}*/
-			pure nothrow:
-			static if (is_indexable!R)
+			alias Index = IndexTypes!R[0];
+			//pure 
+nothrow:
+			static if (is_indexable!(R, Index))
 				{/*...}*/
-					auto ref opIndex (size_t i)
+					auto ref opIndex (Index i)
 						in {/*...}*/
-							static if (hasLength!R)
+							static if (has_length!R)
 								assert (i < range.length);
 						}
 						body {/*...}*/
 							return func (range[i]);
 						}
-
-					static assert (is_indexable!MapResult);
 				}
-			static if (is_sliceable!R)
+
+			auto opSlice ()
 				{/*...}*/
-					auto opSlice ()
-						{/*...}*/
-							return save;
-						}
-					auto opSlice (size_t i, size_t j)
+					return save;
+				}
+
+			static if (is_sliceable!(R, Index))
+				{/*...}*/
+					auto opSlice (Index i, Index j)
 						in {/*...}*/
-							static if (hasLength!R)
+							static if (has_length!R)
 								assert (slice_within_bounds (i, j, length));
 						}
 						body {/*...}*/
 							return MapResult (range[i..j]);
 						}
-
-					static assert (is_sliceable!MapResult);
 				}
-
 			@property:
 			static if (isInputRange!R)
 				{/*...}*/
@@ -130,14 +132,16 @@ public {/*map}*/
 
 					static assert (isBidirectionalRange!MapResult);
 				}
-			static if (hasLength!R)
+			static if (has_length!R)
 				{/*...}*/
 					@property length () const
 						{/*...}*/
 							return range.length;
 						}
 
-					static assert (hasLength!MapResult);
+					alias opDollar = length;
+
+					static assert (has_length!MapResult);
 				}
 
 			private:
@@ -169,38 +173,36 @@ public {/*map}*/
 public {/*zip}*/
 	/* nothrow replacement for std.range.Zip 
 	*/
-	struct ZipResult (Ranges...)
+	struct ZipResult (Ranges...) // TODO we are gonna have to keep a lot more indices
 		{/*...}*/
-			pure nothrow:
-			static if (allSatisfy!(is_indexable, Ranges))
+			//pure 
+nothrow:
+			static if (not(is(CommonIndex == void)))
 				{/*...}*/
-					auto ref opIndex (size_t i)
+					auto ref opIndex (CommonIndex i)
 						in {/*...}*/
-							static if (hasLength!ZipResult)
+							static if (has_length!ZipResult)
 								assert (i < length);
 						}
 						body {/*...}*/
 							return zip_with!`[args[0]]`(i);
 						}
 
-					static assert (is_indexable!ZipResult);
-				}
-			static if (allSatisfy!(is_sliceable, Ranges))
-				{/*...}*/
+					static assert (is_indexable!(ZipResult, CommonIndex));
+
 					auto opSlice ()
 						{/*...}*/
 							return save;
 						}
-					auto opSlice (size_t i, size_t j)
+					auto opSlice /*()*/(CommonIndex i, CommonIndex j)
+						//if (allSatisfy!(is_sliceable, Ranges))
 						in {/*...}*/
-							static if (hasLength!ZipResult)
+							static if (has_length!ZipResult)
 								assert (slice_within_bounds (slice.start + i, slice.start + j, slice.length));
 						}
 						body {/*...}*/
 							return ZipResult (ranges, Indices (slice.start + i, slice.start + j));
 						}
-
-					static assert (is_sliceable!ZipResult);
 				}
 
 			static if (allSatisfy!(isInputRange, Ranges))
@@ -266,48 +268,32 @@ public {/*zip}*/
 
 					static assert (.isOutputRange!(ZipResult, ZipTuple));
 				}
-			static if (allSatisfy!(hasLength, Ranges))
+			static if (allSatisfy!(has_length, Ranges))
 				@property {/*...}*/
 					auto length () const
 						{/*...}*/
 							return ranges[0].length;
 						}
 
-					static assert (hasLength!ZipResult);
+					static assert (has_length!ZipResult);
 				}
 
+			alias CommonIndex = CommonType!(staticMap!(IndexTypes, Ranges));
+
 			private:
-			private {/*ctor}*/
-				this (Ranges ranges)
-					in {/*...}*/
-						auto length = ranges[0].length;
-
-						foreach (range; ranges)
-							assert (range.length == length);
-					}
-					body {/*...}*/
-						this.ranges = ranges;
-					}
-
-				this (Ranges ranges, Indices slice) // XXX
-					body {/*...}*/
-						this (ranges);
-						this.slice = slice;
-					}
-			}
-			private {/*data}*/
-				Ranges ranges;
-				Indices slice;
-			}
 			private {/*defs}*/
 				alias ZipTuple = Tuple!(staticMap!(Unqual, staticMap!(ElementType, Ranges))); 
+
+				static if (is(CommonIndex == void))
+					alias Indices = .Indices;
+				else alias Indices = Interval!CommonIndex;
 
 				auto zip_with (string op, Args...)(Args args)
 					{/*...}*/
 						static code ()
 							{/*...}*/
 								string code;
-// TODO instead of slicing all the ranges, we should just keep 1 or 2 iterators, and save all the range interaction for opIndex
+
 								foreach (r; 0..Ranges.length)
 									code ~= q{ranges[} ~r.text~ q{]} ~op~ q{, };
 
@@ -323,6 +309,33 @@ public {/*zip}*/
 					{/*...}*/
 						alias isOutputRange = .isOutputRange!(R, ElementType!R);
 					}
+
+				template is_sliceable (R)
+					{/*...}*/
+						alias is_sliceable = .is_sliceable!(R, CommonIndex);
+					}
+			}
+			private {/*ctor}*/
+				this (Ranges ranges)
+					in {/*...}*/
+						auto length = ranges[0].length;
+
+						foreach (range; ranges)
+							assert (range.length == length);
+					}
+					body {/*...}*/
+						this.ranges = ranges;
+					}
+
+				this (Ranges ranges, Indices slice)
+					body {/*...}*/
+						this (ranges);
+						this.slice = slice;
+					}
+			}
+			private {/*data}*/
+				Ranges ranges;
+				Indices slice;
 			}
 		}
 
@@ -416,7 +429,8 @@ public {/*sequence}*/
 	struct Sequence (alias func, T)
 		if (is_binary_function!(func!(int, int)))
 		{/*...}*/
-			pure nothrow:
+			//pure 
+nothrow:
 			public {/*[i]}*/
 				auto opIndex (size_t i)
 					{/*...}*/
@@ -484,7 +498,8 @@ public {/*sequence}*/
 	struct FiniteSequence (alias func, T)
 		if (is_binary_function!(func!(int, int)))
 		{/*...}*/
-			pure nothrow:
+			//pure 
+nothrow:
 			public {/*[i]}*/
 				auto opIndex (size_t i)
 					in {/*...}*/
@@ -565,7 +580,7 @@ public {/*sequence}*/
 						return end - start;
 					}
 
-				static assert (hasLength!FiniteSequence);
+				static assert (has_length!FiniteSequence);
 			}
 
 			private:

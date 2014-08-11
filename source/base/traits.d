@@ -7,11 +7,12 @@ private {/*import std}*/
 	import std.traits:
 		isSomeFunction, isSomeString,
 		hasMember,
-		ParameterTypeTuple, ReturnType;
+		ParameterTypeTuple, ReturnType,
+		Unqual;
 }
 private {/*import evx}*/
 	import evx.logic:
-		not;
+		not, And;
 }
 
 public {/*type identification}*/
@@ -203,23 +204,34 @@ public {/*type capabilities}*/
 
 	/* test if a type has slicing, more permissive than std.range.hasSlicing 
 	*/
-	template is_sliceable (T)
+	template is_sliceable (R, T = size_t)
 		{/*...}*/
-			enum is_sliceable = __traits(compiles, T.init[0..1]);
+			enum is_sliceable = __traits(compiles, R.init[T.init..T.init]);
 		}
 
 	/* test if a type is indexable 
 	*/
-	template is_indexable (T)
+	template is_indexable (R, T = size_t)
 		{/*...}*/
-			enum is_indexable = __traits(compiles, T.init[0]);
+			enum is_indexable = __traits(compiles, R.init[T.init]);
 		}
 
-	/* test if a type can index D's built-in arrays and slices 
+	/* test whether a type is capable of addition, subtraction, multiplication and division 
 	*/
-	template can_index_arrays (T)
+	template supports_arithmetic (T)
 		{/*...}*/
-			enum can_index_arrays = __traits(compiles, T[].init[T.init]);
+			enum supports_arithmetic = __traits(compiles,
+				{T x, y; static assert (__traits(compiles, x+y, x-y, x*y, x/y));}
+			);
+		}
+
+	/* test whether a type defines a length. more permissive than std.range.hasLength 
+	*/
+	template has_length (R)
+		{/*...}*/
+			static if (__traits(compiles, R.init.length))
+				alias has_length = allSatisfy!(And!(is_comparable, supports_arithmetic), Unqual!(typeof(R.init.length)));
+			else enum has_length = false;
 		}
 }
 public {/*function characterization}*/

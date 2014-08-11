@@ -27,15 +27,6 @@ private {/*import evx}*/
 
 pure nothrow:
 
-/* test whether a type is capable of addition, subtraction, multiplication and division 
-*/
-template supports_arithmetic (T)
-	{/*...}*/
-		enum supports_arithmetic = __traits(compiles,
-			{T x, y; static assert (__traits(compiles, x+y, x-y, x*y, x/y));}
-		);
-	}
-
 /* ctfe-able arithmetic predicates 
 */
 auto add (T,U)(T a, U b) 

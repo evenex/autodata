@@ -3,7 +3,8 @@ module evx.meta;
 private {/*import std}*/
 	import std.traits:
 		isIterable, isAssignable, isMutable, isBuiltinType,
-		isFunctionPointer, functionLinkage,
+		isFunctionPointer, functionLinkage, ParameterTypeTuple,
+		hasMember,
 		Unqual;
 			
 
@@ -809,7 +810,7 @@ public {/*extraction}*/
 
 	/* build a string tuple of all assignable members of T 
 	*/
-	template assignable_members (T)
+	template get_assignable_members (T)
 		{/*...}*/
 			private template is_assignable (T)
 				{/*...}*/
@@ -825,12 +826,29 @@ public {/*extraction}*/
 						}
 				}
 
-			alias assignable_members = Filter!(is_assignable!T, __traits(allMembers, T));
+			alias get_assignable_members = Filter!(is_assignable!T, __traits(allMembers, T));
 		}
 		unittest {/*...}*/
 			struct Test {int a; const int b; immutable int c; enum d = 0; int e (){return 1;}}
 
-			static assert (assignable_members!Test == TypeTuple!`a`);
+			static assert (get_assignable_members!Test == TypeTuple!`a`);
+		}
+
+	template IndexTypes (R) // XXX currently 1 dimensional and use cases assume that slicing types and indexing types are the same. this is unlikely to change but if it does the code will not be robust to it
+		{/*...}*/
+			static if (hasMember!(R, `opIndex`))
+				alias IndexTypes = staticMap!(FirstParameter, __traits(getOverloads, R, `opIndex`));
+			else static if (__traits(compiles, R.init[0]))
+				alias IndexTypes = TypeTuple!size_t;
+			else alias IndexTypes = void;
+		}
+
+	/* get the type of a function's first parameter 
+	*/
+	template FirstParameter (alias func)
+		if (ParameterTypeTuple!func.length > 0)
+		{/*...}*/
+			alias FirstParameter = ParameterTypeTuple!func[0];
 		}
 }
 public {/*processing}*/

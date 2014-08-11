@@ -2,11 +2,12 @@ module evx.range;
 
 //REFACTOR imports
 import evx.logic: And, Not, not;
-import evx.traits: is_indexable;
+import evx.traits: is_indexable, is_comparable;
 import std.typetuple: allSatisfy;
 import std.range: ElementType, isForwardRange, cycle;
 import evx.functional: map, zip;
 import evx.arithmetic: sum;
+
 
 pure nothrow:
 
@@ -141,7 +142,8 @@ auto adjacent_pairs (R)(R range)
 
 /* test if an attempted slice will be within some bounds 
 */
-bool slice_within_bounds (size_t i, size_t j, size_t length)
+bool slice_within_bounds (T,U,V)(T i, U j, V length)
+	if (allSatisfy!(is_comparable, T,U,V))
 	{/*...}*/
 		return i <= j && j <= length && i < length;
 	}

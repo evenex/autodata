@@ -32,11 +32,9 @@ private {/*import evx}*/
 	import evx.algebra:
 		zero;
 
-	import evx.arithmetic:
-		supports_arithmetic;
 
 	import evx.traits:
-		is_indexable, is_comparable;
+		is_indexable, is_comparable, supports_arithmetic;
 }
 
 immutable infinity = real.infinity;

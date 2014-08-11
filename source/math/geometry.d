@@ -84,26 +84,15 @@ public {/*traits}*/
 			);
 		}
 }
-public {/*vectors}*/ // TODO this needs to be a separate module at this point
+public {/*vectors}*/
 	/* basis vectors 
-		
 	*/
 	struct BasisVector (real base_x, real base_y)
 		{/*...}*/
 			enum is_basis_vector;
-
-			/* most restricted type must be assigned, otherwise sign-safety mechanism in Vec2 will block compilation 
-			*/
-			static if (base_x % 1.0 == 0.0 && base_y % 1.0 == 0.0)
-				{/*U is integral}*/
-					static if (base_x >= 0 && base_y >= 0)
-						alias U = ulong;
-					else alias U = long;
-				}
-			else alias U = real;
 				
-			static immutable x = cast(U)base_x;
-			static immutable y = cast(U)base_y;
+			static immutable x = base_x;
+			static immutable y = base_y;
 
 			static auto opDispatch (string op)()
 				{/*...}*/
@@ -169,8 +158,6 @@ public {/*vectors}*/ // TODO this needs to be a separate module at this point
 			);
 		}
 		unittest {/*...}*/
-			pragma (msg, __traits(compiles, bearing_to (î.vec, ĵ.vec)));
-			pragma (msg, __traits(compiles, î.vec.bearing_to (ĵ.vec)));
 			assert (î.vec.bearing_to (ĵ.vec).approx (π/2));
 			assert (ĵ.vec.bearing_to (î.vec).approx (-π/2));
 			assert (vec(1,-1).bearing_to (î.vec).approx (π/4));

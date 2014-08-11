@@ -27,7 +27,8 @@ private {/*import evx}*/
 		τ;
 
 	import evx.traits: 
-		is_sliceable;
+		is_sliceable,
+		supports_arithmetic;
 
 	import evx.logic: 
 		not;
@@ -45,7 +46,6 @@ private {/*import evx}*/
 		zero, unity;
 
 	import evx.arithmetic: 
-		supports_arithmetic,
 		sum;
 
 	import evx.functional: 
@@ -768,6 +768,3 @@ private {/*identification traits}*/
 			else enum is_vector_array = false;
 		}
 }
-
-
-void main (){}
