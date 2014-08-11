@@ -88,7 +88,7 @@ public debug {/*}*/
 		}
 		
 }
-public {/*profiling}*/
+debug (profiler) {/*...}*/
 	/* write information about the thread environment to the output 
 		and time program execution through checkpoints */
 	struct Profiler
@@ -131,6 +131,7 @@ public {/*profiling}*/
 			public {/*~}*/
 				~this ()
 					{/*...}*/
+						static if (0)
 						debug (profiler) try
 							{/*...}*/
 								stderr.writeln (profiler_exit_indent,
@@ -159,6 +160,7 @@ public {/*profiling}*/
 								this.func_name = func_name;
 								this.entry_time = Clock.currTime;
 								this.last_check = entry_time;
+								static if (0)
 								stderr.writeln (profiler_enter_indent, `in(` ~tid_string~ `): `, func_name, ` at `, entry_time.toISOExtString["2014-05-15".length..$]);
 							}
 						catch (Exception) assert (0);

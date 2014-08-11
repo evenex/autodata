@@ -9,7 +9,7 @@ private {/*import std}*/
 		ElementType;
 
 	import std.algorithm:
-		map, copy; // TODO map??
+		copy;
 
 	import std.conv:
 		text;

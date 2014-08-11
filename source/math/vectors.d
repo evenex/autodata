@@ -1,7 +1,5 @@
 module evx.vectors;
 
-pure nothrow:
-
 private {/*import std}*/
 	import std.traits: 
 		isFloatingPoint,
@@ -17,7 +15,7 @@ private {/*import std}*/
 	import std.range:
 		front, popFront, empty, equal,
 		repeat, only,
-		isInputRange,
+		isInputRange, hasLength,
 		ElementType;
 
 	import std.math: 
@@ -54,8 +52,10 @@ private {/*import evx}*/
 		map, zip, reduce;
 }
 
-struct Vector (uint n, Element = double)
-	if (supports_arithmetic!Element)
+pure nothrow:
+
+struct Vector (uint n, Component = double)
+	if (supports_arithmetic!Component && n > 1)
 	{/*...}*/
 		pure nothrow:
 		enum length = n;
@@ -75,13 +75,10 @@ struct Vector (uint n, Element = double)
 				return components[3];
 			}
 
-			alias r = x;
-			alias g = y;
-			alias b = z;
-			alias a = w;
-
-			alias u = x;
-			alias v = y;
+			alias r = x;	alias s = x;	alias u = x;
+			alias g = y;	alias t = y;	alias v = y;
+			alias b = z;	alias p = z;
+			alias a = w;	alias q = w;
 		}
 		public {/*forwarding}*/
 			auto forward_to_components (string op, Args...)(Args args)
@@ -158,7 +155,6 @@ struct Vector (uint n, Element = double)
 					assert (v.length == length);
 				}
 				body {/*...}*/
-					pragma(msg, op);
 					auto u = vector!length (v[]);
 
 					mixin(q{
@@ -232,27 +228,27 @@ struct Vector (uint n, Element = double)
 					this = range;
 				}
 
-			this (Element[length] components)
+			this (Component[length] components)
 				{/*...}*/
 					this.components = components;
 				}
 
-			this (Elements...)(Elements elements)
-				if (Elements.length == length)
+			this (Components...)(Components components)
+				if (Components.length == length)
 				{/*...}*/
-					foreach (i, element; elements)
-						components[i] = element;
+					foreach (i, component; components)
+						this.components[i] = component;
 				}
 
-			this (Element element)
+			this (Component component)
 				{/*...}*/
-					components[] = element;
+					this.components[] = component;
 				}
 		}
 
 		private:
 		private {/*components}*/
-			Element[length] components;
+			Component[length] components;
 		}
 		private {/*traits}*/
 			template is_vector_function (string func, Args...)
@@ -266,7 +262,7 @@ struct Vector (uint n, Element = double)
 					void over_components ()(Args args)
 						{/*...}*/
 							mixin(q{
-								Element.init.} ~func~ q{ (args); // func symbol isn't available, so this fails...
+								Component.init.} ~func~ q{ (args); // func symbol isn't available, so this fails...
 							});
 						}
 					enum is_vector_function = __traits(compiles, over_vector (Args.init))
@@ -274,11 +270,13 @@ struct Vector (uint n, Element = double)
 				}
 			template is_vectorwise_operable (string op, T)
 				{/*...}*/
+						enum is_vector_like = isInputRange!T || is_vector_array!T || is_vector_tuple!T;
+
 						static if (__traits(compiles, T.init.vector))
-							enum same_length = typeof(T.init.vector).length == length;
+							enum has_same_length = typeof(T.init.vector).length == length;
 						else static if (__traits(compiles, T.init.vector!2))
-							enum same_length = true;
-						else enum same_length = false;
+							enum has_same_length = true;
+						else enum has_same_length = false;
 
 						static if (not(is(ElementType!T == void)))
 							alias U = ElementType!T;
@@ -286,17 +284,20 @@ struct Vector (uint n, Element = double)
 							alias U = CommonType!(τ(T.init.tupleof).Types);
 						else alias U = void;
 
-					enum is_vectorwise_operable = same_length && __traits(compiles, mixin(q{
-						Element.init } ~op~ q{ unity!U
-					}));
+					enum is_vectorwise_operable = is_vector_like && has_same_length 
+						&& __traits(compiles, mixin(q{
+							Component.init } ~op~ q{ unity!U
+						}));
 				}
 			template is_componentwise_operable (string op, T)
 				{/*...}*/
 					enum is_componentwise_operable = not(is_vectorwise_operable!(op, T)) && __traits(compiles, mixin(q{
-						Element.init } ~op~ q{ unity!T
+						Component.init } ~op~ q{ unity!T
 					}));
 				}
 		}
+	}
+	unittest {/*component access}*/
 	}
 	unittest {/*construction and conversion}*/
 		void test (T)()
@@ -418,7 +419,7 @@ struct Vector (uint n, Element = double)
 		assert (-v == u);
 		assert (-u == v);
 
-		// vector-vector ops apply per index-paired element
+		// vector-vector ops apply per index-paired component
 		assert (u + v == w);
 		assert (u + w == u);
 		assert (v + w == v);
@@ -518,10 +519,76 @@ struct Vector (uint n, Element = double)
 			assert (v.floor == [0,2,4]);
 			assert (v.ceil  == [1,2,5]);
 		}
+	unittest {/*vector functions}*/
+		import std.math;
+
+		auto u = vector (1, 2.);
+
+		assert (norm (u).approx (sqrt (5.)));
+		assert (norm (u) == u.norm);
+
+		assert (u.norm!0 == double.infinity);
+		assert (u.norm!1 == u[].sum);
+		assert (u.norm!2 == u.norm);
+		assert (u.norm!3.approx (2.08008));
+		assert (u.norm!4.approx (2.03054));
+		assert (u.norm!5.approx (2.01235));
+
+		assert (u.unit.approx ([0.447214, 0.894427]));
+
+		assert (u.dot (u) == 5);
+
+		auto v = vector (2.,3,4);
+
+		assert (u.det (u) == 0);
+		assert (u.det (vector (-2, 1)).approx (u.norm^^2));
+
+		assert (v.cross (vector (6,4,2)) == [-10, 20, -10]);
+
+		assert (v.proj (vector (6.,4,2)).approx ([3.42857, 2.28571, 1.14286]));
+		assert (v.rej (vector (6.,4,2)).approx ([-1.42857, 0.714286, 2.85714]));
+	}
 	unittest {/*algebraic identity elements}*/
 		auto v = vector (1,2,3);
 		static assert (zero!(typeof(v)) == [0,0,0]);
 		static assert (unity!(typeof(v)) == [1,1,1]);
+	}
+	unittest {/*geometry and dimensional analysis}*/
+		import evx.units;
+		import evx.geometry;
+
+		alias Position = Vector!(2, Meters);
+		alias Velocity = Vector!(2, typeof(meters/second));
+
+		auto a = Position (3.meters, 4.meters);
+
+		assert (+a == a);
+		assert (a - a == zero!Position);
+		assert (-a + a == Position (0.meters));
+		assert (2*a == Position (6.meters, 8.meters));
+		assert (a*a == typeof(a*a)(9.meter*meters, 16.meter*meters));
+		assert (a/a == 1.Vector!2);
+
+		assert (Velocity (10.meters/second, 7.meters/second) * 0.5.seconds == Position (5.meters, 3.5.meters));
+
+		assert (a.norm.approx (5.meters));
+		assert (a.unit.approx (Vector!2 (0.6, 0.8)));
+
+		auto b = 12.meters * a.unit;
+		assert (a.dot (b).approx (a.norm * b.norm));
+		assert (a.det (b).approx (0.square_meters));
+		assert (a.proj (b).approx (a));
+		assert (a.rej (b).approx (Position (0.meters)));
+
+		auto c = a.rotate (π/2);
+		assert (c.approx (Position (-4.meters, 3.meters)));
+		assert (a.dot (c).approx (0.square_meters));
+		assert (a.det (c).approx (a.norm * c.norm));
+		assert (a.proj (c).approx (Position (0.meters)));
+		assert (a.rej (c).approx (a));
+
+		assert (a.bearing_to (c).approx (π/2));
+		assert (distance (a, b).approx (7.meters));
 	}
 
 template vector (uint length)
@@ -533,16 +600,16 @@ template vector (uint length)
 				return vector_from_range!length (range);
 			}
 
-		auto vector (T)(T element)
+		auto vector (T)(T component)
 			if (not(isInputRange!T))
 			{/*...}*/
-				return vector_from_range!length (element.repeat (length));
+				return vector_from_range!length (component.repeat (length));
 			}
 
-		auto vector (Args...)(Args elements)
+		auto vector (Args...)(Args components)
 			if (Args.length == length && is_vector_tuple!(Tuple!Args))
 			{/*...}*/
-				return vector_from_variadic (elements);
+				return vector_from_variadic (components);
 			}
 	}
 template vector ()
@@ -559,96 +626,14 @@ template vector ()
 				return vector_from_array (array);
 			}
 
-		auto vector (Args...)(Args elements)
+		auto vector (Args...)(Args components)
 			if (Args.length > 1 && is_vector_tuple!(Tuple!Args))
 			{/*...}*/
-				return vector_from_variadic (elements);
+				return vector_from_variadic (components);
 			}
 	}
 
-public {/*explicit conversion}*/
-	auto vector_from_tuple (V)(V v)
-		{/*...}*/
-			return vector_from_variadic (v.tupleof);
-		}
-	auto vector_from_array (T)(T array)
-		{/*...}*/
-			enum length = T.sizeof/ElementType!T.sizeof;
-
-			return Vector!(length, Unqual!(ElementType!T))(array[]);
-		}
-	auto vector_from_range (uint length, R)(R range)
-		{/*...}*/
-			return Vector!(length, Unqual!(ElementType!R))(range);
-		}
-	auto vector_from_variadic (Args...)(Args elements)
-		{/*...}*/
-			return Vector!(Args.length, Unqual!(CommonType!Args))(elements);
-		}
-}
-private {/*identification traits}*/
-	template is_vector_tuple (T)
-		{/*...}*/
-			alias Elements = FieldTypeTuple!T;
-			alias U = CommonType!Elements;
-
-			template implicitly_convertible (V)
-				{/*...}*/
-					enum implicitly_convertible = isImplicitlyConvertible!(V, U);
-				}
-
-			enum is_vector_tuple = allSatisfy!(implicitly_convertible, Elements)
-				&& not(isInputRange!U || isStaticArray!U)
-				&& __traits(compiles, T.tupleof);
-		}
-	template is_vector_array (T)
-		{/*...}*/
-			alias Elements = FieldTypeTuple!T;
-			alias U = Elements[0];
-
-			enum is_vector_array = isStaticArray!U;
-		}
-}
-
-void main (){/*units}*/
-	import evx.units;
-	import evx.geometry;
-
-	alias Position = Vector!(2, Meters);
-	alias Velocity = Vector!(2, typeof(meters/second));
-
-	auto a = Position (3.meters, 4.meters);
-
-	assert (+a == a);
-	assert (is(typeof(a-a)));// == Position (0.meters)); // BUG
-//	assert (-a + a == Position (0.meters));
-//	assert (2*a == Position (6.meters, 8.meters));
-//	assert (a*a == typeof(a*a)(9.meter*meters, 16.meter*meters));
-//	assert (a/a == 1.Vector!2);
-//
-//	assert (Velocity (10.meters/second, 7.meters/second) * 0.5.seconds == Position (5.meters, 3.5.meters));
-//
-//	assert (a.norm.approx (5.meters));
-//	assert (a.unit.approx (Vector!2 (0.6, 0.8)));
-//
-//	auto b = 12.meters * a.unit; // BUG unit tries to handle the multiplication. vector ought to attempt opBinary if opBinaryRight is no good, but the reversed mapresult ought to be enough... unit * double == unit
-//	assert (a.dot (b).approx (a.norm * b.norm));
-//	assert (a.det (b).approx (0.square_meters));
-//	assert (a.proj (b).approx (a));
-//	assert (a.rej (b).approx (Position (0.meters)));
-//
-//	auto c = a.rotate (π/2);
-//	assert (c.approx (Position (-4.meters, 3.meters)));
-//	assert (a.dot (c).approx (0.square_meters));
-//	assert (a.det (c).approx (a.norm * c.norm));
-//	assert (a.proj (c).approx (Position (0.meters)));
-//	assert (a.rej (c).approx (a));
-//
-//	assert (a.bearing_to (c).approx (π/2));
-//	assert (distance (a, b).approx (7.meters));
-}
-
-pure {/*unary}*/
+pure {/*unary functions}*/
 	template norm (uint p = 2)
 		{/*...}*/
 			auto norm (V)(V v)
@@ -673,7 +658,7 @@ pure {/*unary}*/
 			else return vector!(V.length) (v[].map!(t => t/norm)); // TODO UCS for static arrays?
 		}
 }
-pure {/*binary}*/
+pure {/*binary functions}*/
 	auto dot (U, V)(U u, V v) 
 		if (is_sliceable!V)
 		{/*...}*/
@@ -709,9 +694,52 @@ pure {/*binary}*/
 		}
 }
 
+public {/*explicit conversion}*/
+	auto vector_from_tuple (V)(V v)
+		{/*...}*/
+			return vector_from_variadic (v.tupleof);
+		}
+	auto vector_from_array (T)(T array)
+		{/*...}*/
+			enum length = T.sizeof/ElementType!T.sizeof;
 
-////////////////////////////////////////////////// TODO left off here
+			return Vector!(length, Unqual!(ElementType!T))(array[]);
+		}
+	auto vector_from_range (uint length, R)(R range)
+		{/*...}*/
+			return Vector!(length, Unqual!(ElementType!R))(range);
+		}
+	auto vector_from_variadic (Args...)(Args components)
+		{/*...}*/
+			return Vector!(Args.length, Unqual!(CommonType!Args))(components);
+		}
+}
+private {/*identification traits}*/
+	template is_vector_tuple (T)
+		{/*...}*/
+			alias Components = FieldTypeTuple!T;
+			alias U = CommonType!Components;
 
+			template implicitly_convertible (V)
+				{/*...}*/
+					enum implicitly_convertible = isImplicitlyConvertible!(V, U);
+				}
+
+			enum is_vector_tuple = Components.length > 1
+				&& allSatisfy!(implicitly_convertible, Components)
+				&& not(isInputRange!U || isStaticArray!U)
+				&& __traits(compiles, T.tupleof);
+		}
+	template is_vector_array (T)
+		{/*...}*/
+			alias Components = FieldTypeTuple!T;
+			alias U = Components[0];
+
+			static if (hasLength!U)
+				enum is_vector_array = isStaticArray!U && U.length > 1;
+			else enum is_vector_array = false;
+		}
+}
 
 		auto output (Args...)(lazy Args args)
 			{/*...}*/
@@ -719,33 +747,3 @@ pure {/*binary}*/
 				debug try writeln (args);
 				catch (Exception) assert (0);
 			}
-unittest
-	{/*...}*/
-		import std.math;
-	
-		auto u = vector (1, 2.);
-
-		assert (norm (u).approx (sqrt (5.)));
-		assert (norm (u) == u.norm);
-
-		assert (u.norm!0 == double.infinity);
-		assert (u.norm!1 == u[].sum);
-		assert (u.norm!2 == u.norm);
-		assert (u.norm!3.approx (2.08008));
-		assert (u.norm!4.approx (2.03054));
-		assert (u.norm!5.approx (2.01235));
-
-		assert (u.unit.approx ([0.447214, 0.894427]));
-
-		assert (u.dot (u) == 5);
-
-		auto v = vector (2.,3,4);
-
-		assert (u.det (u) == 0);
-		assert (u.det (vector (-2, 1)).approx (u.norm^^2));
-
-		assert (v.cross (vector (6,4,2)) == [-10, 20, -10]);
-
-		assert (v.proj (vector (6.,4,2)).approx ([3.42857, 2.28571, 1.14286]));
-		assert (v.rej (vector (6.,4,2)).approx ([-1.42857, 0.714286, 2.85714]));
-	}
