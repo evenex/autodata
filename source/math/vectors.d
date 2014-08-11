@@ -15,7 +15,7 @@ private {/*import std}*/
 	import std.range:
 		front, popFront, empty, equal,
 		repeat, only,
-		isInputRange, hasLength,
+		isInputRange,
 		ElementType;
 
 	import std.math: 
@@ -297,8 +297,6 @@ struct Vector (uint n, Component = double)
 				}
 		}
 	}
-	unittest {/*component access}*/
-	}
 	unittest {/*construction and conversion}*/
 		void test (T)()
 			{/*...}*/
@@ -405,7 +403,37 @@ struct Vector (uint n, Component = double)
 		static assert (not(supports_arithmetic!T2));
 		static assert (not(__traits(compiles, test!T2)));
 	}
-	unittest {/*arithmetic operators}*/
+	unittest {/*component access}*/
+		auto v = vector (1, 2, 3, 4);
+
+		assert (v.x == 1);
+		assert (v.y == 2);
+		assert (v.z == 3);
+		assert (v.w == 4);
+
+		assert (v.r == 1);
+		assert (v.g == 2);
+		assert (v.b == 3);
+		assert (v.a == 4);
+
+		assert (v.s == 1);
+		assert (v.t == 2);
+		assert (v.p == 3);
+		assert (v.q == 4);
+
+		assert (v.u == 1);
+		assert (v.v == 2);
+
+		v.u = 9;
+		assert (v.x == 9);
+
+		v.g += 12;
+		assert (v.y == 14);
+
+		v.b *= v.w;
+		assert (v.p == 12);
+	}
+	unittest {/*arithmetic operations}*/
 		// when constructed per-component, vectors take the common type of their arguments
 		static assert (not(__traits(compiles, vector (τ(1,`c`)))));
 		static assert (__traits(compiles, vector (τ(1, 2f, 'c'))));
@@ -735,15 +763,11 @@ private {/*identification traits}*/
 			alias Components = FieldTypeTuple!T;
 			alias U = Components[0];
 
-			static if (hasLength!U)
-				enum is_vector_array = isStaticArray!U && U.length > 1;
+			static if (isStaticArray!U)
+				enum is_vector_array = U.length > 1;
 			else enum is_vector_array = false;
 		}
 }
 
-		auto output (Args...)(lazy Args args)
-			{/*...}*/
-				import std.stdio;
-				debug try writeln (args);
-				catch (Exception) assert (0);
-			}
+
+void main (){}

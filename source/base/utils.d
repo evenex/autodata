@@ -32,6 +32,15 @@ pure nothrow:
 debug = profiler;
 
 public debug {/*}*/
+	/* pure nothrow writeln 
+	*/
+	auto pure_nothrow_output (Args...)(lazy Args args)
+		{/*...}*/
+			import std.stdio;
+			debug try writeln (args);
+			catch (Exception) assert (0);
+		}
+		
 	/* print a function call with arguments 
 	*/
 	string function_call_to_string (string name, Args...) (Args args)
@@ -86,7 +95,6 @@ public debug {/*}*/
 			}
 			catch (Exception) assert (0);
 		}
-		
 }
 debug (profiler) {/*...}*/
 	/* write information about the thread environment to the output 
@@ -195,12 +203,12 @@ debug (profiler) {/*...}*/
 	}
 }
 public {/*UDA tags}*/
-	/* for non-const sections or members in a series of consts. 
+	/* for non-const sections or members in a series of consts 
 		will not override const label (const:)
 	*/
 	enum vary;
 
-	/* tag for non-pure sections or functions in a series of pures. 
+	/* for non-pure sections or functions in a series of pures 
 		will not override pure label (pure:)
 	*/
 	enum imp;
