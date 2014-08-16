@@ -121,7 +121,7 @@ unittest {/*contigious}*/
 
 /* traverse a range with elements rotated left by some number of positions 
 */
-auto rotate_elements (R)(R range, long positions = 1)
+auto rotate_elements (R)(R range, int positions = 1)
 	in {/*...}*/
 		auto n = range.length;
 		assert ((positions + n) % n > 0);

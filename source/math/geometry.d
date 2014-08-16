@@ -1,4 +1,5 @@
 module evx.geometry;
+void main (){}
 
 private {/*import std}*/
 	import std.algorithm: 

@@ -18,7 +18,8 @@ private {/*import std}*/
 
 	import std.algorithm:
 		zip, sort,
-		countUntil;
+		countUntil,
+		canFind;
 
 	import std.math: 
 		abs;
@@ -45,7 +46,7 @@ unittest
 		auto x = 10.meters;
 		auto y = 5.seconds;
 
-		static assert (not (is_equivalent_Unit!(typeof(x), typeof(y))));
+		static assert (not (is (typeof(x) == typeof(y))));
 		static assert (not (__traits(compiles, x + y)));
 		static assert (__traits(compiles, x * y));
 
@@ -116,7 +117,7 @@ public {/*unit}*/
 					}
 				auto opBinary (string op, U)(U rhs)
 					{/*...}*/
-						static if (op == `/` || op ==  `*`)
+						static if (`/``*`.canFind (op))
 							{/*...}*/
 								static if (is_Unit!U)
 									{/*...}*/
@@ -135,13 +136,9 @@ public {/*unit}*/
 									}
 								else static if (isNumeric!U)
 									{/*...}*/
-										Unit ret;
-
 										mixin(q{
-											ret.scalar = this.scalar } ~op~ q{ rhs;
+											return Unit (this.scalar } ~op~ q{ rhs);
 										});
-
-										return ret;
 									}
 								else static if (__traits(compiles, rhs.opBinaryRight!op (this)))
 									{/*...}*/
@@ -149,16 +146,15 @@ public {/*unit}*/
 									}
 								else static assert (0, `incompatible types for ` ~Unit.stringof~ ` ` ~op~ ` ` ~U.stringof);
 							}
-						else static if (op == `+` || op == `-`)
+						else static if (`+``-``%`.canFind (op))
 							{/*...}*/
 								static assert (is_Unit!U, `cannot add dimensionless quantity to ` ~ Unit.stringof);
-								static if (is_equivalent_Unit!(Unit, U))
+
+								static if (is (Unit: U))
 									{/*...}*/
-										Unit ret;
 										mixin(q{
-											ret.scalar = this.scalar} ~op~ q{ rhs.scalar;
+											return Unit (this.scalar } ~op~ q{ rhs.scalar);
 										});
-										return ret;
 									}
 								else static assert (0, `attempted linear combination of non-equivalent `
 									~ Unit.stringof ~ ` and ` ~ U.stringof
@@ -501,7 +497,7 @@ private {/*code generation}*/
 	auto reciprocate_dimension (T)()
 		if (is_Unit!T)
 		{/*...}*/
-			static auto code ()()
+			static code ()
 				{/*...}*/
 					alias TDim = Filter!(is_Dimension, T.Dimension);
 					alias TPow = Filter!(is_numerical_param, T.Dimension);
@@ -532,37 +528,5 @@ private {/*code generation}*/
 				}
 
 			return raise_dimension!(T, exponent);
-		}
-}
-private {/*traits}*/
-	template is_equivalent_Unit (T, U)
-		if (allSatisfy!(is_Unit, T, U))
-		{/*...}*/
-			const bool is_equivalent_Unit ()
-				{/*...}*/
-					alias T_Dim = Filter!(is_Dimension, T.Dimension);
-					alias T_Pow = Filter!(is_numerical_param, T.Dimension);
-					alias U_Dim = Filter!(is_Dimension, U.Dimension);
-					alias U_Pow = Filter!(is_numerical_param, U.Dimension);
-
-					foreach (i, Dim; T_Dim)
-						{/*...}*/
-							const auto j = staticIndexOf!(Dim, U_Dim);
-							static if (j < 0)
-								return false;
-							else static if (T_Pow[i] != U_Pow[j])
-								return false;
-						}
-					foreach (i, Dim; U_Dim)
-						{/*...}*/
-							const auto j = staticIndexOf!(Dim, T_Dim);
-							static if (j < 0)
-								return false;
-							else static if (U_Pow[i] != T_Pow[j])
-								return false;
-						}
-
-					return true;
-				}
 		}
 }

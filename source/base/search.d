@@ -71,7 +71,7 @@ template binary_search (alias compare, Equivalence equivalence = Equivalence.int
 				if (range.empty)
 					return BinarySearchResult!T (null, 0);
 
-				long min = 0;
+				long min = 0; // XXX bitness-sensitive
 				long max = range.length;
 
 				static if (equivalence is Equivalence.intrinsic)
