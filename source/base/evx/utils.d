@@ -51,8 +51,9 @@ public debug {/*}*/
 		{/*...}*/
 			string call;
 			
-			foreach (arg; args)
+			debug try foreach (arg; args)
 				call ~= arg.text~ `, `;
+			catch (Exception) assert (0); // UPLOAD
 				
 			if (call.length == 0)
 				return name;

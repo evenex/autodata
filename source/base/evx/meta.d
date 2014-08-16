@@ -322,7 +322,11 @@ public {/*initialization}*/
 			static private {/*code generation}*/
 				string generate_library_loader ()
 					{/*...}*/
-						import std.range: empty;
+						import std.range: 
+							empty;
+
+						import std.traits: 
+							isFunctionPointer, functionLinkage; // UPLOAD
 
 						string signature = q{
 							void load_library ()

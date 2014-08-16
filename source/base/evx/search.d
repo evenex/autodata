@@ -71,8 +71,8 @@ template binary_search (alias compare, Equivalence equivalence = Equivalence.int
 				if (range.empty)
 					return BinarySearchResult!T (null, 0);
 
-				long min = 0; // XXX bitness-sensitive
-				long max = range.length;
+				size_t min = 0; // UPLOAD
+				size_t max = range.length;
 
 				static if (equivalence is Equivalence.intrinsic)
 					bool equal_to (ref const T that)
