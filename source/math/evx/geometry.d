@@ -1,5 +1,4 @@
 module evx.geometry;
-void main (){}
 
 private {/*import std}*/
 	import std.algorithm: 
@@ -666,7 +665,7 @@ public {/*axis-aligned bounding boxes}*/
 			assert (c.bounding_box.height.approx (0.5));
 		}
 
-	unittest {/*with evx.units}*/
+	version (X86_64) unittest {/*with evx.units}*/
 		import evx.units;
 
 		alias Pos = Vector!(2, Meters);

@@ -48,14 +48,18 @@ unittest {/*...}*/
 		assert (10.factorial == 3628800);
 		assert (11.factorial == 39916800);
 		assert (12.factorial == 479001600);
-		assert (13.factorial == 6227020800);
-		assert (14.factorial == 87178291200);
-		assert (15.factorial == 1307674368000);
-		assert (16.factorial == 20922789888000);
-		assert (17.factorial == 355687428096000);
-		assert (18.factorial == 6402373705728000);
-		assert (19.factorial == 121645100408832000);
-		assert (20.factorial == 2432902008176640000);
+
+		version(X86_64)
+			{/*...}*/
+				assert (13.factorial == 6227020800);
+				assert (14.factorial == 87178291200);
+				assert (15.factorial == 1307674368000);
+				assert (16.factorial == 20922789888000);
+				assert (17.factorial == 355687428096000);
+				assert (18.factorial == 6402373705728000);
+				assert (19.factorial == 121645100408832000);
+				assert (20.factorial == 2432902008176640000);
+			}
 	}
 	{/*pascal's triangle}*/
 		assert (0.choose (0) == 1);
