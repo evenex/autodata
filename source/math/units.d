@@ -447,6 +447,18 @@ public {/*traits}*/
 			enum is_Dimension = __traits(compiles, T[0].DimensionTrait);
 		}
 }
+debug {/*utility}*/
+	void sleep (Seconds time)
+		{/*...}*/
+			import core.thread:
+				Thread, sleep;
+
+			static import std.datetime;
+
+			debug try Thread.sleep (std.datetime.seconds (time.to_scalar.to!long));
+			catch (Exception) assert (0);
+		}
+}
  
 private:
 private {/*code generation}*/

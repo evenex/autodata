@@ -16,6 +16,8 @@ private {/*import std}*/
 
 	import std.conv:
 		to;
+	import std.numeric:
+		gcd;
 }
 private {/*import evx}*/
 	import evx.utils:
@@ -66,3 +68,18 @@ auto sum (R)(R sequence)
 		return sequence.reduce!((Σ,x) => Σ+x);
 	}
 alias Σ = sum;
+
+/* compute the least common multiple of two numbers 
+*/
+auto lcm (T)(T a, T b) // TODO over more than two numbers
+	{/*...}*/
+		if (a == 0 || b == 0)
+			return a*b;
+		else try return a * (b / gcd (a,b));
+			catch (Exception) assert (0);
+	}
+	unittest {/*...}*/
+		assert (lcm (21, 6) == 42);
+		assert (lcm (15, 6) == 30);
+		assert (lcm (9, 0) == 0);
+	}
