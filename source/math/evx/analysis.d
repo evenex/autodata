@@ -163,6 +163,8 @@ public {/*intervals}*/
 				}
 		}
 
+	/* convenience constructor 
+	*/
 	auto interval (T,U)(T start, U end)
 		if (not(is(CommonType!(T,U) == void)))
 		{/*...}*/
@@ -188,7 +190,7 @@ public {/*intervals}*/
 			assert (A.length == 0);
 		}
 
-	/* test if two intervals overlap
+	/* test if two intervals overlap 
 	*/
 	bool overlaps (T)(const Interval!T A, const Interval!T B)
 		{/*...}*/
@@ -211,6 +213,35 @@ public {/*intervals}*/
 			assert (A.overlaps (B));
 			B.start = 13;
 			assert (not (A.overlaps (B)));
+		}
+
+	/* test if an interval is contained within another 
+	*/
+	bool is_contained_in (T)(Interval!T A, Interval!T B)
+		{/*...}*/
+			return A.start >= B.start && A.end <= B.end;
+		}
+		unittest {/*...}*/
+			auto A = interval (0, 10);
+			auto B = interval (1, 5);
+			auto C = interval (10, 11);
+			auto D = interval (9, 17);
+
+			assert (not (A.is_contained_in (B)));
+			assert (not (A.is_contained_in (C)));
+			assert (not (A.is_contained_in (D)));
+
+			assert (B.is_contained_in (A));
+			assert (not (B.is_contained_in (C)));
+			assert (not (B.is_contained_in (D)));
+
+			assert (not (C.is_contained_in (A)));
+			assert (not (C.is_contained_in (B)));
+			assert (C.is_contained_in (D));
+
+			assert (not (D.is_contained_in (A)));
+			assert (not (D.is_contained_in (B)));
+			assert (not (D.is_contained_in (C)));
 		}
 }
 public {/*calculus}*/
