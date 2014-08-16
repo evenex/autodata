@@ -322,6 +322,8 @@ public {/*initialization}*/
 			static private {/*code generation}*/
 				string generate_library_loader ()
 					{/*...}*/
+						import std.range: empty;
+
 						string signature = q{
 							void load_library ()
 						};
