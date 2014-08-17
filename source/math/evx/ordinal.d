@@ -57,9 +57,9 @@ bool antisymmetrically_equivalent (T,U)(const T a, const U b)
 */
 int compare (T,U)(T a, U b)
 	{/*...}*/
-		static if (__traits(compiles, a.opCmp (b)))
-			return a.opCmp (b);
-		else static if (allSatisfy!(isNumeric, T, U))
-			return cast(int)(a - b);
-		else static assert (0, `can't compare ` ~T.stringof~ ` with ` ~U.stringof);
+		if (a < b)
+			return -1;
+		else if (a > b)
+			return 1;
+		else return 0;
 	}

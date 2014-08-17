@@ -37,7 +37,10 @@ private {/*import evx}*/
 		is_indexable, is_comparable, supports_arithmetic;
 }
 
-immutable infinity = real.infinity;
+template infinity (T)
+	{/*...}*/
+		alias infinity = identity_element!(real.infinity).of_type!T;
+	}
 
 pure nothrow:
 public {/*comparison}*/
@@ -243,14 +246,120 @@ public {/*intervals}*/
 			assert (not (D.is_contained_in (B)));
 			assert (not (D.is_contained_in (C)));
 		}
+
+	/* test if a point is contained within an interval 
+	*/
+	bool is_contained_in (T)(T x, Interval!T I)
+		{/*...}*/
+			return x >= I.start && x < I.end;
+		}
+
+	/* test whether an interval is infinite 
+	*/
+	bool is_infinite (T)(Interval!T I)
+		{/*...}*/
+			return I.start == infinity!T || I.end == infinity!T;
+		}
 }
 public {/*calculus}*/
+	/* test whether a value is infinite 
+	*/
+	bool is_infinite (T)(T value)
+		if (not(is(T == Interval!U, U)))
+		{/*...}*/
+			return value == infinity!T;
+		}
+	bool is_finite (T)(T value)
+		{/*...}*/
+			return not (is_infinite (value));
+		}
+
 	/* compute the derivative of f at x 
 	*/
 	real derivative (alias f)(real x, real Δx = 1e-05)
 		if (isCallable!f)
 		{/*...}*/
 			return (f(x)-f(x-Δx))/Δx;
+		}
+	real derivative (T,U)(T f, U x)
+		if (allSatisfy!(has_trait!`is_continuous`, T))
+		in {/*...}*/
+			static assert (is (U: typeof(T.Δt)));
+
+			assert (x.is_contained_in (bounds));
+		}
+		body {/*...}*/
+			alias Δx = f.Δt;
+
+			return (f(x)-f(x-Δx))/Δx;
+		}
+
+	struct Continuous (Domain, Codomain)
+		{/*...}*/
+			Codomain delegate(Domain) f;
+
+			this (typeof(f) func, Interval!Domain t_bounds, Domain Δt)
+				{/*...}*/
+					this.f = f;
+					this.t_bounds = t_bounds;
+					this.Δt = Δt;
+				}
+		}
+	struct Continuous (alias f)
+		{/*...}*/
+			this (Interval!Domain t_bounds, Domain Δt)
+				{/*...}*/
+					this.t_bounds = t_bounds;
+					this.Δt = Δt;
+				}
+		}
+	mixin template ContinuousFunction ()
+		{/*...}*/
+			enum is_continuous;
+
+			Interval!Domain bounds = interval (-infinity!Domain, infinity!Domain);
+			Domain Δt;
+
+			auto domain ()
+				{/*...}*/
+					if (bounds.is_finite)
+						return ℕ[0..bounds.length / Δt].map!(i => i*Δt);
+					else if (bounds.min.is_finite)
+						return ℕ.map!(i => (i + min)*Δt);
+					else if (bounds.max.is_finite)
+						return ℕ.map!(i => (max - i)*Δt);
+					else return zip (
+						ℕ.map!(i => (-1)^^(i%2)),
+						ℕ.map!(i => (i+1)/2)
+					).map!(τ => τ[0]*τ[1])
+					.map!(i => i*Δt);
+				}
+			auto opCall (Domain x)
+				in {/*...}*/
+					assert (x.is_contained_in (bounds));
+				}
+				body {/*...}*/
+					return f(x);
+				}
+			auto opSlice ()
+				{/*...}*/
+					return domain.map!(t => f(t));
+				}
+			auto opSlice (Domain t0, Domain t1)
+				in {/*...}*/
+					assert (interval (t0,t1).is_contained_in (bounds));
+				}
+				body {/*...}*/
+					size_t i, j;
+
+					try {/*...}*/
+						i = ((t0 - bounds.min)/Δt).to!size_t;
+						j = ((bounds.max - t1)/Δt).to!size_t;
+					}
+					catch (Exception) assert (0);
+
+					return domain[i..j].map!(t => f(t)); 
+				}
 		}
 }
 public {/*normalization}*/

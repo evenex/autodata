@@ -9,7 +9,7 @@ private {/*import evx}*/
 	import evx.functional: map;
 }
 
-pure nothrow:
+nothrow:
 
 /* compute the mean value over a set */
 auto mean (T)(T set)

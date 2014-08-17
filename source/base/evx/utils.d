@@ -11,7 +11,7 @@ private {/*import std}*/
 		Clock, SysTime;
 
 	import std.stdio:
-		stderr, writeln;
+		stderr;
 
 	import std.concurrency:
 		Tid, thisTid;
@@ -34,9 +34,8 @@ debug = profiler;
 public debug {/*}*/
 	/* pure nothrow writeln 
 	*/
-	auto pure_nothrow_output (Args...)(Args args)
+	auto writeln (Args...)(Args args)
 		{/*...}*/
-			import std.stdio;
 			debug try {/*...}*/
 				foreach (arg; args)
 					stderr.write (arg, ` `);
@@ -144,16 +143,9 @@ debug (profiler) {/*...}*/
 			public {/*~}*/
 				~this ()
 					{/*...}*/
-						static if (0)
-						debug (profiler) try
-							{/*...}*/
-								stderr.writeln (profiler_exit_indent,
-									exit_status == ExitStatus.failure? `FAILED!`:``, 
-									`ex(` ~tid_string~`): `, func_name, ` after `, exit_time - entry_time);
-
-								stderr.flush;
-							}
-						catch (Exception) assert (0);
+						writeln (profiler_exit_indent,
+							exit_status == ExitStatus.failure? `FAILED!`:``, 
+							`ex(` ~tid_string~`): `, func_name, ` after `, exit_time - entry_time);
 					}
 			}
 			private:
@@ -167,15 +159,13 @@ debug (profiler) {/*...}*/
 			private {/*☀}*/
 				this (string func_name)
 					{/*...}*/
-						debug (profiler) try
-							{/*...}*/
-								import std.stdio;
-								this.func_name = func_name;
-								this.entry_time = Clock.currTime;
-								this.last_check = entry_time;
-								static if (0)
-								stderr.writeln (profiler_enter_indent, `in(` ~tid_string~ `): `, func_name, ` at `, entry_time.toISOExtString["2014-05-15".length..$]);
-							}
+						debug try {/*...}*/
+							this.func_name = func_name;
+							this.entry_time = Clock.currTime;
+							this.last_check = entry_time;
+
+							writeln (profiler_enter_indent, `in(` ~tid_string~ `):`, func_name, `at`, entry_time.toISOExtString["2014-05-15".length..$]);
+						}
 						catch (Exception) assert (0);
 					}
 				@disable this ();
@@ -187,6 +177,8 @@ debug (profiler) {/*...}*/
 	string profiler (string name = q{profiler})()
 		{/*...}*/
 			return q{
+				import evx.utils: Profiler;
+
 				auto } ~name~ q{ = Profiler.begin;
 				scope (success) } ~name~ q{.end (Profiler.ExitStatus.success);
 				scope (failure) } ~name~ q{.end (Profiler.ExitStatus.failure);

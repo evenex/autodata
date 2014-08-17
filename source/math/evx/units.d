@@ -17,7 +17,7 @@ private {/*import std}*/
 		empty;
 
 	import std.algorithm:
-		zip, sort,
+		zip, sort, SwapStrategy,
 		countUntil,
 		canFind;
 
@@ -221,12 +221,15 @@ public {/*unit}*/
 										dims ~= `s`;
 									else static if (is (Dim == Mass))
 										dims ~= `kg`;
+									else static if (is (Dim == Current))
+										dims ~= `A`;
+									else static assert (0, Dim.stringof~ ` to string unimplemented`);
 								}
 
 							auto powers = [Filter!(is_numerical_param, T)];
 
 							auto sorted_by_descending_power = zip (dims, powers)
-								.sort!((a,b) => a[1] > b[1]);
+								.sort!((a,b) => (a[1] > b[1]) || (a[1] == b[1] && a[0][0] < b[0][0]));
 							
 							auto n_positive_powers = sorted_by_descending_power
 								.countUntil!(a => a[1] < 0);
@@ -243,7 +246,7 @@ public {/*unit}*/
 							static auto to_superscript (U)(U num)
 								{/*...}*/
 									uint n = .abs(num).to!uint;
-									if (n < 3)
+									if (n < 4)
 										{/*...}*/
 											if (n == 1)
 												return ``.to!dstring;
@@ -455,7 +458,7 @@ debug {/*utility}*/
 
 			static import std.datetime;
 
-			debug try Thread.sleep (std.datetime.seconds (time.to_scalar.to!long));
+			debug try Thread.sleep (std.datetime.nsecs ((time.to_scalar * 1_000_000_000).to!long));
 			catch (Exception) assert (0);
 		}
 }

@@ -35,9 +35,11 @@ template zero (T)
 
 /* generate an algebraic identity element for a given type 
 */
-template identity_element (uint element)
-	if (element == 0 || element == 1)
+template identity_element (Element...)
+	if (Element.length == 1)
 	{/*...}*/
+		enum element = Element[0];
+
 		auto of_type (T)()
 			{/*...}*/
 				static if (isNumeric!T)

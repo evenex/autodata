@@ -27,28 +27,28 @@ private {/*import evx}*/
 		map, reduce;
 }
 
-pure nothrow:
+nothrow:
 
 /* ctfe-able arithmetic predicates 
 */
-auto add (T,U)(T a, U b) 
+pure add (T,U)(T a, U b) 
 	{return a + b;}
-auto subtract (T,U)(T a, U b) 
+pure subtract (T,U)(T a, U b) 
 	{return a - b;}
-auto multiply (T,U)(T a, U b) 
+pure multiply (T,U)(T a, U b) 
 	{return a * b;}
-auto divide (T,U)(T a, U b) 
+pure divide (T,U)(T a, U b) 
 	{return a / b;}
 
 /* mappable arithmetic predicates 
 */
-auto add (T,U)(Tuple!(T,U) τ)
+pure add (T,U)(Tuple!(T,U) τ)
 	{return τ[0] + τ[1];}
-auto subtract (T,U)(Tuple!(T,U) τ)
+pure subtract (T,U)(Tuple!(T,U) τ)
 	{return τ[0] - τ[1];}
-auto multiply (T,U)(Tuple!(T,U) τ)
+pure multiply (T,U)(Tuple!(T,U) τ)
 	{return τ[0] * τ[1];}
-auto divide (T,U)(Tuple!(T,U) τ)
+pure divide (T,U)(Tuple!(T,U) τ)
 	{return τ[0] / τ[1];}
 
 /* compute the product of a sequence 
@@ -71,7 +71,7 @@ alias Σ = sum;
 
 /* compute the least common multiple of two numbers 
 */
-auto lcm (T)(T a, T b) // TODO over more than two numbers
+pure lcm (T)(T a, T b) // TODO over more than two numbers
 	{/*...}*/
 		if (a == 0 || b == 0)
 			return a*b;
