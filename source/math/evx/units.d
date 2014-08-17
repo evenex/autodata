@@ -17,7 +17,7 @@ private {/*import std}*/
 		empty;
 
 	import std.algorithm:
-		zip, sort, SwapStrategy,
+		zip, sort,
 		countUntil,
 		canFind;
 
@@ -41,6 +41,7 @@ private {/*import evx}*/
 	import evx.analysis:
 		approx;
 }
+
 unittest
 	{/*demo}*/
 		auto x = 10.meters;

@@ -424,17 +424,20 @@ public {/*reduce}*/
 		}
 }
 public {/*sequence}*/
-	/* an infinite sequence defined by a generating function of the form f(T, size_t) 
+	/* a sequence defined by a generating function of the form f(T, size_t) 
 	*/
 	struct Sequence (alias func, T)
-		if (is_binary_function!(func!(int, int)))
+		if (is_binary_function!(func!(T, size_t)))
 		{/*...}*/
-			//pure 
-nothrow:
+			nothrow:
 			public {/*[i]}*/
 				auto opIndex (size_t i)
-					{/*...}*/
-						return func (initial, i);
+					in {/*...}*/
+						assert (i < length);
+						assert (i != infinity);
+					}
+					body {/*...}*/
+						return func (initial, i + start);
 					}
 
 				static assert (is_indexable!Sequence);
@@ -445,86 +448,17 @@ nothrow:
 						return save;
 					}
 				auto opSlice (size_t i, size_t j)
-					{/*...}*/
-						return FiniteSequence!(func, T)(initial, i, j);
-					}
-
-				auto opSlice (size_t i, size_t j) immutable
-					{/*...}*/
-						return FiniteSequence!(func, T)(initial, i, j);
-					}
-				static assert (is_sliceable!Sequence);
-			}
-			@property {/*InputRange}*/
-				auto popFront ()
-					{/*...}*/
-						initial = initial + unity!T;
-					}
-				auto front ()
-					{/*...}*/
-						return func (initial, 0);
-					}
-				auto empty ()
-					{/*...}*/
-						return false;
-					}
-				// TODO sequence needs to be revamped so we can take $ = inf so ℕ[x..$] will give us ℕ starting at x
-
-				static assert (isInputRange!Sequence);
-			}
-			@property {/*ForwardRange}*/
-				auto save ()
-					{/*...}*/
-						return this;
-					}
-
-				static assert (isForwardRange!Sequence);
-			}
-
-			private:
-			private {/*ctor}*/
-				this (T initial)
-					{/*...}*/
-						this.initial = initial;
-					}
-			}
-			private {/*data}*/
-				T initial;
-			}
-		}
-
-	/* a finite subsequence of some Sequence 
-	*/
-	struct FiniteSequence (alias func, T)
-		if (is_binary_function!(func!(int, int)))
-		{/*...}*/
-			//pure 
-nothrow:
-			public {/*[i]}*/
-				auto opIndex (size_t i)
 					in {/*...}*/
-						assert (i + start < start + length);
+						assert (i != infinity);
+
+						if (j != infinity)
+							assert (slice_within_bounds (i, j, length));
 					}
 					body {/*...}*/
-						return func (initial, i + start);
+						if (j == infinity)
+							return Sequence (initial, start + i, infinity);
+						else return Sequence (initial, start + i, start + j);
 					}
-
-				static assert (is_indexable!FiniteSequence);
-			}
-			public {/*[i..j]}*/
-				auto opSlice ()
-					{/*...}*/
-						return save;
-					}
-				auto opSlice (size_t i, size_t j)
-					in {/*...}*/
-						assert (slice_within_bounds (start + i, start + j, start + length));
-					}
-					body {/*...}*/
-						return FiniteSequence (initial, start + i, start + j);
-					}
-
-				static assert (is_sliceable!FiniteSequence);
 			}
 			@property {/*InputRange}*/
 				auto popFront ()
@@ -541,12 +475,12 @@ nothrow:
 					body {/*...}*/
 						return func (initial, start);
 					}
-				auto empty () const
+				const empty ()
 					{/*...}*/
 						return this.length == 0;
 					}
-				static assert (isInputRange!FiniteSequence);
 
+				static assert (isInputRange!Sequence);
 			}
 			@property {/*ForwardRange}*/
 				auto save ()
@@ -554,12 +488,13 @@ nothrow:
 						return this;
 					}
 
-				static assert (isForwardRange!FiniteSequence);
+				static assert (isForwardRange!Sequence);
 			}
 			@property {/*BidirectionalRange}*/
 				auto popBack ()
 					in {/*...}*/
 						assert (not (empty));
+						assert (not (is_infinite));
 					}
 					body {/*...}*/
 						--end;
@@ -567,39 +502,57 @@ nothrow:
 				auto back ()
 					in {/*...}*/
 						assert (not (empty));
+						assert (not (is_infinite));
 					}
 					body {/*...}*/
 						return func (initial, end - 1);
 					}
 
-				static assert (isBidirectionalRange!FiniteSequence);
+				static assert (isBidirectionalRange!Sequence);
 			}
 			const @property {/*length}*/
-				auto length () const
+				auto length ()
 					{/*...}*/
-						return end - start;
+						if (this.is_finite)
+							return end - start;
+						else return infinity;
 					}
+				alias opDollar = length;
 
-				static assert (has_length!FiniteSequence);
+				bool is_infinite ()
+					{/*...}*/
+						return this.end == this.infinity;
+					}
+				bool is_finite ()
+					{/*...}*/
+						return not (this.is_infinite);
+					}
 			}
 
 			private:
 			private {/*ctor}*/
-				this (T initial, size_t start, size_t end)
+				this (T initial, size_t start = 0, size_t end = infinity)
 					{/*...}*/
 						this.initial = initial;
 						this.start = start;
 						this.end = end;
 					}
 			}
+
 			private {/*data}*/
 				T initial;
+
 				size_t start;
 				size_t end;
+
+				enum infinity = size_t.max;
+			}
+			invariant (){/*...}*/
+				assert (start < infinity);
 			}
 		}
 	
-	/* build an infinite sequence from an index-based generating function and an initial value 
+	/* build a sequence from an index-based generating function and an initial value 
 	*/
 	auto sequence (alias func, T)(T initial)
 		{/*...}*/

@@ -20,7 +20,7 @@ pure nothrow:
 /* the set¹ of natural numbers 
 	1. actually a subset of cardinality 2⁶⁴
 */
-immutable ℕ = 0.sequence!((n,i) => n + i);
+static ℕ () {return 0.sequence!((n,i) => n + i);}
 
 /* a < b 
 */ 

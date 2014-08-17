@@ -5,14 +5,14 @@ private {/*import std}*/
 		min, max;
 
 	import std.math: 
-		abs;
+		abs, round;
 
 	import std.typetuple: 
 		allSatisfy,
 		staticMap;
 
 	import std.traits: 
-		isNumeric, hasMember,
+		isNumeric, hasMember, isCallable,
 		CommonType;
 
 	import std.range:
@@ -20,27 +20,34 @@ private {/*import std}*/
 		ElementType;
 
 	import std.conv:
-		text;
+		to, text;
 }
 private {/*import evx}*/
 	import evx.functional:
-		zip;
+		map, zip;
 
 	import evx.logic:
 		not, And, Or, Not;
 
 	import evx.algebra:
-		zero;
+		zero, identity_element;
 
+	import evx.arithmetic:
+		Σ;
+
+	import evx.ordinal:
+		ℕ;
 
 	import evx.traits:
 		is_indexable, is_comparable, supports_arithmetic;
 }
 
-template infinity (T)
+template infinite (T)
 	{/*...}*/
-		alias infinity = identity_element!(real.infinity).of_type!T;
+		alias infinite = identity_element!(real.infinity).of_type!T;
 	}
+
+alias infinity = infinite!real;
 
 pure nothrow:
 public {/*comparison}*/
@@ -251,14 +258,23 @@ public {/*intervals}*/
 	*/
 	bool is_contained_in (T)(T x, Interval!T I)
 		{/*...}*/
-			return x >= I.start && x < I.end;
+			return x.between (I.start, I.end);
 		}
 
 	/* test whether an interval is infinite 
 	*/
 	bool is_infinite (T)(Interval!T I)
 		{/*...}*/
-			return I.start == infinity!T || I.end == infinity!T;
+			return I.start.is_infinite || I.end.is_infinite;
+		}
+		unittest {/*...}*/
+			auto x = interval (-10, 10);
+			auto y = interval (-infinity, 10);
+			auto z = interval (-10, infinity);
+
+			assert (x.is_finite);
+			assert (y.is_infinite);
+			assert (z.is_infinite);
 		}
 }
 public {/*calculus}*/
@@ -267,99 +283,82 @@ public {/*calculus}*/
 	bool is_infinite (T)(T value)
 		if (not(is(T == Interval!U, U)))
 		{/*...}*/
-			return value == infinity!T;
+			return value.abs == infinite!T;
 		}
 	bool is_finite (T)(T value)
 		{/*...}*/
 			return not (is_infinite (value));
 		}
+		unittest {/*...}*/
+			assert (infinite!real.is_infinite);
+			assert (infinite!double.is_infinite);
+			assert (infinite!float.is_infinite);
 
-	/* compute the derivative of f at x 
+			assert ((-infinite!real).is_infinite);
+			assert ((-infinite!double).is_infinite);
+			assert ((-infinite!float).is_infinite);
+
+			assert (not (zero!real.is_infinite));
+			assert (not (zero!double.is_infinite));
+			assert (not (zero!float.is_infinite));
+
+			import evx.units;
+			assert (infinite!Meters.is_infinite);
+			assert (infinite!Seconds.is_infinite);
+			assert (infinite!Kilograms.is_infinite);
+			assert (infinite!Amperes.is_infinite);
+
+			assert ((-infinite!Meters).is_infinite);
+			assert ((-infinite!Seconds).is_infinite);
+			assert ((-infinite!Kilograms).is_infinite);
+			assert ((-infinite!Amperes).is_infinite);
+
+			assert (not (zero!Meters.is_infinite));
+			assert (not (zero!Seconds.is_infinite));
+			assert (not (zero!Kilograms.is_infinite));
+			assert (not (zero!Amperes.is_infinite));
+		}
+
+	/* compute the derivative of a function at some point 
 	*/
-	real derivative (alias f)(real x, real Δx = 1e-05)
+	real derivative (alias f)(real x, real Δx = 1e-6)
 		if (isCallable!f)
 		{/*...}*/
 			return (f(x)-f(x-Δx))/Δx;
 		}
-	real derivative (T,U)(T f, U x)
-		if (allSatisfy!(has_trait!`is_continuous`, T))
-		in {/*...}*/
-			static assert (is (U: typeof(T.Δt)));
 
-			assert (x.is_contained_in (bounds));
-		}
-		body {/*...}*/
-			alias Δx = f.Δt;
-
-			return (f(x)-f(x-Δx))/Δx;
-		}
-
-	struct Continuous (Domain, Codomain)
+	/* compute the integral of a function over some boundary 
+	*/
+	auto integrate (alias func, T)(Interval!T boundary, T differential = identity_element!(1e-6).of_type!T)
 		{/*...}*/
-			Codomain delegate(Domain) f;
+			static if (isCallable!func)
+				alias f = func;
+			else alias f = func!real;
 
-			this (typeof(f) func, Interval!Domain t_bounds, Domain Δt)
+			immutable domain = boundary;
+			immutable Δx = differential;
+
+			if (domain.is_finite)
 				{/*...}*/
-					this.f = f;
-					this.t_bounds = t_bounds;
-					this.Δt = Δt;
+					size_t n_partitions ()
+						{/*...}*/
+							try return (domain.length / Δx).round.to!size_t + 1;
+							catch (Exception) assert (0);
+						}
+
+					return Σ (ℕ[0..n_partitions]
+						.map!(i => domain.min + i*Δx)
+						.map!(x => f(x)*Δx)
+					);
 				}
+			else assert (0, `integration over infinite domain unimplemented`);
 		}
-	struct Continuous (alias f)
-		{/*...}*/
-			this (Interval!Domain t_bounds, Domain Δt)
-				{/*...}*/
-					this.t_bounds = t_bounds;
-					this.Δt = Δt;
-				}
-		}
-	mixin template ContinuousFunction ()
-		{/*...}*/
-			enum is_continuous;
+		unittest {/*...}*/
+			assert (integrate!(x => x)(interval (0.0, 1.0)).approx (1./2));
+			assert (integrate!(x => x)(interval (-1.0, 1.0)).approx (0));
 
-			Interval!Domain bounds = interval (-infinity!Domain, infinity!Domain);
-			Domain Δt;
-
-			auto domain ()
-				{/*...}*/
-					if (bounds.is_finite)
-						return ℕ[0..bounds.length / Δt].map!(i => i*Δt);
-					else if (bounds.min.is_finite)
-						return ℕ.map!(i => (i + min)*Δt);
-					else if (bounds.max.is_finite)
-						return ℕ.map!(i => (max - i)*Δt);
-					else return zip (
-						ℕ.map!(i => (-1)^^(i%2)),
-						ℕ.map!(i => (i+1)/2)
-					).map!(τ => τ[0]*τ[1])
-					.map!(i => i*Δt);
-				}
-			auto opCall (Domain x)
-				in {/*...}*/
-					assert (x.is_contained_in (bounds));
-				}
-				body {/*...}*/
-					return f(x);
-				}
-			auto opSlice ()
-				{/*...}*/
-					return domain.map!(t => f(t));
-				}
-			auto opSlice (Domain t0, Domain t1)
-				in {/*...}*/
-					assert (interval (t0,t1).is_contained_in (bounds));
-				}
-				body {/*...}*/
-					size_t i, j;
-
-					try {/*...}*/
-						i = ((t0 - bounds.min)/Δt).to!size_t;
-						j = ((bounds.max - t1)/Δt).to!size_t;
-					}
-					catch (Exception) assert (0);
-
-					return domain[i..j].map!(t => f(t)); 
-				}
+			assert (integrate!(x => x^^2)(interval (0.0, 1.0)).approx (1./3));
+			assert (integrate!(x => x^^2)(interval (-1.0, 1.0)).approx (2./3));
 		}
 }
 public {/*normalization}*/
@@ -466,3 +465,4 @@ public {/*normalization}*/
 		}
 
 }
+void main (){}
