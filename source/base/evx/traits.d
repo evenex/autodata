@@ -13,6 +13,9 @@ private {/*import std}*/
 private {/*import evx}*/
 	import evx.logic:
 		not, And;
+
+	import evx.utils:
+		τ;
 }
 
 public {/*type identification}*/
@@ -187,6 +190,15 @@ public {/*type identification}*/
 			static assert (is_embeddable_in!(T1, T3));
 			static assert (not (is_embeddable_in!(T3, T1)));
 		}
+
+	/* test if a type is a tuple 
+	*/
+	template is_tuple (T...)
+		if (T.length == 1)
+		{/*...}*/
+			enum is_tuple = is(typeof(τ(T[0].init.tupleof)) == T[0]);
+		}
+
 }
 public {/*type capabilities}*/
 	/* test if a type is comparable using the < operator 

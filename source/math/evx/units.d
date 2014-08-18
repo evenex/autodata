@@ -6,7 +6,7 @@ private {/*import std}*/
 
 	import std.typetuple:
 		allSatisfy,
-		staticIndexOf,
+		staticIndexOf, staticMap,
 		Filter;
 
 	import std.traits:
@@ -22,7 +22,7 @@ private {/*import std}*/
 		canFind;
 
 	import std.math: 
-		abs;
+		abs, sqrt;
 }
 private {/*import evx}*/
 	import evx.logic: 
@@ -30,7 +30,8 @@ private {/*import evx}*/
 		Or;
 
 	import evx.arithmetic:
-		add, subtract;
+		add, subtract,
+		is_even;
 
 	import evx.traits: 
 		is_numerical_param;
@@ -83,6 +84,22 @@ public {/*unit}*/
 				auto approx (Unit a)
 					{/*...}*/
 						return this.scalar.approx (a.scalar);
+					}
+				auto sqrt ()()
+					if (allSatisfy!(is_even, In_Pow))
+					{/*...}*/
+						template div2 (T...)
+							if (T.length == 1)
+							{/*...}*/
+								enum div2 = T[0]/2;
+							}
+
+						auto ret = combine_dimension!(subtract, Unit, Unit!(In_Dim, staticMap!(div2, In_Pow)));
+						pragma(msg, typeof(ret));
+
+						ret.scalar = .sqrt (this.scalar);
+
+						return ret;
 					}
 
 				auto opDispatch (string op)()

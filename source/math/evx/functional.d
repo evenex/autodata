@@ -30,6 +30,9 @@ private {/*import evx}*/
 	import evx.algebra:
 		unity;
 
+	import evx.analysis:
+		is_continuous;
+
 	import evx.range:
 		slice_within_bounds;
 
@@ -50,14 +53,17 @@ public {/*map}*/
 	struct MapResult (alias func, R)
 		{/*...}*/
 			alias Index = IndexTypes!R[0];
-			//pure 
-nothrow:
+			
+			nothrow:
 			static if (is_indexable!(R, Index))
 				{/*...}*/
 					auto ref opIndex (Index i)
 						in {/*...}*/
-							static if (has_length!R)
+							static if (is_continuous!Index)
+								assert (i < range.measure);
+							else static if (has_length!R)
 								assert (i < range.length);
+							else static assert (0);
 						}
 						body {/*...}*/
 							return func (range[i]);
@@ -73,13 +79,16 @@ nothrow:
 				{/*...}*/
 					auto opSlice (Index i, Index j)
 						in {/*...}*/
-							static if (has_length!R)
+							static if (is_continuous!Index)
+								assert (slice_within_bounds (i, j, measure));
+							else static if (has_length!R)
 								assert (slice_within_bounds (i, j, length));
 						}
 						body {/*...}*/
 							return MapResult (range[i..j]);
 						}
 				}
+
 			@property:
 			static if (isInputRange!R)
 				{/*...}*/
@@ -143,6 +152,17 @@ nothrow:
 
 					static assert (has_length!MapResult);
 				}
+			static if (is_continuous!Index)
+				{/*...}*/
+					@property measure () const
+						{/*...}*/
+							return range.measure;
+						}
+
+					alias opDollar = measure;
+
+					//static assert (is_continuous!MapResult); // TODO, new trait: for something indexable, is the index continuous?
+				}
 
 			private:
 			R range;
@@ -152,7 +172,7 @@ nothrow:
 	*/
 	template map (alias func)
 		{/*...}*/
-			auto map (R)(lazy scope R range)
+			auto map (R)(R range)
 				{/*...}*/
 					return MapResult!(func, R)(range);
 				}
@@ -175,13 +195,15 @@ public {/*zip}*/
 	*/
 	struct ZipResult (Ranges...) // TODO we are gonna have to keep a lot more indices
 		{/*...}*/
-			//pure 
-nothrow:
+			nothrow:
+
 			static if (not(is(CommonIndex == void)))
 				{/*...}*/
 					auto ref opIndex (CommonIndex i)
 						in {/*...}*/
-							static if (has_length!ZipResult)
+							static if (is_continuous!CommonIndex)
+								assert (i < measure);
+							else static if (has_length!ZipResult)
 								assert (i < length);
 						}
 						body {/*...}*/
@@ -195,10 +217,13 @@ nothrow:
 							return save;
 						}
 					auto opSlice /*()*/(CommonIndex i, CommonIndex j)
-						//if (allSatisfy!(is_sliceable, Ranges))
+						//if (allSatisfy!(is_sliceable, Ranges)) REVIEW
 						in {/*...}*/
-							static if (has_length!ZipResult)
-								assert (slice_within_bounds (slice.start + i, slice.start + j, slice.length));
+							static if (is_continuous!CommonIndex)
+								assert (slice_within_bounds (i, j, slice.measure));
+							else static if (has_length!ZipResult)
+								assert (slice_within_bounds (i, j, slice.length));
+							else static assert (0);
 						}
 						body {/*...}*/
 							return ZipResult (ranges, Indices (slice.start + i, slice.start + j));
@@ -277,6 +302,16 @@ nothrow:
 
 					static assert (has_length!ZipResult);
 				}
+			static if (is_continuous!CommonIndex)
+			//static if (allSatisfy!(is_continuous, Ranges)) // TODO 
+				@property {/*...}*/
+					auto measure () const
+						{/*...}*/
+							return ranges[0].measure;
+						}
+
+					//static assert (has_measure!ZipResult); TODO
+				}
 
 			alias CommonIndex = CommonType!(staticMap!(IndexTypes, Ranges));
 
@@ -318,10 +353,20 @@ nothrow:
 			private {/*ctor}*/
 				this (Ranges ranges)
 					in {/*...}*/
-						auto length = ranges[0].length;
+						static if (is_continuous!CommonIndex)
+							{/*...}*/
+								auto measure = ranges[0].measure;
 
-						foreach (range; ranges)
-							assert (range.length == length);
+								foreach (range; ranges)
+									assert (range.measure == measure);
+							}
+						static if (allSatisfy!(has_length, Ranges))
+							{/*...}*/
+								auto length = ranges[0].length;
+
+								foreach (range; ranges)
+									assert (range.length == length);
+							}
 					}
 					body {/*...}*/
 						this.ranges = ranges;

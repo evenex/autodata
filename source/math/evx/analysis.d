@@ -12,8 +12,8 @@ private {/*import std}*/
 		staticMap;
 
 	import std.traits: 
-		isNumeric, hasMember, isCallable,
-		CommonType;
+		isNumeric, hasMember, isCallable, isFloatingPoint,
+		CommonType, RepresentationTypeTuple;
 
 	import std.range:
 		isInputRange, isForwardRange, hasLength,
@@ -112,10 +112,16 @@ public {/*intervals}*/
 	struct Interval (Index)
 		{/*...}*/
 			pure nothrow:
-			const @property length ()
+			static if (is_continuous!Index)
+				const @property measure ()
+					{/*...}*/
+						return end - start;
+					}
+			else const @property length ()
 				{/*...}*/
 					return end - start;
 				}
+
 			const @property empty ()
 				{/*...}*/
 					return end - start == zero!Index;
@@ -130,11 +136,11 @@ public {/*intervals}*/
 					return bounds[1];
 				}
 
-			@property start (Index i)
+			@property start ()(Index i)
 				{/*...}*/
 					bounds[0] = i;
 				}
-			@property end (Index i)
+			@property end ()(Index i)
 				{/*...}*/
 					bounds[1] = i;
 				}
@@ -144,8 +150,7 @@ public {/*intervals}*/
 
 			this (Index start, Index end)
 				{/*...}*/
-					bounds[0] = start;
-					bounds[1] = end;
+					bounds = [start, end];
 				}
 
 			private:
@@ -278,6 +283,13 @@ public {/*intervals}*/
 		}
 }
 public {/*calculus}*/
+	/* test whether a type has a floating point representation
+	*/
+	template is_continuous (T)
+		{/*...}*/
+			enum is_continuous = allSatisfy!(isFloatingPoint, RepresentationTypeTuple!T);
+		}
+
 	/* test whether a value is infinite 
 	*/
 	bool is_infinite (T)(T value)
@@ -342,7 +354,7 @@ public {/*calculus}*/
 				{/*...}*/
 					size_t n_partitions ()
 						{/*...}*/
-							try return (domain.length / Δx).round.to!size_t + 1;
+							try return (domain.measure / Δx).round.to!size_t + 1;
 							catch (Exception) assert (0);
 						}
 
@@ -359,6 +371,21 @@ public {/*calculus}*/
 
 			assert (integrate!(x => x^^2)(interval (0.0, 1.0)).approx (1./3));
 			assert (integrate!(x => x^^2)(interval (-1.0, 1.0)).approx (2./3));
+		}
+
+	/* flag a functor as being integrable with respect to some differential measure 
+	*/
+	deprecated mixin template Integrability (alias Δμ)
+		{/*...}*/
+			enum is_integrable;
+			alias differential_measure = Δμ;
+		}
+
+	/* test if a functor is integrable according to the definition of Integrability 
+	*/
+	deprecated template is_integrable (T)
+		{/*...}*/
+			enum is_integrable = is(T.is_integrable == enum) && is(typeof(T.differential_measure));
 		}
 }
 public {/*normalization}*/
@@ -465,4 +492,3 @@ public {/*normalization}*/
 		}
 
 }
-void main (){}
