@@ -95,7 +95,6 @@ public {/*unit}*/
 							}
 
 						auto ret = combine_dimension!(subtract, Unit, Unit!(In_Dim, staticMap!(div2, In_Pow)));
-						pragma(msg, typeof(ret));
 
 						ret.scalar = .sqrt (this.scalar);
 
