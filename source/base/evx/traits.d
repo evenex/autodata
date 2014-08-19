@@ -2,7 +2,8 @@ module evx.traits;
 
 private {/*import std}*/
 	import std.typetuple:
-		allSatisfy, anySatisfy;
+		allSatisfy, anySatisfy,
+		TypeTuple;
 
 	import std.traits:
 		isSomeFunction, isSomeString,

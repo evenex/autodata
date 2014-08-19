@@ -2,11 +2,17 @@ module evx.arrays;
 
 private {/*import std}*/
 	import std.traits: 
+		isDynamicArray,
 		ReturnType;
 
 	import std.range: 
+		equal, front, popFront,
 		ElementType, 
-		isOutputRange;
+		isInputRange, isForwardRange, isOutputRange;
+
+	import std.algorithm: 
+		copy, swap,
+		sort, isSorted;
 
 	import std.typetuple: 
 		anySatisfy, allSatisfy;
@@ -19,8 +25,39 @@ private {/*import std}*/
 
 	import std.c.stdlib: 
 		malloc, free;
+
+	import std.array:
+		allocate_array = array;
 }
 private {/*import evx}*/
+	import evx.logic:
+		not, Or;
+
+	import evx.ordinal:
+		less_than;
+
+	import evx.arithmetic:
+		sum;
+
+	import evx.utils:
+		τ;
+
+	import evx.move:
+		move, shift_up_from, shift_down_on;
+
+	import evx.traits:
+		is_comparable, is_comparison_function, 
+		is_hashing_function;
+
+	import evx.search:
+		binary_search;
+
+	import evx.meta:
+		replace_in_template,
+		ArrayInterface,
+		CompareBy,
+		ForwardConstructor,
+		Policies, PolicyAssignment;
 }
 
 version (benchmarked)
@@ -247,18 +284,6 @@ version (benchmarked)
 			}
 	}
 
-// REVIEW usage of copy vs move vs swap
-
-// REFACTOR
-	import evx.utils;
-	import evx.meta;
-	import evx.math;
-	import evx.search;
-	import evx.logic;
-	import evx.traits;
-
-	import std.range;
-
 public {/*traits}*/
 	template is_array (T)
 		{/*...}*/
@@ -313,21 +338,22 @@ public {/*policies}*/
 
 	/* specify Dynamic array behavior on overflow 
 	*/
-	enum Reallocation // TODO implement
+	enum Reallocation
 		{/*...}*/
 			permitted,
 			/* on overflow, reallocate if possible; otherwise throw an assert error 
 			*/
 
 			forbidden,
-			/* throw an assert error on overflow
+			/* throw an assert error on overflow 
 			*/
 		}
 }
 
-pure nothrow: // TODO into the arrays
-
-/**/ // TODO DOC
+/* dynamic array over any type equipped with an array interface 
+	a dynamic array implements the grow and shrink primitives
+	constructors will propagate from the backing type
+*/
 struct Dynamic (Array, PolicyList...)
 	{/*...}*/
 		private mixin PolicyAssignment!(
@@ -351,7 +377,7 @@ struct Dynamic (Array, PolicyList...)
 				body {/*...}*/
 					static if (reallocation is Reallocation.permitted)
 						{/*...}*/
-							if (dynamic_length + n <= capacity)
+							if (dynamic_length + n > capacity)
 								{/*...}*/
 									static if (supports_reallocation!Array)
 										array.reallocate (capacity * 2);
@@ -424,13 +450,12 @@ struct Dynamic (Array, PolicyList...)
 		}
 		static assert (is_dynamic_array!Dynamic);
 	}
-	static if (0)
 	unittest {/*...}*/
 		void basic_usage (Array)()
 			{/*...}*/
 				import std.exception: assertThrown;
 
-				debug auto x = Dynamic!Array ([1,2,3]); // REVIEW impure
+				debug auto x = Dynamic!Array ([1,2,3]);
 				auto cap = x.capacity;
 
 				assert (x[].equal ([1,2,3]));
@@ -447,7 +472,7 @@ struct Dynamic (Array, PolicyList...)
 				assert (x.length == 3);
 				assertThrown!Error (x.grow (cap));
 
-				assert (x[].sum == 6); // REVIEW why does this compile? sum -> reduce -> foreach -> impure but reduce == pure so it should give a compiler error!
+				assert (x[].sum == 6);
 
 				x[0] = 2;
 				x[1] = 4;
@@ -485,15 +510,32 @@ struct Dynamic (Array, PolicyList...)
 			z.shrink (1);
 			assert (destroyed);
 		}
+		{/*reallocation policy}*/
+			auto x = Dynamic!(Array!(int, Reallocation.permitted), Reallocation.permitted)(3);
+
+			assert (x.length == 0);
+			assert (x.capacity == 3);
+
+			x.grow (3);
+
+			assert (x.length == 3);
+			assert (x.capacity == 3);
+
+			x.grow (1);
+
+			assert (x.length == 4);
+			assert (x.capacity > 3);
+		}
 	}
 
-/**/ // TODO DOC
+/* dynamic array with appending 
+	appendable arrays define the append primitive, which is equivalent to put and ~=
+	appending creates no temporary copies of either lvalues or rvalues
+*/
 struct Appendable (Array)
 	if (__traits(compiles, Dynamic!Array)
 	&& not (is_ordered_array!Array))
 	{/*...}*/
-		// NOTE individual appends will use opAssign, allowing potential move semantics
-		// but range appends will use copy, which probably uses the copy semantics but TODO let me test this
 		public {/*aliasing}*/
 			static if (is_dynamic_array!Array)
 				alias ArrayType = Array;
@@ -544,7 +586,7 @@ struct Appendable (Array)
 
 					array.grow (saved.length);
 
-					range.copy (array[start..$]); // XXX
+					range.move (array[start..$]);
 				}
 		}
 		public {/*ctor}*/
@@ -555,71 +597,75 @@ struct Appendable (Array)
 		}
 		static assert (isOutputRange!(Appendable, T));
 	}
-	static if (0)
 	unittest {/*...}*/
-			void basic_usage (Array)()
+		import std.range:
+			only;
+
+		void basic_usage (Array)()
+			{/*...}*/
+				auto x = Appendable!Array ([-1,-2,-3]);
+
+				assert (x[].equal ([-1,-2,-3]));
+				x.clear;
+
+				x ~= 1;
+				assert (x.length == 1);
+				x.put (only (2,3));
+				assert (x.length == 3);
+				assert (x[].equal ([1,2,3]));
+				assert (x.length == x.capacity);
+
+				x.clear;
+				assert (x.length == 0);
+
+				x.append (12);
+				assert (x[0] == 12);
+
+				x.shrink (1);
+
+				static assert (not (__traits(compiles, x.ref_append (1))));
+				static assert (__traits(compiles, x.lazy_append (1)));
+				int y = 1;
+				static assert (__traits(compiles, x.ref_append (y)));
+				static assert (__traits(compiles, x.lazy_append (y)));
+			}
+
+		basic_usage!(Dynamic!(int[]));
+		basic_usage!(Dynamic!(int[3]));
+		basic_usage!(Dynamic!(Array!int));
+
+		basic_usage!(int[]);
+		basic_usage!(int[3]);
+		basic_usage!(Array!int);
+
+		{/*destruction policy}*/
+			static bool destroyed = false;
+			struct Test
 				{/*...}*/
-					auto x = Appendable!Array ([-1,-2,-3]);
-
-					assert (x[].equal ([-1,-2,-3]));
-					x.clear;
-
-					x ~= 1;
-					assert (x.length == 1);
-					x.put (only (2,3));
-					assert (x.length == 3);
-					assert (x[].equal ([1,2,3]));
-					assert (x.length == x.capacity);
-
-					x.clear;
-					assert (x.length == 0);
-
-					x.append (12);
-					assert (x[0] == 12);
-
-					x.shrink (1);
-
-					static assert (not (__traits(compiles, x.ref_append (1))));
-					static assert (__traits(compiles, x.lazy_append (1)));
-					int y = 1;
-					static assert (__traits(compiles, x.ref_append (y)));
-					static assert (__traits(compiles, x.lazy_append (y)));
+					bool temp = true;
+					~this () {if (not (temp)) destroyed = true;}
+					this(this) {assert (0, `array does not copy the input`);}
 				}
 
-			basic_usage!(Dynamic!(int[]));
-			basic_usage!(Dynamic!(int[3]));
-			basic_usage!(Dynamic!(Array!int));
+			immutable not_temp = false;
 
-			basic_usage!(int[]);
-			basic_usage!(int[3]);
-			basic_usage!(Array!int);
+			auto x = Appendable!(Dynamic!(Test[1], Destruction.deferred))();
+			x ~= Test (not_temp);
+			assert (not (destroyed), `array does not destroy or copy the input`);
+			x.clear;
+			assert (not (destroyed));
 
-			{/*destruction policy}*/
-				static bool destroyed = false;
-				struct Test
-					{/*...}*/
-						bool temp = true;
-						~this () {if (not (temp)) destroyed = true;}
-						this(this) {assert (0, `array does not copy the input`);}
-					}
-
-				immutable not_temp = false;
-
-				auto x = Appendable!(Dynamic!(Test[1], Destruction.deferred))();
-				x ~= Test (not_temp);
-				assert (not (destroyed), `array does not destroy or copy the input`);
-				x.clear;
-				assert (not (destroyed));
-
-				auto y = Appendable!(Dynamic!(Test[1], Destruction.immediate))();
-				y ~= Test (not_temp);
-				assert (not (destroyed));
-				y.clear;
-				assert (destroyed);
-			}
+			auto y = Appendable!(Dynamic!(Test[1], Destruction.immediate))();
+			y ~= Test (not_temp);
+			assert (not (destroyed));
+			y.clear;
+			assert (destroyed);
 		}
+	}
 
-/**/ // TODO DOC
+/* auto-sorting dynamic array 
+	sorts with <, can be overridden with custom comparator
+*/
 struct Ordered (Array, Sorting...)
 	if ((__traits(compiles, Dynamic!Array)
 		&& not (is_appendable_array!Array)
@@ -695,11 +741,11 @@ struct Ordered (Array, Sorting...)
 				{/*...}*/
 					static if (appears_manually_allocated!Array)
 						{/*allocate}*/
-							array = Array (range.length);
+							array = ArrayType (range.length);
 						}
 					else static if (isDynamicArray!Array)
 						{/*copy and clear}*/
-							this.array = std.array.array (range);
+							this.array = allocate_array (range);
 							this.array.clear;
 						}
 
@@ -709,7 +755,7 @@ struct Ordered (Array, Sorting...)
 				}
 			this (Args...)(Args args)
 				{/*...}*/
-					array = Array (args);
+					array = ArrayType (args);
 				}
 		}
 		private:
@@ -727,7 +773,6 @@ struct Ordered (Array, Sorting...)
 		}
 		static assert (isOutputRange!(Ordered, T));
 	}
-	static if (0)
 	unittest {/*...}*/
 			import std.exception: assertThrown;
 
@@ -776,7 +821,11 @@ struct Ordered (Array, Sorting...)
 			custom_comparator!(Ordered!(Array!int, (int a, int b) => b < a))([1,2,3]);
 		}
 
-/**/ // TODO DOC
+/* no-gc associative array 
+	keys are generated from value.toHash by default
+	this can be overriden with a custom hashing function or a key type,
+	in which case the key must be explicitly supplied to insert an item
+*/
 struct Associative (Array, Lookup...)
 	if ((__traits(compiles, Dynamic!Array)
 		&& not (anySatisfy!(Or!(is_appendable_array, is_ordered_array), Array))
@@ -839,7 +888,7 @@ struct Associative (Array, Lookup...)
 				}
 
 			mixin(q{
-				alias Keyring = } ~rewrite_type!(Array, Item, Index)~ q{;
+				alias Keyring = } ~replace_in_template!(Array, Item, Index)~ q{;
 			});
 		}
 		public {/*insert}*/
@@ -1030,7 +1079,6 @@ struct Associative (Array, Lookup...)
 			);
 		}
 	}
-	static if (0)
 	unittest {/*...}*/
 			import std.exception: assertThrown;
 
@@ -1076,6 +1124,8 @@ struct Associative (Array, Lookup...)
 				test!(Array!int)(8);
 			}
 			{/*internal hash}*/
+				import std.range: only;
+
 				struct Test
 					{/*...}*/
 						size_t root;
@@ -1120,7 +1170,7 @@ struct Associative (Array, Lookup...)
 				x.insert (NoHash (`three`));
 			}
 			{/*destruction policy}*/
-				static bool destroyed = false;
+				bool destroyed = false;
 				struct Destroyer 
 					{/*...}*/
 						bool temp = true;
@@ -1145,11 +1195,12 @@ struct Associative (Array, Lookup...)
 
 ///////////////
 
-/**/ // TODO DOC
+/* mallocated array 
+*/
 struct Array (T, Reallocation reallocation = Reallocation.forbidden)
 	{/*...}*/
 		T* ptr;
-		const size_t length;
+		size_t length;
 
 		mixin ArrayInterface!(ptr, length);
 
@@ -1158,11 +1209,12 @@ struct Array (T, Reallocation reallocation = Reallocation.forbidden)
 				{/*...}*/
 					auto new_ptr = cast(T*)malloc (new_length * T.sizeof);
 
-					this[].move (new_ptr[0..length]); // XXX
+					this[].move (new_ptr[0..length]);
 
 					free (this.ptr);
 
 					this.ptr = new_ptr;
+					this.length = new_length;
 				}
 
 		this (size_t length)
@@ -1178,13 +1230,22 @@ struct Array (T, Reallocation reallocation = Reallocation.forbidden)
 
 				ptr = cast(T*)malloc (length * T.sizeof);
 
-				range.copy (this[]); // XXX
+				range[].copy (this[]);
 			}
 		~this ()
 			{/*...}*/
 				free (cast(void*)ptr);
 			}
 		@disable this (this);
+
+		void opAssign (Array that)
+			{/*...}*/
+				this.ptr = that.ptr;
+				this.length = that.length;
+
+				that.ptr = null;
+				that.length = 0;
+			}
 	}
 
 ///////////////

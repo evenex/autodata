@@ -882,7 +882,7 @@ public {/*processing}*/
 
 	/* perform search and replace on a typename 
 	*/
-	string replace_template (Type, Find, ReplaceWith)()
+	string replace_in_template (Type, Find, ReplaceWith)()
 		{/*...}*/
 			import std.algorithm: findSplit;
 
@@ -899,7 +899,7 @@ public {/*processing}*/
 			alias T1 = Tuple!string;
 
 			mixin(q{
-				alias T2 = } ~replace_template!(T1, string, int)~ q{;
+				alias T2 = } ~replace_in_template!(T1, string, int)~ q{;
 			});
 
 			static assert (is (T2 == Tuple!int));
@@ -1028,6 +1028,12 @@ public {/*code generation}*/
 
 			static string generate_policy_assignments ()
 				{/*...}*/
+					import std.typetuple: 
+						staticMap, staticIndexOf;
+
+					import evx.meta: 
+						type_of;
+
 					alias AssignedTypes = staticMap!(type_of, AssignedPolicies);
 
 					string code;

@@ -8,7 +8,7 @@ private {/*import std}*/
 		abs, round;
 
 	import std.typetuple: 
-		allSatisfy,
+		allSatisfy, anySatisfy,
 		staticMap;
 
 	import std.traits: 
@@ -40,6 +40,9 @@ private {/*import evx}*/
 
 	import evx.traits:
 		is_indexable, is_comparable, supports_arithmetic;
+
+	import evx.meta:
+		IndexTypes;
 }
 
 template infinite (T)
@@ -289,6 +292,54 @@ public {/*calculus}*/
 		{/*...}*/
 			enum is_continuous = allSatisfy!(isFloatingPoint, RepresentationTypeTuple!T);
 		}
+
+	/* test whether a range can represent a floating point function 
+	*/
+	template is_continuous_range (T)
+		{/*...}*/
+			static if (hasMember!(T, `opIndex`))
+				enum has_continuous_domain = anySatisfy!(is_continuous, IndexTypes!T);
+			else enum has_continuous_domain = true;
+
+			static if (hasMember!(T, `measure`))
+				enum is_measurable = __traits(compiles, {auto μ = T.init.measure; static assert (is_continuous!(typeof(μ)));});
+			else enum is_measurable = false;
+
+			enum is_continuous_range = isInputRange!T && has_continuous_domain && is_measurable;
+		}
+	unittest {/*functional compatibility}*/
+		struct T
+			{/*...}*/
+				nothrow:
+
+				float measure;
+
+				auto opIndex (float i)
+					{return i;}
+
+				auto opSlice (float i, float j)
+					{return this;}
+
+				auto front ()
+					{/*...}*/
+						return measure;
+					}
+
+				void popFront ()
+					{/*...}*/
+						
+					}
+
+				enum empty = true;
+			}
+
+		static assert (is_continuous_range!T);
+
+		auto x = T(1);
+		auto y = T(1);
+		auto z = zip(x,y);
+		auto w = z.map!(t => t);
+	}
 
 	/* test whether a value is infinite 
 	*/

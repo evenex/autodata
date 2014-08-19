@@ -31,7 +31,7 @@ private {/*import evx}*/
 		unity;
 
 	import evx.analysis:
-		is_continuous, interval;
+		is_continuous, is_continuous_range, interval;
 
 	import evx.range:
 		slice_within_bounds;
@@ -45,8 +45,6 @@ private {/*import evx}*/
 
 //pure 
 nothrow:
-// REVIEW pure and nothrow
-// REFACTOR made a mess of map and zip
 
 /* aliasable template lambda function 
 */
@@ -77,7 +75,7 @@ public {/*map}*/
 
 			auto opSlice ()
 				{/*...}*/
-					return save;
+					return this;
 				}
 
 			static if (is_sliceable!(R, Index))
@@ -157,7 +155,7 @@ public {/*map}*/
 
 					static assert (has_length!MapResult);
 				}
-			static if (is_continuous!Index)
+			static if (is_continuous_range!R)
 				{/*...}*/
 					@property measure () const
 						{/*...}*/
@@ -165,7 +163,8 @@ public {/*map}*/
 						}
 
 					alias opDollar = measure;
-					//static assert (is_continuous!MapResult); // TODO, new trait: for something indexable, is the index continuous?
+
+					static assert (is_continuous_range!MapResult);
 				}
 
 			private:
@@ -218,7 +217,7 @@ public {/*zip}*/
 
 					auto opSlice ()
 						{/*...}*/
-							return save;
+							return this;
 						}
 					auto opSlice ()(CommonIndex i, CommonIndex j)
 						if (allSatisfy!(is_sliceable, Ranges))
@@ -307,16 +306,16 @@ public {/*zip}*/
 					static if (not (is_continuous!CommonIndex))
 						alias opDollar = length;
 				}
-			static if (is_continuous!CommonIndex)
-			//static if (allSatisfy!(is_continuous, Ranges)) // TODO 
+			static if (allSatisfy!(is_continuous_range, Ranges))
 				@property {/*...}*/
 					auto measure () const
 						{/*...}*/
 							return ranges[0].measure;
 						}
 
-					//static assert (has_measure!ZipResult); TODO
 					alias opDollar = measure;
+
+					static assert (is_continuous_range!ZipResult);
 				}
 
 			alias CommonIndex = CommonType!(staticMap!(IndexTypes, Ranges));
@@ -489,7 +488,7 @@ public {/*sequence}*/
 			public {/*[i..j]}*/
 				auto opSlice ()
 					{/*...}*/
-						return save;
+						return this;
 					}
 				auto opSlice (size_t i, size_t j)
 					in {/*...}*/
@@ -611,7 +610,7 @@ public {/*sequence}*/
 			assert (ℕ[4..9][1..4].equal ([5,6,7]));
 			assert (ℕ[4..9][1..4][1] == 6);
 
-	//		foreach (i, n; ℕ[0..10]) // TODO
-	//			assert (n == i);
+			//foreach (i, n; ℕ[0..10]) // OUTSIDE BUG Error: cannot infer argument types
+			//	assert (n == i);
 		}
 }

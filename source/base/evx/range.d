@@ -1,13 +1,25 @@
 module evx.range;
 
-//REFACTOR imports
-import evx.logic: And, Not, not;
-import evx.traits: is_indexable, is_comparable;
-import std.typetuple: allSatisfy;
-import std.range: ElementType, isForwardRange, cycle;
-import evx.functional: map, zip;
-import evx.arithmetic: sum;
+private {/*import std}*/
+	import std.typetuple:
+		allSatisfy;
 
+	import std.range:
+		ElementType, isForwardRange, cycle;
+}
+private {/*import evx}*/
+	import evx.logic: 
+		And, Not, not;
+
+	import evx.traits:
+		is_indexable, is_comparable;
+
+	import evx.arithmetic:
+		sum;
+
+	import evx.functional:
+		map, zip;
+}
 
 pure nothrow:
 
