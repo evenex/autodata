@@ -18,7 +18,7 @@ private {/*import evx}*/
 		not;
 
 	import evx.arithmetic:
-		sum, pow;
+		sum, squared;
 
 	import evx.functional:
 		zip, map, sequence;
@@ -54,7 +54,8 @@ auto std_dev (T, U = ElementType!T)(T set, const U mean)
 	if (is (ElementType!T : U))
 	{/*...}*/
 		alias μ = mean;
-		return set[].map!(x => (x-μ).pow!2).mean.sqrt;
+
+		return set[].map!(x => (x-μ).squared).mean.sqrt;
 	}
 
 unittest {/*...}*/

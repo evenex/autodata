@@ -72,7 +72,7 @@ public {/*comparison}*/
 
 			return true;
 		}
-	auto approx (T,U)(T a, U b, real relative_tolerance = 1./1000)
+	auto approx (T,U)(T a, U b, real relative_tolerance = 1./10_000)
 		if (allSatisfy!(isNumeric, T, U))
 		{/*...}*/
 			alias V = CommonType!(T,U);

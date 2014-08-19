@@ -31,7 +31,7 @@ private {/*import evx}*/
 		unity;
 
 	import evx.analysis:
-		is_continuous;
+		is_continuous, interval;
 
 	import evx.range:
 		slice_within_bounds;
@@ -40,13 +40,18 @@ private {/*import evx}*/
 		is_indexable, is_sliceable, has_length,
 		is_binary_function;
 
-	import evx.utils; // BUG doesnt like selective Indices import..
+	import evx.utils;
 }
 
 //pure 
 nothrow:
 // REVIEW pure and nothrow
 // REFACTOR made a mess of map and zip
+
+/* aliasable template lambda function 
+*/
+template λ (alias F) {alias λ = F;}
+
 public {/*map}*/
 	/* nothrow replacement for std.algorithm.MapResult 
 	*/
@@ -60,9 +65,9 @@ public {/*map}*/
 					auto ref opIndex (Index i)
 						in {/*...}*/
 							static if (is_continuous!Index)
-								assert (i < range.measure);
+								assert (i < range.measure, `index out of bounds`);
 							else static if (has_length!R)
-								assert (i < range.length);
+								assert (i < range.length, `index out of bounds`);
 							else static assert (0);
 						}
 						body {/*...}*/
@@ -160,7 +165,6 @@ public {/*map}*/
 						}
 
 					alias opDollar = measure;
-
 					//static assert (is_continuous!MapResult); // TODO, new trait: for something indexable, is the index continuous?
 				}
 
@@ -193,7 +197,7 @@ public {/*map}*/
 public {/*zip}*/
 	/* nothrow replacement for std.range.Zip 
 	*/
-	struct ZipResult (Ranges...) // TODO we are gonna have to keep a lot more indices
+	struct ZipResult (Ranges...)
 		{/*...}*/
 			nothrow:
 
@@ -216,17 +220,15 @@ public {/*zip}*/
 						{/*...}*/
 							return save;
 						}
-					auto opSlice /*()*/(CommonIndex i, CommonIndex j)
-						//if (allSatisfy!(is_sliceable, Ranges)) REVIEW
-						in {/*...}*/
-							static if (is_continuous!CommonIndex)
-								assert (slice_within_bounds (i, j, slice.measure));
-							else static if (has_length!ZipResult)
-								assert (slice_within_bounds (i, j, slice.length));
-							else static assert (0);
-						}
-						body {/*...}*/
-							return ZipResult (ranges, Indices (slice.start + i, slice.start + j));
+					auto opSlice ()(CommonIndex i, CommonIndex j)
+						if (allSatisfy!(is_sliceable, Ranges))
+						{/*...}*/
+							ZipResult copy = this;
+
+							foreach (r, ref range; copy.ranges)
+								range = this.ranges[r][i..j];
+							
+							return copy;
 						}
 				}
 
@@ -301,6 +303,9 @@ public {/*zip}*/
 						}
 
 					static assert (has_length!ZipResult);
+
+					static if (not (is_continuous!CommonIndex))
+						alias opDollar = length;
 				}
 			static if (is_continuous!CommonIndex)
 			//static if (allSatisfy!(is_continuous, Ranges)) // TODO 
@@ -311,6 +316,7 @@ public {/*zip}*/
 						}
 
 					//static assert (has_measure!ZipResult); TODO
+					alias opDollar = measure;
 				}
 
 			alias CommonIndex = CommonType!(staticMap!(IndexTypes, Ranges));
@@ -351,7 +357,7 @@ public {/*zip}*/
 					}
 			}
 			private {/*ctor}*/
-				this (Ranges ranges)
+			this (Ranges ranges)
 					in {/*...}*/
 						static if (is_continuous!CommonIndex)
 							{/*...}*/
@@ -371,16 +377,9 @@ public {/*zip}*/
 					body {/*...}*/
 						this.ranges = ranges;
 					}
-
-				this (Ranges ranges, Indices slice)
-					body {/*...}*/
-						this (ranges);
-						this.slice = slice;
-					}
 			}
 			private {/*data}*/
 				Ranges ranges;
-				Indices slice;
 			}
 		}
 

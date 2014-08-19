@@ -236,8 +236,8 @@ public {/*polygons}*/
 		unittest {/*...}*/
 			assert (square (1).area.approx (1));
 			assert (square (2).area.approx (4));
-			assert (circle!100 (1).area.approx (π));
-			assert (circle!100 (2).area.approx (4*π));
+			assert (circle!1000 (1).area.approx (π));
+			assert (circle!1000 (2).area.approx (4*π));
 
 			// http://www.mathsisfun.com/geometry/area-irregular-polygons.html
 			auto irregular = [
@@ -252,7 +252,7 @@ public {/*polygons}*/
 			assert (irregular.area.approx (known_area));
 
 			assert (square (2.meters).area.approx (4.square_meters));
-			assert (circle!100 (1.meter).area.approx (π.square_meters));
+			assert (circle!1000 (1.meter).area.approx (π.square_meters));
 			assert (
 				irregular.map!(v => vector (v.x.meters, v.y.meters))
 				.area.approx (known_area.square_meters)

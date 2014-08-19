@@ -19,7 +19,8 @@ private {/*import std}*/
 	import std.algorithm:
 		zip, sort,
 		countUntil,
-		canFind;
+		canFind,
+		findSplitAfter;
 
 	import std.math: 
 		abs, sqrt;
@@ -70,6 +71,15 @@ pure nothrow:
 
 alias Scalar = double;
 
+immutable string[string] abbreviation_map; 
+shared static this ()
+	{/*...}*/
+		abbreviation_map = [
+			`kgm²/As³`: `V`,
+			`kgm/s²`: `N`,
+		];
+	}
+
 public:
 public {/*unit}*/
 	struct Unit (T...)
@@ -81,10 +91,18 @@ public {/*unit}*/
 					{/*...}*/
 						return Unit (.abs (this.scalar));
 					}
+
 				auto approx (Unit a)
 					{/*...}*/
 						return this.scalar.approx (a.scalar);
 					}
+
+				auto squared ()()
+					{/*...}*/
+						return this.pow!2;
+					}
+				alias sq = squared;
+
 				auto sqrt ()()
 					if (allSatisfy!(is_even, In_Pow))
 					{/*...}*/
@@ -101,6 +119,21 @@ public {/*unit}*/
 
 						return ret;
 					}
+
+				auto power (long exponent)()
+					{/*...}*/
+						static if (exponent > 0)
+							auto ret = raise_dimension!(Unit, exponent);
+						else static if (exponent < 0)
+							auto ret = raise_dimension!(typeof(1/this), -exponent);
+
+						static if (exponent == 0)
+							Scalar ret = 1.0;
+						else ret.scalar = this.scalar^^exponent;
+
+						return ret;
+					}
+				alias pow = power;
 
 				auto opDispatch (string op)()
 					{/*...}*/
@@ -197,20 +230,6 @@ public {/*unit}*/
 							return this } ~ op ~ q{ lhs;
 						});
 					}
-				auto power (long exponent)()
-					{/*...}*/
-						static if (exponent > 0)
-							auto ret = raise_dimension!(Unit, exponent);
-						else static if (exponent < 0)
-							auto ret = raise_dimension!(typeof(1/this), -exponent);
-
-						static if (exponent == 0)
-							Scalar ret = 1.0;
-						else ret.scalar = this.scalar^^exponent;
-
-						return ret;
-					}
-				alias pow = power;
 			}
 			pure {/*assignment}*/
 				auto opOpAssign (string op, U)(U rhs)
@@ -247,7 +266,7 @@ public {/*unit}*/
 							auto powers = [Filter!(is_numerical_param, T)];
 
 							auto sorted_by_descending_power = zip (dims, powers)
-								.sort!((a,b) => (a[1] > b[1]) || (a[1] == b[1] && a[0][0] < b[0][0]));
+								.sort!((a,b) => (a[1] > 0 && 0 > b[1]) || (a[1] * b[1] > 0 && a[0][0] < b[0][0]));
 							
 							auto n_positive_powers = sorted_by_descending_power
 								.countUntil!(a => a[1] < 0);
@@ -267,25 +286,29 @@ public {/*unit}*/
 									if (n < 4)
 										{/*...}*/
 											if (n == 1)
-												return ``.to!dstring;
-											else return (0x00b0 + n).to!dchar.to!dstring;
+												return ``.to!string;
+											else return (0x00b0 + n).to!dchar.to!string;
 										}
 									else {/*...}*/
-										return (0x2070 + n).to!dchar.to!dstring;
+										return (0x2070 + n).to!dchar.to!string;
 									}
 								}
 
-							dstring output = scalar.to!dstring ~ ` `;
+							string output = scalar.to!string ~ ` `;
 
 							foreach (dim; numerator)
-								output ~= dim[0].to!dstring ~ to_superscript (dim[1]);
+								output ~= dim[0].to!string ~ to_superscript (dim[1]);
 
 							output ~= denominator.length? `/` : ``;
 
 							foreach (dim; denominator)
-								output ~= dim[0].to!dstring ~ to_superscript (dim[1]);
+								output ~= dim[0].to!string ~ to_superscript (dim[1]);
 
-							return output;
+							auto split = output.findSplitAfter (` `);
+
+							if (auto translated = split[1] in abbreviation_map)
+								return split[0] ~ *translated;
+							else return output;
 						}
 						catch (Exception) assert (0);
 					}

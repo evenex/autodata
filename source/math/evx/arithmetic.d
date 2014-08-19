@@ -137,14 +137,11 @@ pure lcm (T)(T a, T b) // TODO over more than two numbers
 		assert (lcm (9, 0) == 0);
 	}
 
-/* generic unit-safe exponential operator 
+/* generic squaring predicate 
 */
-template pow (long n) 
+pure squared (T)(T x)
 	{/*...}*/
-		auto pow (T)(T x)
-			{/*...}*/
-				return x^^n;
-			}
+		return x^^2;
 	}
 
 /* test whether a number is odd or even at compile-time 
