@@ -7,7 +7,8 @@ echo ""
 echo "$HEADER"
 printf '=%0.s' $DASHES
 echo ""
-find -name "*.d" | grep -v "all" | grep -oP \([a-z0-9_]\*[/]\?\)[a-z0-9_]\*[.]d | grep -oP \([a-z0-9_]\*[/]\?\)[a-z0-9_]\*[.] | tr '.' ' ' | sort
+#\([a-z0-9_]\*[/]\?\) ← this extracts one more directory level
+find -name "*.d" | grep -v "all" | grep -oP [a-z0-9_]\*[.]d | grep -oP [a-z0-9_]\*[.] | tr '.' ' ' | sort
 
 PENDING_FIXES=$(grep -rn '\<FIXME\>' ./source/ | grep -v Binary | grep -v freetype-gl | grep -v ode[-]0[.]13  | wc -l)
 if [ "$PENDING_FIXES" -gt "0" ]
