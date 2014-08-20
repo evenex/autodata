@@ -383,9 +383,17 @@ struct Dynamic (Array, PolicyList...)
 							if (dynamic_length + n > capacity)
 								{/*...}*/
 									static if (supports_reallocation!Array)
-										array.reallocate (capacity * 2);
+										{/*...}*/
+											if (capacity == 0)
+												array.reallocate (2);
+											else array.reallocate (capacity * 2);
+										}
 									else static if (isDynamicArray!Array)
-										array.length *= 2;
+										{/*...}*/
+											if (capacity == 0)
+												array.length = 2;
+											array.length *= 2;
+										}
 									else assert (0,
 										Array.stringof~ ` capacity ` ~capacity.text~ ` exceeded during ` ~n.text~ ` allocation`
 									);
@@ -450,6 +458,9 @@ struct Dynamic (Array, PolicyList...)
 		private {/*data}*/
 			Array array;
 			size_t dynamic_length;
+		}
+		invariant (){/*}*/
+			assert (array.length >= dynamic_length, Dynamic.stringof~ ` length ` ~dynamic_length.text~ ` exceeded capacity ` ~array.length.text);
 		}
 		static assert (is_dynamic_array!Dynamic);
 	}
@@ -767,6 +778,9 @@ struct Ordered (Array, Sorting...)
 					array = ArrayType (args);
 				}
 		}
+		public {/*data}*/
+			ArrayType array;
+		}
 		const {/*text}*/
 			auto text ()
 				{/*...}*/
@@ -780,13 +794,10 @@ struct Ordered (Array, Sorting...)
 					static assert (0, `cannot explicitly grow Ordered array`);
 				}
 		}
-		private {/*data}*/
-			ArrayType array;
-		}
 		invariant (){/*}*/
 			assert (this[].isSorted!compare);
 		}
-		static assert (isOutputRange!(Ordered, T));
+		//static assert (isOutputRange!(Ordered, T)); TODO
 	}
 	unittest {/*...}*/
 			import std.exception: assertThrown;

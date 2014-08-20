@@ -1,4 +1,4 @@
-module services.display;
+module evx.display;
 
 import std.exception;
 import std.math;
@@ -15,9 +15,11 @@ import evx.math;
 import evx.meta;
 
 alias reduce = evx.functional.reduce;
+alias map = evx.functional.map;
+alias zip = evx.functional.zip;
 
 import evx.service;
-//import services.scheduler;
+import evx.scheduling;
 
 import evx.buffers;
 
@@ -225,7 +227,7 @@ final class Display: Service
 				if (is_geometric!T || is_in_display_space!T)
 				{/*↓}*/
 					static if (is (ElementType!T == Coords))
-						draw (0, geometry.to_draw_space (this), geometry, color, mode);
+						draw (0, geometry.to_draw_space (this), geometry.map!(c => c.value), color, mode);
 					else draw (0, geometry, geometry, color, mode);
 				}
 			void draw (T1, T2) (GLuint texture, T1 geometry, T2 tex_coords, Color color = black.alpha(0), GeometryMode mode = GeometryMode.t_fan)
@@ -288,12 +290,13 @@ final class Display: Service
 							this.space = space;
 						}
 				}
+
 			@(Space.pixel) @property auto dimensions () pure nothrow
 				{/*...}*/
 					return screen_dims[].map!(i => i * 1.0).vec;
 				}
 		}
-		public {/*☀}*/
+		public {/*ctors}*/
 			this (uint width, uint height)
 				{/*...}*/
 					this (uvec(width, height));
@@ -407,11 +410,11 @@ final class Display: Service
 					receive (
 						&render, 
 						&access_rendering_context,
-			//			auto_sync!(animation, (){/*...})*/
-			//				buffer.writer_swap ();
-			//				buffer.reader_swap ();
-			//				listening = false;
-			//			}).expand TODO
+						auto_sync!(animation, (){/*...})*/
+							buffer.writer_swap ();
+							buffer.reader_swap ();
+							listening = false;
+						}).expand
 					);
 
 					return listening;
@@ -438,14 +441,16 @@ final class Display: Service
 
 			GLuint vertex_buffer;
 			GLuint texture_coord_buffer;
+
+			Scheduler animation;
 		}
 		private {/*data}*/
 			@(`pixel`) uvec screen_dims = uvec(800, 800);
 
 			shared BufferGroup!(
-				TripleBuffer!(vec, 2^^14), 
+				TripleBuffer!(fvec, 2^^14), 
 					`vertices`,
-				TripleBuffer!(vec, 2^^14), 
+				TripleBuffer!(fvec, 2^^14), 
 					`texture_coords`,
 				TripleBuffer!(RenderOrder, 2^^12), 
 					`orders`
@@ -465,6 +470,7 @@ final class Display: Service
 		import std.datetime;
 
 		auto colors = [red, orange, yellow, green, cyan, blue, purple, magenta, black, gray, white];
+
 		scope gfx = new Display;
 		gfx.start; scope (exit) gfx.stop;
 
@@ -480,7 +486,7 @@ final class Display: Service
 					color.alpha ((1.0 + x)/8.0),
 					square (1.0, vec(-1))
 						.scale (vec(2.0/8, 2.0/colors.length))
-						.translate (vec((2.0/8)*x, (2.0/colors.length)*i) + vec (1.0/8, 1.0/colors.length)),
+						.translate (vec((2.0/8)*x, (2.0/colors.length)*i) + vec(1.0/8, 1.0/colors.length)),
 					GeometryMode.t_fan
 				);
 
@@ -488,7 +494,6 @@ final class Display: Service
 
 		Thread.sleep (1.seconds);
 	}
-	static if (0)
 	unittest {/*animation}*/
 		import std.algorithm;
 		import std.range;
@@ -552,46 +557,47 @@ final class Display: Service
 		assert (received);
 	}
 
-struct gl
-	{/*...}*/
-		import std.string;
-		static auto ref opDispatch (string name, Args...) (Args args)
-			{/*...}*/
-				debug scope (exit) check_GL_error!name (args);
-				static if (name == "GetUniformLocation")
-					mixin ("return gl"~name~" (args[0], toStringz (args[1]));");
-				else mixin ("return gl"~name~" (args);");
-			}
-		static void check_GL_error (string name, Args...) (Args args)
-			{/*...}*/
-				GLenum error;
-				while ((error = glGetError ()) != GL_NO_ERROR)
-					{/*...}*/
-						string error_msg;
-						final switch (error)
-							{/*...}*/
-								case GL_INVALID_ENUM:
-									error_msg = "GL_INVALID_ENUM";
-									break;
-								case GL_INVALID_VALUE:
-									error_msg = "GL_INVALID_VALUE";
-									break;
-								case GL_INVALID_OPERATION:
-									error_msg = "GL_INVALID_OPERATION";
-									break;
-								case GL_INVALID_FRAMEBUFFER_OPERATION:
-									error_msg = "GL_INVALID_FRAMEBUFFER_OPERATION";
-									break;
-								case GL_OUT_OF_MEMORY:
-									error_msg = "GL_OUT_OF_MEMORY";
-									break;
-							}
-						throw new Exception ("OpenGL error " ~to!string (error)~": "~error_msg~"\n"
-							"	using gl"~function_call_to_string!name (args));
-					}
-			}
-	}
-
+private {/*openGL}*/
+	struct gl
+		{/*...}*/
+			import std.string;
+			static auto ref opDispatch (string name, Args...) (Args args)
+				{/*...}*/
+					debug scope (exit) check_GL_error!name (args);
+					static if (name == "GetUniformLocation")
+						mixin ("return gl"~name~" (args[0], toStringz (args[1]));");
+					else mixin ("return gl"~name~" (args);");
+				}
+			static void check_GL_error (string name, Args...) (Args args)
+				{/*...}*/
+					GLenum error;
+					while ((error = glGetError ()) != GL_NO_ERROR)
+						{/*...}*/
+							string error_msg;
+							final switch (error)
+								{/*...}*/
+									case GL_INVALID_ENUM:
+										error_msg = "GL_INVALID_ENUM";
+										break;
+									case GL_INVALID_VALUE:
+										error_msg = "GL_INVALID_VALUE";
+										break;
+									case GL_INVALID_OPERATION:
+										error_msg = "GL_INVALID_OPERATION";
+										break;
+									case GL_INVALID_FRAMEBUFFER_OPERATION:
+										error_msg = "GL_INVALID_FRAMEBUFFER_OPERATION";
+										break;
+									case GL_OUT_OF_MEMORY:
+										error_msg = "GL_OUT_OF_MEMORY";
+										break;
+								}
+							throw new Exception ("OpenGL error " ~to!string (error)~": "~error_msg~"\n"
+								"	using gl"~function_call_to_string!name (args));
+						}
+				}
+		}
+}
 private {/*shaders}*/
 	template ShaderName (visual_T) {mixin(q{alias ShaderName = }~visual_T.stringof~q{Shader;});}
 	alias Shaders = staticMap!(ShaderName, VisualTypes);
@@ -828,4 +834,4 @@ private {/*types}*/
 	alias VisualTypes = TypeTuple!(Basic);
 }
 
-	void main (){}
+void main (){}

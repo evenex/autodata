@@ -251,7 +251,7 @@ abstract class Service
 						{/*...}*/
 							debug try return func ();
 								catch (Throwable error) {/*...}*/
-									writeln (error.msg, "while", mode);
+									writeln (error.msg, `while`, mode, "\n", error.info);
 									throw error;
 								}
 							else return func ();

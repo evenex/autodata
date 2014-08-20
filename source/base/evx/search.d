@@ -64,7 +64,7 @@ template binary_search (alias compare, Equivalence equivalence = Equivalence.int
 		auto binary_search (R, T = ElementType!R)(R range, T element)
 			if (hasLength!R && is_indexable!R)
 			in {/*...}*/
-				try assert (range.isSorted!compare);
+				debug try assert (range.isSorted!compare);
 				catch (Exception) assert (0);
 			}
 			body {/*...}*/

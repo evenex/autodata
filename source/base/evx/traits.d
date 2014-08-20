@@ -209,7 +209,7 @@ public {/*type capabilities}*/
 			static if (is (T[0]))
 				{/*...}*/
 					const T[0] a, b;
-					enum is_comparable = __traits(compiles, a < b);
+					enum is_comparable = is(typeof(a < b) == bool);
 				}
 			else enum is_comparable = false;
 		}
