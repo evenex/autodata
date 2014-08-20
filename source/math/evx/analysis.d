@@ -116,14 +116,8 @@ public {/*intervals}*/
 		{/*...}*/
 			pure nothrow:
 			static if (is_continuous!Index)
-				const @property measure ()
-					{/*...}*/
-						return end - start;
-					}
-			else const @property length ()
-				{/*...}*/
-					return end - start;
-				}
+				alias measure = size;
+			else alias length = size;
 
 			const @property empty ()
 				{/*...}*/
@@ -146,6 +140,11 @@ public {/*intervals}*/
 			@property end ()(Index i)
 				{/*...}*/
 					bounds[1] = i;
+				}
+
+			const @property size ()
+				{/*...}*/
+					return end - start;
 				}
 
 			alias min = start;
@@ -469,7 +468,7 @@ public {/*normalization}*/
 
 					alias This = typeof(this);
 
-					foreach (member; __traits(allMembers, This))
+					try debug foreach (member; __traits(allMembers, This))
 						{/*...}*/
 							immutable string error_msg = `"` ~member~ ` is not normalized ("` ` ~` ~member~ `.text~ ")"`;
 							
@@ -480,6 +479,7 @@ public {/*normalization}*/
 								assert (} ~member~ q{.between (0.0, 1.0),} ~error_msg~ q{);
 							});
 						}
+					catch (Exception) assert (0);
 				}
 		}
 		unittest {/*...}*/

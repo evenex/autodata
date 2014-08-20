@@ -308,9 +308,10 @@ public {/*polygons}*/
 
 	/* translate a polygon by a vector 
 	*/
-	auto translate (T, Vec = ElementType!T)(T geometry, Vec Δv)
+	auto translate (T, Vec = ElementType!T)(T geometry, Vec displacement)
 		if (is_geometric!T)
 		{/*...}*/
+			immutable Δv = displacement;
 			return geometry.map!(v => v + Δv);
 		}
 
@@ -328,8 +329,10 @@ public {/*polygons}*/
 	auto scale (T1, T2)(T1 geometry, T2 scale)
 		if (is_geometric!T1 && __traits(compiles, geometry.front * scale))
 		{/*...}*/
-			auto c = geometry.mean;
-			return geometry.map!(v => (v-c) * scale + c);
+			immutable c = geometry.mean;
+			immutable s = scale;
+
+			return geometry.map!(v => s*(v-c) + c);
 		}
 
 	unittest {/*with evx.units}*/

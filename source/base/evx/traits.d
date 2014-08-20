@@ -95,11 +95,10 @@ public {/*type identification}*/
 	template has_attribute (T, string member, Attribute...)
 		if (Attribute.length == 1)
 		{/*...}*/
-			static if (member == `this`)
+			static if (member == `this` || not (is_accessible!(T, member)))
 				enum has_attribute = false;
 			else const bool has_attribute ()
 				{/*...}*/
-
 					static if (is_type!(Attribute[0]))
 						alias query = Attribute[0];
 					else immutable query = Attribute[0];
@@ -236,15 +235,6 @@ public {/*type capabilities}*/
 			enum supports_arithmetic = __traits(compiles,
 				{T x, y; static assert (__traits(compiles, x+y, x-y, x*y, x/y));}
 			);
-		}
-
-	/* test whether a type defines a length. more permissive than std.range.hasLength 
-	*/
-	template has_length (R)
-		{/*...}*/
-			static if (__traits(compiles, R.init.length))
-				alias has_length = allSatisfy!(And!(is_comparable, supports_arithmetic), Unqual!(typeof(R.init.length)));
-			else enum has_length = false;
 		}
 }
 public {/*function characterization}*/

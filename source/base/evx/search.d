@@ -68,10 +68,11 @@ template binary_search (alias compare, Equivalence equivalence = Equivalence.int
 				catch (Exception) assert (0);
 			}
 			body {/*...}*/
+			import evx.utils: writeln;
 				if (range.empty)
 					return BinarySearchResult!T (null, 0);
 
-				size_t min = 0; // UPLOAD
+				size_t min = 0;
 				size_t max = range.length;
 
 				static if (equivalence is Equivalence.intrinsic)
@@ -86,6 +87,8 @@ template binary_search (alias compare, Equivalence equivalence = Equivalence.int
 						}
 				else static assert (0);
 
+				debug auto counter = 0;
+
 				while (min < max)
 					{/*...}*/
 						alias sorted = compare;
@@ -98,6 +101,18 @@ template binary_search (alias compare, Equivalence equivalence = Equivalence.int
 							max = mid;
 						else if (sorted (range[mid], element))
 							min = mid + 1;
+
+						debug {/*...}*/
+							assert (++counter <= range.length,
+								(){/*...}*/
+									import evx.utils: writeln;
+
+									writeln (`error: search for`, element, `in`, range, `failed to terminate!`);
+
+									return ``;
+								}()
+							);
+						}
 					}
 
 				if (min < range.length && equal_to (range[min]))

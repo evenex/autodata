@@ -3,7 +3,7 @@ module evx.functional;
 private {/*import std}*/
 	import std.range:
 		front, popFront, empty, back, popBack, put,
-		isInputRange, isForwardRange, isBidirectionalRange, isOutputRange,
+		isInputRange, isForwardRange, isBidirectionalRange, isOutputRange, hasLength,
 		ElementType;
 		
 	import std.conv:
@@ -37,34 +37,30 @@ private {/*import evx}*/
 		slice_within_bounds;
 
 	import evx.traits:
-		is_indexable, is_sliceable, has_length,
+		is_indexable, is_sliceable,
 		is_binary_function;
 
 	import evx.utils;
 }
-
-//pure 
-nothrow:
 
 /* aliasable template lambda function 
 */
 template λ (alias F) {alias λ = F;}
 
 public {/*map}*/
-	/* nothrow replacement for std.algorithm.MapResult 
+	/* replacement for std.algorithm.MapResult 
 	*/
 	struct MapResult (alias func, R)
 		{/*...}*/
 			alias Index = IndexTypes!R[0];
 			
-			nothrow:
 			static if (is_indexable!(R, Index))
 				{/*...}*/
 					auto ref opIndex (Index i)
 						in {/*...}*/
 							static if (is_continuous!Index)
 								assert (i < range.measure, `index out of bounds`);
-							else static if (has_length!R)
+							else static if (hasLength!R)
 								assert (i < range.length, `index out of bounds`);
 							else static assert (0);
 						}
@@ -84,7 +80,7 @@ public {/*map}*/
 						in {/*...}*/
 							static if (is_continuous!Index)
 								assert (slice_within_bounds (i, j, measure));
-							else static if (has_length!R)
+							else static if (hasLength!R)
 								assert (slice_within_bounds (i, j, length));
 						}
 						body {/*...}*/
@@ -144,7 +140,7 @@ public {/*map}*/
 
 					static assert (isBidirectionalRange!MapResult);
 				}
-			static if (has_length!R)
+			static if (hasLength!R)
 				{/*...}*/
 					@property length () const
 						{/*...}*/
@@ -153,7 +149,7 @@ public {/*map}*/
 
 					alias opDollar = length;
 
-					static assert (has_length!MapResult);
+					static assert (hasLength!MapResult);
 				}
 			static if (is_continuous_range!R)
 				{/*...}*/
@@ -171,7 +167,7 @@ public {/*map}*/
 			R range;
 		}
 
-	/* nothrow replacement for std.algorithm.map 
+	/* replacement for std.algorithm.map 
 	*/
 	template map (alias func)
 		{/*...}*/
@@ -194,19 +190,17 @@ public {/*map}*/
 		}
 }
 public {/*zip}*/
-	/* nothrow replacement for std.range.Zip 
+	/* replacement for std.range.Zip 
 	*/
 	struct ZipResult (Ranges...)
 		{/*...}*/
-			nothrow:
-
 			static if (not(is(CommonIndex == void)))
 				{/*...}*/
 					auto ref opIndex (CommonIndex i)
 						in {/*...}*/
 							static if (is_continuous!CommonIndex)
 								assert (i < measure);
-							else static if (has_length!ZipResult)
+							else static if (hasLength!ZipResult)
 								assert (i < length);
 						}
 						body {/*...}*/
@@ -294,14 +288,14 @@ public {/*zip}*/
 
 					static assert (.isOutputRange!(ZipResult, ZipTuple));
 				}
-			static if (allSatisfy!(has_length, Ranges))
+			static if (allSatisfy!(hasLength, Ranges))
 				@property {/*...}*/
 					auto length () const
 						{/*...}*/
 							return ranges[0].length;
 						}
 
-					static assert (has_length!ZipResult);
+					static assert (hasLength!ZipResult);
 
 					static if (not (is_continuous!CommonIndex))
 						alias opDollar = length;
@@ -365,7 +359,7 @@ public {/*zip}*/
 								foreach (range; ranges)
 									assert (range.measure == measure);
 							}
-						static if (allSatisfy!(has_length, Ranges))
+						static if (allSatisfy!(hasLength, Ranges))
 							{/*...}*/
 								auto length = ranges[0].length;
 
@@ -382,7 +376,7 @@ public {/*zip}*/
 			}
 		}
 
-	/* nothrow replacement for std.range.zip 
+	/* replacement for std.range.zip 
 	*/
 	auto zip (Ranges...)(Ranges ranges)
 		{/*...}*/
@@ -401,7 +395,7 @@ public {/*zip}*/
 		}
 }
 public {/*reduce}*/
-	/* nothrow replacement for std.algorithm.reduce 
+	/* replacement for std.algorithm.reduce 
 	*/
 	template reduce (functions...)
 		if (functions.length > 0)
@@ -472,7 +466,6 @@ public {/*sequence}*/
 	struct Sequence (alias func, T)
 		if (is_binary_function!(func!(T, size_t)))
 		{/*...}*/
-			nothrow:
 			public {/*[i]}*/
 				auto opIndex (size_t i)
 					in {/*...}*/
@@ -480,7 +473,8 @@ public {/*sequence}*/
 						assert (i != infinity);
 					}
 					body {/*...}*/
-						return func (initial, i + start);
+						//T (func (initial, i + start)); // TODO UCS
+						return cast(T) func (initial, i + start);
 					}
 
 				static assert (is_indexable!Sequence);
@@ -516,7 +510,7 @@ public {/*sequence}*/
 						assert (not (empty));
 					}
 					body {/*...}*/
-						return func (initial, start);
+						return this[0];
 					}
 				const empty ()
 					{/*...}*/
@@ -548,7 +542,7 @@ public {/*sequence}*/
 						assert (not (is_infinite));
 					}
 					body {/*...}*/
-						return func (initial, end - 1);
+						return this[$-1];
 					}
 
 				static assert (isBidirectionalRange!Sequence);

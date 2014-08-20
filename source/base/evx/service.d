@@ -1,5 +1,6 @@
-module services.service;
+module evx.service;
 
+// REFACTOR imports
 import core.thread;
 import core.sync.condition;
 import std.concurrency;
@@ -311,7 +312,6 @@ unittest
 		assert (y == 1);
 	}
 
-void main (){}
 private version (VERBOSE) {/*...}*/
 	__gshared Tuple!(Service.Id, string)[Tid] service_threads;
 	private string thread_info ()

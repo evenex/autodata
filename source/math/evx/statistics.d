@@ -2,6 +2,7 @@ module evx.statistics;
 
 private {/*import std}*/
 	import std.range:
+		hasLength,
 		ElementType;
 
 	import std.traits:
@@ -11,9 +12,6 @@ private {/*import std}*/
 		sqrt;
 }
 private {/*import evx}*/
-	import evx.traits:
-		has_length;
-
 	import evx.logic:
 		not;
 
@@ -30,14 +28,14 @@ nothrow:
 
 /* compute the mean value over a set */
 auto mean (T)(T set)
-	if (has_length!T)
+	if (hasLength!T)
 	{/*...}*/
 		auto n = set.length;
 
 		return set.sum/n;
 	}
 auto mean (T)(T set)
-	if (not (has_length!T))
+	if (not (hasLength!T))
 	{/*...}*/
 		auto v = zip (set, 1.sequence!((i, n) => i)).sum;
 

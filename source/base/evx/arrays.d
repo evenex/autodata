@@ -6,7 +6,7 @@ private {/*import std}*/
 		ReturnType;
 
 	import std.range: 
-		equal, front, popFront,
+		equal, empty, front, popFront,
 		ElementType, 
 		isInputRange, isForwardRange, isOutputRange;
 
@@ -30,6 +30,9 @@ private {/*import std}*/
 		allocate_array = array;
 }
 private {/*import evx}*/
+	import evx.functional:
+		zip;
+
 	import evx.logic:
 		not, Or;
 
@@ -359,7 +362,7 @@ struct Dynamic (Array, PolicyList...)
 		private mixin PolicyAssignment!(
 			Policies!(
 				`destruction`, Destruction.deferred,
-				`reallocation`, Reallocation.forbidden
+				`reallocation`, Reallocation.permitted
 			),
 			PolicyList
 		);
@@ -372,7 +375,7 @@ struct Dynamic (Array, PolicyList...)
 			void grow (size_t n)
 				in {/*...}*/
 					static if (reallocation is Reallocation.forbidden)
-						assert (dynamic_length + n <= capacity, `array capacity ` ~capacity.text~ ` exceeded during ` ~n.text~ ` allocation`);
+						assert (dynamic_length + n <= capacity, Array.stringof~ ` capacity ` ~capacity.text~ ` exceeded during ` ~n.text~ ` allocation`);
 				}
 				body {/*...}*/
 					static if (reallocation is Reallocation.permitted)
@@ -383,8 +386,8 @@ struct Dynamic (Array, PolicyList...)
 										array.reallocate (capacity * 2);
 									else static if (isDynamicArray!Array)
 										array.length *= 2;
-									else static assert (0,
-										`cannot reallocate ` ~Array.tostring
+									else assert (0,
+										Array.stringof~ ` capacity ` ~capacity.text~ ` exceeded during ` ~n.text~ ` allocation`
 									);
 								}
 						}
@@ -455,7 +458,7 @@ struct Dynamic (Array, PolicyList...)
 			{/*...}*/
 				import std.exception: assertThrown;
 
-				debug auto x = Dynamic!Array ([1,2,3]);
+				debug auto x = Dynamic!(Array, Reallocation.forbidden) ([1,2,3]);
 				auto cap = x.capacity;
 
 				assert (x[].equal ([1,2,3]));
@@ -511,7 +514,7 @@ struct Dynamic (Array, PolicyList...)
 			assert (destroyed);
 		}
 		{/*reallocation policy}*/
-			auto x = Dynamic!(Array!(int, Reallocation.permitted), Reallocation.permitted)(3);
+			auto x = Dynamic!(Array!(int, Reallocation.permitted))(3);
 
 			assert (x.length == 0);
 			assert (x.capacity == 3);
@@ -594,6 +597,12 @@ struct Appendable (Array)
 		}
 		public {/*data}*/
 			ArrayType array;
+		}
+		const {/*text}*/
+			auto text ()
+				{/*...}*/
+					return array.text;
+				}
 		}
 		static assert (isOutputRange!(Appendable, T));
 	}
@@ -758,6 +767,12 @@ struct Ordered (Array, Sorting...)
 					array = ArrayType (args);
 				}
 		}
+		const {/*text}*/
+			auto text ()
+				{/*...}*/
+					return array.text;
+				}
+		}
 		private:
 		@disable {/*grow}*/
 			auto ref grow ()(size_t)
@@ -870,6 +885,11 @@ struct Associative (Array, Lookup...)
 							return index[0];
 						}
 
+					ref @property position_in_array ()
+						{/*...}*/
+							return index[1];
+						}
+
 					this (Key key)
 						{/*...}*/
 							index[0] = key;
@@ -933,19 +953,19 @@ struct Associative (Array, Lookup...)
 		}
 		public {/*remove}*/
 			void remove ()(Key key)
-				in {/*,,,}*/
+				in {/*...}*/
 					assert (this.contains (key), `key ` ~key.text~ ` does not exist in Associative ` ~Array.stringof);
 				}
 				body {/*...}*/
 					auto result = keyring[].binary_search (Index(key));
 
+					items.shift_down_on (result.found.position_in_array);
+
 					keyring.remove_at (result.position);
 
-					items.shift_down_on (result.found.index[1]);
-
 					foreach (ref Index K; keyring)
-						if (K.index[1] > result.position)
-							--K.index[1];
+						if (K.position_in_array > result.position)
+							--K.position_in_array;
 				}
 		}
 		public {/*qualified}*/
@@ -1004,7 +1024,7 @@ struct Associative (Array, Lookup...)
 					auto result = keyring[].binary_search (Index(key));
 
 					if (result.found)
-						return &items[result.found.index[1]];
+						return &items[result.found.position_in_array];
 					else return null;
 				}
 			auto ref get (Key key)
@@ -1048,6 +1068,19 @@ struct Associative (Array, Lookup...)
 				if (anySatisfy!(Or!(isDynamicArray, appears_manually_allocated), Array))
 				{/*...}*/
 					initialize_arrays (capacity);
+				}
+		}
+		const {/*text}*/
+			auto text ()
+				{/*...}*/
+					string text;
+
+					foreach (ref pair; zip (keyring[], items[]))
+						text ~= pair[0].text~ `: ` ~pair[1].text~ `, `;
+
+					if (text.empty)
+						return `[]`;
+					else return `[` ~text[0..$-2]~ `]`;
 				}
 		}
 		private:
