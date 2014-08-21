@@ -101,6 +101,13 @@ abstract class Service
 			}
 		}
 		protected:
+		abstract shared {/*interface}*/
+			bool initialize ();
+			bool process ();
+			bool listen ();
+			bool terminate ();
+			const string name ();
+		}
 		final {/*communication}*/
 			final {/*transmit}*/
 				void send (T...) (T message) const
@@ -156,13 +163,6 @@ abstract class Service
 						else return received;
 					}
 			}
-		}
-		abstract shared {/*interface}*/
-			bool initialize ();
-			bool process ();
-			bool listen ();
-			bool terminate ();
-			const string name ();
 		}
 		protected {/*id}*/
 			this ()
@@ -272,7 +272,9 @@ abstract class Service
 							if (pass!process)
 								set (Mode.listening);
 							else set (Mode.self_terminated); 
+
 							notify_subscribers;
+
 							while (this.listening)
 								if (pass!listen)
 									continue;

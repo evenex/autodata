@@ -120,7 +120,7 @@ public {/*forwarding}*/
 		{/*...}*/
 			static assert (is(typeof(this)), `mixin requires host struct`);
 
-			int opCmp ()(auto ref const typeof(this) that) const
+			auto opCmp ()(auto ref const typeof(this) that) const
 				{/*...}*/
 					import evx.ordinal: compare;
 
@@ -326,7 +326,10 @@ public {/*initialization}*/
 							empty;
 
 						import std.traits: 
-							isFunctionPointer, functionLinkage; // UPLOAD
+							isFunctionPointer, functionLinkage;
+
+						import evx.logic: 
+							not;
 
 						string signature = q{
 							void load_library ()
@@ -359,6 +362,25 @@ public {/*initialization}*/
 			}
 
 			mixin(generate_library_loader);
+
+			void verify_function_call (string op, CArgs...)(CArgs c_args)
+				{/*...}*/
+					enum generic_error = `call to ` ~op~ ` (` ~CArgs.stringof~ `) failed to compile`;
+
+					static if (__traits(compiles, mixin(q{ParameterTypeTuple!(} ~op~ q{)})))
+						{/*enum error}*/
+							mixin(q{
+								alias Params = ParameterTypeTuple!(} ~op~ q{);
+							});
+
+							static if (not(is(CArgs == Params)))
+								enum error = `cannot call ` ~op~ ` ` ~Params.stringof~ ` with ` ~CArgs.stringof;
+							else enum error = generic_error;
+						}
+					else enum error = generic_error;
+
+					static assert (__traits(compiles, mixin(op~ q{ (c_args)})), error);
+				}
 		}
 		unittest {/*...}*/
 			static struct GSLVector

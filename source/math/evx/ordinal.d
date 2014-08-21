@@ -2,10 +2,10 @@ module evx.ordinal;
 
 private {/*import std}*/
 	import std.typetuple:
-		allSatisfy;
+		allSatisfy, anySatisfy;
 
 	import std.traits:
-		isNumeric;
+		isNumeric, isFloatingPoint;
 }
 private {/*import evx}*/
 	import evx.functional:
@@ -55,8 +55,12 @@ bool antisymmetrically_equivalent (T,U)(const T a, const U b)
 
 /* emulate opCmp 
 */
-int compare (T,U)(T a, U b)
+auto compare (T,U)(T a, U b)
 	{/*...}*/
+		static if (anySatisfy!(isFloatingPoint, T, U))
+			if (a != a || b != b)
+				return real.nan;
+
 		if (a < b)
 			return -1;
 		else if (a > b)

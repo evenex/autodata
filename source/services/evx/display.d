@@ -695,7 +695,7 @@ private {/*shaders}*/
 					GLuint program;
 					bool protocol_check;
 				}
-				protected {/*☀}*/
+				protected {/*ctor}*/
 					this (string vertex_path, string fragment_path)
 						{/*...}*/
 							void verify (string object_type) (GLuint gl_object)
@@ -719,7 +719,6 @@ private {/*shaders}*/
 								}
 							auto build_shader (GLenum shader_type, string path)
 								{/*...}*/
-									path = "/home/vlad/Projects/active/tcr/engine_v7/glsl/" ~ path; // TEMP
 									if (not (exists (path)))
 										assert (null, "error: couldn't find " ~ path);
 									GLuint shader = gl.CreateShader (shader_type);
@@ -833,5 +832,3 @@ private {/*types}*/
 	struct AccessConfirmation {}
 	alias VisualTypes = TypeTuple!(Basic);
 }
-
-void main (){}
