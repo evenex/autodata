@@ -615,7 +615,7 @@ private {/*shaders}*/
 						return command;
 					}
 			}
-		const string uniform_protocol ()
+		string uniform_protocol ()
 			{/*...}*/
 				return q{	
 					mixin (link_uniforms!(typeof (this)));

@@ -97,7 +97,7 @@ public {/*type identification}*/
 		{/*...}*/
 			static if (member == `this` || not (is_accessible!(T, member)))
 				enum has_attribute = false;
-			else const bool has_attribute ()
+			else bool has_attribute ()
 				{/*...}*/
 					static if (is_type!(Attribute[0]))
 						alias query = Attribute[0];

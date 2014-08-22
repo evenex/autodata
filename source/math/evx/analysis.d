@@ -63,13 +63,13 @@ public {/*comparison}*/
 	
 	/* test if a number or range is approximately equal to another 
 	*/
-	auto approx (T,U)(T a, U b)
+	auto approx (T,U)(T a, U b, real relative_tolerance = 1./10_000)
 		if (allSatisfy!(isInputRange, T, U) && allSatisfy!(Or!(isNumeric, overloads_approx), CommonType!(staticMap!(ElementType, T, U))))
 		{/*...}*/
 			alias C = CommonType!(staticMap!(ElementType, T, U));
 
 			foreach (τ; zip (a,b))
-				if (τ[0].approx (τ[1]))
+				if (τ[0].approx (τ[1], relative_tolerance))
 					continue;
 				else return false;
 

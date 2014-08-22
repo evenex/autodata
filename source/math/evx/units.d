@@ -77,6 +77,8 @@ shared static this ()
 		abbreviation_map = [
 			`kgm²/As³`: `V`,
 			`kgm/s²`: `N`,
+			`kgm²/s²`: `Nm`,
+			`/s`: `Hz`,
 		];
 	}
 
@@ -92,9 +94,9 @@ public {/*unit}*/
 						return Unit (.abs (this.scalar));
 					}
 
-				auto approx (Unit a)
+				auto approx (Unit a, real tolerance = 1./10_000)
 					{/*...}*/
-						return this.scalar.approx (a.scalar);
+						return this.scalar.approx (a.scalar, tolerance);
 					}
 
 				auto squared ()()

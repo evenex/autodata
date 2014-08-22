@@ -116,13 +116,15 @@ template TripleBuffer (T, uint size, uint poll_frequency = 4_000)
 						{/*...}*/
 							while ((write_index + 2) % 3 != read_index)
 								Thread.sleep (wait_period);
-							(cast()buffer[++write_index %= 3]).clear;
+							(cast()buffer[++write_index %= 3]).clear; // REVIEW
 						}
 					void reader_swap ()
 						{/*...}*/
 							while ((write_index + 1) % 3 != read_index)
 								Thread.sleep (wait_period);
-							++read_index %= 3;
+							++read_index %= 3; // REVIEW Deprecation: Read-modify-write operations are not allowed for shared variables. Use core.atomic.atomicOp!"+="(this.read_index, 1) instead.
+							//core.atomic.atomicOp!"+="(this.read_index, 1);
+							//core.atomic.atomicOp!"%="(this.read_index, 3);
 						}
 				}
 				shared {/*append}*/
