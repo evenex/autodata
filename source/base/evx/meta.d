@@ -878,6 +878,17 @@ public {/*extraction}*/
 		{/*...}*/
 			alias FirstParameter = ParameterTypeTuple!func[0];
 		}
+
+	template DollarType (R)
+		{/*...}*/
+			static if (__traits(compiles, R.init[$]))
+				{/*...}*/
+					static if (hasMember!(R, `opDollar`))
+						alias DollarType = typeof (R.opDollar);
+					else alias DollarType = size_t;
+				}
+			else alias DollarType = void;
+		}
 }
 public {/*processing}*/
 	template type_of (T...)

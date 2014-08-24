@@ -22,7 +22,7 @@ private {/*import std}*/
 }
 private {/*import evx}*/
 	import evx.meta:
-		IndexTypes;
+		IndexTypes, DollarType;
 
 	import evx.logic:
 		not;
@@ -147,7 +147,8 @@ public {/*map}*/
 							return range.length;
 						}
 
-					alias opDollar = length;
+					static if (is(ReturnType!length == DollarType!R))
+						alias opDollar = length;
 
 					static assert (hasLength!MapResult);
 				}
@@ -158,7 +159,8 @@ public {/*map}*/
 							return range.measure;
 						}
 
-					alias opDollar = measure;
+					static if (is(ReturnType!measure == DollarType!R))
+						alias opDollar = measure;
 
 					static assert (is_continuous_range!MapResult);
 				}
@@ -295,10 +297,10 @@ public {/*zip}*/
 							return ranges[0].length;
 						}
 
-					static assert (hasLength!ZipResult);
-
-					static if (not (is_continuous!CommonIndex))
+					static if (is(ReturnType!length == CommonDollar))
 						alias opDollar = length;
+
+					static assert (hasLength!ZipResult);
 				}
 			static if (allSatisfy!(is_continuous_range, Ranges))
 				@property {/*...}*/
@@ -307,12 +309,14 @@ public {/*zip}*/
 							return ranges[0].measure;
 						}
 
-					alias opDollar = measure;
+					static if (is(ReturnType!measure == CommonDollar))
+						alias opDollar = measure;
 
 					static assert (is_continuous_range!ZipResult);
 				}
 
 			alias CommonIndex = CommonType!(staticMap!(IndexTypes, Ranges));
+			alias CommonDollar = CommonType!(staticMap!(DollarType, Ranges));
 
 			private:
 			private {/*defs}*/

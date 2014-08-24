@@ -230,7 +230,7 @@ final class Display: Service
 						draw (0, geometry.to_draw_space (this), geometry.map!(c => c.value), color, mode);
 					else draw (0, geometry, geometry, color, mode);
 				}
-			void draw (T1, T2) (GLuint texture, T1 geometry, T2 tex_coords, Color color = black.alpha(0), GeometryMode mode = GeometryMode.t_fan)
+			void draw (T1, T2) (GLuint texture, T1 geometry, T2 tex_coords, Color color = black.alpha (0), GeometryMode mode = GeometryMode.t_fan)
 				if (allSatisfy!(Or!(is_geometric, is_in_display_space), T1, T2))
 				in {/*...}*/
 					assert (tex_coords.length == geometry.length, `geometry/texture coords length mismatched`);
