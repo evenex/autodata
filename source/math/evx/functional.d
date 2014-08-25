@@ -31,10 +31,8 @@ private {/*import evx}*/
 		unity;
 
 	import evx.analysis:
-		is_continuous, is_continuous_range, interval;
-
-	import evx.range:
-		slice_within_bounds;
+		is_continuous, is_continuous_range, 
+		between, interval;
 
 	import evx.traits:
 		is_indexable, is_sliceable,
@@ -79,9 +77,9 @@ public {/*map}*/
 					auto opSlice (Index i, Index j)
 						in {/*...}*/
 							static if (is_continuous!Index)
-								assert (slice_within_bounds (i, j, measure));
+								assert (j.between (i, measure));
 							else static if (hasLength!R)
-								assert (slice_within_bounds (i, j, length));
+								assert (j.between (i, length));
 						}
 						body {/*...}*/
 							return MapResult (range[i..j]);
@@ -246,7 +244,11 @@ public {/*zip}*/
 						}
 					bool empty () const
 						{/*...}*/
-							return ranges[0].empty;
+							foreach (const ref range; ranges)
+								if (range.empty)
+									return true;
+
+							return false;
 						}
 
 					static assert (isInputRange!ZipResult);
@@ -290,7 +292,7 @@ public {/*zip}*/
 
 					static assert (.isOutputRange!(ZipResult, ZipTuple));
 				}
-			static if (allSatisfy!(hasLength, Ranges))
+			static if (allSatisfy!(hasLength, Ranges)) // TODO infinite ranges shouldn't count here
 				@property {/*...}*/
 					auto length () const
 						{/*...}*/
@@ -318,6 +320,7 @@ public {/*zip}*/
 			alias CommonIndex = CommonType!(staticMap!(IndexTypes, Ranges));
 			alias CommonDollar = CommonType!(staticMap!(DollarType, Ranges));
 
+			// if any have length/measure, and those that don't are infinite... and if so, all their lengths/measures are the same, except for those that are infinite
 			private:
 			private {/*defs}*/
 				alias ZipTuple = Tuple!(staticMap!(Unqual, staticMap!(ElementType, Ranges))); 
@@ -493,7 +496,7 @@ public {/*sequence}*/
 						assert (i != infinity);
 
 						if (j != infinity)
-							assert (slice_within_bounds (i, j, length));
+							assert (j.between (i, length));
 					}
 					body {/*...}*/
 						if (j == infinity)
@@ -588,7 +591,7 @@ public {/*sequence}*/
 
 				enum infinity = size_t.max;
 			}
-			invariant (){/*...}*/
+			invariant (){/*}*/
 				assert (start < infinity);
 			}
 		}

@@ -119,17 +119,17 @@ auto contigious (R)(R ranges)
 	{/*...}*/
 		return Contigious!R (ranges);
 	}
-unittest {/*contigious}*/
-	import std.range: equal;
+	unittest {/*contigious}*/
+		import std.range: equal;
 
-	int[2] x = [1,2];
-	int[2] y = [3,4];
-	int[2] z = [5,6];
+		int[2] x = [1,2];
+		int[2] y = [3,4];
+		int[2] z = [5,6];
 
-	int[2][] A = [x,y,z];
+		int[2][] A = [x,y,z];
 
-	assert (A.contigious.equal ([1,2,3,4,5,6]));
-}
+		assert (A.contigious.equal ([1,2,3,4,5,6]));
+	}
 
 /* traverse a range with elements rotated left by some number of positions 
 */
@@ -152,10 +152,9 @@ auto adjacent_pairs (R)(R range)
 		return range.zip (range.rotate_elements);
 	}
 
-/* test if an attempted slice will be within some bounds 
+/* always-false test for infinite ranges, for ranges which do not define an is_infinite property 
 */
-bool slice_within_bounds (T,U,V)(T i, U j, V length)
-	if (allSatisfy!(is_comparable, T,U,V))
+bool is_infinite (R)(R)
 	{/*...}*/
-		return i <= j && j <= length && i < length;
+		return false;
 	}

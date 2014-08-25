@@ -54,6 +54,8 @@ alias infinity = infinite!real;
 
 pure nothrow:
 public {/*comparison}*/
+	enum standard_relative_tolerance = 1e-5;
+
 	/* test if a type overloads approximate equality comparison 
 	*/
 	template overloads_approx (T)
@@ -63,7 +65,7 @@ public {/*comparison}*/
 	
 	/* test if a number or range is approximately equal to another 
 	*/
-	auto approx (T,U)(T a, U b, real relative_tolerance = 1./10_000)
+	auto approx (T,U)(T a, U b, real relative_tolerance = standard_relative_tolerance)
 		if (allSatisfy!(isInputRange, T, U) && allSatisfy!(Or!(isNumeric, overloads_approx), CommonType!(staticMap!(ElementType, T, U))))
 		{/*...}*/
 			alias C = CommonType!(staticMap!(ElementType, T, U));
@@ -75,7 +77,7 @@ public {/*comparison}*/
 
 			return true;
 		}
-	auto approx (T,U)(T a, U b, real relative_tolerance = 1./10_000)
+	auto approx (T,U)(T a, U b, real relative_tolerance = standard_relative_tolerance)
 		if (allSatisfy!(isNumeric, T, U))
 		{/*...}*/
 			alias V = CommonType!(T,U);

@@ -40,7 +40,7 @@ private {/*import evx}*/
 		π;
 
 	import evx.analysis: 
-		approx;
+		approx, standard_relative_tolerance;
 
 	import evx.algebra: 
 		zero, unity;
@@ -107,7 +107,7 @@ struct Vector (uint n, Component = double)
 						return this[].equal (that);
 					else static assert (0);
 				}
-			auto approx (V)(V that) const
+			auto approx (V)(V that, real relative_tolerance = standard_relative_tolerance) const
 				if (is_vector_tuple!V || is_vector_array!V || isInputRange!V)
 				{/*...}*/
 					static if (is_vector_tuple!V)
