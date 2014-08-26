@@ -133,6 +133,8 @@ public {/*vectors}*/
 	alias fvec = Vector!(2, float);
 	alias ivec = Vector!(2, int);
 	alias uvec = Vector!(2, uint);
+	alias svec = Vector!(2, size_t); // REVIEW uvec = 2,size_t? is uint on 32, ulong on 64
+	alias rvec = Vector!(2, real);
 
 	/* rotate a vector 
 	*/
@@ -312,15 +314,17 @@ public {/*polygons}*/
 		if (is_geometric!T)
 		{/*...}*/
 			immutable Δv = displacement;
+
 			return geometry.map!(v => v + Δv);
 		}
 
 	/* rotate a polygon about its centroid 
 	*/
-	auto rotate (T, U = ElementType!(ElementType!T))(T geometry, U θ)
+	auto rotate (T, U = ElementType!(ElementType!T), V = ElementType!T)(T geometry, U θ, V center = V.init)
 		if (is_geometric!T)
 		{/*...}*/
-			auto c = geometry.mean;
+			immutable c = center == V.init? geometry.mean: center;
+
 			return geometry.map!(v => (v-c).rotate (θ) + c);
 		}
 

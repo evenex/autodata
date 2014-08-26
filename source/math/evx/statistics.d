@@ -63,8 +63,8 @@ unittest {/*...}*/
 	auto x = [9.0, 2, 5, 4, 12, 7, 8, 11, 9, 3, 7, 4, 12, 5, 4, 10, 9, 6, 9, 4];
 
 	assert (x.mean == 7);
-	assert (x.std_dev.approx (2.983));
-	assert (x.std_dev (x.mean).approx (2.983));
+	assert (x.std_dev.approx (2.983, 1e-4));
+	assert (x.std_dev (x.mean).approx (2.983, 1e-4));
 
 	import evx.units;
 	auto y = x.map!(i => i.meters);

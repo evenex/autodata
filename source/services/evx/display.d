@@ -35,9 +35,9 @@ enum GeometryMode
 		l_loop 	= derelict.opengl3.gl3.GL_LINE_LOOP
 	}
 
-public {/*coordinate transformations}*/
-	public {/*from}*/
-		auto from_draw_space (T)(T geometry) pure nothrow
+nothrow {/*coordinate transformations}*/
+	pure {/*from}*/
+		auto from_draw_space (T)(T geometry) 
 			if (is (T == vec) || is_geometric!T)
 			{/*...}*/
 				static if (is (T == vec))
@@ -46,7 +46,7 @@ public {/*coordinate transformations}*/
 					return geometry.map!(v => Display.Coords (v, Display.Space.draw));
 				else static assert (0);
 			}
-		auto from_extended_space (T)(T geometry) pure nothrow
+		auto from_extended_space (T)(T geometry) 
 			if (is (T == vec) || is_geometric!T)
 			{/*...}*/
 				static if (is (T == vec))
@@ -55,7 +55,7 @@ public {/*coordinate transformations}*/
 					return geometry.map!(v => Display.Coords (v, Display.Space.extended));
 				else static assert (0);
 			}
-		auto from_pixel_space (T)(T geometry) pure nothrow
+		auto from_pixel_space (T)(T geometry) 
 			if (is (T == vec) || is_geometric!T)
 			{/*...}*/
 				static if (is (T == vec))
@@ -65,9 +65,9 @@ public {/*coordinate transformations}*/
 				else static assert (0);
 			}
 	}
-	public {/*to}*/
+	pure {/*to}*/
 		public {/*element}*/
-			vec to_draw_space (Display.Coords coords, Display display) pure nothrow
+			vec to_draw_space (Display.Coords coords, Display display) 
 				{/*...}*/
 					with (Display.Space) final switch (coords.space)
 						{/*...}*/
@@ -83,7 +83,7 @@ public {/*coordinate transformations}*/
 								return 2*coords.value/display.dimensions - 1;
 						}
 				}
-			vec to_extended_space (Display.Coords coords, Display display) pure nothrow
+			vec to_extended_space (Display.Coords coords, Display display) 
 				{/*...}*/
 					with (Display.Space) final switch (coords.space)
 						{/*...}*/
@@ -99,7 +99,7 @@ public {/*coordinate transformations}*/
 								return coords.to_draw_space (display).from_draw_space.to_extended_space (display);
 						}
 				}
-			vec to_pixel_space (Display.Coords coords, Display display) pure nothrow
+			vec to_pixel_space (Display.Coords coords, Display display) 
 				{/*...}*/
 					with (Display.Space) final switch (coords.space)
 						{/*...}*/
@@ -113,20 +113,23 @@ public {/*coordinate transformations}*/
 				}
 		}
 		public {/*range}*/
-			auto to_draw_space (T)(T geometry, Display display) nothrow
+			auto to_draw_space (T)(T geometry, Display display)
 				if (is (ElementType!T == Display.Coords))
 				{/*...}*/
-					return geometry.map!(coords => coords.to_draw_space (display));
+					return display.repeat (geometry.length).zip (geometry)
+						.map!(τ => τ[1].to_draw_space (τ[0]));
 				}
-			auto to_extended_space (T)(T geometry, Display display) nothrow
+			auto to_extended_space (T)(T geometry, Display display)
 				if (is (ElementType!T == Display.Coords))
 				{/*...}*/
-					return geometry.map!(coords => coords.to_extended_space (display));
+					return display.repeat (geometry.length).zip (geometry)
+						.map!(τ => τ[1].to_extended_space (τ[0]));
 				}
-			auto to_pixel_space (T)(T geometry, Display display) nothrow
+			auto to_pixel_space (T)(T geometry, Display display)
 				if (is (ElementType!T == Display.Coords))
 				{/*...}*/
-					return geometry.map!(coords => coords.to_pixel_space (display));
+					return display.repeat (geometry.length).zip (geometry)
+						.map!(τ => τ[1].to_pixel_space (τ[0]));
 				}
 		}
 	}
@@ -138,6 +141,7 @@ public {/*coordinate transformations}*/
 				else enum is_in_display_space = false;
 			}
 	}
+}
 	unittest {/*...}*/
 		scope gfx = new Display;
 		gfx.start; scope (exit) gfx.stop;
@@ -209,7 +213,6 @@ public {/*coordinate transformations}*/
 			));
 		}
 	}
-}
 
 final class Display: Service
 	{/*...}*/
@@ -279,21 +282,23 @@ final class Display: Service
 			enum Space {draw, extended, pixel}
 			struct Coords
 				{/*...}*/
+					pure nothrow:
+
 					Space space;
 					vec value;
 					alias value this;
 
 					@disable this ();
-					this (vec value, Space space) pure nothrow
+					this (vec value, Space space)
 						{/*...}*/
 							this.value = value;
 							this.space = space;
 						}
 				}
 
-			@(Space.pixel) @property auto dimensions () pure nothrow
+			@(Space.pixel) @property auto dimensions () pure nothrow const
 				{/*...}*/
-					return screen_dims[].map!(i => i * 1.0).vec;
+					return screen_dims[].vec;
 				}
 		}
 		public {/*ctors}*/
@@ -532,13 +537,19 @@ final class Display: Service
 			{/*automatically sync the display with a scheduler}*/
 				auto D = cast()sD;
 				auto S = cast()sS;
+
 				scope (exit) {D.stop (); S.stop (); ownerTid.prioritySend (true);}
+
 				verts = [vec(0), vec(1), vec(1,0)];
+
 				D.start ();
 				S.start ();
+
 				S.enqueue (800.msecs); // this is our termination signal
 				D.subscribe (); // to receive a service ID
+
 				D.sync_with (S, 30); // 30 fps
+
 				bool rendering = true;
 				while (rendering && received_before (100.msecs, 
 					(Scheduler.Notification _)
@@ -557,7 +568,7 @@ final class Display: Service
 		assert (received);
 	}
 
-private {/*openGL}*/
+public {/*openGL}*/
 	struct gl
 		{/*...}*/
 			import std.string;
@@ -629,7 +640,7 @@ private {/*shaders}*/
 		import std.algorithm;
 		import derelict.opengl3.gl3;
 	}
-	private {/*interfaces}*/
+	private {/*shader interface}*/
 		shared interface ShaderInterface
 			{/*...}*/
 				void execute ();
@@ -698,13 +709,16 @@ private {/*shaders}*/
 				protected {/*ctor}*/
 					this (string vertex_path, string fragment_path)
 						{/*...}*/
-							void verify (string object_type) (GLuint gl_object)
+							void verify (string object_type) (GLuint gl_object) // REFACTOR
 								{/*...}*/
 									GLint status;
+
 									const string glGet_iv = "glGet" ~ object_type ~ "iv";
 									const string glGet_InfoLog = "glGet" ~ object_type ~ "InfoLog";
 									const string glStatus = object_type == "Shader"? "COMPILE":"LINK";
+
 									mixin (glGet_iv ~ " (gl_object, GL_" ~ glStatus ~ "_STATUS, &status);");
+
 									if (status == GL_FALSE) 
 										{/*error}*/
 											GLchar[] error_log; 
@@ -730,17 +744,23 @@ private {/*shaders}*/
 									verify!"Shader" (shader);
 									return shader;
 								}
+
 							GLuint vert_shader = build_shader (GL_VERTEX_SHADER, vertex_path);
 							GLuint frag_shader = build_shader (GL_FRAGMENT_SHADER, fragment_path);
+
 							program = gl.CreateProgram ();
+
 							gl.AttachShader (program, vert_shader);
 							gl.AttachShader (program, frag_shader);
+
 							gl.LinkProgram (program); 
 							verify!"Program" (program);
+
 							gl.DeleteShader (vert_shader);
 							gl.DeleteShader (frag_shader);
 							gl.DetachShader (program, vert_shader);
 							gl.DetachShader (program, frag_shader);
+
 							gl.UseProgram (program);
 						}
 				}

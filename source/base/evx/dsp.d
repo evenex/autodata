@@ -253,85 +253,87 @@ enum Method
 		repeat
 	}
 
-struct Interpolated (S, Method method)
-	if (is(S == Sampler!T, T))
+struct Interpolated (R, Method method)
+//struct Interpolated (R, alias stencil) // TODO stencil-based interpolation
+//	if (is_indexable!R && ParameterTypeTuple!stencil.length.is_odd) 
 	{/*...}*/
-		S sampler;
+	//	alias Stencil = ParameterTypeTuple!stencil;
+	//	static assert (allSatisfy!(is_type_of!(Stencil[0]), Stencil));
 
-		static if (method is Method.repeat)
+		R range;
+
+		const size_t dilation_factor;
+		size_t remaining_front;
+		size_t remaining_back;
+
+		void popFront ()
 			{/*...}*/
-				const size_t dilation_factor;
-				size_t remaining_front;
-				size_t remaining_back;
-
-				void popFront ()
+				if (not (--remaining_front))
 					{/*...}*/
-						if (not (--remaining_front))
-							{/*...}*/
-								sampler.popFront;
-								remaining_front = dilation_factor;
-							}
-					}
-				void popBack ()
-					{/*...}*/
-						if (not (--remaining_back))
-							{/*...}*/
-								sampler.popBack;
-								remaining_back = dilation_factor;
-							}
-					}
-				const length ()
-					{/*...}*/
-						return sampler.length * dilation_factor;
-					}
-				static if (not(is_continuous_range!S))
-					{/*[┅]}*/
-						auto opSlice ()
-							{/*...}*/
-								return Interpolated (sampler, dilation_factor);
-							}
-
-						auto opSlice (S.Index i, S.Index j)
-							{/*...}*/
-								return Interpolated (sampler[i/s..j/s], (s), (s - i % s), (s - j % s));
-							}
-
-						auto opIndex (S.Index i)
-							{/*...}*/
-								return sampler[i/s];
-							}
-
-						private @property s ()
-							{/*...}*/
-								return dilation_factor.to!(S.Index);
-							}
-					}
-
-				alias sampler this;
-
-				this (S sampler, size_t dilation_factor)
-					{/*...}*/
-						this.dilation_factor = dilation_factor;
-						this.sampler = sampler;
-
+						range.popFront;
 						remaining_front = dilation_factor;
-						remaining_back = dilation_factor;
-					}
-				this (S sampler, size_t dilation_factor, size_t remaining_front, size_t remaining_back)
-					{/*...}*/
-						this (sampler, dilation_factor);
-						this.remaining_front = remaining_front;
-						this.remaining_back = remaining_back;
 					}
 			}
+		void popBack ()
+			{/*...}*/
+				if (not (--remaining_back))
+					{/*...}*/
+						range.popBack;
+						remaining_back = dilation_factor;
+					}
+			}
+		const length ()
+			{/*...}*/
+				return range.length * dilation_factor;
+			}
+		static if (not(is_continuous_range!R))
+			{/*[┅]}*/
+				auto opSlice ()
+					{/*...}*/
+						return Interpolated (range, dilation_factor);
+					}
+
+				auto opSlice (R.Index i, R.Index j)
+					{/*...}*/
+						return Interpolated (range[i/s..j/s], (s), (s - i % s), (s - j % s));
+					}
+
+				auto opIndex (R.Index i)
+					{/*...}*/
+						return range[i/s];
+					}
+
+				private @property s ()
+					{/*...}*/
+						return dilation_factor.to!(R.Index);
+					}
+			}
+
+		alias range this;
+
+		this (R range, size_t dilation_factor)
+			{/*...}*/
+				this.dilation_factor = dilation_factor;
+				this.range = range;
+
+				remaining_front = dilation_factor;
+				remaining_back = dilation_factor;
+			}
+		this (R range, size_t dilation_factor, size_t remaining_front, size_t remaining_back)
+			{/*...}*/
+				this (range, dilation_factor);
+				this.remaining_front = remaining_front;
+				this.remaining_back = remaining_back;
+			}
 	}
-auto interpolate (Method method, S)(S signal, size_t factor)
+
+auto interpolate (Method method, S)(S signal, size_t dilation_factor)
 	in {/*...}*/
-		assert (factor > 0, `signal interpolation requires positive factor`);
+		assert (dilation_factor > 0, `signal interpolation requires positive dilation factor`);
 	}
 	body {/*...}*/
 		static if (method is Method.repeat)
-			return Interpolated!(S, method)(signal, factor);
+			return Interpolated!(S, method)(signal, dilation_factor);
 	}
 	unittest {/*...}*/
 		import std.range: equal;

@@ -629,15 +629,23 @@ public {/*construction}*/
 					{/*...}*/
 						return this[0..$] = that;
 					}
-				auto opSliceOpAssign (string op, U)(auto ref U that, size_t i, size_t j)
+				auto opSliceOpAssign (string op, U)(auto ref U that, size_t i, size_t j) // REVIEW
 					in {/*...}*/
 						import std.range: hasLength;
 
-						static if (hasLength!U)
-							assert (that.length == j-i, `length mismatch for range assignment`);
+						static if (isInputRange!U && hasLength!U)
+							assert (that.length == j-i, 
+								`length mismatch for range op-assignment ` ~op~ `: `
+								~U.stringof~ `:`~that.length.text~ ` vs ` ~(j-i).text
+							);
 					}
 					body {/*...}*/
-						static if (is_indexable!U)
+						static if (__traits(compiles, this.front = that))
+							foreach (k, ref x; this[i..j])
+								mixin(q{
+									x } ~op~ q{= that;
+								});
+						else static if (is_indexable!U)
 							foreach (k, ref x; this[i..j])
 								mixin(q{
 									x } ~op~ q{= that[k];
@@ -648,7 +656,7 @@ public {/*construction}*/
 									X.front } ~op~ q{= that.front;
 								});
 					}
-				auto opSliceOpAssign (string op, U)(auto ref U that)
+				auto opSliceOpAssign (string op, U)(auto ref U that) // REVIEW
 					{/*...}*/
 						mixin(q{
 							return this[0..$] } ~op~ q{= that;

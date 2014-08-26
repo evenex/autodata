@@ -158,3 +158,10 @@ bool is_infinite (R)(R)
 	{/*...}*/
 		return false;
 	}
+
+/* psuedo-ForwardRange operator for arrays 
+*/
+auto save (T)(T[] array)
+	{/*...}*/
+		return array;
+	}

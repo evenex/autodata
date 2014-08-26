@@ -45,6 +45,9 @@ private {/*import evx}*/
 	import evx.utils:
 		τ;
 
+	import evx.range:
+		save;
+
 	import evx.move:
 		move, shift_up_from, shift_down_on;
 

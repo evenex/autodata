@@ -45,7 +45,7 @@ class Scheduler: Service
 				}
 			bool process ()
 				{/*...}*/
-					schedule.execute ();
+					schedule.execute;
 					return true;
 				}
 			bool listen ()
@@ -204,16 +204,18 @@ class Scheduler: Service
 		}
 	}
 
-void sync_with (T) (T service, Scheduler scheduler, uint framerate = 30) if (is (T: Service))
+void sync_with (T) (T service, Scheduler scheduler, uint framerate) 
+	if (is (T: Service))
 	in {/*...}*/
 		assert (service.is_running, "attempted to sync while "~T.stringof~" offline");
 	}
 	body {/*...}*/
 		service.send (cast(shared)scheduler, framerate);
+
 		if (not (receiveTimeout (500.msecs, (bool confirmation){})))
 			assert (null, "no reply from service thread. is it listening for (shared Scheduler, uint)?");
 	}
-void sync_with (T) (T service, shared Scheduler scheduler, uint framerate = 30)
+void sync_with (T) (T service, shared Scheduler scheduler, uint framerate) // TODO Hertz
 	{/*^}*/
 		sync_with (service, cast(Scheduler)scheduler, framerate);
 	}
