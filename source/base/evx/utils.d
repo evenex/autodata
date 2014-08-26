@@ -39,7 +39,22 @@ private {/*import evx}*/
 pure nothrow:
 
 debug = profiler;
+public {/*c-compatibility}*/
+	/* forward a set of arguments, converting strings into null-terminated c-strings
+	*/
+	static to_c (Args...)(Args args)
+		{/*...}*/
+			alias CArgs = ReplaceAll!(string, const(char)*, Args);
+			CArgs c_args;
 
+			foreach (i, arg; args)
+			static if (isSomeString!(typeof(arg)))
+			c_args[i] = args[i].toStringz;
+			else c_args[i] = args[i];
+
+			return τ(c_args);
+		}
+}
 public debug {/*}*/
 	/* pure nothrow writeln 
 	*/
