@@ -26,7 +26,7 @@ private {/*import evx}*/
 		zero, unity;
 
 	import evx.analysis:
-		interval, is_continuous, is_continuous_range;
+		between, interval, is_continuous, is_continuous_range;
 }
 
 struct Stream (Sample, Index)
@@ -151,7 +151,10 @@ struct Sampler (Stream)
 				}
 
 			auto opIndex (Index i)
-				{/*...}*/
+				in {/*...}*/
+					assert ((i + first).between (first, last));
+				}
+				body {/*...}*/
 					return source (first + i);
 				}
 		}
@@ -171,7 +174,9 @@ struct Sampler (Stream)
 
 			bool empty () const
 				{/*...}*/
-					return first >= last;
+					static if (Stream.is_continuous)
+						return first + stride >= last; // REVIEW figure out why this is so
+					else return first >= last;
 				}
 		}
 		public {/*BidirectionalRange}*/
@@ -327,7 +332,7 @@ struct Interpolated (R, Method method)
 			}
 	}
 
-auto interpolate (Method method, S)(S signal, size_t dilation_factor)
+auto interpolate (Method method, S)(S signal, size_t dilation_factor) // REVIEW turns out this is unnecessary due to the way continuous ranges are traversed... repeated interpolation is default when a lower-frequency sampler is traversed in lockstep with a higher-frequency sampler
 	in {/*...}*/
 		assert (dilation_factor > 0, `signal interpolation requires positive dilation factor`);
 	}
