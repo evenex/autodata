@@ -581,6 +581,9 @@ public {/*construction}*/
 	mixin template ArrayInterface (alias pointer, alias length)
 		if (is_sliceable!(typeof(pointer)))
 		{/*...}*/
+			import evx.traits:
+				is_indexable;
+
 			public:
 			public {/*[┄]}*/
 				ref auto opIndex (size_t i)
@@ -621,6 +624,29 @@ public {/*construction}*/
 						else static if (isInputRange!U)
 							for (auto X = this[]; not (X.empty); X.popFront, that.popFront)
 								X.front = that.front;
+					}
+				auto opSliceAssign (U)(auto ref U that)
+					{/*...}*/
+						return this[0..$] = that;
+					}
+				auto opSliceOpAssign (string op, U)(auto ref U that, size_t i, size_t j)
+					in {/*...}*/
+						import std.range: hasLength;
+
+						static if (hasLength!U)
+							assert (that.length == j-i, `length mismatch for range assignment`);
+					}
+					body {/*...}*/
+						static if (is_indexable!U)
+							foreach (k, ref x; this[i..j])
+								mixin(q{
+									x } ~op~ q{= that[k];
+								});
+						else static if (isInputRange!U)
+							for (auto X = this[]; not (X.empty); X.popFront, that.popFront)
+								mixin(q{
+									X.front } ~op~ q{= that.front;
+								});
 					}
 				auto opSliceAssign (U)(auto ref U that)
 					{/*...}*/
