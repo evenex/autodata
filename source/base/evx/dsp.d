@@ -95,7 +95,7 @@ struct Stream (Sample, Index)
 					this.last_index = last_index;
 
 					static if (Stream.is_continuous)
-						this.frequency =()=> zero!Index;
+						this.frequency =()=> zero!Frequency;
 				}
 		}
 	}

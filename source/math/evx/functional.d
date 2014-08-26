@@ -18,7 +18,7 @@ private {/*import std}*/
 
 	import std.traits:
 		isNumeric, isFloatingPoint, isIntegral, isUnsigned,
-		Unqual, CommonType;
+		Unqual, CommonType, ReturnType;
 }
 private {/*import evx}*/
 	import evx.meta:
@@ -145,7 +145,7 @@ public {/*map}*/
 							return range.length;
 						}
 
-					static if (is(ReturnType!length == DollarType!R))
+					static if (is(ReturnType!(range.length) == DollarType!R))
 						alias opDollar = length;
 
 					static assert (hasLength!MapResult);
@@ -157,7 +157,7 @@ public {/*map}*/
 							return range.measure;
 						}
 
-					static if (is(ReturnType!measure == DollarType!R))
+					static if (is(ReturnType!(range.measure) == DollarType!R))
 						alias opDollar = measure;
 
 					static assert (is_continuous_range!MapResult);
@@ -299,7 +299,7 @@ public {/*zip}*/
 							return ranges[0].length;
 						}
 
-					static if (is(ReturnType!length == CommonDollar))
+					static if (is(ReturnType!(ranges[0].length) == CommonDollar))
 						alias opDollar = length;
 
 					static assert (hasLength!ZipResult);
@@ -308,10 +308,10 @@ public {/*zip}*/
 				@property {/*...}*/
 					auto measure () const
 						{/*...}*/
-							return ranges[0].measure;
+							return ranges[0].measure; // REVIEW i don't want any [0] going on, instead iterate over all ranges and select the correct measure according to some infinity-respecting rules
 						}
 
-					static if (is(ReturnType!measure == CommonDollar))
+					static if (is(ReturnType!(ranges[0].measure) == CommonDollar))
 						alias opDollar = measure;
 
 					static assert (is_continuous_range!ZipResult);
