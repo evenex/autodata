@@ -648,9 +648,11 @@ public {/*construction}*/
 									X.front } ~op~ q{= that.front;
 								});
 					}
-				auto opSliceAssign (U)(auto ref U that)
+				auto opSliceOpAssign (string op, U)(auto ref U that)
 					{/*...}*/
-						return this[0..$] = that;
+						mixin(q{
+							return this[0..$] } ~op~ q{= that;
+						});
 					}
 			}
 			public {/*range}*/
