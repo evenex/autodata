@@ -23,6 +23,7 @@ alias reduce = evx.functional.reduce;
 alias versus = zip;
 
 enum Style {standard, minimal}
+
 struct Plot (Data, Style style)
 	if (is(ElementType!Data == Tuple!(T,U), T, U))
 	{/*...}*/
@@ -340,9 +341,7 @@ auto plot (Style style = Style.standard, Data)(Data data)
 
 		return Plot!(Data, style) (data);
 	}
-
-unittest
-	{/*...}*/
+	unittest {/*...}*/
 		import std.math;
 
 		scope gfx = new Display (400,400);
@@ -363,9 +362,7 @@ unittest
 		import std.datetime: msecs;
 		core.thread.Thread.sleep (2000.msecs);
 	}
-
-void main ()
-	{/*units}*/
+	unittest {/*units}*/
 		import std.math;
 		import evx.units;
 

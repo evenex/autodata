@@ -732,9 +732,11 @@ public {/*explicit conversion}*/
 		}
 	auto vector_from_array (T)(T array)
 		{/*...}*/
-			enum length = T.sizeof/ElementType!T.sizeof;
+			alias U = FieldTypeTuple!T[0];
 
-			return Vector!(length, Unqual!(ElementType!T))(array[]);
+			enum length = U.sizeof/ElementType!U.sizeof;
+
+			return Vector!(length, Unqual!(ElementType!U))(array[]);
 		}
 	auto vector_from_range (uint length, R)(R range)
 		{/*...}*/
