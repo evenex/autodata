@@ -93,7 +93,7 @@ struct Image
 							this.format = Format.rgba; // TEMP until if/when i need more TGA modes
 
 							data = memory.allocate (width*height);
-							file.stream_tga (data);
+							file.load_tga (data);
 
 							if (header.origin_bottom_left)
 								foreach (row; 0..height/2)
@@ -132,7 +132,7 @@ struct Image
 			}
 	}
 
-private void stream_tga (ref File file, ref Resource!Pixel destination) //TODO enforce depth, alignment, and 2^ dimension
+private void load_tga (ref File file, ref Resource!Pixel destination) //TODO enforce depth, alignment, and 2^ dimension
 	{/*...}*/
 		Pixel[1] pixel;
 

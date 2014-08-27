@@ -46,13 +46,14 @@ private {/*import evx}*/
 }
 
 template infinite (T)
+	if (is_continuous!T)
 	{/*...}*/
 		alias infinite = identity_element!(real.infinity).of_type!T;
 	}
 
 alias infinity = infinite!real;
 
-pure nothrow:
+pure:
 public {/*comparison}*/
 	enum standard_relative_tolerance = 1e-5;
 
@@ -116,7 +117,7 @@ public {/*intervals}*/
 	*/
 	struct Interval (Index)
 		{/*...}*/
-			pure nothrow:
+			pure:
 			static if (is_continuous!Index)
 				alias measure = size;
 			else alias length = size;
@@ -158,7 +159,8 @@ public {/*intervals}*/
 				}
 
 			private:
-			Index[2] bounds;
+			Index[2] bounds = [zero!Index, zero!Index];
+
 			invariant (){/*...}*/
 				assert (bounds[0] <= bounds[1], `bounds inverted`);
 			}
@@ -311,8 +313,6 @@ public {/*calculus}*/
 	unittest {/*functional compatibility}*/
 		struct T
 			{/*...}*/
-				nothrow:
-
 				float measure;
 
 				auto opIndex (float i)

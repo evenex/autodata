@@ -39,7 +39,7 @@ private {/*import evx}*/
 pure nothrow:
 
 debug = profiler;
-public {/*c-compatibility}*/
+public {/*C compatibility}*/
 	/* forward a set of arguments, converting strings into null-terminated c-strings
 	*/
 	static to_c (Args...)(Args args)

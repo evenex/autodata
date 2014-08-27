@@ -319,45 +319,45 @@ public {/*initialization}*/
 		{/*...}*/
 			static assert (is(typeof(this)), `mixin requires host struct`);
 
+			import std.traits: allSatisfy, isSomeString;
+
 			static private {/*code generation}*/
 				string generate_library_loader ()
 					{/*...}*/
-						import std.range: 
-							empty;
-
-						import std.traits: 
-							isFunctionPointer, functionLinkage;
-
-						import evx.logic: 
-							not;
-
 						string signature = q{
-							void load_library ()
+							void load_library (Args...)(Args file_names)
+								if (allSatisfy!(isSomeString, Args))
 						};
 
 						string code = q{
 							import std.c.linux.linux;
+							import evx.utils: to_c;
+
+							static if (Args.length > 0)
+								void*[Args.length] libs;
+							else void*[1] libs = [null];
+
+							auto paths = file_names.to_c;
+
+							foreach (i,_; Args)
+								libs[i] = dlopen (paths[i], RTLD_LOCAL | RTLD_LAZY);
 						};
 
 						foreach (symbol; __traits (allMembers, typeof(this)))
-							static if (not (symbol.empty))
-								static if (isFunctionPointer!(__traits (getMember, typeof(this), symbol)))
-									static if (functionLinkage!(__traits (getMember, typeof(this), symbol)) == "C")
-										code ~= q{
-											} ~symbol~ q{ = cast (typeof (} ~symbol~ q{)) dlsym (null, } `"`~symbol~`"` q{);
-											assert (} ~symbol~ q{, "couldn't load C library function "} `"`~symbol~`"` q{);
-										};
+							static if (is_C_function!symbol)
+								code ~= q{
+									foreach (lib; libs)
+										}`{`q{
+											} ~symbol~ q{ = cast(typeof(} ~symbol~ q{)) dlsym (lib, } `"`~symbol~`"` q{);
 
-						string nothrow_block = q{
-							import std.conv: text;
+											if (} ~symbol~ q{ !is null)
+												break;
+										}`}`q{
 
-							try }`{`q{
-								} ~code~ q{
-							}`}`q{
-							catch (Exception ex) assert (0, ex.file ~ ex.line.text ~ ex.msg ~ ex.info.text);
-						};
+									assert (} ~symbol~ q{ !is null, "couldn't load C library function "} `"`~symbol~`"` q{);
+								};
 
-						return signature~ `{` ~nothrow_block~ `}`;
+						return signature~ `{` ~code~ `}`;
 					}
 			}
 
@@ -380,6 +380,20 @@ public {/*initialization}*/
 					else enum error = generic_error;
 
 					static assert (__traits(compiles, mixin(op~ q{ (c_args)})), error);
+				}
+
+			template is_C_function (string name)
+				{/*...}*/
+					import std.range: empty;
+
+					import std.traits: 
+						isFunctionPointer, functionLinkage;
+
+					static if (name.empty)
+						enum is_C_function = false;
+					else static if (isFunctionPointer!(__traits (getMember, typeof(this), name)))
+						enum is_C_function = functionLinkage!(__traits (getMember, typeof(this), name)) == "C";
+					else enum is_C_function = false;
 				}
 		}
 		unittest {/*...}*/

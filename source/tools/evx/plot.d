@@ -22,7 +22,8 @@ alias reduce = evx.functional.reduce;
 
 alias versus = zip;
 
-struct Plot (Data)
+enum Style {standard, minimal}
+struct Plot (Data, Style style)
 	if (is(ElementType!Data == Tuple!(T,U), T, U))
 	{/*...}*/
 		alias Point = ElementType!Data;
@@ -32,7 +33,7 @@ struct Plot (Data)
 
 		alias XRange = Interval!XType;
 		alias YRange = Interval!YType;
-		enum automatic;
+		enum {automatic}
 
 		public:
 		@property {/*options}*/
@@ -49,7 +50,7 @@ struct Plot (Data)
 			auto title (String)(String title)
 				if (isSomeString!String)
 				{/*...}*/
-					_title = title.to!string;
+					_title = title.text;
 					return this;
 				}
 
@@ -84,9 +85,12 @@ struct Plot (Data)
 			void draw ()
 				{/*...}*/
 					if (data.empty) return;
+
+					enum x1 = unity!XType;
+					enum y1 = unity!YType;
 					
-					auto x_data = data.map!(τ => τ[0]);
-					auto y_data = data.map!(τ => τ[1]);
+					auto y_data = data.map!(τ => τ[0]);
+					auto x_data = data.map!(τ => τ[1]);
 
 					auto get_limit (string axis, string side)()
 						{/*...}*/
@@ -103,10 +107,11 @@ struct Plot (Data)
 							});
 
 							mixin(q{
-								return _range.is_infinite?
+								return _range.} ~side~ q{.is_infinite?
 									_data.reduce!_side : _range.} ~side~ q{;
 							});
 						}
+
 					auto x_min = get_limit!(`x`,`min`);
 					auto x_max = get_limit!(`x`,`max`);
 					auto y_min = get_limit!(`y`,`min`);
@@ -117,69 +122,170 @@ struct Plot (Data)
 					auto w_1 = bounds.width - h_0;
 					auto ε = 0.1*h_0;
 
-					auto title_field = bounds;
-						title_field.bottom = title_field.bottom + h_1 + ε;
-					auto y_field = bounds;
-						y_field.top 	= y_field.top 	 - h_0;
-						y_field.bottom 	= y_field.bottom + h_0;
-						y_field.right 	= y_field.right	 - w_1 - ε;
-					auto x_field = bounds;
-						x_field.left	= x_field.left	+ h_0;
-						x_field.top		= x_field.top 	- h_1;
-						x_field.right	= x_field.right	- 2*ε;
-					auto plot_field = bounds;
-						plot_field.left   = plot_field.left   + h_0;
-						plot_field.right  = plot_field.right  - 2*ε;
-						plot_field.top 	  = plot_field.top 	  - h_0;
-						plot_field.bottom = plot_field.bottom + h_0;
+					void draw_data_in (Box!double plot_field)
+						{/*...}*/
+							display.draw (_color.alpha (0.25), plot_field[].from_extended_space.to_draw_space (display));
+							display.draw (_color, 
+								data.map!(τ => vec(τ[1]/x1, τ[0]/y1))
+									.map!(v => v - vec(x_min/x1, y_min/y1))
+									.map!(v => v / vec((x_max-x_min)/x1, (y_max-y_min)/y1))
+									.map!(v => v * vec(plot_field.width, plot_field.height))
+									.map!(v => v + plot_field.low_left)
+									.from_extended_space.to_draw_space (display),
+								GeometryMode.l_strip
+							);
+						}
 
-					scribe.write (_title)
-						.size (_text_size)
-						.color (_color)
-						.align_to (Alignment.center)
-						.inside (title_field)
-					();
-					scribe.write (x_label)
-						.size (_text_size)
-						.color (_color)
-						.align_to (Alignment.top_left)
-						.inside (x_field)
-					();
-					scribe.write (x_max.to!string.length < 5? x_max.to!string : x_max.to!string[0..5]~`…`)
-						.size (_text_size)
-						.color (_color)
-						.align_to (Alignment.top_right)
-						.inside (x_field)
-					();
-					scribe.write (y_label)
-						.size (_text_size)
-						.color (_color)
-						.rotate (π/2)
-						.align_to (Alignment.bottom_right)
-						.wrap_width (y_field.height)
-						.inside (y_field)
-					();
-					scribe.write (y_max.to!string.length < 5? y_max.to!string : y_max.to!string[0..5]~`…`)
-						.size (_text_size)
-						.color (_color)
-						.rotate (π/2)
-						.align_to (Alignment.top_right)
-						.inside (y_field)
-					();
+					static if (style is Style.standard)
+						{/*...}*/
+							auto title_field = bounds;
+								with (title_field) {/*...}*/
+									left = left + 2*h_0;
+									bottom = bottom + h_1 + ε;
+								}
 
-					display.draw (_color.alpha (0.25), plot_field[].from_extended_space.to_draw_space (display));
-					display.draw (_color, 
-						data.map!(τ => vec(τ[0],τ[1]))
-							.map!(v => v - vec(x_min, y_min))
-							.map!(v => v / vec(x_max-x_min, y_max-y_min))
-							.map!(v => v * vec(plot_field.width, plot_field.height))
-							.map!(v => v + plot_field.low_left)
-							.from_extended_space.to_draw_space (display),
-						GeometryMode.l_strip
-					);
+							auto y_field = bounds;
+								with (y_field) {/*...}*/
+									top 	= top 	 - h_0;
+									bottom 	= bottom + 2*h_0;
+									right 	= right	 - w_1 - ε;
+									left 	= left	 + ε;
+								}
+
+							auto x_field = bounds;
+								with (x_field) {/*...}*/
+									left	= left	 + 2*h_0;
+									top		= top 	 - h_1 - ε;
+									right	= right	 - 2*ε;
+								}
+
+							auto x_ticks = x_field[].translate (vec(0, h_0)).bounding_box;
+							auto y_ticks = y_field[].translate (vec(h_0, 0)).bounding_box;
+
+							auto plot_field = bounds;
+								with (plot_field) {/*...}*/
+									left   = left   + 2*h_0;
+									right  = right  - 2*ε;
+									top 	  = top 	  - h_0;
+									bottom = bottom + 2*h_0;
+								}
+
+							scribe.write (_title)
+								.size (_text_size)
+								.color (_color)
+								.align_to (Alignment.top_center)
+								.inside (title_field)
+							();
+							scribe.write (x_label~ ` (` ~x_max.text.find (` `)[1..$]~ `)`)
+								.size (_text_size)
+								.color (_color)
+								.align_to (Alignment.top_center)
+								.inside (x_field)
+							();
+							scribe.write (x_min/x1)
+								.size (_text_size)
+								.color (_color)
+								.align_to (Alignment.top_left)
+								.inside (x_ticks)
+							();
+							scribe.write (x_max/x1)
+								.size (_text_size)
+								.color (_color)
+								.align_to (Alignment.top_right)
+								.inside (x_ticks)
+							();
+							scribe.write (y_label~ ` (` ~y_max.text.find (` `)[1..$]~ `)`)
+								.size (_text_size)
+								.color (_color)
+								.rotate (π/2)
+								.align_to (Alignment.center_right)
+								.wrap_width (y_field.height)
+								.inside (y_field)
+							();
+							scribe.write (y_min/y1)
+								.size (_text_size)
+								.color (_color)
+								.rotate (π/2)
+								.align_to (Alignment.bottom_right)
+								.wrap_width (y_field.height)
+								.inside (y_ticks)
+							();
+							scribe.write (y_max/y1)
+								.size (_text_size)
+								.color (_color)
+								.rotate (π/2)
+								.align_to (Alignment.top_right)
+								.wrap_width (y_field.height)
+								.inside (y_ticks)
+							();
+
+							draw_data_in (plot_field);
+						}
+					else static if (style is Style.minimal)
+						{/*...}*/
+							auto title_field = bounds;
+								title_field.bottom = title_field.bottom + h_1 + ε;
+
+							auto y_field = bounds;
+								with (y_field) {/*...}*/
+									top 	= top 	 - h_0;
+									bottom 	= bottom + h_0;
+									right 	= right	 - w_1 - ε;
+								}
+
+							auto x_field = bounds;
+								with (x_field) {/*...}*/
+									left	= left	+ h_0;
+									top		= top 	- h_1;
+									right	= right	- 2*ε;
+								}
+
+							auto plot_field = bounds;
+								with (plot_field) {/*...}*/
+									left   = left   + h_0;
+									right  = right  - 2*ε;
+									top    = top 	- h_0;
+									bottom = bottom + h_0;
+								}
+
+							scribe.write (_title)
+								.size (_text_size)
+								.color (_color)
+								.align_to (Alignment.center)
+								.inside (title_field)
+							();
+							scribe.write (x_label)
+								.size (_text_size)
+								.color (_color)
+								.align_to (Alignment.top_left)
+								.inside (x_field)
+							();
+							scribe.write (x_max)
+								.size (_text_size)
+								.color (_color)
+								.align_to (Alignment.top_right)
+								.inside (x_field)
+							();
+							scribe.write (y_label)
+								.size (_text_size)
+								.color (_color)
+								.rotate (π/2)
+								.align_to (Alignment.bottom_right)
+								.wrap_width (y_field.height)
+								.inside (y_field)
+							();
+							scribe.write (y_max)
+								.size (_text_size)
+								.color (_color)
+								.rotate (π/2)
+								.align_to (Alignment.top_right)
+								.wrap_width (y_field.height)
+								.inside (y_field)
+							();
+
+							draw_data_in (plot_field);
+						}
 				}
-		}
-		public {/*types}*/
 		}
 		public {/*ctor}*/
 			this (Data data)
@@ -209,16 +315,14 @@ struct Plot (Data)
 				{/*...}*/
 					static code ()
 						{/*...}*/
+							enum Range = axis.capitalize ~ q{Range};
+							enum Type = axis.capitalize ~ q{Type};
+
 							return q{
-								auto } ~axis~ q{_axis (String, R)(String label, R range = automatic)
+								auto axis_options (String)(String label, } ~Range~ q{ range = interval (-infinite!} ~Type~ q{, infinite!} ~Type~ q{))
 									}`{`q{
 										this.} ~axis~ q{_label = label.text;
-
-										enum infinity = infinite!} ~axis.capitalize~ q{Type;
-
-										static if (range is automatic)
-											this.} ~axis~ q{_range = interval (-infinity, infinity);
-										else this.} ~axis~ q{_range = range;
+										this.} ~axis~ q{_range = range;
 
 										return this;
 									}`}`q{
@@ -230,14 +334,14 @@ struct Plot (Data)
 		}
 	}
 
-auto plot (Data)(Data data)
+auto plot (Style style = Style.standard, Data)(Data data)
 	{/*...}*/
 		static assert (is(ElementType!Data == Tuple!(T,U), T, U));
 
-		return Plot!Data (data);
+		return Plot!(Data, style) (data);
 	}
 
-void main ()
+unittest
 	{/*...}*/
 		import std.math;
 
@@ -245,14 +349,42 @@ void main ()
 		gfx.start; scope (exit) gfx.stop;
 		scope txt = new Scribe (gfx, [20]);
 
-		plot (ℕ[1..100].map!(x => exp (0.04*x)).versus (ℕ[1..100].map!(x => 0.04*x)))
+		writeln (ℕ[1..100].map!(x => exp (1. * x)).reduce!max);
+		plot (ℕ[1..100].map!(x => exp (0.1 * x)).versus (ℕ[1..100].map!(x => 0.1 * x)))
 			.color (red)
 			.text_size (20)
 			.using (gfx, txt)
+			.x_axis (`x`)
+			.y_axis (`exp (x)`)
 		.draw;
 
 		gfx.render;
 
 		import std.datetime: msecs;
 		core.thread.Thread.sleep (2000.msecs);
+	}
+
+void main ()
+	{/*units}*/
+		import std.math;
+		import evx.units;
+
+		scope gfx = new Display (400,400);
+		gfx.start; scope (exit) gfx.stop;
+		scope txt = new Scribe (gfx, [14]);
+
+		plot (ℕ[1..100].map!(x => (x^^2).joules).versus (ℕ[1..100].map!(x => x.meters/second)))
+			.color (white)
+			.title (`energy vs speed`)
+			.text_size (14)
+			.using (gfx, txt)
+			.x_axis (`speed`)
+			.y_axis (`energy`)
+			.inside ([vec(-1,-1), vec(1,1)].scale (0.5).bounding_box)
+		.draw;
+
+		gfx.render;
+
+		import std.datetime: msecs;
+		core.thread.Thread.sleep (3000.msecs);
 	}

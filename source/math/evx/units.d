@@ -77,7 +77,7 @@ shared static this ()
 		abbreviation_map = [
 			`kgm²/As³`: `V`,
 			`kgm/s²`: `N`,
-			`kgm²/s²`: `Nm`,
+			`kgm²/s²`: `N m`, // BUG how to handle joules?
 			`/s`: `Hz`,
 		];
 	}
@@ -447,14 +447,20 @@ public {/*force}*/
 			return scalar * kilogram*meter/second/second;
 		}
 }
-public {/*torque/moment}*/
+public {/*energy}*/
+	alias Joules = ReturnType!joule;
+	alias joules = joule;
+
+	auto joule (Scalar scalar = 1)
+		{/*...}*/
+			return scalar * newton*meters;
+		}
+}
+public {/*torque}*/
 	alias NewtonMeters = ReturnType!newton_meter;
 	alias newton_meters = newton_meter;
 
-	auto newton_meter (Scalar scalar = 1)
-		{/*...}*/
-			return scalar * newton*meter;
-		}
+	alias newton_meter = joule;
 }
 public {/*frequency}*/
 	alias Hertz = ReturnType!hertz;

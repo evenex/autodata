@@ -133,7 +133,7 @@ struct Unicode
 							`crosshair`	:'✛',
 						];
 					}
-					all = chain (ascii, arrow.byValue, symbol.byValue).array;
+					all = chain (ascii, arrow.byValue, symbol.byValue).array; // REVIEW
 				}
 			@disable this();
 		}
