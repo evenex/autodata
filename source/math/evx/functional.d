@@ -1,44 +1,21 @@
 module evx.functional;
 
-private {/*import std}*/
-	import std.range:
-		front, popFront, empty, back, popBack, put,
-		isInputRange, isForwardRange, isBidirectionalRange, isOutputRange, hasLength,
-		ElementType;
-		
-	import std.conv:
-		text;
-
-	import std.typetuple:
-		staticMap,
-		allSatisfy;
-
-	import std.typecons:
-		Tuple;
-
-	import std.traits:
-		isNumeric, isFloatingPoint, isIntegral, isUnsigned,
-		Unqual, CommonType, ReturnType;
-}
-private {/*import evx}*/
-	import evx.meta:
-		IndexTypes, DollarType;
-
-	import evx.logic:
-		not;
-
-	import evx.algebra:
-		unity;
-
-	import evx.analysis:
-		is_continuous, is_continuous_range, 
-		between, interval;
-
-	import evx.traits:
-		is_indexable, is_sliceable,
-		is_binary_function;
-
-	import evx.utils;
+private {/*imports}*/
+	private {/*std}*/
+		import std.range;
+		import std.conv;
+		import std.typetuple;
+		import std.typecons;
+		import std.traits;
+	}
+	private {/*evx}*/
+		import evx.meta;
+		import evx.logic;
+		import evx.algebra;
+		import evx.analysis;
+		import evx.traits;
+		import evx.utils;
+	}
 }
 
 /* aliasable template lambda function 
@@ -480,7 +457,7 @@ public {/*sequence}*/
 						assert (i != infinity);
 					}
 					body {/*...}*/
-						//T (func (initial, i + start)); // TODO UCS
+						//T (func (initial, i + start)); // XXX UCS
 						return cast(T) func (initial, i + start);
 					}
 

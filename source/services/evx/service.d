@@ -1,15 +1,22 @@
 module evx.service;
 
-// REFACTOR imports
-import core.thread;
-import core.sync.condition;
-import std.concurrency;
-import std.typecons: Tuple, tuple;
-import std.traits;
-
-import evx.utils;
-import evx.meta;
-import evx.math;
+private {/*imports}*/
+	private {/*core}*/
+		import core.thread;
+		import core.sync.condition;
+	}
+	private {/*std}*/
+		import std.concurrency;
+		import std.typecons;
+		import std.traits;
+		import std.conv;
+	}
+	private {/*evx}*/
+		import evx.utils;
+		import evx.meta;
+		import evx.math;
+	}
+}
 
 public {/*traits}*/
 	const bool is_service (T) ()
@@ -111,6 +118,7 @@ abstract class Service
 		final {/*communication}*/
 			final {/*transmit}*/
 				void send (T...) (T message) const
+					if (not(is(T == TypeTuple!bool)))
 					{/*...}*/
 						version (VERBOSE) {/*...}*/
 							static if (T.length == 1)
@@ -128,39 +136,28 @@ abstract class Service
 							emit (this.base_info, "→ "~T.stringof~" {"~msg~"}");
 						}
 
-						static if (is (T == Stop) || is (T == bool)) // TODO bool => anything of size 1.. maybe even reject bool outright or warn on its use?
+						static if (is (T == Stop))
 							(cast()thread).prioritySend (message);
 						else (cast()thread).send (message);
 					}
 				shared void reply (T...) (T message)
+					if (not(is(T == TypeTuple!bool)))
 					{/*...}*/
 						version (VERBOSE) {/*...}*/
 							emit (thread_info, "← "~T.stringof~" {"~to!string(message)~"}");
 						}
 
-						static if (is (T == bool))
-							ownerTid.prioritySend (message);
-						else ownerTid.send (message);
+						ownerTid.send (message);
 					}
 			}
 			static {/*receive}*/
 				void receive (Ops...)(Ops ops)
 					{/*...}*/
-						void receive ()
-							{std.concurrency.receive ((Stop signal){}, ops);}
-
-						debug try receive;
-							catch (Exception ex) assert (0, ex.msg);
-						else receive;
+						std.concurrency.receive ((Stop signal){}, ops);
 					}
-				bool received_before (Ops...) (Duration timeout, Ops ops)
+				bool received_before (Ops...) (Seconds timeout, Ops ops)
 					{/*...}*/
-						auto received () 
-							{return std.concurrency.receiveTimeout (timeout, (Stop signal){}, ops);}
-
-						debug try return received;
-							catch (Exception ex) assert (0, ex.msg);
-						else return received;
+						return evx.utils.received_before (timeout, (Stop signal){}, ops);
 					}
 			}
 		}

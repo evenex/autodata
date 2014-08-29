@@ -1,32 +1,16 @@
 module evx.dsp;
 
-private {/*import std}*/
-	import std.traits:
-		isFloatingPoint,
-		isSomeFunction, ReturnType, ParameterTypeTuple,
-		isBuiltinType, RepresentationTypeTuple;
-
-	import std.typetuple:
-		allSatisfy;
-
-	import std.functional:
-		toDelegate;
-
-	import std.conv:
-		to;
-}
-private {/*import evx}*/
-	import evx.logic: 
-		not;
-
-	import evx.traits: 
-		supports_arithmetic;
-
-	import evx.algebra:
-		zero, unity;
-
-	import evx.analysis:
-		between, interval, is_continuous, is_continuous_range;
+private {/*imports}*/
+	private {/*std}*/
+		import std.traits;
+		import std.typetuple;
+		import std.functional;
+		import std.conv;
+	}
+	private {/*evx}*/
+		import evx.traits; 
+		import evx.math;
+	}
 }
 
 struct Stream (Sample, Index)
@@ -250,119 +234,5 @@ struct Sampler (Stream)
 		}
 		private {/*error message}*/
 			enum no_sampling_frequency_error = `for floating-point samplers, sampling frequency must be set with "sampler.at (f)" before use`;
-		}
-	}
-
-enum Method
-	{/*interpolation}*/
-		repeat
-	}
-
-struct Interpolated (R, Method method)
-//struct Interpolated (R, alias stencil) // TODO stencil-based interpolation
-//	if (is_indexable!R && ParameterTypeTuple!stencil.length.is_odd) 
-	{/*...}*/
-	//	alias Stencil = ParameterTypeTuple!stencil;
-	//	static assert (allSatisfy!(is_type_of!(Stencil[0]), Stencil));
-
-		R range;
-
-		const size_t dilation_factor;
-		size_t remaining_front;
-		size_t remaining_back;
-
-		void popFront ()
-			{/*...}*/
-				if (not (--remaining_front))
-					{/*...}*/
-						range.popFront;
-						remaining_front = dilation_factor;
-					}
-			}
-		void popBack ()
-			{/*...}*/
-				if (not (--remaining_back))
-					{/*...}*/
-						range.popBack;
-						remaining_back = dilation_factor;
-					}
-			}
-		const length ()
-			{/*...}*/
-				return range.length * dilation_factor;
-			}
-		static if (not(is_continuous_range!R))
-			{/*[┅]}*/
-				auto opSlice ()
-					{/*...}*/
-						return Interpolated (range, dilation_factor);
-					}
-
-				auto opSlice (R.Index i, R.Index j)
-					{/*...}*/
-						return Interpolated (range[i/s..j/s], (s), (s - i % s), (s - j % s));
-					}
-
-				auto opIndex (R.Index i)
-					{/*...}*/
-						return range[i/s];
-					}
-
-				private @property s ()
-					{/*...}*/
-						return dilation_factor.to!(R.Index);
-					}
-			}
-
-		alias range this;
-
-		this (R range, size_t dilation_factor)
-			{/*...}*/
-				this.dilation_factor = dilation_factor;
-				this.range = range;
-
-				remaining_front = dilation_factor;
-				remaining_back = dilation_factor;
-			}
-		this (R range, size_t dilation_factor, size_t remaining_front, size_t remaining_back)
-			{/*...}*/
-				this (range, dilation_factor);
-				this.remaining_front = remaining_front;
-				this.remaining_back = remaining_back;
-			}
-	}
-
-auto interpolate (Method method, S)(S signal, size_t dilation_factor) // REVIEW turns out this is unnecessary due to the way continuous ranges are traversed... repeated interpolation is default when a lower-frequency sampler is traversed in lockstep with a higher-frequency sampler
-	in {/*...}*/
-		assert (dilation_factor > 0, `signal interpolation requires positive dilation factor`);
-	}
-	body {/*...}*/
-		static if (method is Method.repeat)
-			return Interpolated!(S, method)(signal, dilation_factor);
-	}
-	unittest {/*...}*/
-		import std.range: equal;
-
-		auto z = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-
-		{/*discrete stream}*/
-			auto x = stream_from ((size_t x) => z[x], () => z.length)[].interpolate!(Method.repeat)(4); // interpolation metafunction?
-
-			assert (x.length == 12*4);
-
-			assert (x[0..16].length == 16);
-			assert (x[0..16].equal ([0,0,0,0, 1,1,1,1, 2,2,2,2, 3,3,3,3]));
-		}
-		{/*continuous stream}*/
-			import std.math: floor;
-
-			auto y = stream_from ((double x) => z[x.floor.to!size_t], ()=> 8.0).at (()=> 4.0)[].interpolate!(Method.repeat)(4);
-
-			assert (y.length == 8*4*4);
-			assert (y.measure == 8);
-
-			assert (y[0..4].length == 16);
-			assert (y[0..4].measure == 4);
-			assert (y[0..4].equal ([0,0,0,0, 1,1,1,1, 2,2,2,2, 3,3,3,3]));
 		}
 	}

@@ -1,38 +1,20 @@
 module evx.arithmetic;
 
-private {/*import std}*/
-	import std.traits:
-		isNumeric, isIntegral,
-		FieldTypeTuple;
-	
-	import std.range:
-		isInputRange;
-
-	import std.typetuple:
-		anySatisfy,
-		staticMap;
-
-	import std.typecons:
-		Tuple;
-
-	import std.conv:
-		to;
-
-	import std.numeric:
-		gcd;
-}
-private {/*import evx}*/
-	import evx.utils:
-		τ;
-
-	import evx.logic:
-		not;
-
-	import evx.functional:
-		map, reduce;
-
-	import evx.traits:
-		is_numerical_param, is_tuple;
+private {/*imports}*/
+	private {/*std}*/
+		import std.traits;
+		import std.range;
+		import std.typetuple;
+		import std.typecons;
+		import std.conv;
+		import std.numeric;
+	}
+	private {/*evx}*/
+		import evx.utils;
+		import evx.logic;
+		import evx.functional;
+		import evx.traits;
+	}
 }
 
 nothrow:

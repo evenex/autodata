@@ -1,9 +1,14 @@
 module evx.colors;
 
-import std.math;
-// REFACTOR imports
-import evx.utils;
-import evx.math;
+private {/*imports}*/
+	private {/*std}*/
+		import std.math;
+	}
+	private {/*evx}*/
+		import evx.utils;
+		import evx.math;
+	}
+}
 
 public enum {/*Color palette}*/
 	/* mono */
@@ -23,6 +28,7 @@ public enum {/*Color palette}*/
 	purple 	= blue*magenta,
 	brown	= orange*black,
 }
+
 struct Color
 	{/*...}*/
 		pure nothrow:

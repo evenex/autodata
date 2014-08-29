@@ -1,48 +1,28 @@
 module evx.analysis;
 
-private {/*import std}*/
-	import std.algorithm: 
-		min, max;
+private {/*imports}*/
+	private {/*std}*/
+		import std.algorithm; 
+		import std.math; 
+		import std.typetuple; 
+		import std.traits; 
+		import std.range;
+		import std.conv;
+	}
+	private {/*evx}*/
+		import evx.functional;
+		import evx.logic;
+		import evx.algebra;
+		import evx.arithmetic;
+		import evx.ordinal;
+		import evx.traits;
+		import evx.meta;
+		import evx.functional;
+	}
 
-	import std.math: 
-		abs, round;
-
-	import std.typetuple: 
-		allSatisfy, anySatisfy,
-		staticMap;
-
-	import std.traits: 
-		isNumeric, hasMember, isCallable, isFloatingPoint,
-		CommonType, RepresentationTypeTuple;
-
-	import std.range:
-		isInputRange, isForwardRange, hasLength,
-		ElementType;
-
-	import std.conv:
-		to, text;
-}
-private {/*import evx}*/
-	import evx.functional:
-		map, zip;
-
-	import evx.logic:
-		not, And, Or, Not;
-
-	import evx.algebra:
-		zero, identity_element;
-
-	import evx.arithmetic:
-		Σ;
-
-	import evx.ordinal:
-		ℕ;
-
-	import evx.traits:
-		is_indexable, is_comparable, supports_arithmetic;
-
-	import evx.meta:
-		IndexTypes;
+	alias zip = evx.functional.zip;
+	alias map = evx.functional.map;
+	alias reduce = evx.functional.reduce;
 }
 
 template infinite (T)
@@ -347,7 +327,9 @@ public {/*calculus}*/
 	bool is_infinite (T)(T value)
 		if (not(is(T == Interval!U, U)))
 		{/*...}*/
-			return value.abs == infinite!T;
+			static if (__traits(compiles, infinite!T))
+				return value.abs == infinite!T;
+			else return false;
 		}
 	bool is_finite (T)(T value)
 		{/*...}*/
@@ -465,8 +447,8 @@ public {/*normalization}*/
 		{/*...}*/
 			invariant ()
 				{/*...}*/
-					import evx.meta: 
-						has_attribute;
+					import std.conv;
+					import evx.traits;
 
 					alias This = typeof(this);
 

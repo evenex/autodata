@@ -1,44 +1,34 @@
 module evx.utils;
 
-private {/*import std}*/
-	import std.typecons:
-		Tuple, tuple;
-
-	import std.typetuple:
-		ReplaceAll;
-
-	import std.string:
-		toStringz;
-
-	import std.traits:
-		isSomeString;
-
-	import std.range:
-		repeat;
-
-	import std.datetime:
-		Clock, SysTime;
-
-	import std.stdio:
-		stderr;
-
-	import std.concurrency:
-		Tid, thisTid;
-
-	import std.conv:
-		text;
-}
-private {/*import evx}*/
-	import evx.meta:
-		CompareBy;
-
-	import evx.math:
-		zero, Interval;
-}
-
-pure nothrow:
-
 debug = profiler;
+
+private {/*imports}*/
+	private {/*std}*/
+		import std.typecons;
+		import std.typetuple;
+		import std.string;
+		import std.traits;
+		import std.range;
+		import std.datetime;
+		import std.stdio;
+		import std.concurrency;
+		import std.conv;
+	}
+	private {/*evx}*/
+		import evx.meta;
+		import evx.math;
+	}
+
+	alias Interval = evx.analysis.Interval;
+}
+
+public {/*concurrency}*/
+	auto received_before (Ops...)(Seconds limit, Ops ops)
+		{/*...}*/
+			return receiveTimeout (limit.to_duration, ops);
+		}
+}
+pure nothrow:
 public {/*C compatibility}*/
 	/* forward a set of arguments, converting strings into null-terminated c-strings
 	*/
@@ -124,7 +114,26 @@ public debug {/*}*/
 			catch (Exception) assert (0);
 		}
 }
-debug (profiler) {/*...}*/
+public {/*UDA tags}*/
+	/* for non-const sections or members in a series of consts 
+		will not override const label (const:)
+	*/
+	enum vary;
+
+	/* for non-pure sections or functions in a series of pures 
+		will not override pure label (pure:)
+	*/
+	enum imp;
+}
+public {/*tuples}*/
+	alias τ = tuple;
+	template Aⁿ (T...) {alias Aⁿ = T;}
+}
+public {/*indices}*/
+	alias Index = size_t;
+	alias Indices = Interval!Index;
+}
+debug (profiler) {/*}*/
 	/* write information about the thread environment to the output 
 		and time program execution through checkpoints */
 	struct Profiler
@@ -222,23 +231,4 @@ debug (profiler) {/*...}*/
 	private {/*formatting}*/
 		debug static uint indent = 0;
 	}
-}
-public {/*UDA tags}*/
-	/* for non-const sections or members in a series of consts 
-		will not override const label (const:)
-	*/
-	enum vary;
-
-	/* for non-pure sections or functions in a series of pures 
-		will not override pure label (pure:)
-	*/
-	enum imp;
-}
-public {/*tuples}*/
-	alias τ = tuple;
-	template Aⁿ (T...) {alias Aⁿ = T;}
-}
-public {/*indices}*/
-	alias Index = size_t;
-	alias Indices = Interval!Index;
 }

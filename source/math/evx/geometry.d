@@ -1,59 +1,35 @@
 module evx.geometry;
 
-private {/*import std}*/
-	import std.algorithm: 
-		copy, min, max,
-		canFind, countUntil,
-		setIntersection;
+private {/*imports}*/
+	private {/*std}*/
+		import std.algorithm; 
+		import std.traits; 
+		import std.typetuple;
+		import std.conv;
+		import std.range;
+		import std.math;
+	}
+	private {/*import evx}*/
+		import evx.utils; 
+		import evx.traits; 
+		import evx.range;
+		import evx.meta;
 
-	import std.traits: 
-		isFloatingPoint, isIntegral, isUnsigned,
-		Unqual, EnumMembers;
+		import evx.algebra;
+		import evx.constants;
+		import evx.functional;
+		import evx.logic; 
+		import evx.ordinal;
+		import evx.arithmetic; 
+		import evx.analysis; 
+		import evx.statistics; 
+		import evx.vectors;
+		import evx.units;
+	}
 
-	import std.typetuple:
-		allSatisfy;
-
-	import std.conv:
-		to, text;
-
-	import std.range:
-		repeat,
-		isInputRange,
-		ElementType;
-
-	import std.math:
-		atan2, SQRT2;
-}
-private {/*import evx}*/
-	import evx.utils: 
-		τ, vary, Aⁿ;
-
-	import evx.traits: 
-		is_sliceable, is_type_of;
-
-	import evx.range:
-		adjacent_pairs;
-
-	import evx.meta:
-		ArrayInterface;
-
-	import evx.functional:
-		map, zip, reduce;
-
-	import evx.logic: 
-		not;
-
-	import evx.ordinal:
-		ℕ;
-
-	import evx.arithmetic: 
-		Σ;
-
-	import evx.statistics: 
-		mean;
-
-	import evx.vectors;
-	import evx.units;
+	alias map = evx.functional.map;
+	alias zip = evx.functional.zip;
+	alias reduce = evx.functional.reduce;
 }
 
 pure nothrow:
@@ -67,20 +43,19 @@ public {/*traits}*/
 
 	/* test if a type can be used as a vector 
 	*/
-	bool is_vector (T)()
+	template is_vector (T)
 		{/*...}*/
 			const T vector = T.init;
 
 			static if (is (T.is_basis_vector == enum))
-				return true;
-			else return __traits(compiles, 
+				enum is_vector = true;
+			else enum is_vector =  __traits(compiles, 
 				(-vector.x, -vector.y),
 				(+vector.x, +vector.y),
 
 				(vector.x + vector.y), 
 				(vector.x - vector.y),
 				(vector.x * vector.y),
-				(vector.x / vector.y)
 			);
 		}
 }
@@ -132,8 +107,7 @@ public {/*vectors}*/
 	alias vec  = Vector!(2, double);
 	alias fvec = Vector!(2, float);
 	alias ivec = Vector!(2, int);
-	alias uvec = Vector!(2, uint);
-	alias svec = Vector!(2, size_t); // REVIEW uvec = 2,size_t? is uint on 32, ulong on 64
+	alias uvec = Vector!(2, size_t);
 	alias rvec = Vector!(2, real);
 
 	/* rotate a vector 
@@ -253,11 +227,11 @@ public {/*polygons}*/
 			auto known_area = 8.3593;
 			assert (irregular.area.approx (known_area));
 
-			assert (square (2.meters).area.approx (4.square_meters));
-			assert (circle!1000 (1.meter).area.approx (π.square_meters));
+			assert (square (2.meters).area.approx (4.squared!meters));
+			assert (circle!1000 (1.meter).area.approx (π.squared!meters));
 			assert (
 				irregular.map!(v => vector (v.x.meters, v.y.meters))
-				.area.approx (known_area.square_meters)
+				.area.approx (known_area.squared!meters)
 			);
 		}
 
@@ -559,6 +533,7 @@ public {/*axis-aligned bounding boxes}*/
 			assert (box.width.approx (0.1));
 			assert (box.height.approx (200));
 		}
+	alias BoundingBox = Box!double;
 
 	/* compute the bounding box of a polygon 
 	*/

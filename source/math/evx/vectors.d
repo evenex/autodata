@@ -1,63 +1,38 @@
 module evx.vectors;
 
-private {/*import std}*/
-	import std.traits: 
-		isFloatingPoint,
-		isImplicitlyConvertible, isStaticArray,
-		Unqual, FieldTypeTuple, CommonType;
+private {/*imports}*/
+	private {/*std}*/
+		import std.algorithm; 
+		import std.traits; 
+		import std.typecons;
+		import std.typetuple;
+		import std.range;
+		import std.math; 
+		import std.conv;
+	}
+	private {/*evx}*/
+		import evx.utils; 
+		import evx.traits; 
+		import evx.logic; 
+		import evx.meta;
+		import evx.constants; 
+		import evx.analysis; 
+		import evx.algebra; 
+		import evx.arithmetic; 
+		import evx.functional; 
+	}
 
-	import std.typecons:
-		Tuple;
-
-	import std.typetuple:
-		allSatisfy;
-
-	import std.range:
-		front, popFront, empty, equal,
-		repeat, only,
-		isInputRange,
-		ElementType;
-
-	import std.math: 
-		cos, sin, abs, sqrt, pow, floor, ceil,
-		isFinite;
-}
-private {/*import evx}*/
-	import evx.utils: 
-		τ;
-
-	import evx.traits: 
-		is_sliceable,
-		supports_arithmetic;
-
-	import evx.logic: 
-		not;
-
-	import evx.meta:
-		ArrayInterface;
-
-	import evx.constants: 
-		π;
-
-	import evx.analysis: 
-		approx, standard_relative_tolerance;
-
-	import evx.algebra: 
-		zero, unity;
-
-	import evx.arithmetic: 
-		sum;
-
-	import evx.functional: 
-		map, zip, reduce;
+	alias zip = evx.functional.zip;
+	alias map = evx.functional.map;
+	alias reduce = evx.functional.reduce;
 }
 
-pure nothrow:
+pure:
 
 struct Vector (uint n, Component = double)
 	if (supports_arithmetic!Component && n > 1)
 	{/*...}*/
-		pure nothrow:
+		pure:
 		enum length = n;
 
 		public:
@@ -80,6 +55,24 @@ struct Vector (uint n, Component = double)
 			alias b = z;	alias p = z;
 			alias a = w;	alias q = w;
 		}
+		public {/*swizzling}*/
+			auto swizzle (string components)()
+				{/*...}*/
+					static code ()
+						{/*...}*/
+							string code;
+
+							foreach (component; components)
+								code ~= q{this.} ~component.text~ `, `;
+
+							return code;
+						}
+
+					mixin(q{
+						return vector (} ~code[0..$-2]~ q{);
+					});
+				}
+		}
 		public {/*forwarding}*/
 			auto forward_to_components (string op, Args...)(Args args)
 				{/*...}*/
@@ -88,11 +81,21 @@ struct Vector (uint n, Component = double)
 						return vector!length (this[].map!(t => t.} ~op~ q{ (immutable_args)));
 					});
 				}
-
-			auto opDispatch (string op, Args...)(Args args)
-				if (not(is_vector_function!(op, Args)))
+		}
+		public {/*dispatch}*/
+			template opDispatch (string op)
 				{/*...}*/
-					return forward_to_components!op (args);
+					auto opDispatch (Args...)(Args args)
+						if (not(is_vector_function!(op, Args) || is_vector_swizzle!op))
+						{/*...}*/
+							return forward_to_components!op (args);
+						}
+
+					auto opDispatch ()()
+						if (is_vector_swizzle!op)
+						{/*...}*/
+							return swizzle!op;
+						}
 				}
 		}
 		public {/*operators}*/
@@ -249,6 +252,8 @@ struct Vector (uint n, Component = double)
 		private:
 		private {/*components}*/
 			Component[length] components;
+
+			enum ComponentGroup {xyzw, rgba, stpq, uv}
 		}
 		private {/*traits}*/
 			template is_vector_function (string func, Args...)
@@ -267,6 +272,24 @@ struct Vector (uint n, Component = double)
 						}
 					enum is_vector_function = __traits(compiles, over_vector (Args.init))
 						|| not(__traits(compiles, over_components (Args.init)));
+				}
+			public template is_vector_swizzle (string components) // BUG doesn't work if private... why?
+				{/*...}*/
+					static if (components.length > 1)
+						{/*...}*/
+							template in_group (ComponentGroup group)
+								{/*...}*/
+									static in_this_group (dchar c)
+										{/*...}*/
+											return group.text.canFind (c);
+										}
+
+									enum in_group = components.all!in_this_group;
+								}
+
+							enum is_vector_swizzle = anySatisfy!(in_group, EnumMembers!ComponentGroup);
+						}
+					else enum is_vector_swizzle = false;
 				}
 			template is_vectorwise_operable (string op, T)
 				{/*...}*/
@@ -432,6 +455,15 @@ struct Vector (uint n, Component = double)
 
 		v.b *= v.w;
 		assert (v.p == 12);
+	}
+	unittest {/*swizzling}*/
+		auto v = vector (1, 2, 3, 4);
+
+		assert (v.xy == vector (1, 2));
+		assert (v.xyz == vector (1, 2, 3));
+		assert (v.zyx == vector (3, 2, 1));
+		assert (v.xxx == vector (1, 1, 1));
+		assert (v.xyzzy == vector (1, 2, 3, 3, 2));
 	}
 	unittest {/*arithmetic operations}*/
 		// when constructed per-component, vectors take the common type of their arguments
@@ -607,13 +639,13 @@ struct Vector (uint n, Component = double)
 
 		auto b = 12.meters * a.unit;
 		assert (a.dot (b).approx (a.norm * b.norm));
-		assert (a.det (b).approx (0.square_meters));
+		assert (a.det (b).approx (0.squared!meters));
 		assert (a.proj (b).approx (a));
 		assert (a.rej (b).approx (Position (0.meters)));
 
 		auto c = a.rotate (π/2);
 		assert (c.approx (Position (-4.meters, 3.meters)));
-		assert (a.dot (c).approx (0.square_meters));
+		assert (a.dot (c).approx (0.squared!meters));
 		assert (a.det (c).approx (a.norm * c.norm));
 		assert (a.proj (c).approx (Position (0.meters)));
 		assert (a.rej (c).approx (a));
@@ -673,7 +705,7 @@ pure {/*unary functions}*/
 					alias T = ElementType!V;
 
 					static if (is (typeof(T.__ctor)))
-						return T (v[].map!(t => (t/unity!T)^^p).sum ^^ (1.0/p)); // TODO UNIFORM CONSTRUCTOR SYNTAX PLS
+						return T (v[].map!(t => (t/unity!T)^^p).sum ^^ (1.0/p)); // XXX UNIFORM CONSTRUCTOR SYNTAX PLS
 					else return cast(T) (v[].map!(t => abs (t/unity!T)^^p).sum ^^ (1.0/p));
 				}
 		}
@@ -686,7 +718,7 @@ pure {/*unary functions}*/
 
 			if (norm == zero!T)
 				return vector!(V.length) (zero!T / unity!T);
-			else return vector!(V.length) (v[].map!(t => t/norm)); // TODO UCS for static arrays?
+			else return vector!(V.length) (v[].map!(t => t/norm)); // XXX UCS for static arrays?
 		}
 }
 pure {/*binary functions}*/

@@ -1,11 +1,10 @@
 module evx.logic;
 
-private {/*import std}*/
-	import std.traits:
-		isSomeFunction;
-
-	import std.typetuple:
-		templateAnd, templateOr, templateNot;
+private {/*imports}*/
+	private {/*std}*/
+		import std.traits;
+		import std.typetuple;
+	}
 }
 
 pure nothrow:

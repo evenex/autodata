@@ -1,27 +1,20 @@
 module evx.statistics;
 
-private {/*import std}*/
-	import std.range:
-		hasLength,
-		ElementType;
+private {/*imports}*/
+	private {/*std}*/
+		import std.range;
+		import std.traits;
+		import std.math;
+	}
+	private {/*evx}*/
+		import evx.logic;
+		import evx.arithmetic;
+		import evx.functional;
+		import evx.vectors;
+	}
 
-	import std.traits:
-		isIntegral;
-
-	import std.math:
-		sqrt;
-}
-private {/*import evx}*/
-	import evx.logic:
-		not;
-
-	import evx.arithmetic:
-		sum, squared;
-
-	import evx.functional:
-		zip, map, sequence;
-
-	import evx.vectors;
+	alias map = evx.functional.map;
+	alias zip = evx.functional.zip;
 }
 
 nothrow:

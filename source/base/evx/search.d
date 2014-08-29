@@ -1,20 +1,15 @@
 module evx.search;
 
-import std.traits:
-	hasMember,
-	ParameterTypeTuple;
-
-import std.range:
-	empty,
-	hasLength, 
-	isSorted;
-
-import evx.traits:
-	is_comparison_function,
-	is_indexable;
-
-import evx.ordinal:
-	antisymmetrically_equivalent, less_than;
+private {/*imports}*/
+	private {/*std}*/
+		import std.traits;
+		import std.range;
+	}
+	private {/*evx}*/
+		import evx.traits;
+		import evx.ordinal;
+	}
+}
 
 pure nothrow:
 

@@ -1,17 +1,22 @@
 module evx.image;
 
-import std.conv;
-import std.stdio;
-import std.range;
-import std.algorithm;
-
-import derelict.opengl3.gl3;
-import evx.display;
-
-import evx.allocators;
-
-import evx.utils;
-import evx.math;
+private {/*imports}*/
+	private {/*std}*/
+		import std.conv;
+		import std.stdio;
+		import std.range;
+		import std.algorithm;
+	}
+	private {/*evx}*/
+		import evx.display;
+		import evx.allocators;
+		import evx.utils;
+		import evx.math;
+	}
+	private {/*opengl}*/
+		import derelict.opengl3.gl3;
+	}
+}
 
 struct Pixel
 	{/*...}*/

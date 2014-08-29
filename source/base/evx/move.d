@@ -1,19 +1,14 @@
 module evx.move;
 
-private {/*import std}*/
-	import std.typetuple:
-		allSatisfy;
-
-	import std.range:
-		front, popFront, empty,
-		isInputRange, hasLength;
-}
-private {/*import evx}*/
-	import evx.traits:
-		is_indexable;
-
-	import evx.arrays:
-		is_dynamic_array;
+private {/*imports}*/
+	private {/*std}*/
+		import std.typetuple;
+		import std.range;
+	}
+	private {/*evx}*/
+		import evx.traits;
+		import evx.arrays;
+	}
 }
 
 /* move all elements in a range (starting at index) up by one position 

@@ -1,16 +1,25 @@
 module evx.buffers;
 
-import std.range;
-import std.traits;
-import std.typetuple;
-import std.conv: to, text;
-
-import evx.utils;
-import evx.meta;
-
-import evx.allocators;
-		import std.datetime: nsecs;
-		import core.thread: Thread, sleep;
+private {/*imports}*/
+	private {/*core}*/
+		import core.atomic;
+		import core.thread;
+	}
+	private {/*std}*/
+		import std.datetime;
+		import std.range;
+		import std.traits;
+		import std.typetuple;
+		import std.conv;
+	}
+	private {/*evx}*/
+		import evx.utils;
+		import evx.meta;
+		import evx.logic;
+		import evx.allocators;
+		import evx.traits;
+	}
+}
 
 
 /* Buffers
@@ -37,13 +46,16 @@ Because of the nondeterministic nature of the GC, Invalid Memory
 */
 template DoubleBuffer (T, uint size)
 	{/*...}*/
-		final class DoubleBuffer // TODO struct
+		final class DoubleBuffer
 			{/*...}*/
 				public: 
 				shared {/*swap}*/
 					void swap ()
 						{/*...}*/
-							(cast()this).buffer[++write_index %= 2].clear;
+							atomicOp!`+=` (write_index, 1);
+							atomicOp!`%=` (write_index, 2);
+
+							(cast()this).buffer[write_index].clear;
 						}
 				}
 				shared {/*append}*/
@@ -116,15 +128,19 @@ template TripleBuffer (T, uint size, uint poll_frequency = 4_000)
 						{/*...}*/
 							while ((write_index + 2) % 3 != read_index)
 								Thread.sleep (wait_period);
-							(cast()buffer[++write_index %= 3]).clear; // REVIEW
+
+							atomicOp!`+=` (write_index, 1);
+							atomicOp!`%=` (write_index, 3);
+
+							(cast()buffer[write_index]).clear;
 						}
 					void reader_swap ()
 						{/*...}*/
 							while ((write_index + 1) % 3 != read_index)
 								Thread.sleep (wait_period);
-							++read_index %= 3; // REVIEW Deprecation: Read-modify-write operations are not allowed for shared variables. Use core.atomic.atomicOp!"+="(this.read_index, 1) instead.
-							//core.atomic.atomicOp!"+="(this.read_index, 1);
-							//core.atomic.atomicOp!"%="(this.read_index, 3);
+
+							atomicOp!`+=` (read_index, 1);
+							atomicOp!`%=` (read_index, 3);
 						}
 				}
 				shared {/*append}*/
@@ -160,7 +176,7 @@ template TripleBuffer (T, uint size, uint poll_frequency = 4_000)
 				shared {/*ctor}*/
 					this ()
 						{/*...}*/
-							auto memory = new Allocator!T (size*3); // REVIEW allocator can't be manually deleted now... buffers will probably last all program, but still...
+							auto memory = new Allocator!T (size*3);
 
 							cast()buffer[0] = memory.allocate (size);
 							cast()buffer[1] = memory.allocate (size);

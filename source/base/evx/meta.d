@@ -1,42 +1,21 @@
 module evx.meta;
 
-private {/*import std}*/
-	import std.traits:
-		isIterable, isAssignable, isMutable, isBuiltinType,
-		isFunctionPointer, functionLinkage, ParameterTypeTuple,
-		hasMember,
-		Unqual;
-			
-
-	import std.typetuple:
-		allSatisfy, anySatisfy,
-		TypeTuple,
-		staticMap, staticIndexOf, Filter;
-
-	import std.typecons:
-		Tuple;
-
-	import std.range:
-		empty,
-		array;
-
-	import std.conv:
-		text;
-}
-private {/*import evx}*/
-	import evx.logic:
-		not, And, Or, Not;
-
-	import evx.utils:
-		imp;
-
-	import evx.traits:
-		is_type, is_string_param, is_numerical_param, is_alias,
-		is_indexable, is_sliceable,
-		has_attribute, is_accessible;
+private {/*imports}*/
+	private {/*std}*/
+		import std.traits;
+		import std.typetuple;
+		import std.typecons;
+		import std.range;
+		import std.conv;
+	}
+	private {/*evx}*/
+		import evx.logic;
+		import evx.utils;
+		import evx.traits;
+	}
 }
 
-pure nothrow:
+pure:
 public {/*forwarding}*/
 	/* forward opApply (foreach) 
 	*/
@@ -407,7 +386,7 @@ public {/*initialization}*/
 				}
 			debug static struct Test
 				{/*...}*/
-					pure nothrow:
+					pure:
 
 					extern (C) int function (GSLVector* a, const GSLVector* b) gsl_vector_add;
 
@@ -643,7 +622,7 @@ public {/*construction}*/
 					{/*...}*/
 						return this[0..$] = that;
 					}
-				auto opSliceOpAssign (string op, U)(auto ref U that, size_t i, size_t j) // REVIEW
+				auto opSliceOpAssign (string op, U)(auto ref U that, size_t i, size_t j)
 					in {/*...}*/
 						import std.range: hasLength;
 
@@ -670,7 +649,7 @@ public {/*construction}*/
 									X.front } ~op~ q{= that.front;
 								});
 					}
-				auto opSliceOpAssign (string op, U)(auto ref U that) // REVIEW
+				auto opSliceOpAssign (string op, U)(auto ref U that)
 					{/*...}*/
 						mixin(q{
 							return this[0..$] } ~op~ q{= that;

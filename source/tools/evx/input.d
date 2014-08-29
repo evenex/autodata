@@ -1,16 +1,24 @@
 module tools.input;
 
-// REFACTOR imports
-import std.datetime;
-import std.exception;
-import evx.utils;
-import evx.math;
-import evx.display;
-import evx.buffers;
-import derelict.glfw3.glfw3;
+private {/*imports}*/
+	private {/*std}*/
+		import std.datetime;
+		import std.exception;
+	}
+	private {/*evx}*/
+		import evx.utils;
+		import evx.math;
+		import evx.display;
+		import evx.buffers;
+	}
+	private {/*glfw3}*/
+		import derelict.glfw3.glfw3;
+	}
+}
 
 final class Input
 	{/*...}*/
+		public:
 		public {/*interface}*/
 			void bind (T)(T input, void delegate(bool) action)
 				{/*...}*/
@@ -124,7 +132,9 @@ final class Input
 					display.access_rendering_context (
 						(){/*...}*/
 							auto window = glfwGetCurrentContext();
+
 							enforce (window !is null);
+
 							glfwSetInputMode (window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 							glfwSetKeyCallback (window, &key_callback);
 							glfwSetMouseButtonCallback (window, &button_callback);
@@ -141,6 +151,7 @@ final class Input
 					mouse_map.clear;
 				}
 		}
+
 		private:
 		private {/*events}*/
 			shared static DoubleBuffer!(Event, 2^^6) events;
@@ -207,26 +218,26 @@ final class Input
 					}
 				}
 		}
-		static:
+
+		static nothrow:
 		extern (C) {/*callbacks}*/
-			void key_callback (GLFWwindow*, int key, int scancode, int state, int mods) nothrow
+			void key_callback (GLFWwindow*, int key, int scancode, int state, int mods)
 				{/*...}*/
 					if (state == GLFW_REPEAT)
 						return;
-					try events ~= Event (key, cast(bool)state);
-					catch assert (0);
+
+					events ~= Event (key, cast(bool)state);
 				}
-			void button_callback (GLFWwindow*, int button, int state, int mods) nothrow
+			void button_callback (GLFWwindow*, int button, int state, int mods)
 				{/*...}*/
 					if (state == GLFW_REPEAT)
 						return;
-					try events ~= Event (button, cast(bool)state);
-					catch assert (0);
+
+					events ~= Event (button, cast(bool)state);
 				}
-			void pointer_callback (GLFWwindow*, double xpos, double ypos) nothrow
+			void pointer_callback (GLFWwindow*, double xpos, double ypos)
 				{/*...}*/
-					try mouse_pointer = vec(xpos, ypos).from_pixel_space.to_extended_space (active_display);
-					catch (Exception) assert (0); // REVIEW
+					mouse_pointer = vec(xpos, ypos).from_pixel_space.to_extended_space (active_display);
 
 					mouse_pointer.y *= -1;
 				}

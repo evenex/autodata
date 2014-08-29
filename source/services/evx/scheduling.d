@@ -1,24 +1,29 @@
 module evx.scheduling;
 
-// REFACTOR imports
-import std.datetime;
-import std.concurrency;
-import std.traits;
+private {/*imports}*/
+	private {/*std}*/
+		import std.datetime;
+		import std.concurrency;
+		import std.conv;
+		import std.traits;
+	}
+	private {/*evx}*/
+		import evx.service;
+		import evx.utils;
+		import evx.meta;
+		import evx.math;
+		import evx.arrays;
+	}
 
-import evx.service;
-
-import evx.utils;
-import evx.meta;
-import evx.math;
-import evx.arrays;
-
-alias seconds = std.datetime.seconds;
+	alias seconds = evx.units.seconds;
+}
 
 class Scheduler: Service
 	{/*...}*/
 		public:
 		public {/*services}*/
-			void enqueue (T = long) (Duration delay, T message = cast(T)0x0) if (is (T: long))
+			void enqueue (T = long) (Seconds delay, T message = cast(T)0x0) 
+				if (is (T: long))
 				in {/*...}*/
 					assert (this.is_running, "cannot enqueue event before Scheduler has started"); 
 				}
@@ -37,6 +42,7 @@ class Scheduler: Service
 					long message;
 				}
 		}
+
 		protected:
 		@Service shared override {/*interface}*/
 			bool initialize ()
@@ -50,7 +56,7 @@ class Scheduler: Service
 				}
 			bool listen ()
 				{/*...}*/
-					void new_event (Tid tid, Duration delay, long message)
+					void new_event (Tid tid, Seconds delay, long message)
 						{/*...}*/
 							schedule.add (Schedule.Event (tid, delay, message));
 						}
@@ -75,6 +81,7 @@ class Scheduler: Service
 					return "scheduler";
 				}
 		}
+
 		private:
 		private {/*schedule}*/
 			Schedule schedule;
@@ -105,11 +112,11 @@ class Scheduler: Service
 									SysTime time;
 									long message;
 								}
-								private {/*☀}*/
-									this (Tid tid, Duration delay, long message)
+								private {/*ctor}*/
+									this (Tid tid, Seconds delay, long message)
 										{/*...}*/
 											this.tid = tid;
-											this.time = Clock.currTime + delay;
+											this.time = Clock.currTime + delay.to_duration;
 											this.message = message;
 										}
 								}
@@ -134,17 +141,19 @@ class Scheduler: Service
 							}
 					}
 					shared {/*properties}*/
-						@property Duration lead_time () const
+						@property Seconds lead_time () const
 							{/*...}*/ 
-								auto time = (cast(Queue)queue).front.time - Clock.currTime;
+								auto time = ((cast(Queue)queue).front.time - Clock.currTime).to_evx_time;
 
 								debug if (time < 0.seconds) 
 									{/*...}*/
 										import std.stdio;
-										stderr.writeln (`warning: an event was `~to!string(-time)~` late!`);
+
+										stderr.writeln (`warning: an event was ` ~(-time).text~ ` late!`);
+
 										stderr.flush;
 									}
-								return time < 0.msecs? 0.msecs: time;
+								return time < 0.seconds? 0.seconds: time;
 							}
 
 						pure @property bool empty () const
@@ -169,12 +178,12 @@ class Scheduler: Service
 							alias receive = std.concurrency.receive;
 							int result;
 							S.start ();
-							S.enqueue (1.msecs, 0x1);
-							S.enqueue (2.msecs, 0x2);
+							S.enqueue (1.milliseconds, 0x1);
+							S.enqueue (2.milliseconds, 0x2);
 							receive ((Notification x) {assert (x == 0x1);});
 							receive ((Notification x) {assert (x == 0x2);});
-							S.enqueue (2.msecs, 0x2);
-							S.enqueue (1.msecs, 0x1);
+							S.enqueue (2.milliseconds, 0x2);
+							S.enqueue (1.milliseconds, 0x1);
 							receive ((Notification x) {assert (x == 0x1);});
 							receive ((Notification x) {assert (x == 0x2);});
 							S.stop ();
@@ -182,29 +191,29 @@ class Scheduler: Service
 				}
 		}
 		{/*parallel}*/
-			auto ALL = new Scheduler [10];
-			auto LEFT  = ALL[0..$/2];
-			auto RIGHT = ALL[$/2..$];
+			auto all = new Scheduler [10];
+			auto left  = all[0..$/2];
+			auto right = all[$/2..$];
 
-			foreach (i, ref s; ALL)   	s = new Scheduler;
-			foreach (i, ref s; ALL)   	s.start ();
-			foreach (i, ref s; ALL)   	s.enqueue (2*(1+i).msecs, i);
-			foreach (i, ref s; ALL)  	receive ((Notification x) {assert (x == i);});
-			foreach (i, ref s; RIGHT)	s.stop ();
-			foreach (i, ref s; LEFT)  	s.enqueue (2*(1+i).msecs, i);
-			foreach (i, ref s; LEFT)  	receive ((Notification x) {assert (x == i);});
-			foreach (i, ref s; LEFT)  	s.stop ();
-			foreach (i, ref s; RIGHT) 	s.start ();
-			foreach (i, ref s; RIGHT) 	s.enqueue (2*(1+i).msecs, i);
-			foreach (i, ref s; RIGHT) 	receive ((Notification x) {assert (x == i);});
-			foreach (i, ref s; ALL)   	s.start ();
-			foreach (i, ref s; ALL) 	s.enqueue (2*(1+i).msecs, i);
-			foreach (i, ref s; ALL)  	receive ((Notification x) {assert (x == i);});
-			foreach (i, ref s; ALL)		s.stop ();
+			foreach (i, ref s; all)   	s = new Scheduler;
+			foreach (i, ref s; all)   	s.start ();
+			foreach (i, ref s; all)   	s.enqueue (2*(1+i).milliseconds, i);
+			foreach (i, ref s; all)  	receive ((Notification x) {assert (x == i);});
+			foreach (i, ref s; right)	s.stop ();
+			foreach (i, ref s; left)  	s.enqueue (2*(1+i).milliseconds, i);
+			foreach (i, ref s; left)  	receive ((Notification x) {assert (x == i);});
+			foreach (i, ref s; left)  	s.stop ();
+			foreach (i, ref s; right) 	s.start ();
+			foreach (i, ref s; right) 	s.enqueue (2*(1+i).milliseconds, i);
+			foreach (i, ref s; right) 	receive ((Notification x) {assert (x == i);});
+			foreach (i, ref s; all)   	s.start ();
+			foreach (i, ref s; all) 	s.enqueue (2*(1+i).milliseconds, i);
+			foreach (i, ref s; all)  	receive ((Notification x) {assert (x == i);});
+			foreach (i, ref s; all)		s.stop ();
 		}
 	}
 
-void sync_with (T) (T service, Scheduler scheduler, uint framerate) 
+void sync_with (T) (T service, Scheduler scheduler, Hertz framerate) 
 	if (is (T: Service))
 	in {/*...}*/
 		assert (service.is_running, "attempted to sync while "~T.stringof~" offline");
@@ -212,10 +221,10 @@ void sync_with (T) (T service, Scheduler scheduler, uint framerate)
 	body {/*...}*/
 		service.send (cast(shared)scheduler, framerate);
 
-		if (not (receiveTimeout (500.msecs, (bool confirmation){})))
-			assert (null, "no reply from service thread. is it listening for (shared Scheduler, uint)?");
+		if (not (received_before (500.milliseconds, (Synced confirmation){})))
+			assert (null, "no reply from service thread. is it listening for auto_sync?");
 	}
-void sync_with (T) (T service, shared Scheduler scheduler, uint framerate) // TODO Hertz
+void sync_with (T) (T service, shared Scheduler scheduler, Hertz framerate)
 	{/*^}*/
 		sync_with (service, cast(Scheduler)scheduler, framerate);
 	}
@@ -225,18 +234,30 @@ auto auto_sync (alias scheduler, alias action)()
 	{/*...}*/
 		void refresh_sync (Scheduler.Notification framerate)
 			{/*...}*/
-				(cast(Scheduler)scheduler).enqueue ((1000/framerate).msecs, framerate);
+				(cast(Scheduler)scheduler).enqueue (1/framerate.hertz, framerate);
+
 				action ();
 			}
-		void start_sync (shared Scheduler new_scheduler, uint framerate)
+
+		void start_sync (shared Scheduler new_scheduler, Hertz framerate)
 			in {/*...}*/
 				assert (new_scheduler !is null, "attempted to sync with offline scheduler");
 			}
 			body {/*...}*/
 				scheduler = cast(Scheduler)new_scheduler;
-				scheduler.enqueue ((1000/framerate).msecs, framerate);
-				Service.reply (true);
+
+				scheduler.enqueue (1/framerate, framerate.to_scalar.to!long);
+
+				Service.reply (Synced ());
+
 				action ();
 			}
-		return tuple (&start_sync, &refresh_sync);
+
+		return τ(&start_sync, &refresh_sync);
 	}
+
+private {/*sync primitives}*/
+	struct Synced {}
+}
+
+void main (){}

@@ -1,14 +1,11 @@
 module evx.combinatorics;
 
-private {/*import std}*/
-	import std.typetuple: 
-		allSatisfy;
-
-	import std.traits: 
-		isIntegral;
-
-	import std.functional:
-		memoize;
+private {/*imports}*/
+	private {/*std}*/
+		import std.typetuple; 
+		import std.traits; 
+		import std.functional;
+	}
 }
 
 pure nothrow:

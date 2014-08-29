@@ -1,24 +1,18 @@
 module evx.range;
 
-private {/*import std}*/
-	import std.typetuple:
-		allSatisfy;
+private {/*imports}*/
+	private {/*std}*/
+		import std.typetuple;
+		import std.range;
+	}
+	private {/*evx}*/
+		import evx.logic; 
+		import evx.traits;
+		import evx.math;
+	}
 
-	import std.range:
-		ElementType, isForwardRange, cycle;
-}
-private {/*import evx}*/
-	import evx.logic: 
-		And, Not, not;
-
-	import evx.traits:
-		is_indexable, is_comparable;
-
-	import evx.arithmetic:
-		sum;
-
-	import evx.functional:
-		map, zip;
+	alias map = evx.functional.map;
+	alias zip = evx.functional.zip;
 }
 
 pure nothrow:
@@ -80,7 +74,6 @@ struct Contigious (R)
 		@property {/*range}*/
 			const length ()
 				{/*...}*/
-					import math: sum;
 					return ranges.map!(r => r.length).sum;
 				}
 			auto ref front ()
@@ -157,11 +150,4 @@ auto adjacent_pairs (R)(R range)
 bool is_infinite (R)(R)
 	{/*...}*/
 		return false;
-	}
-
-/* psuedo-ForwardRange operator for arrays 
-*/
-auto save (T)(T[] array)
-	{/*...}*/
-		return array;
 	}

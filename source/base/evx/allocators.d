@@ -1,31 +1,21 @@
 module evx.allocators;
 
-private {/*import std}*/
-	import std.exception:
-		assertThrown;
+private {/*imports}*/
+	private {/*std}*/
+		import std.exception;
+		import std.range;
+		import std.conv;
+	}
+	private {/*evx}*/
+		import evx.search;
+		import evx.utils;
+		import evx.math;
+		import evx.arrays;
+		import evx.move;
+	}
 
-	import std.range:
-		repeat,
-		hasLength, isRandomAccessRange;
-}
-private {/*import evx}*/
-	import evx.search:
-		binary_search;
-
-	import evx.utils:
-		Index, Indices;
-
-	import evx.analysis:
-		interval,
-		starts_before_start;
-
-	import evx.ordinal:
-		ℕ;
-
-	import evx.functional:
-		map, zip;
-
-	import evx.arrays;
+	alias zip = evx.functional.zip;
+	alias map = evx.functional.map;
 }
 
 /* Resources 
@@ -177,14 +167,14 @@ struct Allocator (T, Id = Index)
 				}
 		}
 		public {/*ctor}*/
-			this (uint capacity = 2^^12)
+			this (size_t capacity = 2^^14, size_t max_resources = 2^^12)
 				{/*...}*/
 					pool = Array!T (capacity);
 
-					free_list = typeof(free_list) (100); // REVIEW
+					free_list = typeof(free_list) (max_resources);
 					free_list ~= Indices (0, capacity);
 
-					resources = typeof(resources) (100); // REVIEW
+					resources = typeof(resources) (max_resources);
 				}
 		}
 		private:
@@ -368,13 +358,7 @@ struct Allocator (T, Id = Index)
 							}
 					}
 					public {/*dtor}*/
-						static if (0)// is (ResourceHandle == shared)) // REVIEW
-							shared ~this ()
-								{/*...}*/
-									if (is_allocated)
-										allocator.free (id);
-								}
-						else ~this ()
+						~this ()
 							{/*...}*/
 								if (is_allocated)
 									allocator.free (id);

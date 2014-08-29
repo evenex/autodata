@@ -1,10 +1,10 @@
 module evx.probability;
 
-private {/*import std}*/
-	import std.mathspecial:
-		normalDistributionInverse;
-	import std.random:
-		uniform;
+private {/*imports}*/
+	private {/*std}*/
+		import std.mathspecial;
+		import std.random;
+	}
 }
 
 nothrow:

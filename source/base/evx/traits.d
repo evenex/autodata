@@ -1,22 +1,14 @@
 module evx.traits;
 
-private {/*import std}*/
-	import std.typetuple:
-		allSatisfy, anySatisfy,
-		TypeTuple;
-
-	import std.traits:
-		isSomeFunction, isSomeString,
-		hasMember,
-		ParameterTypeTuple, ReturnType,
-		Unqual;
-}
-private {/*import evx}*/
-	import evx.logic:
-		not, And;
-
-	import evx.utils:
-		τ;
+private {/*imports}*/
+	private {/*std}*/
+		import std.typetuple;
+		import std.traits;
+	}
+	private {/*evx}*/
+		import evx.logic;
+		import evx.utils;
+	}
 }
 
 public {/*type identification}*/

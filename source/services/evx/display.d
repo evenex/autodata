@@ -1,28 +1,40 @@
 module evx.display;
 
-import std.exception;
-import std.math;
-import std.traits;
-import std.range;
-import std.variant;
-import std.typetuple;
-import std.array;
+private {/*imports}*/
+	private {/*std}*/
+		import std.file;
+		import std.datetime;
+		import std.algorithm;
+		import std.concurrency;
+		import std.exception;
+		import std.math;
+		import std.traits;
+		import std.range;
+		import std.variant;
+		import std.typetuple;
+		import std.array;
+		import std.string;
+		import std.c.stdio;
+	}
+	private {/*evx}*/
+		import evx.utils;
+		import evx.colors;
+		import evx.math;
+		import evx.meta;
+		import evx.service;
+		import evx.scheduling;
+		import evx.buffers;
+	}
+	private {/*opengl}*/
+		import derelict.glfw3.glfw3;
+		import derelict.opengl3.gl3;
+	}
 
-// REFACTOR imports
-import evx.utils;
-import evx.colors;
-import evx.math;
-import evx.meta;
-
-alias reduce = evx.functional.reduce;
-alias map = evx.functional.map;
-alias zip = evx.functional.zip;
-
-import evx.service;
-import evx.scheduling;
-
-import evx.buffers;
-
+	alias reduce = evx.functional.reduce;
+	alias map = evx.functional.map;
+	alias zip = evx.functional.zip;
+	alias seconds = evx.units.seconds;
+}
 
 alias TextureId = GLuint;
 
@@ -33,6 +45,13 @@ enum GeometryMode
 		lines 	= derelict.opengl3.gl3.GL_LINES,
 		l_strip = derelict.opengl3.gl3.GL_LINE_STRIP,
 		l_loop 	= derelict.opengl3.gl3.GL_LINE_LOOP
+	}
+
+enum PixelFormat
+	{/*...}*/
+		rgb = GL_RGB,
+		bgr = GL_BGR,
+		unsigned_byte = GL_UNSIGNED_BYTE,
 	}
 
 nothrow {/*coordinate transformations}*/
@@ -74,10 +93,10 @@ nothrow {/*coordinate transformations}*/
 							case draw:
 								return coords.value;
 							case extended:
-								with (display.dimensions) {/*...}*/
+								{/*...}*/
 									auto min = display.dimensions[].reduce!min;
 
-									return coords.value*vec(min/x, min/y);
+									return coords.value * (min.vec / display.dimensions);
 								}
 							case pixel:
 								return 2*coords.value/display.dimensions - 1;
@@ -88,10 +107,10 @@ nothrow {/*coordinate transformations}*/
 					with (Display.Space) final switch (coords.space)
 						{/*...}*/
 							case draw:
-								with (display.dimensions) {/*...}*/
+								{/*...}*/
 									auto min = display.dimensions[].reduce!min;
 
-									return coords.value*vec(min/x, min/y);
+									return coords.value * (display.dimensions / min.vec);
 								}
 							case extended:
 								return coords.value;
@@ -216,14 +235,6 @@ nothrow {/*coordinate transformations}*/
 
 final class Display: Service
 	{/*...}*/
-		private {/*imports}*/
-			import std.file;
-			import std.datetime;
-			import std.algorithm;
-			import derelict.glfw3.glfw3;
-			import derelict.opengl3.gl3;
-			import std.concurrency: Tid;
-		}
 		public:
 		public {/*drawing}*/
 			void draw (T) (Color color, T geometry, GeometryMode mode = GeometryMode.l_loop) 
@@ -264,9 +275,9 @@ final class Display: Service
 				}
 				body {/*...}*/
 					buffer.writer_swap ();
-					send (true);
+					send (RenderCommand());
 				}
-			void access_rendering_context (T)(T request, Duration time_allowed = 1.seconds)
+			void access_rendering_context (T)(T request, Seconds time_allowed = 1.second)
 				if (isCallable!T)
 				in {/*...}*/
 					static assert (ParameterTypeTuple!T.length == 0);
@@ -325,8 +336,8 @@ final class Display: Service
 						glfwSetErrorCallback (&error_callback);
 						enforce (glfwInit (), "glfwInit failed");
 
-						immutable dims = cast()screen_dims; //REVIEW
-						window = glfwCreateWindow (dims.x, dims.y, "sup", null, null);
+						immutable dims = cast()screen_dims;
+						window = glfwCreateWindow (dims.x.to!uint, dims.y.to!uint, "evx.display", null, null);
 
 						enforce (window !is null);
 						glfwMakeContextCurrent (window);
@@ -353,6 +364,8 @@ final class Display: Service
 				}
 			bool process ()
 				{/*...}*/
+					gl.Clear (GL_COLOR_BUFFER_BIT);
+
 					auto vertex_pool = buffer.vertices.read[];
 					auto texture_coord_pool = buffer.texture_coords.read[];
 					auto order_pool = buffer.orders.read[];
@@ -390,7 +403,6 @@ final class Display: Service
 
 					glfwPollEvents ();
 					glfwSwapBuffers (window);
-					gl.Clear (GL_COLOR_BUFFER_BIT);
 
 					return true;
 				}
@@ -398,10 +410,12 @@ final class Display: Service
 				{/*...}*/
 					bool listening = true;
 
-					void render (bool _ = true)
+					void render (RenderCommand)
 						{/*...}*/
 							buffer.reader_swap;
+
 							listening = false;
+
 							assert (buffer.texture_coords.read.length == buffer.vertices.read.length, 
 								`vertices and texture coords not 1-to-1`
 							);
@@ -409,7 +423,7 @@ final class Display: Service
 					void access_rendering_context (shared void delegate() request)
 						{/*...}*/
 							request ();
-							reply (AccessConfirmation ());
+							reply (AccessConfirmation());
 						}
 						
 					receive (
@@ -465,7 +479,6 @@ final class Display: Service
 		extern (C) {/*callbacks}*/
 			void error_callback (int, const (char)* error) nothrow
 				{/*...}*/
-					import std.c.stdio: fprintf, stderr;
 					fprintf (stderr, "error glfw: %s\n", error);
 				}
 		}
@@ -500,13 +513,8 @@ final class Display: Service
 		Thread.sleep (1.seconds);
 	}
 	unittest {/*animation}*/
-		import std.algorithm;
-		import std.range;
-		import std.array;
-		import core.thread: Thread, sleep;
+		import core.thread;
 		import std.datetime;
-		import std.concurrency;
-		alias received_before = receiveTimeout;
 
 		scope D = new Display;
 		scope S = new Scheduler;
@@ -527,10 +535,10 @@ final class Display: Service
 				scope (exit) {D.stop (); S.stop (); ownerTid.prioritySend (true);}
 				D.start ();
 				S.start ();
-				S.enqueue (30.msecs);
+				S.enqueue (30.milliseconds);
 				int frames = 20;
-				while (frames-- && received_before (100.msecs, 
-					(Scheduler.Notification _) {animate (D); D.render (); if (frames) S.enqueue (30.msecs);}
+				while (frames-- && received_before (100.milliseconds,
+					(Scheduler.Notification _) {animate (D); D.render (); if (frames) S.enqueue (30.milliseconds);}
 				)){}
 			}
 		static void auto_test (shared Display sD, shared Scheduler sS)
@@ -545,13 +553,13 @@ final class Display: Service
 				D.start ();
 				S.start ();
 
-				S.enqueue (800.msecs); // this is our termination signal
+				S.enqueue (800.milliseconds); // this is our termination signal
 				D.subscribe (); // to receive a service ID
 
-				D.sync_with (S, 30); // 30 fps
+				D.sync_with (S, 30.hertz);
 
 				bool rendering = true;
-				while (rendering && received_before (100.msecs, 
+				while (rendering && received_before (100.milliseconds,
 					(Scheduler.Notification _)
 						{rendering = false;},
 					(Service.Id id)
@@ -709,39 +717,55 @@ private {/*shaders}*/
 				protected {/*ctor}*/
 					this (string vertex_path, string fragment_path)
 						{/*...}*/
-							void verify (string object_type) (GLuint gl_object) // REFACTOR
+							void verify (string object_type) (GLuint gl_object)
 								{/*...}*/
 									GLint status;
 
-									const string glGet_iv = "glGet" ~ object_type ~ "iv";
-									const string glGet_InfoLog = "glGet" ~ object_type ~ "InfoLog";
-									const string glStatus = object_type == "Shader"? "COMPILE":"LINK";
+									const string glGet_iv = q{glGet} ~object_type~ q{iv};
+									const string glGet_InfoLog = q{glGet} ~object_type~ q{InfoLog};
+									const string glStatus = object_type == `Shader`? `COMPILE`:`LINK`;
 
-									mixin (glGet_iv ~ " (gl_object, GL_" ~ glStatus ~ "_STATUS, &status);");
+									mixin(q{
+										} ~glGet_iv~ q{ (gl_object, GL_} ~glStatus~ q{_STATUS, &status);
+									});
 
 									if (status == GL_FALSE) 
 										{/*error}*/
 											GLchar[] error_log; 
 											GLsizei log_length;
-											mixin (glGet_iv ~ "(gl_object, GL_INFO_LOG_LENGTH, &log_length);");
+
+											mixin(q{
+												} ~glGet_iv~ q{(gl_object, GL_INFO_LOG_LENGTH, &log_length);
+											});
+
 											error_log.length = log_length;
-											mixin (glGet_InfoLog ~ "(gl_object, log_length, null, error_log.ptr);");
+
+											mixin (q{
+												} ~glGet_InfoLog~ q{(gl_object, log_length, null, error_log.ptr);
+											});
+
 											if (error_log.startsWith (`Vertex`))
-												assert (null, vertex_path ~ " error: " ~ error_log);
-											else assert (null, fragment_path ~ " error: " ~ error_log);
+												assert (null, vertex_path~ ` error: ` ~error_log);
+											else assert (null, fragment_path~ ` error: ` ~error_log);
 										}
 								}
+
 							auto build_shader (GLenum shader_type, string path)
-								{/*...}*/
+								in {/*...}*/
 									if (not (exists (path)))
-										assert (null, "error: couldn't find " ~ path);
+										assert (null, `error: couldn't find ` ~path);
+								}
+								out (shader) {/*...}*/
+									verify!`Shader` (shader);
+								}
+								body {/*...}*/
 									GLuint shader = gl.CreateShader (shader_type);
-									import std.string;
-									auto source = readText (path);
-									auto csrc = toStringz (source);
-									gl.ShaderSource (shader, 1, &csrc, null);
+
+									auto source = readText (path).toStringz;
+
+									gl.ShaderSource (shader, 1, &source, null);
 									gl.CompileShader (shader);
-									verify!"Shader" (shader);
+
 									return shader;
 								}
 
@@ -754,7 +778,7 @@ private {/*shaders}*/
 							gl.AttachShader (program, frag_shader);
 
 							gl.LinkProgram (program); 
-							verify!"Program" (program);
+							verify!`Program` (program);
 
 							gl.DeleteShader (vert_shader);
 							gl.DeleteShader (frag_shader);
@@ -849,6 +873,9 @@ private {/*orders}*/
 		}
 }
 private {/*types}*/
-	struct AccessConfirmation {}
 	alias VisualTypes = TypeTuple!(Basic);
+}
+private {/*sync signals}*/
+	struct RenderCommand {}
+	struct AccessConfirmation {}
 }

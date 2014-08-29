@@ -1,18 +1,12 @@
 module evx.algebra;
 
-private {/*import std}*/
-	import std.traits:
-		isNumeric, isStaticArray, staticMap,
-		FieldTypeTuple;
-
-	import std.range:
-		ElementType;
-
-	import std.algorithm:
-		copy;
-
-	import std.conv:
-		text;
+private {/*imports}*/
+	private {/*std}*/
+		import std.traits;
+		import std.range;
+		import std.algorithm;
+		import std.conv;
+	}
 }
 
 pure nothrow:

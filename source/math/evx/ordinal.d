@@ -1,18 +1,14 @@
 module evx.ordinal;
 
-private {/*import std}*/
-	import std.typetuple:
-		allSatisfy, anySatisfy;
-
-	import std.traits:
-		isNumeric, isFloatingPoint;
-}
-private {/*import evx}*/
-	import evx.functional:
-		sequence;
-
-	import evx.logic:
-		not;
+private {/*imports}*/
+	private {/*std}*/
+		import std.typetuple;
+		import std.traits;
+	}
+	private {/*evx}*/
+		import evx.functional;
+		import evx.logic;
+	}
 }
 
 pure nothrow:

@@ -1,74 +1,85 @@
 module evx.units;
 
-private {/*import std}*/
-	import std.conv:
-		to, text;
-
-	import std.typetuple:
-		allSatisfy,
-		staticIndexOf, staticMap,
-		Filter;
-
-	import std.traits:
-		isNumeric, isIntegral,
-		ReturnType;
-
-	import std.range: 
-		empty;
-
-	import std.algorithm:
-		zip, sort,
-		countUntil,
-		canFind,
-		findSplitAfter;
-
-	import std.math: 
-		abs, sqrt;
-}
-private {/*import evx}*/
-	import evx.logic: 
-		not,
-		Or;
-
-	import evx.arithmetic:
-		add, subtract,
-		is_even;
-
-	import evx.traits: 
-		is_numerical_param;
-
-	import evx.meta:
-		CompareBy;
-
-	import evx.analysis:
-		approx;
-}
-
-unittest
-	{/*demo}*/
-		auto x = 10.meters;
-		auto y = 5.seconds;
-
-		static assert (not (is (typeof(x) == typeof(y))));
-		static assert (not (__traits(compiles, x + y)));
-		static assert (__traits(compiles, x * y));
-
-		auto z = 1.meter/second;
-
-		auto w = z + x/y;
-
-		assert (w == 3.meters/second);
-
-		static assert (is (typeof(meter/meter) == Scalar));
-		assert (x/x == 1.0);
-
-		assert (x.power!2 == 100.meter*meters);
-		assert (x.power!(-1) == 1.0 / 10.meters);
-		assert (x.power!0 == 1.0);
+private {/*imports}*/
+	static import std.datetime;
+	private {/*std}*/
+		import std.conv;
+		import std.typetuple;
+		import std.traits;
+		import std.range; 
+		import std.algorithm;
+		import std.math; 
+	}
+	private {/*evx}*/
+		import evx.logic; 
+		import evx.arithmetic;
+		import evx.traits; 
+		import evx.meta;
+		import evx.analysis;
 	}
 
-pure nothrow:
+	alias zip = std.algorithm.zip;
+}
 
+unittest {/*demo}*/
+	auto x = 10.meters;
+	auto y = 5.seconds;
+
+	static assert (not (is (typeof(x) == typeof(y))));
+	static assert (not (__traits(compiles, x + y)));
+	static assert (__traits(compiles, x * y));
+
+	auto z = 1.meter/second;
+
+	auto w = z + x/y;
+
+	assert (w == 3.meters/second);
+
+	static assert (is (typeof(meter/meter) == Scalar));
+	assert (x/x == 1.0);
+
+	assert (x.power!2 == 100.meter*meters);
+	assert (x.power!(-1) == 1.0 / 10.meters);
+	assert (x.power!0 == 1.0);
+}
+
+public:
+public {/*traits}*/
+	template is_Unit (T...)
+		if (T.length == 1)
+		{/*...}*/
+			alias U = T[0];
+			enum is_Unit = is (U.UnitTrait == enum);
+		}
+	template is_Dimension (T...)
+		if (T.length == 1)
+		{/*...}*/
+			enum is_Dimension = __traits(compiles, T[0].DimensionTrait);
+		}
+}
+public {/*Time ↔ std.datetime.Duration}*/
+	auto to_duration (Seconds time)
+		{/*...}*/
+			return std.datetime.nsecs ((time.to_scalar * 1_000_000_000).to!long);
+		}
+	auto to_evx_time (std.datetime.Duration duration)
+		{/*...}*/
+			return duration.total!`nsecs`.nanoseconds;
+		}
+}
+public {/*convenience functions}*/
+	auto squared (alias unit)(Scalar scalar)
+		{/*...}*/
+			return unit (scalar) * unit;
+		}
+
+	auto cubic (alias unit)(Scalar scalar)
+		if (is_Unit!(ReturnType!unit))
+		{/*...}*/
+			return unit (scalar) * unit * unit;
+		}
+}
+ 
 alias Scalar = double;
 
 immutable string[string] abbreviation_map; 
@@ -77,18 +88,17 @@ shared static this ()
 		abbreviation_map = [
 			`kgm²/As³`: `V`,
 			`kgm/s²`: `N`,
-			`kgm²/s²`: `N m`, // BUG how to handle joules?
 			`/s`: `Hz`,
 		];
 	}
 
-public:
+pure nothrow:
 public {/*unit}*/
 	struct Unit (T...)
 		if (allSatisfy!(Or!(is_Dimension, is_numerical_param), T))
 		{/*...}*/
-			public nothrow:
-			pure const {/*math}*/
+			public:
+			pure const nothrow {/*math}*/
 				auto abs ()
 					{/*...}*/
 						return Unit (.abs (this.scalar));
@@ -155,10 +165,10 @@ public {/*unit}*/
 						});
 					}
 			}
-			pure const {/*comparison}*/
+			pure const nothrow {/*comparison}*/
 				mixin CompareBy!to_scalar;
 			}
-			pure const {/*operators}*/
+			pure const nothrow {/*operators}*/
 				auto opUnary (string op)()
 					{/*...}*/
 						Unit ret;
@@ -232,7 +242,7 @@ public {/*unit}*/
 						});
 					}
 			}
-			pure {/*assignment}*/
+			pure nothrow {/*assignment}*/
 				auto opOpAssign (string op, U)(U rhs)
 					{/*...}*/
 						mixin(q{
@@ -245,76 +255,77 @@ public {/*unit}*/
 					}
 			}
 			const @property {/*text}*/
-				auto toString ()
+				auto toString (string abbreviation = ``)
 					{/*...}*/
-						try {/*...}*/
-							alias Dims = Filter!(is_Dimension, T);
+						if (abbreviation.empty)
+							{/*...}*/
+								alias Dims = Filter!(is_Dimension, T);
 
-							string[] dims;
-							foreach (Dim; Dims)
-								{/*...}*/
-									static if (is (Dim == Space))
-										dims ~= `m`;
-									else static if (is (Dim == Time))
-										dims ~= `s`;
-									else static if (is (Dim == Mass))
-										dims ~= `kg`;
-									else static if (is (Dim == Current))
-										dims ~= `A`;
-									else static assert (0, Dim.stringof~ ` to string unimplemented`);
-								}
-
-							auto powers = [Filter!(is_numerical_param, T)];
-
-							auto sorted_by_descending_power = zip (dims, powers)
-								.sort!((a,b) => (a[1] > 0 && 0 > b[1]) || (a[1] * b[1] > 0 && a[0][0] < b[0][0]));
-							
-							auto n_positive_powers = sorted_by_descending_power
-								.countUntil!(a => a[1] < 0);
-
-							if (n_positive_powers < 0)
-								n_positive_powers = dims.length;
-
-							auto numerator   = sorted_by_descending_power
-								[0..n_positive_powers];
-
-							auto denominator = sorted_by_descending_power
-								[n_positive_powers..$];
-
-							static auto to_superscript (U)(U num)
-								{/*...}*/
-									uint n = .abs(num).to!uint;
-									if (n < 4)
-										{/*...}*/
-											if (n == 1)
-												return ``.to!string;
-											else return (0x00b0 + n).to!dchar.to!string;
-										}
-									else {/*...}*/
-										return (0x2070 + n).to!dchar.to!string;
+								string[] dims;
+								foreach (Dim; Dims)
+									{/*...}*/
+										static if (is (Dim == Space))
+											dims ~= `m`;
+										else static if (is (Dim == Time))
+											dims ~= `s`;
+										else static if (is (Dim == Mass))
+											dims ~= `kg`;
+										else static if (is (Dim == Current))
+											dims ~= `A`;
+										else static assert (0, Dim.stringof~ ` to string unimplemented`);
 									}
-								}
 
-							string output = scalar.to!string ~ ` `;
+								auto powers = [Filter!(is_numerical_param, T)];
 
-							foreach (dim; numerator)
-								output ~= dim[0].to!string ~ to_superscript (dim[1]);
+								auto sorted_by_descending_power = zip (dims, powers)
+									.sort!((a,b) => (a[1] > 0 && 0 > b[1]) || (a[1] * b[1] > 0 && a[0][0] < b[0][0]));
+								
+								auto n_positive_powers = sorted_by_descending_power
+									.countUntil!(a => a[1] < 0);
 
-							output ~= denominator.length? `/` : ``;
+								if (n_positive_powers < 0)
+									n_positive_powers = dims.length;
 
-							foreach (dim; denominator)
-								output ~= dim[0].to!string ~ to_superscript (dim[1]);
+								auto numerator   = sorted_by_descending_power
+									[0..n_positive_powers];
 
-							auto split = output.findSplitAfter (` `);
+								auto denominator = sorted_by_descending_power
+									[n_positive_powers..$];
 
-							if (auto translated = split[1] in abbreviation_map)
-								return split[0] ~ *translated;
-							else return output;
-						}
-						catch (Exception) assert (0);
+								static auto to_superscript (U)(U num)
+									{/*...}*/
+										uint n = .abs(num).to!uint;
+										if (n < 4)
+											{/*...}*/
+												if (n == 1)
+													return ``.text;
+												else return (0x00b0 + n).to!dchar.text;
+											}
+										else {/*...}*/
+											return (0x2070 + n).to!dchar.text;
+										}
+									}
+
+								string output = scalar.text ~ ` `;
+
+								foreach (dim; numerator)
+									output ~= dim[0].text ~ to_superscript (dim[1]);
+
+								output ~= denominator.length? `/` : ``;
+
+								foreach (dim; denominator)
+									output ~= dim[0].text ~ to_superscript (dim[1]);
+
+								auto split = output.findSplitAfter (` `);
+
+								if (auto translated = split[1] in abbreviation_map)
+									return split[0] ~ *translated;
+								else return output;
+							}
+						else return scalar.text~ ` ` ~abbreviation;
 					}
 			}
-			pure const @property {/*conversion}*/
+			pure const nothrow @property {/*conversion}*/
 				Scalar to_scalar ()
 					{/*...}*/
 						return scalar;
@@ -325,6 +336,7 @@ public {/*unit}*/
 			private {/*...}*/
 				alias In_Dim = Filter!(is_Dimension, T);
 				alias In_Pow = Filter!(is_numerical_param, T);
+
 				static assert (In_Dim.length == In_Pow.length,
 					`dimension/power mismatch`
 				);
@@ -365,7 +377,6 @@ public {/*base dimensions}*/
 		}
 }
 
-public:
 public {/*mass}*/
 	alias Kilograms = ReturnType!kilogram;
 	alias kilograms = kilogram;
@@ -399,11 +410,6 @@ public {/*space}*/
 		{/*...}*/
 			return scalar * 0.001.meter;
 		}
-
-	auto square_meters (Scalar scalar = 1)
-		{/*...}*/
-			return scalar * meter.pow!2;
-		}
 }
 public {/*time}*/
 	alias Seconds = ReturnType!second;
@@ -411,6 +417,7 @@ public {/*time}*/
 	alias minutes = minute;
 	alias hours = hour;
 	alias milliseconds = millisecond;
+	alias nanoseconds = nanosecond;
 
 	auto second (Scalar scalar = 1)
 		{/*...}*/
@@ -427,6 +434,10 @@ public {/*time}*/
 	auto millisecond (Scalar scalar = 1)
 		{/*...}*/
 			return scalar * second/1000;
+		}
+	auto nanosecond (Scalar scalar = 1)
+		{/*...}*/
+			return scalar * second/1_000_000_000;
 		}
 }
 public {/*current}*/
@@ -484,33 +495,6 @@ public {/*voltage}*/
 		}
 }
 
-public:
-public {/*traits}*/
-	template is_Unit (T...)
-		if (T.length == 1)
-		{/*...}*/
-			alias U = T[0];
-			enum is_Unit = is (U.UnitTrait == enum);
-		}
-	template is_Dimension (T...)
-		if (T.length == 1)
-		{/*...}*/
-			enum is_Dimension = __traits(compiles, T[0].DimensionTrait);
-		}
-}
-debug {/*utility}*/
-	void sleep (Seconds time)
-		{/*...}*/
-			import core.thread:
-				Thread, sleep;
-
-			static import std.datetime;
-
-			debug try Thread.sleep (std.datetime.nsecs ((time.to_scalar * 1_000_000_000).to!long));
-			catch (Exception) assert (0);
-		}
-}
- 
 private:
 private {/*code generation}*/
 	auto combine_dimension (alias op, T, U)()

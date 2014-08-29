@@ -1,24 +1,27 @@
-module evx.plot;// TODO refactor everything
+module evx.plot;
 
-import std.traits;
-import std.typecons;
-import std.algorithm;
-import std.range;
-import std.string;
+private {/*imports}*/
+	private {/*std}*/
+		import std.traits;
+		import std.typecons;
+		import std.algorithm;
+		import std.range;
+		import std.string;
+		import std.conv;
+	}
+	private {/*evx}*/
+		import evx.allocators;
+		import evx.utils;
+		import evx.colors;
+		import evx.math;
+		import evx.display;
+		import evx.scribe;
+	}
 
-import evx.allocators;
-
-import evx.utils;
-import evx.colors;
-import evx.math;
-
-import evx.display;
-
-import evx.scribe;
-
-alias zip = evx.functional.zip;
-alias map = evx.functional.map;
-alias reduce = evx.functional.reduce;
+	alias zip = evx.functional.zip;
+	alias map = evx.functional.map;
+	alias reduce = evx.functional.reduce;
+}
 
 alias versus = zip;
 
@@ -81,6 +84,9 @@ struct Plot (Data, Style style)
 
 			alias x_axis = axis_options!`x`;
 			alias y_axis = axis_options!`y`;
+
+			alias x_units = unit_options!`x`;
+			alias y_units = unit_options!`y`;
 		}
 		public {/*drawing}*/
 			void draw ()
@@ -123,7 +129,27 @@ struct Plot (Data, Style style)
 					auto w_1 = bounds.width - h_0;
 					auto ε = 0.1*h_0;
 
-					void draw_data_in (Box!double plot_field)
+					{/*set unit string}*/
+						if (_x_units.empty)
+							{/*...}*/
+								_x_units = x_max.text.find (` `);
+
+								if (not (_x_units.empty))
+									_x_units = `(` ~_x_units[1..$]~ `)`;
+							}
+						else _x_units = `(` ~_x_units~ `)`;
+
+						if (_y_units.empty)
+							{/*...}*/
+								_y_units = y_max.text.find (` `);
+
+								if (not (_y_units.empty))
+									_y_units = `(` ~_y_units[1..$]~ `)`;
+							}
+						else _y_units = `(` ~_y_units~ `)`;
+					}
+
+					void draw_data_in (BoundingBox plot_field)
 						{/*...}*/
 							display.draw (_color.alpha (0.25), plot_field[].from_extended_space.to_draw_space (display));
 							display.draw (_color, 
@@ -177,7 +203,7 @@ struct Plot (Data, Style style)
 								.align_to (Alignment.top_center)
 								.inside (title_field)
 							();
-							scribe.write (x_label~ ` (` ~x_max.text.find (` `)[1..$]~ `)`)
+							scribe.write (x_label~ ` ` ~_x_units)
 								.size (_text_size)
 								.color (_color)
 								.align_to (Alignment.top_center)
@@ -195,7 +221,7 @@ struct Plot (Data, Style style)
 								.align_to (Alignment.top_right)
 								.inside (x_ticks)
 							();
-							scribe.write (y_label~ ` (` ~y_max.text.find (` `)[1..$]~ `)`)
+							scribe.write (y_label~ ` ` ~_y_units)
 								.size (_text_size)
 								.color (_color)
 								.rotate (π/2)
@@ -287,6 +313,8 @@ struct Plot (Data, Style style)
 							draw_data_in (plot_field);
 						}
 				}
+			
+			alias opCall = draw;
 		}
 		public {/*ctor}*/
 			this (Data data)
@@ -303,13 +331,19 @@ struct Plot (Data, Style style)
 			Data data;
 
 			string _title;
+
 			string x_label;
-			string y_label;
+			string _x_units;
 			XRange x_range = interval (-infinite!XType, infinite!XType);
+
+			string y_label;
+			string _y_units;
 			YRange y_range = interval (-infinite!YType, infinite!YType);
+
 			Color _color = black;
 			size_t _text_size;
-			Box!double bounds = bounding_box ([-1.vec, 1.vec]);
+
+			auto bounds = bounding_box ([-1.vec, 1.vec]);
 		}
 		private {/*code generation}*/
 			template axis_options (string axis)
@@ -324,6 +358,23 @@ struct Plot (Data, Style style)
 									}`{`q{
 										this.} ~axis~ q{_label = label.text;
 										this.} ~axis~ q{_range = range;
+
+										return this;
+									}`}`q{
+							};
+						}
+
+					mixin(code);
+				}
+
+			template unit_options (string axis)
+				{/*...}*/
+					static code ()
+						{/*...}*/
+							return q{
+								auto unit_options (String)(String label)
+									}`{`q{
+										this._} ~axis~ q{_units = label.text;
 
 										return this;
 									}`}`q{
@@ -348,14 +399,15 @@ auto plot (Style style = Style.standard, Data)(Data data)
 		gfx.start; scope (exit) gfx.stop;
 		scope txt = new Scribe (gfx, [20]);
 
-		writeln (ℕ[1..100].map!(x => exp (1. * x)).reduce!max);
-		plot (ℕ[1..100].map!(x => exp (0.1 * x)).versus (ℕ[1..100].map!(x => 0.1 * x)))
-			.color (red)
-			.text_size (20)
-			.using (gfx, txt)
+		plot (
+			ℕ[1..100].map!(x => exp (0.1 * x))
+			.versus (
+				ℕ[1..100].map!(x => 0.1 * x)
+			)
+		)	.y_axis (`exp (x)`)
 			.x_axis (`x`)
-			.y_axis (`exp (x)`)
-		.draw;
+			.color (red).text_size (20).using (gfx, txt)
+		();
 
 		gfx.render;
 
@@ -370,15 +422,17 @@ auto plot (Style style = Style.standard, Data)(Data data)
 		gfx.start; scope (exit) gfx.stop;
 		scope txt = new Scribe (gfx, [14]);
 
-		plot (ℕ[1..100].map!(x => (x^^2).joules).versus (ℕ[1..100].map!(x => x.meters/second)))
-			.color (white)
-			.title (`energy vs speed`)
-			.text_size (14)
-			.using (gfx, txt)
+		plot (
+			ℕ[1..100].map!(x => (x^^2).joules)
+			.versus (
+				ℕ[1..100].map!(x => x.meters/second)
+			)
+		)	.title (`energy vs speed`)
 			.x_axis (`speed`)
-			.y_axis (`energy`)
+			.y_axis (`energy`).y_units (`J`)
 			.inside ([vec(-1,-1), vec(1,1)].scale (0.5).bounding_box)
-		.draw;
+			.color (white).text_size (14).using (gfx, txt)
+		();
 
 		gfx.render;
 

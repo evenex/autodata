@@ -1,69 +1,33 @@
 module evx.arrays;
 
-private {/*import std}*/
-	import std.traits: 
-		isDynamicArray,
-		ReturnType;
+private {/*imports}*/
+	private {/*std}*/
+		import std.traits; 
+		import std.range;
+		import std.algorithm; 
+		import std.typetuple; 
+		import std.typecons; 
+		import std.conv; 
+		import std.c.stdlib; 
+		import std.array;
+	}
+	private {/*evx}*/
+		import evx.functional;
+		import evx.logic;
+		import evx.ordinal;
+		import evx.arithmetic;
+		import evx.utils;
+		import evx.range;
+		import evx.move;
+		import evx.traits;
+		import evx.search;
+		import evx.meta;
+	}
 
-	import std.range: 
-		equal, empty, front, popFront,
-		ElementType, 
-		isInputRange, isForwardRange, isOutputRange;
-
-	import std.algorithm: 
-		copy, swap,
-		sort, isSorted;
-
-	import std.typetuple: 
-		anySatisfy, allSatisfy;
-
-	import std.typecons: 
-		Tuple;
-
-	import std.conv: 
-		text;
-
-	import std.c.stdlib: 
-		malloc, free;
-
-	import std.array:
-		allocate_array = array;
-}
-private {/*import evx}*/
-	import evx.functional:
-		zip;
-
-	import evx.logic:
-		not, Or;
-
-	import evx.ordinal:
-		less_than;
-
-	import evx.arithmetic:
-		sum;
-
-	import evx.utils:
-		τ;
-
-	import evx.range:
-		save;
-
-	import evx.move:
-		move, shift_up_from, shift_down_on;
-
-	import evx.traits:
-		is_comparable, is_comparison_function, 
-		is_hashing_function;
-
-	import evx.search:
-		binary_search;
-
-	import evx.meta:
-		replace_in_template,
-		ArrayInterface,
-		CompareBy,
-		ForwardConstructor,
-		Policies, PolicyAssignment;
+	alias zip = evx.functional.zip;
+	alias map = evx.functional.map;
+	alias reduce = evx.functional.reduce;
+	alias allocate_array = std.range.array;
 }
 
 version (benchmarked)
@@ -800,7 +764,7 @@ struct Ordered (Array, Sorting...)
 		invariant (){/*}*/
 			assert (this[].isSorted!compare);
 		}
-		//static assert (isOutputRange!(Ordered, T)); TODO
+		static assert (isOutputRange!(Ordered, T));
 	}
 	unittest {/*...}*/
 			import std.exception: assertThrown;
