@@ -90,7 +90,12 @@ struct Plot (Data, Style style)
 		}
 		public {/*drawing}*/
 			void draw ()
-				{/*...}*/
+				in {/*...}*/
+					assert (display !is null);
+					assert (scribe !is null);
+					assert (display.is_running);
+				}
+				body {/*...}*/
 					if (data.empty) return;
 
 					enum x1 = unity!XType;

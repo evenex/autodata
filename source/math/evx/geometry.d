@@ -32,7 +32,7 @@ private {/*imports}*/
 	alias reduce = evx.functional.reduce;
 }
 
-pure nothrow:
+pure: // REVIEW nothrow was here, invalidated by daq display routines
 public {/*traits}*/
 	/* test if a type can be used by this library 
 	*/
@@ -323,7 +323,7 @@ public {/*axis-aligned bounding boxes}*/
 	*/
 	struct Box (T)
 		{/*...}*/
-			pure nothrow @property:
+			pure @property: // REVIEW nothrow was here, invalidated by daq display routines
 			const {/*corners}*/
 				Vec opDispatch (string op)()
 					if (op.canFind (`left`, `center`, `right`))
@@ -584,7 +584,7 @@ public {/*axis-aligned bounding boxes}*/
 				}
 		}
 		unittest {/*...}*/
-			auto compute_offset (Alignment alignment) pure nothrow
+			auto compute_offset (Alignment alignment) pure
 				{return circle (1).bounding_box.offset_to (alignment, circle (2).bounding_box);}
 			
 			with (Alignment)
@@ -659,7 +659,7 @@ public {/*axis-aligned bounding boxes}*/
 
 		assert (box.center == Pos(0.5.meters, 0.5.meters));
 
-		auto compute_offset (Alignment alignment) pure nothrow
+		auto compute_offset (Alignment alignment) pure
 			{return circle (1.meter).bounding_box.offset_to (alignment, circle (2.meters).bounding_box);}
 		
 		with (Alignment)

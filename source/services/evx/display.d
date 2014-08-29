@@ -54,7 +54,7 @@ enum PixelFormat
 		unsigned_byte = GL_UNSIGNED_BYTE,
 	}
 
-nothrow {/*coordinate transformations}*/
+pure {/*coordinate transformations}*/
 	pure {/*from}*/
 		auto from_draw_space (T)(T geometry) 
 			if (is (T == vec) || is_geometric!T)
@@ -467,7 +467,7 @@ final class Display: Service
 			@(`pixel`) uvec screen_dims = uvec(800, 800);
 
 			shared BufferGroup!(
-				TripleBuffer!(fvec, 2^^14), 
+				TripleBuffer!(fvec, 2^^16), 
 					`vertices`,
 				TripleBuffer!(fvec, 2^^14), 
 					`texture_coords`,

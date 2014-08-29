@@ -126,15 +126,19 @@ final class Scribe
 
 							foreach (size; font_sizes)
 								{/*...}*/
-									font[size] = texture_font_new (atlas, font_path, size);
-									auto missed_glyphs 	= texture_font_load_glyphs (font[size], Unicode.ptr);
+									font[size] = texture_font_new_from_file (atlas, size, font_path); // REVIEW new or new_from_file?
+									// TODO assert that the font exists
+
+									auto missed_glyphs = texture_font_load_glyphs (font[size], Unicode.ptr);
 
 									if (missed_glyphs > 0)
 										{/*...}*/
 											reset;
+
 											if (atlas_size.y == 2*atlas_size.x)
 												atlas_size.x *= 2;
 											else atlas_size.y *= 2;
+
 											load_texture_atlas ();
 											break;
 										}
@@ -296,7 +300,7 @@ final class Scribe
 			texture_font_t*[size_t] font;
 		}
 		private {/*settings}*/
-			enum font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"; // TEMP
+			enum font_path = "/usr/share/fonts/dejavu/DejaVuSansMono.ttf"; // TODO auto-search for font
 			const size_t[] font_sizes;
 		}
 		private {/*services}*/
@@ -308,8 +312,8 @@ final class Scribe
 				texture_atlas_new;
 			void function (texture_atlas_t* self)
 				texture_atlas_delete;
-			texture_font_t* function (texture_atlas_t* atlas, const char* filename, const float size) 
-				texture_font_new;
+			texture_font_t* function (texture_atlas_t* atlas, const float size, const char* filename)
+				texture_font_new_from_file;
 			size_t function (texture_font_t* self, const dchar* charcodes) 
 				texture_font_load_glyphs;
 			void function (texture_font_t* self)

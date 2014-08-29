@@ -485,7 +485,8 @@ public {/*construction}*/
 					{/*...}*/
 						static string builder_getter_setter (string name)()
 							{/*...}*/
-								import std.typetuple: staticIndexOf;
+								import std.typetuple;
+								import std.traits;
 
 								alias Type = Types[staticIndexOf!(name, Names)];
 
