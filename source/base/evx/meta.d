@@ -497,7 +497,7 @@ public {/*construction}*/
 										}`}`q{
 								};
 
-								static if (not (isDelegate!Type || isFunctionPointer!Type || isBuiltinType!Type)) // TODO we can get rid of isBuiltinType with UCS
+								static if (not (isDelegate!Type || isFunctionPointer!Type || isBuiltinType!Type)) // XXX we can get rid of isBuiltinType with UCS
 									setter ~= q{
 										auto ref } ~name~ q{ (Args...)(Args args)
 											}`{`q{
@@ -550,7 +550,7 @@ public {/*construction}*/
 						int, `a`,
 						int, `b`,
 						int, `c`,
-						int, `d`,
+						int delegate(), `d`,
 					);
 				}
 
@@ -559,14 +559,12 @@ public {/*construction}*/
 			x	.a (1)
 				.b (2)
 				.c (3)
-				.d (4);
+				.d (() => 4);
 
 			assert (x.a == 1);
 			assert (x.b == 2);
 			assert (x.c == 3);
 			assert (x.d == 4);
-
-			// TODO unittest builder for correct function ptr & delegate behavior
 		}
 
 	/* apply an array interface over a pointer and length variable 

@@ -55,6 +55,15 @@ struct Vector (uint n, Component = double)
 			alias b = z;	alias p = z;
 			alias a = w;	alias q = w;
 		}
+		public {/*forwarding}*/
+			auto forward_to_components (string op, Args...)(Args args)
+				{/*...}*/
+					immutable immutable_args = args;
+					mixin(q{
+						return vector!length (this[].map!(t => t.} ~op~ q{ (immutable_args)));
+					});
+				}
+		}
 		public {/*swizzling}*/
 			auto swizzle (string components)()
 				{/*...}*/
@@ -70,15 +79,6 @@ struct Vector (uint n, Component = double)
 
 					mixin(q{
 						return vector (} ~code[0..$-2]~ q{);
-					});
-				}
-		}
-		public {/*forwarding}*/
-			auto forward_to_components (string op, Args...)(Args args)
-				{/*...}*/
-					immutable immutable_args = args;
-					mixin(q{
-						return vector!length (this[].map!(t => t.} ~op~ q{ (immutable_args)));
 					});
 				}
 		}
@@ -248,6 +248,36 @@ struct Vector (uint n, Component = double)
 					this.components[] = component;
 				}
 		}
+		public {/*conv}*/
+			@property array ()
+				{/*...}*/
+					return components;
+				}
+			@property tuple ()
+				{/*...}*/
+					static code ()
+						{/*...}*/
+							string code;
+
+							foreach (i; 0..length)
+								code ~= q{this[} ~i.text~ q{], };
+
+							return code[0..$-2];
+						}
+
+					mixin(q{
+						return τ(} ~code~ q{);
+					});
+				}
+			auto opCast (T)()
+				{/*...}*/
+					static if (__traits(compiles, T (this.tuple.expand)))
+						return T (this.tuple.expand);
+					else static if (__traits(compiles, T (this[])))
+						return T (this[]);
+					else static assert (0, `cannot convert ` ~Vector.stringof~ ` to ` ~T.stringof);
+				}
+		}
 
 		private:
 		private {/*components}*/
@@ -261,19 +291,19 @@ struct Vector (uint n, Component = double)
 					void over_vector ()(Args args)
 						{/*...}*/
 							mixin(q{
-								} ~func~ q{ (Vector.init, args); // func symbol isn't available, so this fails...
+								} ~func~ q{ (Vector.init, args);
 							});
 						}
 					void over_components ()(Args args)
 						{/*...}*/
 							mixin(q{
-								Component.init.} ~func~ q{ (args); // func symbol isn't available, so this fails...
+								Component.init.} ~func~ q{ (args);
 							});
 						}
 					enum is_vector_function = __traits(compiles, over_vector (Args.init))
 						|| not(__traits(compiles, over_components (Args.init)));
 				}
-			public template is_vector_swizzle (string components) // BUG doesn't work if private... why?
+			public template is_vector_swizzle (string components) // HACK opDispatch fails if this is private... why?
 				{/*...}*/
 					static if (components.length > 1)
 						{/*...}*/
@@ -336,6 +366,10 @@ struct Vector (uint n, Component = double)
 					assert (a[0] == v.x);
 					assert (a[1] == v.y);
 					assert (a[2] == v.z);
+
+					auto w = cast(ForeignVec)a;
+
+					assert (w == v);
 				}
 				{/*range types}*/
 					// dynamic array
@@ -357,11 +391,17 @@ struct Vector (uint n, Component = double)
 					auto b = a.vector;
 					assert (b[].equal (a[]));
 
+					auto a1 = b.array;
+					static assert (is (typeof(a1) == T[4]));
+					assert (a1[].equal (a[]));
+
 					// tuples
 					auto c = τ(value,value,value).vector;
 					assert (c[0] == value);
 					assert (c[1] == value);
 					assert (c[2] == value);
+
+					assert (c.tuple == τ(value, value, value));
 				}
 				{/*per-component construction}*/
 					/* variadic: 
@@ -456,14 +496,18 @@ struct Vector (uint n, Component = double)
 		v.b *= v.w;
 		assert (v.p == 12);
 	}
-	unittest {/*swizzling}*/
+	unittest {/*component swizzling}*/
 		auto v = vector (1, 2, 3, 4);
 
+		assert (v.xyzw == v);
 		assert (v.xy == vector (1, 2));
-		assert (v.xyz == vector (1, 2, 3));
 		assert (v.zyx == vector (3, 2, 1));
 		assert (v.xxx == vector (1, 1, 1));
 		assert (v.xyzzy == vector (1, 2, 3, 3, 2));
+
+		assert (v.rgba == v);
+		assert (v.bgra == vector (3, 2, 1, 4));
+		static assert (not(__traits(compiles, v.rgxy)));
 	}
 	unittest {/*arithmetic operations}*/
 		// when constructed per-component, vectors take the common type of their arguments

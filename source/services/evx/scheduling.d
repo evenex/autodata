@@ -259,5 +259,3 @@ auto auto_sync (alias scheduler, alias action)()
 private {/*sync primitives}*/
 	struct Synced {}
 }
-
-void main (){}

@@ -273,7 +273,7 @@ public {/*zip}*/
 				@property {/*...}*/
 					auto length () const
 						{/*...}*/
-							return ranges[0].length;
+							return ranges[0].length; // TODO nix the [0]
 						}
 
 					static if (is(ReturnType!(Ranges[0].length) == CommonDollar))
@@ -285,7 +285,7 @@ public {/*zip}*/
 				@property {/*...}*/
 					auto measure () const
 						{/*...}*/
-							return ranges[0].measure; // REVIEW i don't want any [0] going on, instead iterate over all ranges and select the correct measure according to some infinity-respecting rules
+							return ranges[0].measure; // TODO i don't want any [0] going on, instead iterate over all ranges and select the correct measure according to some infinity-respecting rules
 						}
 
 					static if (is(ReturnType!(Ranges[0].measure) == CommonDollar))
@@ -338,14 +338,14 @@ public {/*zip}*/
 					in {/*...}*/
 						static if (is_continuous!CommonIndex)
 							{/*...}*/
-								auto measure = ranges[0].measure;
+								auto measure = ranges[0].measure; // TODO
 
 								foreach (range; ranges)
 									assert (range.measure == measure);
 							}
 						static if (allSatisfy!(hasLength, Ranges))
 							{/*...}*/
-								auto length = ranges[0].length;
+								auto length = ranges[0].length; // TODO
 
 								foreach (range; ranges)
 									assert (range.length == length);

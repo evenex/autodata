@@ -173,7 +173,7 @@ final class Scribe
 					for (int i = 0; i < glyphs.length; ++i)
 					//foreach (i, glyph; glyphs) BUG cannot infer argument types
 						{/*...}*/
-							auto glyph = glyphs[i]; // TEMP workaround
+							auto glyph = glyphs[i]; // HACK workaround
 							auto geometry = cards[4*i..4*i+4];
 							auto tex_coords = glyph.roi[].bounding_box[].flip!`vertical`;
 
