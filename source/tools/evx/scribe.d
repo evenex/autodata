@@ -308,7 +308,7 @@ final class Scribe
 			texture_font_t*[size_t] font;
 		}
 		private {/*settings}*/
-			enum font_path = "./data/DejaVuSansMono.ttf";
+			enum font_path = "./font/DejaVuSansMono.ttf";
 			const size_t[] font_sizes;
 		}
 		private {/*services}*/
