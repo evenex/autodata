@@ -325,7 +325,7 @@ public {/*calculus}*/
 	/* test whether a value is infinite 
 	*/
 	bool is_infinite (T)(T value)
-		if (not(is(T == Interval!U, U)))
+		if (not(is(T == Interval!U, U) || isInputRange!T))
 		{/*...}*/
 			static if (__traits(compiles, infinite!T))
 				return value.abs == infinite!T;

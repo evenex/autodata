@@ -15,7 +15,20 @@ private {/*imports}*/
 	alias zip = evx.functional.zip;
 }
 
-pure nothrow:
+/* explicitly counts the number of elements in an InputRange 
+*/
+auto element_count (R)(R range)
+	if (isInputRange!R)
+	{/*...}*/
+		size_t count;
+
+		foreach (_; range)
+			++count;
+
+		return count;
+	}
+
+pure:
 
 /* construct a ForwardRange out of a range of ranges such that the inner ranges appear concatenated 
 */
@@ -148,6 +161,7 @@ auto adjacent_pairs (R)(R range)
 /* always-false test for infinite ranges, for ranges which do not define an is_infinite property 
 */
 bool is_infinite (R)(R)
+	if (isInputRange!R)
 	{/*...}*/
 		return false;
 	}

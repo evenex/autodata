@@ -112,7 +112,7 @@ struct Sampler (Stream)
 
 					@property length () const
 						{/*...}*/
-							return (measure/stride).to!size_t;
+							return (measure/stride).round.to!size_t;
 						}
 			}
 			else {/*...}*/
@@ -158,9 +158,7 @@ struct Sampler (Stream)
 
 			bool empty () const
 				{/*...}*/
-					static if (Stream.is_continuous)
-						return first + stride >= last; // REVIEW figure out why this is so
-					else return first >= last;
+					return length == 0;
 				}
 		}
 		public {/*BidirectionalRange}*/

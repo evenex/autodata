@@ -582,7 +582,7 @@ struct Unicode
 		}
 	}
 
-void main () {/*...}*/
+unittest {/*...}*/
 	import core.thread;
 	import std.datetime;
 

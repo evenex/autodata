@@ -23,9 +23,9 @@ private {/*imports}*/
 template λ (alias F) {alias λ = F;}
 
 public {/*map}*/
-	/* replacement for std.algorithm.MapResult 
+	/* replacement for std.algorithm.Mapped 
 	*/
-	struct MapResult (alias func, R)
+	struct Mapped (alias func, R)
 		{/*...}*/
 			alias Index = IndexTypes!R[0];
 			
@@ -59,7 +59,7 @@ public {/*map}*/
 								assert (j.between (i, length));
 						}
 						body {/*...}*/
-							return MapResult (range[i..j]);
+							return Mapped (range[i..j]);
 						}
 				}
 
@@ -85,7 +85,7 @@ public {/*map}*/
 							return range.empty;
 						}
 
-					static assert (isInputRange!MapResult);
+					static assert (isInputRange!Mapped);
 				}
 			static if (isForwardRange!R)
 				{/*...}*/
@@ -94,7 +94,7 @@ public {/*map}*/
 							return this;
 						}
 
-					static assert (isForwardRange!MapResult);
+					static assert (isForwardRange!Mapped);
 				}
 			static if (isBidirectionalRange!R)
 				{/*...}*/
@@ -113,7 +113,7 @@ public {/*map}*/
 							range.popBack;
 						}
 
-					static assert (isBidirectionalRange!MapResult);
+					static assert (isBidirectionalRange!Mapped);
 				}
 			static if (hasLength!R)
 				{/*...}*/
@@ -125,7 +125,7 @@ public {/*map}*/
 					static if (is(ReturnType!(R.length) == DollarType!R))
 						alias opDollar = length;
 
-					static assert (hasLength!MapResult);
+					static assert (hasLength!Mapped);
 				}
 			static if (is_continuous_range!R)
 				{/*...}*/
@@ -137,7 +137,7 @@ public {/*map}*/
 					static if (is(ReturnType!(R.measure) == DollarType!R))
 						alias opDollar = measure;
 
-					static assert (is_continuous_range!MapResult);
+					static assert (is_continuous_range!Mapped);
 				}
 
 			private:
@@ -150,7 +150,7 @@ public {/*map}*/
 		{/*...}*/
 			auto map (R)(R range)
 				{/*...}*/
-					return MapResult!(func, R)(range);
+					return Mapped!(func, R)(range);
 				}
 		}
 		unittest {/*...}*/
@@ -169,7 +169,7 @@ public {/*map}*/
 public {/*zip}*/
 	/* replacement for std.range.Zip 
 	*/
-	struct ZipResult (Ranges...)
+	struct Zipped (Ranges...)
 		{/*...}*/
 			static if (not(is(CommonIndex == void)))
 				{/*...}*/
@@ -177,14 +177,14 @@ public {/*zip}*/
 						in {/*...}*/
 							static if (is_continuous!CommonIndex)
 								assert (i < measure);
-							else static if (hasLength!ZipResult)
+							else static if (hasLength!Zipped)
 								assert (i < length);
 						}
 						body {/*...}*/
 							return zip_with!`[args[0]]`(i);
 						}
 
-					static assert (is_indexable!(ZipResult, CommonIndex));
+					static assert (is_indexable!(Zipped, CommonIndex));
 
 					auto opSlice ()
 						{/*...}*/
@@ -193,7 +193,7 @@ public {/*zip}*/
 					auto opSlice ()(CommonIndex i, CommonIndex j)
 						if (allSatisfy!(is_sliceable, Ranges))
 						{/*...}*/
-							ZipResult copy = this;
+							Zipped copy = this;
 
 							foreach (r, ref range; copy.ranges)
 								range = this.ranges[r][i..j];
@@ -228,7 +228,7 @@ public {/*zip}*/
 							return false;
 						}
 
-					static assert (isInputRange!ZipResult);
+					static assert (isInputRange!Zipped);
 				}
 			static if (allSatisfy!(isForwardRange, Ranges))
 				@property {/*...}*/
@@ -237,7 +237,7 @@ public {/*zip}*/
 							return this;
 						}
 
-					static assert (isForwardRange!ZipResult);
+					static assert (isForwardRange!Zipped);
 				}
 			static if (allSatisfy!(isBidirectionalRange, Ranges))
 				@property {/*...}*/
@@ -257,7 +257,7 @@ public {/*zip}*/
 								range.popBack;
 						}
 
-					static assert (isBidirectionalRange!ZipResult);
+					static assert (isBidirectionalRange!Zipped);
 				}
 			static if (allSatisfy!(isOutputRange, Ranges))
 				@property {/*...}*/
@@ -267,7 +267,7 @@ public {/*zip}*/
 								range.put (element[i]);
 						}
 
-					static assert (.isOutputRange!(ZipResult, ZipTuple));
+					static assert (.isOutputRange!(Zipped, ZipTuple));
 				}
 			static if (allSatisfy!(hasLength, Ranges)) // TODO infinite ranges shouldn't count here
 				@property {/*...}*/
@@ -279,7 +279,7 @@ public {/*zip}*/
 					static if (is(ReturnType!(Ranges[0].length) == CommonDollar))
 						alias opDollar = length;
 
-					static assert (hasLength!ZipResult);
+					static assert (hasLength!Zipped);
 				}
 			static if (allSatisfy!(is_continuous_range, Ranges))
 				@property {/*...}*/
@@ -291,7 +291,7 @@ public {/*zip}*/
 					static if (is(ReturnType!(Ranges[0].measure) == CommonDollar))
 						alias opDollar = measure;
 
-					static assert (is_continuous_range!ZipResult);
+					static assert (is_continuous_range!Zipped);
 				}
 
 			alias CommonIndex = CommonType!(staticMap!(IndexTypes, Ranges));
@@ -348,7 +348,10 @@ public {/*zip}*/
 								auto length = ranges[0].length; // TODO
 
 								foreach (range; ranges)
-									assert (range.length == length);
+									assert (range.length == length, 
+										typeof(range).stringof~ ` length (` ~range.length.text~ `) does not match`
+										` length ` ~length.text~ ` (established by ` ~typeof(ranges[0]).stringof~ `)`
+									);
 							}
 					}
 					body {/*...}*/
@@ -364,7 +367,7 @@ public {/*zip}*/
 	*/
 	auto zip (Ranges...)(Ranges ranges)
 		{/*...}*/
-			return ZipResult!Ranges (ranges);
+			return Zipped!Ranges (ranges);
 		}
 		unittest {
 			import std.range: equal;
