@@ -29,8 +29,7 @@ private {/*imports}*/
 	alias reduce = evx.functional.reduce;
 }
 
-static if (1) version = from_file; //TEMP until i figure out whats going on with this lib
-
+static if (0) version = from_file; //TEMP until i figure out whats going on with this lib
 
 final class Scribe
 	{/*...}*/
