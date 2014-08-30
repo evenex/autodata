@@ -223,7 +223,7 @@ final class Scribe
 					//foreach (i, glyph; glyphs) BUG cannot infer argument types
 					for (int i = 0; i < glyphs.length; ++i)
 						{/*set card coordinates in pen-space}*/
-							auto glyph  = glyphs[i]; // XXX workaround
+							auto glyph  = glyphs[i]; // HACK workaround
 							auto offset = glyph.offset;
 							auto dims   = glyph.dims;
 
@@ -338,7 +338,7 @@ final class Scribe
 				texture_font_delete;
  			void function (texture_atlas_t* self)
 				texture_atlas_upload;
-			texture_glyph_t* function (texture_font_t* self, dchar charcode) // XXX 32-64-bit
+			texture_glyph_t* function (texture_font_t* self, dchar charcode)
 				texture_font_get_glyph;
 		}
 		extern (C) {/*definitions}*/
@@ -373,7 +373,7 @@ final class Scribe
 				}
 			struct texture_glyph_t
 				{/*...}*/
-					dchar charcode; // Wide character this glyph represents  // XXX 32/64 bit
+					dchar charcode; // Wide character this glyph represents
 					uint id; // Glyph id (used for display lists) 
 					size_t width; // Glyph's width in pixels. 
 					size_t height; // Glyph's height in pixels. 
