@@ -29,6 +29,9 @@ private {/*imports}*/
 	alias reduce = evx.functional.reduce;
 }
 
+static if (0) version = from_file; //TEMP until i figure out whats going on with this lib
+
+
 final class Scribe
 	{/*...}*/
 		public:
@@ -50,9 +53,8 @@ final class Scribe
 				{/*↓}*/
 					return (cast(Scribe)this).glyph (args);
 				}
-			Glyph glyph (char_T)(char_T code, size_t size = 0, Color glyph_color = black)
+			Glyph glyph (Unicode.Char code, size_t size = 0, Color glyph_color = black)
 				in {/*...}*/
-					assert (isSomeChar!char_T);
 					assert (font !is null);
 					assert (size == 0 || size in font);
 				}
@@ -126,8 +128,12 @@ final class Scribe
 
 							foreach (size; font_sizes)
 								{/*...}*/
-									font[size] = texture_font_new_from_file (atlas, size, font_path); // REVIEW new or new_from_file?
-									// TODO assert that the font exists
+									version(from_file)
+									font[size] = texture_font_new_from_file (atlas, size, font_path); 
+									else
+									font[size] = texture_font_new (atlas, font_path, size);
+
+									assert (font[size] !is null, `couldn't load font from ` ~font_path);
 
 									auto missed_glyphs = texture_font_load_glyphs (font[size], Unicode.ptr);
 
@@ -206,8 +212,8 @@ final class Scribe
 					auto wrap_width = order.wrap_width;
 
 					if (wrap_width < 0) 
-						with (draw_box) wrap_width = right - left;
-					else wrap_width = (wrap_width*î.vec.rotate (rotation)).from_extended_space.to_pixel_space (display).norm;
+						wrap_width = draw_box.width;
+					else wrap_width = (wrap_width * î.vec.rotate (rotation)).from_extended_space.to_pixel_space (display).norm;
 
 					newline_positions ~= 0;
 					//foreach (i, glyph; glyphs) BUG cannot infer argument types
@@ -290,8 +296,10 @@ final class Scribe
 				{/*...}*/
 					if (atlas !is null)
 						texture_atlas_delete (atlas);
+
 					foreach (f; font)
-						{texture_font_delete (f);}
+						texture_font_delete (f);
+
 					font = null;
 				}
 		}
@@ -312,15 +320,21 @@ final class Scribe
 				texture_atlas_new;
 			void function (texture_atlas_t* self)
 				texture_atlas_delete;
+
+			version(from_file)
 			texture_font_t* function (texture_atlas_t* atlas, const float size, const char* filename)
 				texture_font_new_from_file;
-			size_t function (texture_font_t* self, const dchar* charcodes) 
+			else
+			texture_font_t* function (texture_atlas_t* atlas, const char* filename, const float size)
+				texture_font_new;
+
+			size_t function (texture_font_t* self, const Unicode.Char* charcodes) 
 				texture_font_load_glyphs;
 			void function (texture_font_t* self)
 				texture_font_delete;
  			void function (texture_atlas_t* self)
 				texture_atlas_upload;
-			texture_glyph_t* function (texture_font_t* self, dchar charcode) // XXX 32-64-bit
+			texture_glyph_t* function (texture_font_t* self, Unicode.Char charcode) // XXX 32-64-bit
 				texture_font_get_glyph;
 		}
 		extern (C) {/*definitions}*/
@@ -355,7 +369,7 @@ final class Scribe
 				}
 			struct texture_glyph_t
 				{/*...}*/
-					dchar charcode; // Wide character this glyph represents  // XXX 32/64 bit
+					Unicode.Char charcode; // Wide character this glyph represents  // XXX 32/64 bit
 					uint id; // Glyph id (used for display lists) 
 					size_t width; // Glyph's width in pixels. 
 					size_t height; // Glyph's height in pixels. 
