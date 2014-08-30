@@ -29,7 +29,7 @@ private {/*imports}*/
 	alias reduce = evx.functional.reduce;
 }
 
-static if (0) version = from_file; //TEMP until i figure out whats going on with this lib
+static if (1) version = from_file; //TEMP until i figure out whats going on with this lib
 
 
 final class Scribe
@@ -53,7 +53,7 @@ final class Scribe
 				{/*↓}*/
 					return (cast(Scribe)this).glyph (args);
 				}
-			Glyph glyph (Unicode.Char code, size_t size = 0, Color glyph_color = black)
+			Glyph glyph (dchar code, size_t size = 0, Color glyph_color = black)
 				in {/*...}*/
 					assert (font !is null);
 					assert (size == 0 || size in font);
@@ -61,14 +61,18 @@ final class Scribe
 				body {/*...}*/
 					if (size == 0)
 						size = font_sizes[0];
+
 					auto font = font[size];
 					auto glyph = texture_font_get_glyph (font, code);
+
 					float s0 = glyph.s0;
 					float t0 = glyph.t0;
 					float s1 = glyph.s1;
 					float t1 = glyph.t1;
+
 					size_t width  = glyph.width;
 					size_t height = glyph.height;
+
 					int offset_x = glyph.offset_x;
 					int offset_y = glyph.offset_y;
 
@@ -328,13 +332,13 @@ final class Scribe
 			texture_font_t* function (texture_atlas_t* atlas, const char* filename, const float size)
 				texture_font_new;
 
-			size_t function (texture_font_t* self, const Unicode.Char* charcodes) 
+			size_t function (texture_font_t* self, const dchar* charcodes) 
 				texture_font_load_glyphs;
 			void function (texture_font_t* self)
 				texture_font_delete;
  			void function (texture_atlas_t* self)
 				texture_atlas_upload;
-			texture_glyph_t* function (texture_font_t* self, Unicode.Char charcode) // XXX 32-64-bit
+			texture_glyph_t* function (texture_font_t* self, dchar charcode) // XXX 32-64-bit
 				texture_font_get_glyph;
 		}
 		extern (C) {/*definitions}*/
@@ -369,7 +373,7 @@ final class Scribe
 				}
 			struct texture_glyph_t
 				{/*...}*/
-					Unicode.Char charcode; // Wide character this glyph represents  // XXX 32/64 bit
+					dchar charcode; // Wide character this glyph represents  // XXX 32/64 bit
 					uint id; // Glyph id (used for display lists) 
 					size_t width; // Glyph's width in pixels. 
 					size_t height; // Glyph's height in pixels. 
@@ -471,16 +475,14 @@ struct Table
 
 struct Unicode
 	{/*...}*/
-		alias Char = dchar; // XXX on 64-bit systems
-
 		__gshared: 
 		const {/*character maps}*/
-			Char[] ascii;
-			Char[string] arrow;
-			Char[string] symbol;
+			dchar[] ascii;
+			dchar[string] arrow;
+			dchar[string] symbol;
 		}
 		const {/*aliasing}*/
-			Char[] all;
+			dchar[] all;
 			alias all this;
 		}
 		private {/*☀}*/
@@ -581,7 +583,7 @@ struct Unicode
 		}
 	}
 
-unittest {/*...}*/
+void main () {/*...}*/
 	import core.thread;
 	import std.datetime;
 
