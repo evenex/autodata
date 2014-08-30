@@ -300,7 +300,7 @@ final class Scribe
 			texture_font_t*[size_t] font;
 		}
 		private {/*settings}*/
-			enum font_path = "/usr/share/fonts/dejavu/DejaVuSansMono.ttf"; // TODO auto-search for font
+			enum font_path = "./data/DejaVuSansMono.ttf";
 			const size_t[] font_sizes;
 		}
 		private {/*services}*/

@@ -330,6 +330,11 @@ public {/*unit}*/
 					{/*...}*/
 						return scalar;
 					}
+
+				template opCast (T : Scalar)
+					{/*...}*/
+						alias opCast = to_scalar;
+					}
 			}
 
 			private:
