@@ -167,21 +167,20 @@ private void load_tga (ref File file, ref Resource!Pixel destination) //TODO enf
 			}
 	}
 
-unittest
-	{/*...}*/
-		import core.thread;
-		import std.datetime;
+unittest {/*...}*/
+	import core.thread;
+	import std.datetime;
 
-		scope gfx = new Display;
-		gfx.start; scope (exit) gfx.stop;
+	scope gfx = new Display;
+	gfx.start; scope (exit) gfx.stop;
 
-		auto image = Image (`/home/vlad/tcr/art/concrete.tga`);
+	auto image = Image (`test.tga`);
 
-		auto texture = image.upload_to (gfx);
+	auto texture = image.upload_to (gfx);
 
-		gfx.draw (texture, square, square.translate (vec(0.5)));
+	gfx.draw (texture, square, square.translate (vec(0.5)));
 
-		gfx.render;
+	gfx.render;
 
-		Thread.sleep (100.msecs);
-	}
+	Thread.sleep (100.msecs);
+}
