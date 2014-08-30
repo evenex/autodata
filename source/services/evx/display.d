@@ -804,7 +804,7 @@ private {/*shaders}*/
 				public:
 					this ()
 						{/*...}*/
-							super ("basic.vert", "basic.frag");
+							super ("./shader/basic.vert", "./shader/basic.frag");
 							mixin (uniform_protocol);
 						}
 				protected:
