@@ -32,6 +32,20 @@ pure:
 struct Vector (uint n, Component = double)
 	if (supports_arithmetic!Component && n > 1)
 	{/*...}*/
+		public {/*text}*/
+			alias text = toString; // REVIEW this may be improper use of a text override
+
+			@property toString (Args...)(Args args) // REVIEW this allows unit abbreviation override to propagate to elements
+				{/*...}*/
+					string text;
+
+					foreach (component; this[])
+						text ~= component.text (args)~ `, `;
+
+					return `[` ~text[0..$-2]~ `]`;
+				}
+		}
+
 		pure:
 		enum length = n;
 

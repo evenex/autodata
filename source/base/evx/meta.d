@@ -704,35 +704,43 @@ public {/*construction}*/
 					mixin IterateOver!opSlice;
 			}
 			const {/*text}*/
-				auto toString ()
+				auto text (Args...)(Args args)
 					{/*...}*/
-						debug try {/*...}*/
-							import std.conv: text, to;
-							import std.range: empty, ElementType;
-							import std.traits: PointerTarget;
+						import std.traits;
+						import std.range;
 
-							static if (__traits(compiles, this[].text))
-								return this[].text;
-							else static if (__traits(compiles, this[0].text))
+						static if (is (typeof(pointer) == T*, T))
+							enum default_output = `[` ~PointerTarget!(typeof(pointer)).stringof~ `...]`;
+						else enum default_output = `[` ~ElementType!(typeof(pointer)).stringof~ `...]`;
+
+						debug {/*...}*/
+							static if (__traits(compiles, this[0].toString (args)))
 								{/*...}*/
 									string output;
 
-									foreach (element; 0..length)
-										output ~= element.text ~ `, `;
+									foreach (element; this[])
+										output ~= element.toString (args)~ `, `;
 
 									if (output.empty)
 										return `[]`;
 									else return `[` ~output[0..$-2]~ `]`;
 								}
-							else static if (is (typeof(pointer) == T*, T))
-								return `[` ~PointerTarget!(typeof(pointer)).stringof~ `...]`;
-							else return `[` ~ElementType!(typeof(pointer)).stringof~ `...]`;
+							else static if (__traits(compiles, this[0].text))
+								{/*...}*/
+									string output;
+
+									foreach (element; this[])
+										output ~= element.text~ `, `;
+
+									if (output.empty)
+										return `[]`;
+									else return `[` ~output[0..$-2]~ `]`;
+								}
+							else static if (__traits(compiles, this[].text))
+								return this[].text;
+							else return default_output;
 						}
-						catch (Exception) assert (0);
-					}
-				auto text ()
-					{/*...}*/
-						return toString;
+						else return default_output;
 					}
 			}
 		}

@@ -97,6 +97,11 @@ public {/*intervals}*/
 	*/
 	struct Interval (Index)
 		{/*...}*/
+			const @property toString ()
+				{/*...}*/
+					return `interval (` ~min.text~ `..` ~max.text~ `)`;
+				}
+
 			pure:
 			static if (is_continuous!Index)
 				alias measure = size;

@@ -60,7 +60,7 @@ public {/*traits}*/
 public {/*Time ↔ std.datetime.Duration}*/
 	auto to_duration (Seconds time)
 		{/*...}*/
-			return std.datetime.nsecs ((time.to_scalar * 1_000_000_000).to!long);
+			return std.datetime.nsecs ((time.to!Scalar * 1_000_000_000).to!long);
 		}
 	auto to_evx_time (std.datetime.Duration duration)
 		{/*...}*/
@@ -324,6 +324,8 @@ public {/*unit}*/
 							}
 						else return scalar.text~ ` ` ~abbreviation;
 					}
+
+				alias text = toString;
 			}
 			pure const nothrow @property {/*conversion}*/
 				Scalar to_scalar ()
