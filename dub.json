@@ -9,7 +9,7 @@
 		"derelict-ft"  	: "~master",
 		"dchip"  		: "~master",
 	},
-	"libs": ["ftgl", "freetype_gl", "gsl", "gslcblas"],
+	"libs": ["ftgl", "freetype_gl", "gsl", "gslcblas", "opencv_core", "opencv_highgui"],
 	"importPaths": [],
 	"targetType": "executable",
 	"buildRequirements": ["disallowDeprecations"],
