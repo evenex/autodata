@@ -473,7 +473,7 @@ public {/*axis-aligned bounding boxes}*/
 					assert (geometry.length > 1);
 				}
 				body {/*...}*/
-					auto result = geometry[].reduce!(
+					auto result = geometry.reduce!(
 						(a,b) => Vec(min (a.x, b.x), min (a.y, b.y)),
 						(a,b) => Vec(max (a.x, b.x), max (a.y, b.y))
 					);
@@ -604,7 +604,7 @@ public {/*axis-aligned bounding boxes}*/
 	*/
 	auto move_to (T)(ref Box!T box, Alignment alignment, Vector!(2, T) position)
 		{/*...}*/
-			immutable offset = box.offset_to (alignment, bounding_box(position.repeat (2)));
+			immutable offset = box.offset_to (alignment, bounding_box (position.repeat (2)));
 
 			return box.verts[].map!(v => v + offset).copy (box.verts[]);
 		}
