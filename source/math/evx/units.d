@@ -9,6 +9,8 @@ private {/*imports}*/
 		import std.range; 
 		import std.algorithm;
 		import std.math; 
+		import std.format;
+		import std.array;
 	}
 	private {/*evx}*/
 		import evx.logic; 
@@ -255,7 +257,12 @@ public {/*unit}*/
 					}
 			}
 			const @property {/*text}*/
-				auto toString (string abbreviation = ``)
+				string toString (size_t precision)
+					{/*...}*/
+						return toString (``, precision);
+					}
+
+				string toString (string abbreviation = ``, size_t precision = 6)
 					{/*...}*/
 						if (abbreviation.empty)
 							{/*...}*/
@@ -306,7 +313,9 @@ public {/*unit}*/
 										}
 									}
 
-								string output = scalar.text ~ ` `;
+								auto writer = appender!string (); // TEMP
+								writer.formattedWrite ("%." ~precision.text~ "g ", scalar);
+								string output = writer.data;
 
 								foreach (dim; numerator)
 									output ~= dim[0].text ~ to_superscript (dim[1]);

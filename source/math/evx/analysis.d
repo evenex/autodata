@@ -39,11 +39,9 @@ public {/*rounding}*/
 	*/
 	auto round (T)(T value)
 		{/*...}*/
-			auto floored = value.floor;
-
-			if ((value - floored) < 0.5)
-				return floored;
-			else return floored + 1.0;
+			if (value % 1.0 < 0.5)
+				return value.floor;
+			else return value.ceil;
 		}
 }
 public {/*comparison}*/

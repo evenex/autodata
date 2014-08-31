@@ -201,4 +201,8 @@ struct Stride (R)
 			{/*...}*/
 				return range.length / stride;
 			}
+
+		invariant() {/*}*/
+			assert (stride != 0, `stride must be nonzero`);
+		}
 	}
