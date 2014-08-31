@@ -185,6 +185,9 @@ struct Delivery (T)
 					this.future = &future;
 				}
 		}
+		public {/*operators}*/
+			alias opAssign = send;
+		}
 		private:
 		private {/*data}*/
 			Future!T* future;

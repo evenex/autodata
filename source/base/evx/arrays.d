@@ -1063,6 +1063,38 @@ struct Associative (Array, Lookup...)
 					else return `[` ~text[0..$-2]~ `]`;
 				}
 		}
+		public {/*iteration}*/
+			int opApply (scope int delegate(ref Item dynamic_body) op)
+				{/*...}*/
+					int result;
+
+					foreach (ref element; items[])
+						{/*...}*/
+							result = op (element);
+
+							if (result) 
+								break;
+						}
+
+					return result;
+				}
+			int opApply (scope int delegate(Key, ref Item dynamic_body) op)
+				{/*...}*/
+					int result;
+
+					for (auto i = 0; i < size; ++i)
+						{/*...}*/
+							auto index = keyring[i];
+
+							result = op (index.key, items[index.position_in_array]);
+
+							if (result) 
+								break;
+						}
+
+					return result;
+				}
+		}
 		private:
 		private {/*data}*/
 			Appendable!Array items;
