@@ -16,19 +16,6 @@ private {/*imports}*/
 	alias zip = evx.functional.zip;
 }
 
-/* explicitly counts the number of elements in an InputRange 
-*/
-auto count_elements (R)(R range)
-	if (isInputRange!R)
-	{/*...}*/
-		size_t count;
-
-		foreach (_; range)
-			++count;
-
-		return count;
-	}
-
 pure:
 
 /* construct a ForwardRange out of a range of ranges such that the inner ranges appear concatenated 
@@ -185,7 +172,7 @@ struct Stride (R)
 				this.stride = stride;
 			}
 
-		auto front ()
+		auto ref front ()
 			{/*...}*/
 				return range.front;
 			}
@@ -199,6 +186,19 @@ struct Stride (R)
 				return range.length < stride;
 			}
 
+		static if (isBidirectionalRange!R)
+			{/*...}*/
+				auto ref back ()
+					{/*...}*/
+						return range.back;
+					}
+				void popBack ()
+					{/*...}*/
+						foreach (_; 0..stride)
+							range.popBack;
+					}
+			}
+
 		const @property length ()
 			{/*...}*/
 				return range.length / stride;
@@ -209,12 +209,36 @@ struct Stride (R)
 		}
 	}
 
-/* enumerates a range with ℕ to provide an index to foreach 
-	this exploits the automatic foreach tuple index unpacking trick which is obscure and under controversy
+/* generate a foreach index for a custom range 
+	this exploits the automatic tuple foreach index unpacking trick which is obscure and under controversy
 	reference: https://issues.dlang.org/show_bug.cgi?id=7361
 */
 auto enumerate (R)(R range)
 	if (isInputRange!R && hasLength!R)
 	{/*...}*/
 		return ℕ[0..range.length].zip (range);
+	}
+
+/* explicitly count the number of elements in an InputRange 
+*/
+size_t count (R)(R range)
+	if (isInputRange!R)
+	{/*...}*/
+		size_t count;
+
+		foreach (_; range)
+			++count;
+
+		return count;
+	}
+
+/* verify that the length of a range is its true length 
+*/
+debug void verify_length (R)(R range)
+	{/*...}*/
+		auto length = range.length;
+		auto count = range.count;
+
+		if (length != count)
+			assert (0, R.stringof~ ` length (` ~count.text~ `) doesn't match reported length (` ~length.text~ `)`);
 	}

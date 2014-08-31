@@ -219,7 +219,7 @@ final class Scribe
 
 					newline_positions ~= 0;
 					foreach (i, glyph; enumerate (glyphs))
-						{/*set card coordinates in pen-space}*/
+						{/*set card coordinates in pixel-space}*/
 							auto offset = glyph.offset;
 							auto dims   = glyph.dims;
 
@@ -278,7 +278,7 @@ final class Scribe
 						}
 
 					immutable scale = order.scale;
-					auto translation = order.translate;
+					immutable translation = order.translate;
 
 					immutable p = pen;
 					pure transform (vec v) { return scale*((v-p/2).rotate (rotation) + p/2);}

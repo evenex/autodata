@@ -1020,6 +1020,8 @@ struct Associative (Array, Lookup...)
 				{/*...}*/
 					return this.contains (key);
 				}
+
+			alias opIndex = get;
 		}
 		public {/*clear}*/
 			void clear ()

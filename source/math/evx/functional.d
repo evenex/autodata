@@ -24,7 +24,7 @@ private {/*imports}*/
 template λ (alias F) {alias λ = F;}
 
 public {/*map}*/
-	/* replacement for std.algorithm.Mapped 
+	/* replacement for std.algorithm.MapResult 
 	*/
 	struct Mapped (alias func, R)
 		{/*...}*/

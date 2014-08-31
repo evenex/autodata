@@ -26,30 +26,38 @@ final class Input
 						{/*...}*/
 							if (input == Key.esc)
 								enforce (Key.esc !in key_map);
+
 							alias map = key_map;
 						}
 					else alias map = mouse_map;
+
 					if (action is null)
 						{/*...}*/
 							static if (is (T == Key))
 								assert (input != Key.esc);
+
 							map.current_map.remove (input);
 						}
 					else map[input] = action;
 				}
-			void process ()
+
+			const @property keys_pressed (R)(R range)
+				if (is (ElementType!R == Key))
 				{/*...}*/
-					events.swap ();
-					foreach (event; events.read[]) with (event) 
-						if (button in mouse_map)
-							mouse_map[button](pressed);
-						else if (key in key_map)
-							key_map[key](pressed);
+					return range.map!(k => keys[k]);
 				}
-			@property auto pointer () nothrow const
+
+			const @property buttons_pressed (R)(R range)
+				if (is (ElementType!R == Mouse))
+				{/*...}*/
+					return range.map!(b => buttons[b]);
+				}
+			const @property pointer ()
 				{/*...}*/
 					return mouse_pointer;
 				}
+		}
+		public {/*inputs}*/
 			enum Key
 				{/*...}*/
 					ignored 	= GLFW_KEY_UNKNOWN,
@@ -122,7 +130,19 @@ final class Input
 					aux_5 	= GLFW_MOUSE_BUTTON_5
 				}
 		}
-		public {/*☀}*/
+		public {/*events}*/
+			void process ()
+				{/*...}*/
+					events.swap;
+
+					foreach (event; events.read[]) with (event) 
+						if (button in mouse_map)
+							mouse_map[button](pressed);
+						else if (key in key_map)
+							key_map[key](pressed);
+				}
+		}
+		public {/*ctor}*/
 			this (Display display, void delegate(bool) main_escape_function)
 				in {/*...}*/
 					assert (display.is_running);
@@ -155,14 +175,16 @@ final class Input
 		private:
 		private {/*events}*/
 			shared static DoubleBuffer!(Event, 2^^6) events;
+
 			struct Event
 				{/*...}*/
 					private {/*data}*/
 						int code;
 						bool pressed;
 					}
-					@property {/*key/mouse}*/
+					nothrow @property {/*key/mouse}*/
 						union Cast {int code; Key key; Mouse button;}
+
 						Key key ()
 							{/*...}*/
 								return Cast (code).key;
@@ -176,9 +198,14 @@ final class Input
 		}
 		__gshared {/*state}*/
 			Display active_display;
-			vec mouse_pointer = 0.vec;
+
 			Map!Key key_map;
+			bool[Key] keys;
+
 			Map!Mouse mouse_map;
+			bool[Mouse] buttons;
+			vec mouse_pointer = 0.vec;
+
 			struct Map (T)
 				{/*...}*/
 					alias current_map this;
@@ -226,14 +253,22 @@ final class Input
 					if (state == GLFW_REPEAT)
 						return;
 
-					events ~= Event (key, cast(bool)state);
+					auto event = Event (key, cast(bool)state);
+
+					keys[event.key] = event.pressed;
+
+					events ~= event;
 				}
 			void button_callback (GLFWwindow*, int button, int state, int mods)
 				{/*...}*/
 					if (state == GLFW_REPEAT)
 						return;
 
-					events ~= Event (button, cast(bool)state);
+					auto event = Event (button, cast(bool)state);
+
+					buttons[event.button] = event.pressed;
+
+					events ~= event;
 				}
 			void pointer_callback (GLFWwindow*, double xpos, double ypos)
 				{/*...}*/
