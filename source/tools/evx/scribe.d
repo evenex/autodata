@@ -29,7 +29,7 @@ private {/*imports}*/
 	alias reduce = evx.functional.reduce;
 }
 
-static if (0) version = from_file; //TEMP until i figure out whats going on with this lib
+static if (1) version = from_file; //TEMP until i figure out whats going on with this lib
 
 final class Scribe
 	{/*...}*/
@@ -208,7 +208,7 @@ final class Scribe
 
 					vec pen = vec(0, -font.ascender);
 
-					auto bounds = order.bounds;
+					immutable bounds = order.bounds;
 					auto draw_box = bounds[].from_extended_space.to_pixel_space (display).bounding_box;
 
 					immutable rotation = order.rotate;

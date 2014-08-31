@@ -48,7 +48,7 @@ public {/*C compatibility}*/
 public debug {/*}*/
 	/* pure nothrow writeln 
 	*/
-	auto writeln (Args...)(Args args)
+	auto pwriteln (Args...)(Args args)
 		{/*...}*/
 			debug try {/*...}*/
 				foreach (arg; args)
@@ -167,8 +167,7 @@ debug (profiler) {/*}*/
 								
 								this.last_check = Clock.currTime;
 								
-								stderr.writeln (check, ` `, marks);
-								stderr.flush;
+								pwriteln (check, ` `, marks);
 							}
 						catch (Exception) assert (0);
 					}
@@ -176,7 +175,7 @@ debug (profiler) {/*}*/
 			public {/*~}*/
 				~this ()
 					{/*...}*/
-						writeln (profiler_exit_indent,
+						pwriteln (profiler_exit_indent,
 							exit_status == ExitStatus.failure? `FAILED!`:``, 
 							`ex(` ~tid_string~`): `, func_name, ` after `, exit_time - entry_time);
 					}
@@ -197,7 +196,7 @@ debug (profiler) {/*}*/
 							this.entry_time = Clock.currTime;
 							this.last_check = entry_time;
 
-							writeln (profiler_enter_indent, `in(` ~tid_string~ `):`, func_name, `at`, entry_time.toISOExtString["2014-05-15".length..$]);
+							pwriteln (profiler_enter_indent, `in(` ~tid_string~ `):`, func_name, `at`, entry_time.toISOExtString["2014-05-15".length..$]);
 						}
 						catch (Exception) assert (0);
 					}

@@ -4,6 +4,7 @@ private {/*imports}*/
 	private {/*std}*/
 		import std.typetuple;
 		import std.range;
+		import std.conv;
 	}
 	private {/*evx}*/
 		import evx.logic; 
@@ -17,7 +18,7 @@ private {/*imports}*/
 
 /* explicitly counts the number of elements in an InputRange 
 */
-auto element_count (R)(R range)
+auto count_elements (R)(R range)
 	if (isInputRange!R)
 	{/*...}*/
 		size_t count;
@@ -164,4 +165,40 @@ bool is_infinite (R)(R)
 	if (isInputRange!R)
 	{/*...}*/
 		return false;
+	}
+
+auto stride (R,T)(R range, T stride)
+	{/*...}*/
+		return Stride!R (range, stride.to!size_t);
+	}
+struct Stride (R)
+	{/*...}*/
+		R range;
+
+		size_t stride;
+
+		this (R range, size_t stride)
+			{/*...}*/
+				this.range = range;
+				this.stride = stride;
+			}
+
+		auto front ()
+			{/*...}*/
+				return range.front;
+			}
+		void popFront ()
+			{/*...}*/
+				foreach (_; 0..stride)
+					range.popFront;
+			}
+		bool empty () const
+			{/*...}*/
+				return range.length < stride;
+			}
+
+		const @property length ()
+			{/*...}*/
+				return range.length / stride;
+			}
 	}

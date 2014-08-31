@@ -473,7 +473,7 @@ public {/*axis-aligned bounding boxes}*/
 					assert (geometry.length > 1);
 				}
 				body {/*...}*/
-					auto result = geometry.reduce!(
+					auto result = geometry[].reduce!(
 						(a,b) => Vec(min (a.x, b.x), min (a.y, b.y)),
 						(a,b) => Vec(max (a.x, b.x), max (a.y, b.y))
 					);

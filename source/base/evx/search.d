@@ -63,7 +63,6 @@ template binary_search (alias compare, Equivalence equivalence = Equivalence.int
 				catch (Exception) assert (0);
 			}
 			body {/*...}*/
-			import evx.utils: writeln;
 				if (range.empty)
 					return BinarySearchResult!T (null, 0);
 
@@ -98,14 +97,13 @@ template binary_search (alias compare, Equivalence equivalence = Equivalence.int
 							min = mid + 1;
 
 						debug {/*...}*/
-							assert (++counter <= range.length,
-								(){/*...}*/
-									import evx.utils: writeln;
+							import std.conv;
 
-									writeln (`error: search for`, element, `in`, range, `failed to terminate!`);
-
-									return ``;
-								}()
+							try assert (++counter <= range.length,
+								`error: search for` ~element.text~ `in` ~R.stringof~ `failed to terminate!`
+							);
+							catch (Exception ex) assert (0, 
+								`error: search for` ~T.stringof~ `in` ~R.stringof~ `failed to terminate!`
 							);
 						}
 					}

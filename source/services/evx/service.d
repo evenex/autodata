@@ -248,7 +248,7 @@ abstract class Service
 						{/*...}*/
 							debug try return func ();
 								catch (Throwable error) {/*...}*/
-									writeln (`error @`, error.file, `(`, error.line, `): `, error.msg, `while`, mode, "\n", error.info);
+									pwriteln (`error @`, error.file, `(`, error.line, `): `, error.msg, `while`, mode, "\n", error.info);
 									throw error;
 								}
 							else return func ();

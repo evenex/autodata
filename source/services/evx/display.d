@@ -55,7 +55,7 @@ enum PixelFormat
 	}
 
 pure {/*coordinate transformations}*/
-	pure {/*from}*/
+	public {/*from}*/
 		auto from_draw_space (T)(T geometry) 
 			if (is (T == vec) || is_geometric!T)
 			{/*...}*/
@@ -84,9 +84,9 @@ pure {/*coordinate transformations}*/
 				else static assert (0);
 			}
 	}
-	pure {/*to}*/
+	public {/*to}*/
 		public {/*element}*/
-			vec to_draw_space (Display.Coords coords, Display display) 
+			vec to_draw_space ()(Display.Coords coords, Display display) 
 				{/*...}*/
 					with (Display.Space) final switch (coords.space)
 						{/*...}*/
@@ -102,7 +102,7 @@ pure {/*coordinate transformations}*/
 								return 2*coords.value/display.dimensions - 1;
 						}
 				}
-			vec to_extended_space (Display.Coords coords, Display display) 
+			vec to_extended_space ()(Display.Coords coords, Display display) 
 				{/*...}*/
 					with (Display.Space) final switch (coords.space)
 						{/*...}*/
@@ -118,7 +118,7 @@ pure {/*coordinate transformations}*/
 								return coords.to_draw_space (display).from_draw_space.to_extended_space (display);
 						}
 				}
-			vec to_pixel_space (Display.Coords coords, Display display) 
+			vec to_pixel_space ()(Display.Coords coords, Display display) 
 				{/*...}*/
 					with (Display.Space) final switch (coords.space)
 						{/*...}*/

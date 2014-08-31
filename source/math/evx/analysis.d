@@ -34,6 +34,18 @@ template infinite (T)
 alias infinity = infinite!real;
 
 pure:
+public {/*rounding}*/
+	/* pure replacement for std.math.round 
+	*/
+	auto round (T)(T value)
+		{/*...}*/
+			auto floored = value.floor;
+
+			if ((value - floored) < 0.5)
+				return floored;
+			else return floored + 1.0;
+		}
+}
 public {/*comparison}*/
 	enum standard_relative_tolerance = 1e-5;
 

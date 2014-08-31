@@ -32,10 +32,10 @@ private {/*imports}*/
 
 version (benchmarked)
 	{/*...}*/
+		import std.stdio;
+
 		void print_results (R)(size_t test_size, string[] test_names, ref R results)
 			{/*...}*/
-				import std.math: round;
-
 				auto minimum = results[]
 					.map!(r => r.length)
 					.reduce!min;

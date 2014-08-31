@@ -11,6 +11,8 @@ private {/*imports}*/
 		import evx.traits; 
 		import evx.math;
 	}
+
+	alias round = evx.analysis.round;
 }
 
 struct Stream (Sample, Index)
