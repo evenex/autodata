@@ -167,6 +167,8 @@ bool is_infinite (R)(R)
 		return false;
 	}
 
+/* const-correct replacement for std.range.stride 
+*/
 auto stride (R,T)(R range, T stride)
 	{/*...}*/
 		return Stride!R (range, stride.to!size_t);
@@ -205,4 +207,14 @@ struct Stride (R)
 		invariant() {/*}*/
 			assert (stride != 0, `stride must be nonzero`);
 		}
+	}
+
+/* enumerates a range with ℕ to provide an index to foreach 
+	this exploits the automatic foreach tuple index unpacking trick which is obscure and under controversy
+	reference: https://issues.dlang.org/show_bug.cgi?id=7361
+*/
+auto enumerate (R)(R range)
+	if (isInputRange!R && hasLength!R)
+	{/*...}*/
+		return ℕ[0..range.length].zip (range);
 	}

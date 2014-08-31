@@ -195,9 +195,7 @@ public {/*intervals}*/
 			A.start = 9;
 			assert (A.length == 1);
 
-			static if (0)
-			try assertThrown!Error (A.end = 8); // OUTSIDE BUG assertThrown is no longer suppressing the assertion failure
-			catch (Exception) assert (0);
+			assertThrown!Error (A.end = 8);
 			A.bounds[1] = 10;
 
 			assert (not (A.empty));
@@ -403,8 +401,7 @@ public {/*calculus}*/
 				{/*...}*/
 					size_t n_partitions ()
 						{/*...}*/
-							try return (domain.measure / Δx).round.to!size_t + 1;
-							catch (Exception) assert (0);
+							return (domain.measure / Δx).round.to!size_t + 1;
 						}
 
 					return Σ (ℕ[0..n_partitions]

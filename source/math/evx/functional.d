@@ -15,6 +15,7 @@ private {/*imports}*/
 		import evx.analysis;
 		import evx.traits;
 		import evx.utils;
+		import evx.range;
 	}
 }
 
@@ -591,7 +592,7 @@ public {/*sequence}*/
 			assert (ℕ[4..9][1..4].equal ([5,6,7]));
 			assert (ℕ[4..9][1..4][1] == 6);
 
-			//foreach (i, n; ℕ[0..10]) // OUTSIDE BUG Error: cannot infer argument types
-			//	assert (n == i);
+			for (auto i = 0; i < 10; ++i)
+				assert (ℕ[0..10][i] == i);
 		}
 }

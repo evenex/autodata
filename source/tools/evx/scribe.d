@@ -22,6 +22,7 @@ private {/*imports}*/
 		import evx.allocators;
 		import evx.arrays;
 		import evx.display;
+		import evx.range;
 	}
 
 	alias map = evx.functional.map;
@@ -29,7 +30,7 @@ private {/*imports}*/
 	alias reduce = evx.functional.reduce;
 }
 
-static if (1) version = from_file; //TEMP until i figure out whats going on with this lib
+static if (0) version = from_file; //TEMP until i figure out whats going on with this lib
 
 final class Scribe
 	{/*...}*/
@@ -183,10 +184,8 @@ final class Scribe
 
 					auto cards = typeset (glyphs, order);
 
-					for (int i = 0; i < glyphs.length; ++i)
-					//foreach (i, glyph; glyphs) BUG cannot infer argument types
+					foreach (i, glyph; enumerate (glyphs))
 						{/*...}*/
-							auto glyph = glyphs[i]; // HACK workaround
 							auto geometry = cards[4*i..4*i+4];
 							auto tex_coords = glyph.roi[].bounding_box[].flip!`vertical`;
 
@@ -219,10 +218,8 @@ final class Scribe
 					else wrap_width = (wrap_width * î.vec.rotate (rotation)).from_extended_space.to_pixel_space (display).norm;
 
 					newline_positions ~= 0;
-					//foreach (i, glyph; glyphs) BUG cannot infer argument types
-					for (int i = 0; i < glyphs.length; ++i)
+					foreach (i, glyph; enumerate (glyphs))
 						{/*set card coordinates in pen-space}*/
-							auto glyph  = glyphs[i]; // HACK workaround
 							auto offset = glyph.offset;
 							auto dims   = glyph.dims;
 
