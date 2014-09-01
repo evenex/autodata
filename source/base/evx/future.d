@@ -72,23 +72,7 @@ unittest {/*demo}*/
 struct Future (T)
 	{/*...}*/
 		public:
-		const @property {/*status}*/
-			bool is_realized ()
-				{/*...}*/
-					return realized;
-				}
-		}
-		public {/*interface}*/
-			void assign (U)(U that)
-				if (__traits(compiles, payload = that))
-				in {/*...}*/
-					assert (this.is_realized.not, Future.stringof~ ` has already been realized`);
-				}
-				body {/*...}*/
-					payload = that;
-					finalize;
-				}
-
+		public {/*client interface}*/
 			void await (size_t poll_frequency = 1000)
 				{/*...}*/
 					import core.thread; // REVIEW
@@ -108,6 +92,34 @@ struct Future (T)
 					return payload;
 				}
 			alias get this;
+
+		}
+		public {/*server interface}*/
+			void assign (U)(U that)
+				if (__traits(compiles, payload = that))
+				in {/*...}*/
+					assert (this.is_realized.not, Future.stringof~ ` has already been realized`);
+				}
+				body {/*...}*/
+					payload = that;
+					finalize;
+				}
+
+			auto ref stream ()
+				{/*...}*/
+					return payload;
+				}
+
+			void finalize ()
+				{/*...}*/
+					realized = true;
+				}
+		}
+		const @property {/*status}*/
+			bool is_realized ()
+				{/*...}*/
+					return realized;
+				}
 		}
 		public {/*operators}*/
 			alias opCall = get;
@@ -118,23 +130,11 @@ struct Future (T)
 			T payload;
 			bool realized;
 		}
-		private {/*}*/
-			void finalize ()
-				{/*...}*/
-					realized = true;
-				}
-		}
 	}
 struct Promise (T)
 	{/*...}*/
 		public:
-		const @property {/*status}*/
-			@property bool is_fulfilled () const
-				{/*...}*/
-					return future.is_realized;
-				}
-		}
-		public {/*interface}*/
+		public {/*client interface}*/
 			auto await (uint poll_frequency = 1000)
 				{/*...}*/
 					future.await (poll_frequency);
@@ -148,6 +148,12 @@ struct Promise (T)
 					return future.payload;
 				}
 			alias get this;
+		}
+		const @property {/*status}*/
+			@property bool is_fulfilled () const
+				{/*...}*/
+					return future.is_realized;
+				}
 		}
 		public {/*operators}*/
 			alias opCall = get;
@@ -166,27 +172,37 @@ struct Promise (T)
 struct Delivery (T)
 	{/*...}*/
 		public:
+		public {/*server interface}*/
+			void send (U)(U that)
+				if (not (is (U == typeof(this))))
+				{/*...}*/
+					*future = that;
+				}
+
+			auto ref stream ()
+				{/*...}*/
+					return future.stream;
+				}
+
+			void finalize ()
+				{/*...}*/
+					future.finalize;
+				}
+		}
 		const @property {/*status}*/
 			@property bool was_delivered ()
 				{/*...}*/
 					return future.is_realized;
 				}
 		}
-		public {/*interface}*/
-			void send (U)(U that)
-				if (not (is (U == typeof(this))))
-				{/*...}*/
-					*future = that;
-				}
+		public {/*operators}*/
+			alias opAssign = send;
 		}
 		public {/*ctor}*/
 			this (ref Future!T future)
 				{/*...}*/
 					this.future = &future;
 				}
-		}
-		public {/*operators}*/
-			alias opAssign = send;
 		}
 		private:
 		private {/*data}*/
