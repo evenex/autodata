@@ -15,9 +15,8 @@ private {/*imports}*/
 
 	alias map = evx.functional.map;
 	alias zip = evx.functional.zip;
+	alias sequence = evx.functional.sequence;
 }
-
-nothrow:
 
 /* compute the mean value over a set */
 auto mean (T)(T set)

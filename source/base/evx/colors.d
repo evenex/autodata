@@ -139,17 +139,16 @@ struct Color
 
 		mixin NormalizedInvariance;
 
-		unittest
-			{/*...}*/
-				assert (red + blue == magenta);
-				assert (red + green == yellow);
-				assert (cyan - blue == green);
-				assert (cyan - blue - green == black);
-				assert (red + yellow + blue == white);
-				assert (white - (red + blue) == green);
-
-				auto orange = Color (1.0, 0.5, 0.0);
-				assert (red + yellow == yellow);
-				assert (red * yellow == orange);
-			}
 	};
+unittest {/*...}*/
+	assert (red + blue == magenta);
+	assert (red + green == yellow);
+	assert (cyan - blue == green);
+	assert (cyan - blue - green == black);
+	assert (red + yellow + blue == white);
+	assert (white - (red + blue) == green);
+
+	auto orange = Color (1.0, 0.5, 0.0);
+	assert (red + yellow == yellow);
+	assert (red * yellow == orange);
+}

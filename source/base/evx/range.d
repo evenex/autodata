@@ -16,6 +16,17 @@ private {/*imports}*/
 	alias zip = evx.functional.zip;
 }
 
+/* generate a foreach index for a custom range 
+	this exploits the automatic tuple foreach index unpacking trick which is obscure and under controversy
+	reference: https://issues.dlang.org/show_bug.cgi?id=7361
+*/
+auto enumerate (R)(R range) // REVIEW purity broken by opencv
+	if (isInputRange!R && hasLength!R)
+	{/*...}*/
+		return ℕ[0..range.length].zip (range);
+	}
+
+
 pure:
 
 /* construct a ForwardRange out of a range of ranges such that the inner ranges appear concatenated 
@@ -172,20 +183,38 @@ struct Stride (R)
 				this.stride = stride;
 			}
 
-		auto ref front ()
+		const @property length ()
 			{/*...}*/
-				return range.front;
-			}
-		void popFront ()
-			{/*...}*/
-				foreach (_; 0..stride)
-					range.popFront;
-			}
-		bool empty () const
-			{/*...}*/
-				return range.length < stride;
+				return range.length / stride;
 			}
 
+		static if (isInputRange!R)
+			{/*...}*/
+				auto ref front ()
+					{/*...}*/
+						return range.front;
+					}
+				void popFront ()
+					{/*...}*/
+						foreach (_; 0..stride)
+							range.popFront;
+					}
+				bool empty () const
+					{/*...}*/
+						return range.length < stride;
+					}
+
+				static assert (isInputRange!Stride);
+			}
+		static if (isForwardRange!R)
+			{/*...}*/
+				@property save ()
+					{/*...}*/
+						return this;
+					}
+
+				static assert (isForwardRange!Stride);
+			}
 		static if (isBidirectionalRange!R)
 			{/*...}*/
 				auto ref back ()
@@ -197,26 +226,14 @@ struct Stride (R)
 						foreach (_; 0..stride)
 							range.popBack;
 					}
+
+				static assert (isBidirectionalRange!Stride);
 			}
 
-		const @property length ()
-			{/*...}*/
-				return range.length / stride;
-			}
 
 		invariant() {/*}*/
 			assert (stride != 0, `stride must be nonzero`);
 		}
-	}
-
-/* generate a foreach index for a custom range 
-	this exploits the automatic tuple foreach index unpacking trick which is obscure and under controversy
-	reference: https://issues.dlang.org/show_bug.cgi?id=7361
-*/
-auto enumerate (R)(R range)
-	if (isInputRange!R && hasLength!R)
-	{/*...}*/
-		return ℕ[0..range.length].zip (range);
 	}
 
 /* explicitly count the number of elements in an InputRange 

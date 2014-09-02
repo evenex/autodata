@@ -65,7 +65,7 @@ public {/*forwarding}*/
 		unittest {/*...}*/
 			import std.conv: to;
 
-			debug struct Test {int[4] x; pure nothrow: mixin IterateOver!x;}
+			debug struct Test {int[4] x; pure : mixin IterateOver!x;}
 
 			static assert (isIterable!Test);
 
@@ -140,8 +140,8 @@ public {/*forwarding}*/
 					}
 		}
 		unittest {/*...}*/
-			debug static struct Test {int a; pure nothrow: this (int a) {this.a = -a;}}
-			debug static struct Ctor {Test t; pure nothrow: mixin ForwardConstructor!t;}
+			debug static struct Test {int a; pure : this (int a) {this.a = -a;}}
+			debug static struct Ctor {Test t; pure : mixin ForwardConstructor!t;}
 
 			auto x = Ctor (12);
 			assert (x.t.a == -12);
@@ -151,7 +151,7 @@ public {/*forwarding}*/
 	*/
 	struct ChainForwarding (T)
 		{/*...}*/
-			public pure nothrow:
+			public pure :
 			mixin(forward_members);
 
 			private:
@@ -196,7 +196,7 @@ public {/*forwarding}*/
 				{/*...}*/
 					int _x, _y, _z; 
 
-					pure nothrow:
+					pure :
 					@property x (int x)
 						{_x = x;}
 					@property y (int y)
@@ -253,12 +253,12 @@ public {/*initialization}*/
 
 			debug static struct Test
 				{/*...}*/
-					static struct Inner {int x, y; pure nothrow this (int x, int y) {this.x = x; this.y = y;}}
+					static struct Inner {int x, y; pure this (int x, int y) {this.x = x; this.y = y;}}
 					static struct Malloced
 						{/*...}*/
 							int* mem; 
 
-							pure nothrow:
+							pure :
 
 							this (int size)
 								{mem = cast(int*)malloc(size);}
@@ -268,7 +268,7 @@ public {/*initialization}*/
 								}
 						}
 
-					pure nothrow:
+					pure :
 
 					mixin AutoInitialize;
 					@Initialize!(666, 42) Inner i1;
@@ -421,7 +421,7 @@ public {/*construction}*/
 
 			struct Id
 				{/*...}*/
-					static auto create () nothrow
+					static auto create ()
 						{/*...}*/
 							return typeof(this) (++generator);
 						}
@@ -439,7 +439,7 @@ public {/*construction}*/
 						__gshared typeof(id) generator;
 					}
 
-					pure nothrow mixin CompareBy!id;
+					pure mixin CompareBy!id;
 				}
 		}
 		unittest {
@@ -547,7 +547,7 @@ public {/*construction}*/
 		unittest {/*...}*/
 			struct Test
 				{/*...}*/
-					pure nothrow mixin Builder!(
+					pure mixin Builder!(
 						int, `a`,
 						int, `b`,
 						int, `c`,
@@ -756,8 +756,6 @@ public {/*construction}*/
 					int* mem;
 					int size;
 
-					nothrow:
-
 					this (int size)
 						{/*...}*/
 							this.size = size;
@@ -770,7 +768,7 @@ public {/*construction}*/
 				{/*...}*/
 					int[4] mem;
 					enum size = 4;
-					pure nothrow mixin ArrayInterface!(mem, size);
+					pure mixin ArrayInterface!(mem, size);
 				}
 
 			debug auto a = Array (4);
@@ -815,7 +813,7 @@ public {/*extraction}*/
 	*/
 	template collect_members (T, alias attribute)
 		{/*...}*/
-			immutable string[] collect_members ()
+			static string[] collect_members ()
 				{/*...}*/
 					immutable string[] collect (members...) ()
 						{/*...}*/

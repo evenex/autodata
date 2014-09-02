@@ -10,7 +10,6 @@ private {/*imports}*/
 		import std.conv;
 	}
 	private {/*evx}*/
-		import evx.allocators;
 		import evx.utils;
 		import evx.colors;
 		import evx.math;

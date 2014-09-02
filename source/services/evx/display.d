@@ -23,6 +23,7 @@ private {/*imports}*/
 		import evx.meta;
 		import evx.service;
 		import evx.scheduling;
+		import evx.arrays;
 		import evx.buffers;
 	}
 	private {/*opengl}*/
@@ -236,6 +237,11 @@ pure {/*coordinate transformations}*/
 final class Display: Service
 	{/*...}*/
 		public:
+		void background (Color color) // REVIEW
+			{/*...}*/
+				access_rendering_context (() => gl.ClearColor (color.vector.tuple.expand));
+			}
+
 		public {/*drawing}*/
 			void draw (T) (Color color, T geometry, GeometryMode mode = GeometryMode.l_loop) 
 				if (is_geometric!T || is_in_display_space!T)
@@ -372,12 +378,12 @@ final class Display: Service
 
 					if (order_pool.length)
 						{/*sort orders}*/
-							template take_order (visual_T)
+							template take_order (ArtStyle)
 								{/*...}*/
 									alias take_order = λ!(
-										(Order!visual_T order) 
+										(Order!ArtStyle order) 
 											{/*...}*/
-												const auto i = staticIndexOf!(visual_T, VisualTypes);
+												const auto i = staticIndexOf!(ArtStyle, VisualTypes);
 												(cast(Shaders[i])shaders[i]).render_list ~= order;
 											}
 									);
@@ -618,7 +624,7 @@ public {/*openGL}*/
 		}
 }
 private {/*shaders}*/
-	template ShaderName (visual_T) {mixin(q{alias ShaderName = }~visual_T.stringof~q{Shader;});}
+	template ShaderName (ArtStyle) {mixin(q{alias ShaderName = }~ArtStyle.stringof~q{Shader;});}
 	alias Shaders = staticMap!(ShaderName, VisualTypes);
 
 	struct Uniform {}
@@ -626,7 +632,7 @@ private {/*shaders}*/
 	private {/*protocols}*/
 		template link_uniforms (T)
 			{/*...}*/
-				const string link_uniforms ()
+				string link_uniforms ()
 					{/*...}*/
 						string command;
 						foreach (uniform; collect_members!(T, Uniform))
@@ -653,27 +659,30 @@ private {/*shaders}*/
 			{/*...}*/
 				void execute ();
 			}
-		abstract class Shader (visual_T): ShaderInterface
+		abstract class Shader (ArtStyle): ShaderInterface
 			{/*...}*/
-				protected alias visual_type = visual_T;
+				protected alias visual_type = ArtStyle; // REFACTOR visual/style
 				public:
 				public {/*render list}*/
-					Order!visual_T[] render_list;
+					Appendable!(Order!ArtStyle[]) render_list; // TODO autoinit?
 				}
 				protected:
 				shared final {/*shader interface}*/
 					void execute ()
 						in {/*...}*/
-							assert (protocol_check, visual_T.stringof~" shader failed protocol");
+							assert (protocol_check, ArtStyle.stringof~" shader failed protocol");
 						}
 						body {/*...}*/
 							gl.UseProgram (program);
+							with (cast()this) // REVIEW
 							foreach (order; render_list) 
 								{/*...}*/
+									with (cast(shared)this) // REVIEW
 									preprocess (order);
 									gl.DrawArrays (order.mode, order.index, order.length);
 								}
-							render_list.clear ();
+							with (cast()this) // REVIEW
+							render_list.clear;
 						}
 				}
 				shared {/*shader settings}*/
@@ -708,7 +717,7 @@ private {/*shaders}*/
 						}
 				}
 				abstract shared {/*preprocessing}*/
-					void preprocess (Order!visual_T);
+					void preprocess (Order!ArtStyle);
 				}
 				protected {/*data}*/
 					GLuint program;
@@ -839,7 +848,7 @@ private {/*orders}*/
 	alias OrderTypes = staticMap!(Order, VisualTypes);
 	alias RenderOrder = Algebraic!OrderTypes;
 
-	struct Order (visual_T = byte)
+	struct Order (ArtStyle = byte)
 		{/*...}*/
 			public {/*standard}*/
 				GLenum mode = int.max;
@@ -847,7 +856,7 @@ private {/*orders}*/
 				uint length = 0;
 			}
 			public {/*extended}*/
-				visual_T visual;
+				ArtStyle visual;
 				alias visual this;
 			}
 			public {/*☀}*/

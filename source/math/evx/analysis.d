@@ -17,7 +17,6 @@ private {/*imports}*/
 		import evx.ordinal;
 		import evx.traits;
 		import evx.meta;
-		import evx.functional;
 	}
 
 	alias zip = evx.functional.zip;
@@ -35,11 +34,25 @@ alias infinity = infinite!real;
 
 pure:
 public {/*rounding}*/
+	/* generic replacement for std.math.floor 
+	*/
+	auto floor (T)(T value)
+		{/*...}*/
+			return value - (value % T (1.0));
+		}
+
+	/* generic replacement for std.math.floor 
+	*/
+	auto ceil (T)(T value)
+		{/*...}*/
+			return value.floor + T (1.0);
+		}
+
 	/* pure replacement for std.math.round 
 	*/
 	auto round (T)(T value)
 		{/*...}*/
-			if (value % 1.0 < 0.5)
+			if (value % T (1.0) < T (0.5))
 				return value.floor;
 			else return value.ceil;
 		}
@@ -109,7 +122,7 @@ public {/*intervals}*/
 		{/*...}*/
 			const @property toString ()
 				{/*...}*/
-					return `interval (` ~min.text~ `..` ~max.text~ `)`;
+					return `[` ~min.text~ `..` ~max.text~ `]`;
 				}
 
 			pure:

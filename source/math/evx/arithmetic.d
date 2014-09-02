@@ -17,8 +17,6 @@ private {/*imports}*/
 	}
 }
 
-nothrow:
-
 public {/*ctfe-able arithmetic predicates}*/
 	pure add (T,U)(T a, U b) 
 		if (not (anySatisfy!(is_tuple, T, U)))

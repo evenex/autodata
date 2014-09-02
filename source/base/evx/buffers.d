@@ -16,7 +16,7 @@ private {/*imports}*/
 		import evx.utils;
 		import evx.meta;
 		import evx.logic;
-		import evx.allocators;
+		import evx.arrays;
 		import evx.traits;
 	}
 }
@@ -28,8 +28,8 @@ Buffers are a mechanism for safely transferring large quantities
 
 Buffers expose two Ranges, called the write and read buffers.
 	The Buffer itself acts as an OutputRange with appending (which 
-	writes to the write buffer). Buffers are backed by Resources, 
-	so their length cannot exceed their declared capacity.
+	writes to the write buffer). Buffers are backed by DynamicArrays, 
+	they will reallocate if their length exceeds their declared capacity.
 
 Because of the nondeterministic nature of the GC, Invalid Memory 
 	errors can arise if Buffers persist on the heap at program 
@@ -52,8 +52,8 @@ template DoubleBuffer (T, uint size)
 				shared {/*swap}*/
 					void swap ()
 						{/*...}*/
-							atomicOp!`+=` (write_index, 1);
-							atomicOp!`%=` (write_index, 2);
+							write_index.atomicOp!`+=` (1);
+							write_index.atomicOp!`%=` (2);
 
 							(cast()this).buffer[write_index].clear;
 						}
@@ -91,15 +91,14 @@ template DoubleBuffer (T, uint size)
 				shared {/*ctor}*/
 					this ()
 						{/*...}*/
-							auto memory = new Allocator!T (size*2);
-
-							cast()buffer[0] = memory.allocate (size);
-							cast()buffer[1] = memory.allocate (size);
+							with (cast()this) 
+							foreach (ref array; buffer)
+								array = typeof(array)(size);
 						}
 				}
 				private:
 				private {/*data}*/
-					Resource!T buffer[2];
+					Appendable!(Array!T) buffer[2];
 					uint write_index = 0;
 				}
 			}
@@ -129,8 +128,8 @@ template TripleBuffer (T, uint size, uint poll_frequency = 4_000)
 							while ((write_index + 2) % 3 != read_index)
 								Thread.sleep (wait_period);
 
-							atomicOp!`+=` (write_index, 1);
-							atomicOp!`%=` (write_index, 3);
+							write_index.atomicOp!`+=` (1);
+							write_index.atomicOp!`%=` (3);
 
 							(cast()buffer[write_index]).clear;
 						}
@@ -139,8 +138,8 @@ template TripleBuffer (T, uint size, uint poll_frequency = 4_000)
 							while ((write_index + 1) % 3 != read_index)
 								Thread.sleep (wait_period);
 
-							atomicOp!`+=` (read_index, 1);
-							atomicOp!`%=` (read_index, 3);
+							read_index.atomicOp!`+=` (1);
+							read_index.atomicOp!`%=` (3);
 						}
 				}
 				shared {/*append}*/
@@ -176,16 +175,14 @@ template TripleBuffer (T, uint size, uint poll_frequency = 4_000)
 				shared {/*ctor}*/
 					this ()
 						{/*...}*/
-							auto memory = new Allocator!T (size*3);
-
-							cast()buffer[0] = memory.allocate (size);
-							cast()buffer[1] = memory.allocate (size);
-							cast()buffer[2] = memory.allocate (size);
+							with (cast()this) 
+							foreach (ref array; buffer)
+								array = typeof(array)(size);
 						}
 				}
 				private:
 				private {/*data}*/
-					Resource!T buffer[3];
+					Appendable!(Array!T)[3] buffer;
 					uint write_index = 0;
 					uint read_index  = 2;
 				}
@@ -259,80 +256,77 @@ class BufferGroup (Declarations...)
 			}
 	}
 
-unittest
-	{/*...}*/
-		static void test (string Buffer)()
-			{/*...}*/
-				mixin(q{
-					scope b = new shared } ~Buffer~ q{!(int, 10);}
-				);
-				assert (b.capacity == 10);
-				assert (b.length == 0);
+unittest {/*...}*/
+	static void test (string Buffer)()
+		{/*...}*/
+			mixin(q{
+				scope b = new shared } ~Buffer~ q{!(int, 10);}
+			);
+			assert (b.capacity == 10);
+			assert (b.length == 0);
 
-				b.put ([9,8]);
-				assert (b.length == 2);
-				b.put (7);
-				assert (b.length == 3);
-				b ~= 6;
-				assert (b.length == 4);
-				b ~= [5,4];
-				assert (b.length == 6);
+			b.put ([9,8]);
+			assert (b.length == 2);
+			b.put (7);
+			assert (b.length == 3);
+			b ~= 6;
+			assert (b.length == 4);
+			b ~= [5,4];
+			assert (b.length == 6);
 
-				assert (b.write[].equal ([9,8,7,6,5,4]));
-				assert (b.read[].equal ((int[]).init));
+			assert (b.write[].equal ([9,8,7,6,5,4]));
+			assert (b.read[].equal ((int[]).init));
 
-				static if (Buffer == q{TripleBuffer})
-					b.writer_swap, b.reader_swap;
-				else b.swap;
+			static if (Buffer == q{TripleBuffer})
+				b.writer_swap, b.reader_swap;
+			else b.swap;
 
-				assert (b.write[].equal ((int[]).init));
-				assert (b.read[].equal ([9,8,7,6,5,4]));
+			assert (b.write[].equal ((int[]).init));
+			assert (b.read[].equal ([9,8,7,6,5,4]));
 
-				static if (Buffer == q{TripleBuffer})
-					b.writer_swap, b.reader_swap;
-				else b.swap;
+			static if (Buffer == q{TripleBuffer})
+				b.writer_swap, b.reader_swap;
+			else b.swap;
 
-				assert (b.write[].equal ((int[]).init));
-				assert (b.read[].equal ((int[]).init));
-			}
+			assert (b.write[].equal ((int[]).init));
+			assert (b.read[].equal ((int[]).init));
+		}
 
-		test!q{DoubleBuffer};
-		test!q{TripleBuffer};
-	}
+	test!q{DoubleBuffer};
+	test!q{TripleBuffer};
+}
+unittest {/*...}*/
+	import evx.math;
+	import std.concurrency;
 
-unittest
-	{/*...}*/
-		import evx.math;
-		import std.concurrency;
+	static void test (string Buffer)()
+		{/*...}*/
+			mixin(q{
+				alias Buff = shared } ~ Buffer ~ q{!(int, 24);
+			});
 
-		static void test (string Buffer)()
-			{/*...}*/
-				mixin(q{
-					alias Buff = shared } ~ Buffer ~ q{!(int, 24);
-				});
+			scope A = new Buff;
 
-				scope A = new Buff;
+			static void task (Buff A)
+				{/*...}*/
+					static if (Buffer == q{TripleBuffer})
+						A.reader_swap;
 
-				static void task (Buff A)
-					{/*...}*/
-						static if (Buffer == q{TripleBuffer})
-							A.reader_swap;
+					auto data = A.read[];
+					ownerTid.send (data.sum);
+				}
 
-						auto data = A.read[];
-						ownerTid.send (data.sum);
-					}
+			A ~= [1, 2];
+			A ~= [3, 4];
+			static if (Buffer == q{DoubleBuffer})
+				A.swap;
+			else A.writer_swap;
+			assert (A.length == 0);
 
-				A ~= [1, 2];
-				A ~= [3, 4];
-				static if (Buffer == q{DoubleBuffer})
-					A.swap;
-				else A.writer_swap;
-				assert (A.length == 0);
+			spawn (&task, A);
+			receive ((int sum) {assert (sum == 10);});
+		}
 
-				spawn (&task, A);
-				receive ((int sum) {assert (sum == 10);});
-			}
-
-		test!q{DoubleBuffer};
-		test!q{TripleBuffer};
-	}
+	test!q{DoubleBuffer};
+	test!q{TripleBuffer};
+}

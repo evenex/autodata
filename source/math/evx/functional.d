@@ -26,7 +26,7 @@ template λ (alias F) {alias λ = F;}
 public {/*map}*/
 	/* replacement for std.algorithm.MapResult 
 	*/
-	struct Mapped (alias func, R)
+	struct Mapped (R, alias func)
 		{/*...}*/
 			alias Index = IndexTypes!R[0];
 			
@@ -83,7 +83,7 @@ public {/*map}*/
 						}
 					bool empty () const
 						{/*...}*/
-							return range.empty;
+							return this.range.empty; // REVIEW need 'this' in 2.066
 						}
 
 					static assert (isInputRange!Mapped);
@@ -120,7 +120,7 @@ public {/*map}*/
 				{/*...}*/
 					@property length () const
 						{/*...}*/
-							return range.length;
+							return this.range.length; // REVIEW need 'this' in 2.066.. only for const methods?
 						}
 
 					static if (is(ReturnType!(R.length) == DollarType!R))
@@ -151,7 +151,7 @@ public {/*map}*/
 		{/*...}*/
 			auto map (R)(R range)
 				{/*...}*/
-					return Mapped!(func, R)(range);
+					return Mapped!(R, func)(range);
 				}
 		}
 		unittest {/*...}*/
@@ -380,6 +380,90 @@ public {/*zip}*/
 			auto c = zip (a,b);
 
 			assert (c.equal ([τ(1, `a`), τ(2, `b`), τ(3, `c`)]));
+		}
+}
+public {/*filter}*/
+	struct Filtered (R, alias match)
+		{/*...}*/
+			R range;
+
+			auto ref front ()
+				{/*...}*/
+					return range.front;
+				}
+			void popFront ()
+				{/*...}*/
+					range.popFront;
+
+					while (not (empty || match (front)))
+						range.popFront;
+				}
+			bool empty () const
+				{/*...}*/
+					return range.empty;
+				}
+
+			static assert (isInputRange!Filtered);
+
+			static if (isForwardRange!R)
+				{/*...}*/
+					@property save ()
+						{/*...}*/
+							return this;
+						}
+
+					static assert (isForwardRange!Filtered);
+				}
+
+			static if (isBidirectionalRange!R)
+				{/*...}*/
+					auto ref back ()
+						{/*...}*/
+							return range.back;
+						}
+					void popBack ()
+						{/*...}*/
+							while (not (empty || match (back)))
+								range.popBack;
+						}
+
+					static assert (isBidirectionalRange!Filtered);
+				}
+
+			this (R range)
+				{/*...}*/
+					this.range = range;
+					
+					if (not (empty || match (range.front)))
+						popFront;
+
+					static if (isBidirectionalRange!R)
+						if (not (empty || match (range.back)))
+							popBack;
+				}
+		}
+
+	/* replacement for std.algorithm.filter 
+	*/
+	template filter (alias match)
+		{/*...}*/
+			auto filter (R)(R range)
+				if (isInputRange!R)
+				{/*...}*/
+					return Filtered!(R, match)(range);
+				}
+		}
+		unittest {/*...}*/
+			import std.range: equal;
+
+			auto a = [1, 2, 3, 4];
+
+			auto b = a.filter!(x => x % 2);
+
+			auto c = b.filter!(x => x > 1);
+
+			assert (b.equal ([1, 3]));
+			assert (c.equal ([3]));
 		}
 }
 public {/*reduce}*/

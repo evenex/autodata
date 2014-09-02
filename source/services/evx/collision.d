@@ -1,5 +1,7 @@
 module services.collision;
 
+import core.atomic;
+
 import std.conv;
 import std.algorithm;
 import std.range;
@@ -14,10 +16,10 @@ import evx.service;
 import evx.future;
 import evx.arrays;
 import evx.buffers;
-import evx.allocators;
 import evx.range;
 
 alias map = evx.functional.map;
+alias sum = evx.arithmetic.sum;
 
 // TODO UNIT SAFE
 
@@ -99,7 +101,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 							}
 						void velocity (fvec new_velocity)
 							in {/*...}*/
-								assert (mass.not!isInfinity);
+								assert (mass.is_finite);
 							}
 							body {/*...}*/
 								cp.BodySetVel (body_id, new_velocity.to!cpVect);
@@ -176,8 +178,8 @@ final class CollisionDynamics (ClientId = size_t): Service
 												case polygon:
 													{/*...}*/
 														auto len = geometry.length.to!int;
-														auto poly = geometry_memory.save (geometry);
-														auto hull = geometry_memory.allocate (len);
+														auto poly = Array!fvec (geometry);
+														auto hull = Array!fvec (len);
 
 														cp.ConvexHull (len, cast(cpVect*)poly[].ptr, cast(cpVect*)hull[].ptr, null, 0.0);
 
@@ -325,6 +327,8 @@ final class CollisionDynamics (ClientId = size_t): Service
 
 					private bool body_uploaded ()
 						{/*...}*/
+							while (bodies_locked)//REVIEW
+								{}
 							body_option = dynamics.bodies.find (id);
 							
 							return body_option? true:false;
@@ -553,6 +557,8 @@ final class CollisionDynamics (ClientId = size_t): Service
 			}
 		shared void process_uploads () // REFACTOR
 			{/*...}*/
+				bodies_locked = true; // REVIEW
+
 				auto vertex_pool = buffer.vertices.read[];
 
 				foreach (ref upload; buffer.uploads.read[])
@@ -572,10 +578,13 @@ final class CollisionDynamics (ClientId = size_t): Service
 							)
 						);
 					}
+
+				bodies_locked = false; // REVIEW
 			}
 
-		@Service shared override {/*interface}*/
+		shared override {/*interface}*/ // OUTSIDE BUG DMD segfault if I tag with @Service
 			import dchip.all;
+
 			bool initialize ()
 				{/*...}*/
 					space = cp.SpaceNew ();
@@ -588,7 +597,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 					process_uploads;
 
 					cp.SpaceStep (space, Δt);
-					++t;
+					t.atomicOp!`+=` (1);
 
 					{/*postprocess}*/
 						foreach (ref dynamic_body; bodies)
@@ -700,10 +709,9 @@ final class CollisionDynamics (ClientId = size_t): Service
 			@Initialize!(2^^12) 
 			Associative!(Array!Body, ClientId)  // REVIEW
 				bodies;
-				
-			@Initialize!(2^^12) 
-			Allocator!fvec geometry_memory;
 
+			bool bodies_locked; // REVIEW
+				
 			@Initialize!()
 			shared BufferGroup!(
 				DoubleBuffer!(fvec, 2^^12),
@@ -819,7 +827,7 @@ unittest {/*body upload}*/
 
 	P.update;
 	auto start = Clock.currTime;
-	while (a.position == fvec(1))
+	while (a.position == fvec(1)) // BUG race condition, tried to check position while upload in progress.
 		{/*...}*/
 			assert (Clock.currTime - start < 2.seconds, `waited too long for body to update`);
 			Thread.sleep (100.msecs);
@@ -875,7 +883,7 @@ unittest {/*queries}*/
 	assert (futures[1].length == 2);
 	assert (futures[2].length == 1);
 
-	futures.clear;
+	destroy (futures);
 
 	p.box_query ([fvec(999),fvec(1001)], futures[0]);
 	p.box_query ([fvec(300),fvec(400)], futures[1]);

@@ -151,7 +151,7 @@ public {/*type identification}*/
 	*/
 	template is_embeddable_in (T, U)
 		{/*...}*/
-			const bool is_embeddable_in ()
+			bool is_embeddable_in ()
 				{/*...}*/
 					foreach (member; __traits (allMembers, T))
 						{/*...}*/

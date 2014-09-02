@@ -8,8 +8,8 @@ private {/*imports}*/
 		import std.algorithm;
 	}
 	private {/*evx}*/
+		import evx.arrays;
 		import evx.display;
-		import evx.allocators;
 		import evx.utils;
 		import evx.math;
 	}
@@ -48,13 +48,8 @@ struct TGA_Header
 	}
 struct Image
 	{/*...}*/
-		__gshared Allocator!Pixel memory;
-		shared static this ()
-			{/*...}*/
-				memory = Allocator!Pixel (1024*1024);
-			}
+		Appendable!(Array!Pixel) data;
 
-		Resource!Pixel data;
 		uint height;
 		uint width;
 		Format format; enum Format {rgba = GL_RGBA, bgra = GL_BGRA, gray = GL_ALPHA}
@@ -97,7 +92,7 @@ struct Image
 							this.height = header.height;
 							this.format = Format.rgba; // TEMP until if/when i need more TGA modes
 
-							data = memory.allocate (width*height);
+							data = typeof(data)(width*height);
 							file.load_tga (data);
 
 							if (header.origin_bottom_left)
@@ -137,7 +132,7 @@ struct Image
 			}
 	}
 
-private void load_tga (ref File file, ref Resource!Pixel destination) //TODO enforce depth, alignment, and 2^ dimension
+private void load_tga (ref File file, ref Appendable!(Array!Pixel) destination) //TODO enforce depth, alignment, and 2^ dimension
 	{/*...}*/
 		Pixel[1] pixel;
 
@@ -160,7 +155,7 @@ private void load_tga (ref File file, ref Resource!Pixel destination) //TODO enf
 				else {/*...}*/
 					int run_length = register[0] + 1;
 
-					destination.length += run_length;
+					destination.grow (run_length);
 
 					file.rawRead (destination[$-run_length..$]);
 				}

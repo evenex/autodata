@@ -239,8 +239,8 @@ final class Input
 							}
 						void clear ()
 							{/*...}*/
-								context.clear;
-								lookup.clear;
+								context = null;
+								lookup = null;
 							}
 					}
 				}

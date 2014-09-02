@@ -13,20 +13,19 @@ private {/*imports}*/
 	}
 	private {/*evx}*/
 		import evx.functional;
-		import evx.logic;
-		import evx.ordinal;
-		import evx.arithmetic;
 		import evx.utils;
 		import evx.range;
 		import evx.move;
 		import evx.traits;
 		import evx.search;
 		import evx.meta;
+		import evx.math;
 	}
 
 	alias zip = evx.functional.zip;
 	alias map = evx.functional.map;
 	alias reduce = evx.functional.reduce;
+	alias sum = evx.arithmetic.sum;
 	alias allocate_array = std.range.array;
 }
 
@@ -1242,54 +1241,79 @@ struct Associative (Array, Lookup...)
 
 /* mallocated array 
 */
-struct Array (T, Reallocation reallocation = Reallocation.forbidden)
-	{/*...}*/
-		T* ptr;
-		size_t length;
+version (DMD_SEGFAULT) // OUTSIDE BUG
+	struct Array (T, Reallocation reallocation = Reallocation.forbidden)
+		{/*...}*/
+			T* ptr;
+			size_t length;
 
-		mixin ArrayInterface!(ptr, length);
+			mixin ArrayInterface!(ptr, length);
 
-		static if (reallocation is Reallocation.permitted)
-			void reallocate (size_t new_length)
+			static if (reallocation is Reallocation.permitted)
+				void reallocate (size_t new_length)
+					{/*...}*/
+						auto new_ptr = cast(T*)malloc (new_length * T.sizeof);
+
+						this[].move (new_ptr[0..length]);
+
+						free (this.ptr);
+
+						this.ptr = new_ptr;
+						this.length = new_length;
+					}
+
+			this (size_t length)
 				{/*...}*/
-					auto new_ptr = cast(T*)malloc (new_length * T.sizeof);
+					this.length = length;
 
-					this[].move (new_ptr[0..length]);
-
-					free (this.ptr);
-
-					this.ptr = new_ptr;
-					this.length = new_length;
+					ptr = cast(T*)malloc (length * T.sizeof);
 				}
+			this (R)(R range) // XXX the bug has something to do with this constructor
+				if (is (ElementType!R == T))
+				{/*...}*/
+					this.length = range.length;
 
-		this (size_t length)
+					ptr = cast(T*)malloc (length * T.sizeof);
+
+					range[].copy (this[]);
+				}
+			~this ()
+				{/*...}*/
+					free (cast(void*)ptr);
+				}
+			@disable this (this);
+
+			void opAssign (Array that)
+				{/*...}*/
+					this.ptr = that.ptr;
+					this.length = that.length;
+
+					that.ptr = null;
+					that.length = 0;
+				}
+		}
+else struct Array (T, Reallocation reallocation = Reallocation.permitted)
+	{/*...}*/
+		T[] data;
+		alias data this;
+
+		this (size_t L)
 			{/*...}*/
-				this.length = length;
-
-				ptr = cast(T*)malloc (length * T.sizeof);
+				data = new T[L];
+			}
+		this (T[] that)
+			{/*...}*/
+				data = that;
 			}
 		this (R)(R range)
-			if (is (ElementType!R == T))
 			{/*...}*/
-				this.length = range.length;
-
-				ptr = cast(T*)malloc (length * T.sizeof);
-
-				range[].copy (this[]);
+				auto data = new T[range.length];
+				range.copy (data);
 			}
-		~this ()
-			{/*...}*/
-				free (cast(void*)ptr);
-			}
-		@disable this (this);
 
-		void opAssign (Array that)
+		void reallocate (size_t new_length)
 			{/*...}*/
-				this.ptr = that.ptr;
-				this.length = that.length;
-
-				that.ptr = null;
-				that.length = 0;
+				data.length = new_length;
 			}
 	}
 

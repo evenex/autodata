@@ -25,6 +25,7 @@ private {/*imports}*/
 	alias zip = evx.functional.zip;
 	alias map = evx.functional.map;
 	alias reduce = evx.functional.reduce;
+	alias sum = evx.arithmetic.sum;
 }
 
 pure:
@@ -638,8 +639,6 @@ struct Vector (uint n, Component = double)
 			assert (v.ceil  == [1,2,5]);
 		}
 	unittest {/*vector functions}*/
-		import std.math;
-
 		auto u = vector (1, 2.);
 
 		assert (norm (u).approx (sqrt (5.)));
@@ -668,6 +667,7 @@ struct Vector (uint n, Component = double)
 
 		assert (v.proj (vector (6.,4,2)).approx ([3.42857, 2.28571, 1.14286]));
 		assert (v.rej (vector (6.,4,2)).approx ([-1.42857, 0.714286, 2.85714]));
+		
 	}
 	unittest {/*algebraic identity elements}*/
 		auto v = vector (1,2,3);

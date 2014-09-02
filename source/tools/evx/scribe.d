@@ -19,7 +19,6 @@ private {/*imports}*/
 		import evx.colors;
 		import evx.math;
 		import evx.meta;
-		import evx.allocators;
 		import evx.arrays;
 		import evx.display;
 		import evx.range;
