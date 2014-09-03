@@ -23,7 +23,7 @@ public enum {/*Color palette}*/
 	cyan 	= green + blue,
 	magenta = blue + red,
 	/* others */
-	gray	= black*white,
+	grey	= black*white,
 	orange 	= red*yellow,
 	purple 	= blue*magenta,
 	brown	= orange*black,
@@ -38,11 +38,42 @@ struct Color
 					b = 1.0, 
 					a = 1.0;
 		}
-		public {/*ops}*/
+		@property {/*channels}*/
+			Color red (double r)
+				{/*...}*/
+					return Color (r,g,b,a);
+				}
+			Color green (double g)
+				{/*...}*/
+					return Color (r,g,b,a);
+				}
+			Color blue (double b)
+				{/*...}*/
+					return Color (r,g,b,a);
+				}
 			Color alpha (double a)
 				{/*...}*/
 					return Color (r,g,b,a);
 				}
+
+			double red ()
+				{/*...}*/
+					return r;
+				}
+			double green ()
+				{/*...}*/
+					return g;
+				}
+			double blue ()
+				{/*...}*/
+					return b;
+				}
+			double alpha ()
+				{/*...}*/
+					return a;
+				}
+		}
+		public {/*ops}*/
 			Color opBinary (string op) (Color color)
 				{/*...}*/
 					Color ret = this;

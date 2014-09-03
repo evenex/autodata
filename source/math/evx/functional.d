@@ -81,9 +81,9 @@ public {/*map}*/
 						body {/*...}*/
 							range.popFront;
 						}
-					bool empty () const
+					bool empty ()
 						{/*...}*/
-							return this.range.empty; // REVIEW need 'this' in 2.066
+							return range.empty;
 						}
 
 					static assert (isInputRange!Mapped);
@@ -220,9 +220,9 @@ public {/*zip}*/
 							foreach (ref range; ranges)
 								range.popFront;
 						}
-					bool empty () const
+					bool empty ()
 						{/*...}*/
-							foreach (const ref range; ranges)
+							foreach (range; ranges)
 								if (range.empty)
 									return true;
 
@@ -398,7 +398,7 @@ public {/*filter}*/
 					while (not (empty || match (front)))
 						range.popFront;
 				}
-			bool empty () const
+			bool empty ()
 				{/*...}*/
 					return range.empty;
 				}

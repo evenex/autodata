@@ -36,14 +36,26 @@ struct Vector (uint n, Component = double)
 		public {/*text}*/
 			alias text = toString; // REVIEW this may be improper use of a text override
 
-			@property toString (Args...)(Args args) // REVIEW this allows unit abbreviation override to propagate to elements
+			@property toString ()
 				{/*...}*/
-					string text;
+					string output;
 
 					foreach (component; this[])
-						text ~= component.text (args)~ `, `;
+						output ~= component.text~ `, `;
 
-					return `[` ~text[0..$-2]~ `]`;
+					return `[` ~output[0..$-2]~ `]`;
+				}
+
+			static if (1)
+			@property toString (Args...)(Args args) // REVIEW this allows unit abbreviation override to propagate to elements
+				if (Args.length > 2) // HACK otherwise we print blanks, why?
+				{/*...}*/
+					string output;
+
+					foreach (component; this[])
+						output ~= component.text (args)~ `, `;
+
+					return `[` ~output[0..$-2]~ `]`;
 				}
 		}
 

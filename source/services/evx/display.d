@@ -100,7 +100,7 @@ pure {/*coordinate transformations}*/
 									return coords.value * (min.vec / display.dimensions);
 								}
 							case pixel:
-								return 2*coords.value/display.dimensions - 1;
+								return 2 * coords.value/display.dimensions * vec(1,-1) + vec(-1,1);
 						}
 				}
 			vec to_extended_space ()(Display.Coords coords, Display display) 
@@ -124,7 +124,7 @@ pure {/*coordinate transformations}*/
 					with (Display.Space) final switch (coords.space)
 						{/*...}*/
 							case draw:
-								return (coords.value+1)*display.dimensions/2;
+								return (coords.value - vec(-1,1)) * vec(1,-1) * display.dimensions/2; // REVIEW
 							case extended:
 								return coords.to_draw_space (display).from_draw_space.to_pixel_space (display);
 							case pixel:

@@ -28,7 +28,6 @@ public {/*concurrency}*/
 			return receiveTimeout (limit.to_duration, ops);
 		}
 }
-pure nothrow:
 public {/*C compatibility}*/
 	/* forward a set of arguments, converting strings into null-terminated c-strings
 	*/
@@ -38,13 +37,14 @@ public {/*C compatibility}*/
 			CArgs c_args;
 
 			foreach (i, arg; args)
-			static if (isSomeString!(typeof(arg)))
-			c_args[i] = args[i].toStringz;
-			else c_args[i] = args[i];
+				static if (isSomeString!(typeof(arg)))
+					c_args[i] = args[i].toStringz;
+				else c_args[i] = args[i];
 
 			return τ(c_args);
 		}
 }
+pure nothrow:
 public debug {/*}*/
 	/* pure nothrow writeln 
 	*/

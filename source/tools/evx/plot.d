@@ -39,6 +39,12 @@ struct Plot (Data, Style style)
 		enum {automatic}
 
 		public:
+		@property {/*}*/
+			auto draw_box ()
+				{/*...}*/
+					
+				}
+		}
 		@property {/*options}*/
 			auto using (Display display, Scribe scribe)
 				{/*...}*/
@@ -97,9 +103,6 @@ struct Plot (Data, Style style)
 				body {/*...}*/
 					if (data.empty) return;
 
-					enum x1 = unity!XType;
-					enum y1 = unity!YType;
-					
 					auto y_data = data.map!(τ => τ[0]);
 					auto x_data = data.map!(τ => τ[1]);
 
@@ -122,16 +125,10 @@ struct Plot (Data, Style style)
 									_data.reduce!_side : _range.} ~side~ q{;
 							});
 						}
-
 					auto x_min = get_limit!(`x`,`min`);
 					auto x_max = get_limit!(`x`,`max`);
 					auto y_min = get_limit!(`y`,`min`);
 					auto y_max = get_limit!(`y`,`max`);
-
-					auto h_0 = 2.5 * scribe.font_height (_text_size);
-					auto h_1 = bounds.height - h_0;
-					auto w_1 = bounds.width - h_0;
-					auto ε = 0.1*h_0;
 
 					{/*set unit string}*/
 						if (_x_units.empty)
@@ -157,9 +154,9 @@ struct Plot (Data, Style style)
 						{/*...}*/
 							display.draw (_color.alpha (0.25), plot_field[].from_extended_space.to_draw_space (display));
 							display.draw (_color, 
-								data.map!(τ => vec(τ[1]/x1, τ[0]/y1))
-									.map!(v => v - vec(x_min/x1, y_min/y1))
-									.map!(v => v / vec((x_max-x_min)/x1, (y_max-y_min)/y1))
+								data.map!(τ => vec(τ[1].to!double, τ[0].to!double))
+									.map!(v => v - vec(x_min.to!double, y_min.to!double))
+									.map!(v => v / vec((x_max-x_min).to!double, (y_max-y_min).to!double))
 									.map!(v => v * vec(plot_field.width, plot_field.height))
 									.map!(v => v + plot_field.low_left)
 									.from_extended_space.to_draw_space (display),
@@ -169,37 +166,8 @@ struct Plot (Data, Style style)
 
 					static if (style is Style.standard)
 						{/*...}*/
-							auto title_field = bounds;
-								with (title_field) {/*...}*/
-									left = left + 2*h_0;
-									bottom = bottom + h_1 + ε;
-								}
-
-							auto y_field = bounds;
-								with (y_field) {/*...}*/
-									top 	= top 	 - h_0;
-									bottom 	= bottom + 2*h_0;
-									right 	= right	 - w_1 - ε;
-									left 	= left	 + ε;
-								}
-
-							auto x_field = bounds;
-								with (x_field) {/*...}*/
-									left	= left	 + 2*h_0;
-									top		= top 	 - h_1 - ε;
-									right	= right	 - 2*ε;
-								}
-
 							auto x_ticks = x_field[].translate (vec(0, h_0)).bounding_box;
 							auto y_ticks = y_field[].translate (vec(h_0, 0)).bounding_box;
-
-							auto plot_field = bounds;
-								with (plot_field) {/*...}*/
-									left   = left   + 2*h_0;
-									right  = right  - 2*ε;
-									top 	  = top 	  - h_0;
-									bottom = bottom + 2*h_0;
-								}
 
 							scribe.write (_title)
 								.size (_text_size)
@@ -213,13 +181,13 @@ struct Plot (Data, Style style)
 								.align_to (Alignment.top_center)
 								.inside (x_field)
 							();
-							scribe.write (x_min/x1)
+							scribe.write (x_min.to!double)
 								.size (_text_size)
 								.color (_color)
 								.align_to (Alignment.top_left)
 								.inside (x_ticks)
 							();
-							scribe.write (x_max/x1)
+							scribe.write (x_max.to!double)
 								.size (_text_size)
 								.color (_color)
 								.align_to (Alignment.top_right)
@@ -233,19 +201,21 @@ struct Plot (Data, Style style)
 								.wrap_width (y_field.height)
 								.inside (y_field)
 							();
-							scribe.write (y_min/y1)
+							scribe.write (y_min.to!double)
+								.size (_text_size)
+								.color (_color)
+								.rotate (π/2)
+								.align_to (Alignment.top_right) 
+								//.align_to (Alignment.bottom_right)  BUG pixel space fucked the alignment
+								.wrap_width (y_field.height)
+								.inside (y_ticks)
+							();
+							scribe.write (y_max.to!double)
 								.size (_text_size)
 								.color (_color)
 								.rotate (π/2)
 								.align_to (Alignment.bottom_right)
-								.wrap_width (y_field.height)
-								.inside (y_ticks)
-							();
-							scribe.write (y_max/y1)
-								.size (_text_size)
-								.color (_color)
-								.rotate (π/2)
-								.align_to (Alignment.top_right)
+								//.align_to (Alignment.top_right)  BUG pixel space fucked the alignment
 								.wrap_width (y_field.height)
 								.inside (y_ticks)
 							();
@@ -254,31 +224,6 @@ struct Plot (Data, Style style)
 						}
 					else static if (style is Style.minimal)
 						{/*...}*/
-							auto title_field = bounds;
-								title_field.bottom = title_field.bottom + h_1 + ε;
-
-							auto y_field = bounds;
-								with (y_field) {/*...}*/
-									top 	= top 	 - h_0;
-									bottom 	= bottom + h_0;
-									right 	= right	 - w_1 - ε;
-								}
-
-							auto x_field = bounds;
-								with (x_field) {/*...}*/
-									left	= left	+ h_0;
-									top		= top 	- h_1;
-									right	= right	- 2*ε;
-								}
-
-							auto plot_field = bounds;
-								with (plot_field) {/*...}*/
-									left   = left   + h_0;
-									right  = right  - 2*ε;
-									top    = top 	- h_0;
-									bottom = bottom + h_0;
-								}
-
 							scribe.write (_title)
 								.size (_text_size)
 								.color (_color)
@@ -320,6 +265,96 @@ struct Plot (Data, Style style)
 			
 			alias opCall = draw;
 		}
+		public {/*fields}*/
+			auto title_field ()
+				{/*...}*/
+					auto field = bounds;
+					
+					with (field) {/*...}*/
+						static if (style is Style.standard)
+							{/*...}*/
+								left = left + 2*h_0;
+								bottom = bottom + h_1 + ε;
+							}
+						else static if (style is Style.minimal)
+							{/*...}*/
+								bottom = bottom + h_1 + ε;
+							}
+					}
+
+					return field;
+				}
+
+			auto y_field ()
+				{/*...}*/
+					auto field = bounds;
+
+					with (field) {/*...}*/
+						static if (style is Style.standard)
+							{/*...}*/
+								top 	= top 	 - h_0;
+								bottom 	= bottom + 2*h_0;
+								right 	= right	 - w_1 - ε;
+								left 	= left	 + ε;
+							}
+						else static if (style is Style.minimal)
+							{/*...}*/
+								top 	= top 	 - h_0;
+								bottom 	= bottom + h_0;
+								right 	= right	 - w_1 - ε;
+							}
+					}
+
+					return field;
+				}
+
+			auto x_field ()
+				{/*...}*/
+					auto field = bounds;
+
+					with (field) {/*...}*/
+						static if (style is Style.standard)
+							{/*...}*/
+								left	= left	 + 2*h_0;
+								top		= top 	 - h_1 - ε;
+								right	= right	 - 2*ε;
+							}
+						else static if (style is Style.minimal)
+							{/*...}*/
+								left	= left	+ h_0;
+								top		= top 	- h_1;
+								right	= right	- 2*ε;
+							}
+					}
+
+					return field;
+				}
+
+			auto plot_field ()
+				{/*...}*/
+					auto field = bounds;
+
+					with (field) {/*...}*/
+						static if (style is Style.standard)
+							{/*...}*/
+								left   = left   + 2*h_0;
+								right  = right  - 2*ε;
+								top	   = top	- h_0;
+								bottom = bottom + 2*h_0;
+							}
+						else static if (style is Style.minimal)
+							{/*...}*/
+								left   = left   + h_0;
+								right  = right  - 2*ε;
+								top    = top 	- h_0;
+								bottom = bottom + h_0;
+							}
+					}
+
+					return field;
+				}
+
+		}
 		public {/*ctor}*/
 			this (Data data)
 				{/*...}*/
@@ -348,6 +383,29 @@ struct Plot (Data, Style style)
 			size_t _text_size;
 
 			auto bounds = bounding_box ([-1.vec, 1.vec]);
+		}
+		const {/*measurements}*/
+			auto h_0 ()
+				in {/*...}*/
+					assert (scribe !is null,
+						`operation requires valid ` ~typeof(scribe).stringof
+					);
+				}
+				body {/*...}*/
+					return 2.5 * scribe.font_height (_text_size);
+				}
+			auto h_1 ()
+				{/*...}*/
+					return bounds.height - h_0;
+				}
+			auto w_1 ()
+				{/*...}*/
+					return bounds.width - h_0;
+				}
+			auto ε ()
+				{/*...}*/
+					return 0.1*h_0;
+				}
 		}
 		private {/*code generation}*/
 			template axis_options (string axis)
@@ -416,7 +474,7 @@ auto plot (Style style = Style.standard, Data)(Data data)
 		gfx.render;
 
 		import std.datetime: msecs;
-		core.thread.Thread.sleep (2000.msecs);
+		core.thread.Thread.sleep (1000.msecs);
 	}
 	unittest {/*units}*/
 		import std.math;
@@ -427,7 +485,7 @@ auto plot (Style style = Style.standard, Data)(Data data)
 		scope txt = new Scribe (gfx, [14]);
 
 		plot (
-			ℕ[1..100].map!(x => (x^^2).joules)
+			ℕ[1..100].map!(x => (x^^2).joules - 10.joules)
 			.versus (
 				ℕ[1..100].map!(x => x.meters/second)
 			)
@@ -441,5 +499,5 @@ auto plot (Style style = Style.standard, Data)(Data data)
 		gfx.render;
 
 		import std.datetime: msecs;
-		core.thread.Thread.sleep (3000.msecs);
+		core.thread.Thread.sleep (1000.msecs);
 	}

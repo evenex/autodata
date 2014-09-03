@@ -81,14 +81,14 @@ final class Scribe
 						texture = atlas.id;
 						roi = [vec(s0, t0), vec(s1, t1)];
 						offset = ivec(offset_x, offset_y);
-						dims = uvec(width, height);
+						dims = uvec(width, height)[].map!(to!int).ivec; // HACK
 						advance = glyph.advance_x;
 						color = glyph_color;
 					}
 					return g;
 				}
 
-			auto font_height (size_t size)
+			const font_height (size_t size)
 				in {/*...}*/
 					assert (size in font);
 				}
@@ -97,7 +97,7 @@ final class Scribe
 					return scale[].reduce!max;
 				}
 
-			auto available_sizes ()
+			const available_sizes ()
 				{/*...}*/
 					return font_sizes;
 				}
@@ -173,12 +173,11 @@ final class Scribe
 					assert (display, "tried to write but scribe has no display");
 				}
 				body {/*...}*/
-					alias writeln = evx.utils.writeln;
 					auto text = order.text;
 					auto color = order.color;
 					auto size = order.size;
 					if (text.empty) return;
-					
+
 					auto glyphs = text.map!(c => glyph (c, size, color));
 
 					auto cards = typeset (glyphs, order);
@@ -288,6 +287,8 @@ final class Scribe
 						.map!(v => v + card_box.offset_to (alignment, draw_box))
 						.map!(v => v.from_pixel_space.to_draw_space (display) + translation);
 
+					cards[] = cards[].flip!`vertical`; // HACK flip to correct for the fucked-ness of pixel-space transform
+
 					return cards;
 				}
 
@@ -307,7 +308,7 @@ final class Scribe
 			texture_font_t*[size_t] font;
 		}
 		private {/*settings}*/
-			enum font_path = "./font/DejaVuSansMono.ttf";
+			enum font_path = "./font/VeraMono.ttf";
 			const size_t[] font_sizes;
 		}
 		private {/*services}*/
@@ -398,7 +399,7 @@ struct Glyph
 		Color color = black;
 
 		@("pixel") ivec offset;
-		@("pixel") uvec dims;
+		@("pixel") ivec dims;
 		@("pixel") float advance;
 	}
 struct Text
