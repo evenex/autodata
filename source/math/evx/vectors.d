@@ -29,14 +29,6 @@ private {/*imports}*/
 	alias sum = evx.arithmetic.sum;
 }
 
-static if (0)
-unittest {/*string parsing}*/
-	enum x = `[3, 2, 1]`;
-
-	auto v = Vector!(3, int)(x);
-
-	assert (v[].equal ([3,2,1]));
-}
 pure:
 
 struct Vector (uint n, Component = double)
@@ -283,15 +275,13 @@ struct Vector (uint n, Component = double)
 					this.components[] = component;
 				}
 
-			static if (0)
-			this (string input)
+			this ()(string input)
+				if (__traits(compiles, input.extract_number.to!Component))
 				{/*...}*/
 					foreach (ref i; components)
 						{/*...}*/
-							auto split = input.findSplitBefore (`,`);
-
-							auto i_string = split[0];
-							input = split[1];
+							auto i_string = input.findSplitBefore (`,`)[0];
+							input = input.findSplitAfter (`,`)[1];
 
 							if (i_string.empty)
 								assert (0, `bad string → vector conversion`);
@@ -747,6 +737,15 @@ struct Vector (uint n, Component = double)
 
 		assert (a.bearing_to (c).approx (π/2));
 		assert (distance (a, b).approx (7.meters));
+	}
+	unittest {/*string parsing}*/
+		enum x = `[3, 2, 1]`;
+
+		assert (Vector!(3, int)(x)[] == [3,2,1]);
+
+		import evx.units;
+		enum y = `[0.001 kg, 0.002 kg, 0.003 kg, 0.005 kg]`;
+		assert (Vector!(4, Kilograms)(y) == [1.grams, 2.grams, 3.grams, 5.grams]);
 	}
 
 template vector (uint length)

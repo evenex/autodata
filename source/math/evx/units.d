@@ -377,7 +377,6 @@ public {/*unit}*/
 					this.scalar = quantity.scalar;
 				}
 
-			static if (0)
 			this (String)(String input)
 				if (isSomeString!String)
 				{/*...}*/
