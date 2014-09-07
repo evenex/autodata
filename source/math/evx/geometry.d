@@ -109,6 +109,7 @@ public {/*vectors}*/
 	alias ivec = Vector!(2, int);
 	alias uvec = Vector!(2, size_t);
 	alias rvec = Vector!(2, real);
+	alias lvec = Vector!(2, long);
 
 	/* rotate a vector 
 	*/

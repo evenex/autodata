@@ -205,8 +205,7 @@ struct Plot (Data, Style style)
 								.size (_text_size)
 								.color (_color)
 								.rotate (π/2)
-								.align_to (Alignment.top_right) 
-								//.align_to (Alignment.bottom_right)  BUG pixel space fucked the alignment
+								.align_to (Alignment.bottom_right)
 								.wrap_width (y_field.height)
 								.inside (y_ticks)
 							();
@@ -214,8 +213,7 @@ struct Plot (Data, Style style)
 								.size (_text_size)
 								.color (_color)
 								.rotate (π/2)
-								.align_to (Alignment.bottom_right)
-								//.align_to (Alignment.top_right)  BUG pixel space fucked the alignment
+								.align_to (Alignment.top_right)
 								.wrap_width (y_field.height)
 								.inside (y_ticks)
 							();

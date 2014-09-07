@@ -69,8 +69,8 @@ final class Scribe
 					float s1 = glyph.s1;
 					float t1 = glyph.t1;
 
-					size_t width  = glyph.width;
-					size_t height = glyph.height;
+					int width  = glyph.width.to!int;
+					int height = glyph.height.to!int;
 
 					int offset_x = glyph.offset_x;
 					int offset_y = glyph.offset_y;
@@ -81,7 +81,7 @@ final class Scribe
 						texture = atlas.id;
 						roi = [vec(s0, t0), vec(s1, t1)];
 						offset = ivec(offset_x, offset_y);
-						dims = uvec(width, height)[].map!(to!int).ivec; // HACK
+						dims = ivec(width, height);
 						advance = glyph.advance_x;
 						color = glyph_color;
 					}
@@ -286,8 +286,6 @@ final class Scribe
 					cards[] = cards[].map!transform
 						.map!(v => v + card_box.offset_to (alignment, draw_box))
 						.map!(v => v.from_pixel_space.to_draw_space (display) + translation);
-
-					cards[] = cards[].flip!`vertical`; // HACK flip to correct for the fucked-ness of pixel-space transform
 
 					return cards;
 				}
@@ -592,7 +590,7 @@ unittest {/*...}*/
 			scope display = new Display (800, 600);
 			display.start; scope (exit) display.stop;
 
-			auto scribe = new Scribe (display, [14, 18]);
+			auto scribe = new Scribe (display, [14, 18, 10]);
 			auto stuff (float x) 
 				{/*...}*/
 					auto upper = [vec(-1.5*x+0.2, -x), vec(2*x+0.2, x)];
@@ -617,56 +615,56 @@ unittest {/*...}*/
 			{/*alignment test}*/
 				auto bb = [vec(0.6,-0.6), 0.vec];
 				scribe.write ("top_left")
-					.scale (0.75)
+					.scale (0.6)
 					.color (white)
 					.align_to (Alignment.top_left)
 					.inside (bb)
 				();
 				scribe.write ("center_left")
 					.color (white)
-					.scale (0.75)
+					.scale (0.6)
 					.align_to (Alignment.center_left)
 					.inside (bb)
 				();
 				scribe.write ("bottom left")
 					.color (white)
-					.scale (0.75)
+					.scale (0.6)
 					.align_to (Alignment.bottom_left)
 					.inside (bb)
 				();
 				scribe.write ("top_center")
 					.color (white)
-					.scale (0.75)
+					.scale (0.6)
 					.align_to (Alignment.top_center)
 					.inside (bb)
 				();
 				scribe.write ("center")
 					.color (white)
-					.scale (0.75)
+					.scale (0.6)
 					.align_to (Alignment.center)
 					.inside (bb)
 				();
 				scribe.write ("bottom_center")
 					.color (white)
-					.scale (0.75)
+					.scale (0.6)
 					.align_to (Alignment.bottom_center)
 					.inside (bb)
 				();
 				scribe.write ("top_right")
 					.color (white)
-					.scale (0.75)
+					.scale (0.6)
 					.align_to (Alignment.top_right)
 					.inside (bb)
 				();
 				scribe.write ("center_right")
 					.color (white)
-					.scale (0.75)
+					.scale (0.6)
 					.align_to (Alignment.center_right)
 					.inside (bb)
 				();
 				scribe.write ("bottom_right")
 					.color (white)
-					.scale (0.75)
+					.scale (0.6)
 					.align_to (Alignment.bottom_right)
 					.inside (bb)
 				();

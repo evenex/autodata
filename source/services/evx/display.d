@@ -100,7 +100,9 @@ pure {/*coordinate transformations}*/
 									return coords.value * (min.vec / display.dimensions);
 								}
 							case pixel:
-								return 2 * coords.value/display.dimensions * vec(1,-1) + vec(-1,1);
+								return 2 * coords.value/display.dimensions + vec(-1,1);
+							case inverted_pixel:
+								return coords.to_pixel_space (display).from_pixel_space.to_draw_space (display);
 						}
 				}
 			vec to_extended_space ()(Display.Coords coords, Display display) 
@@ -117,6 +119,8 @@ pure {/*coordinate transformations}*/
 								return coords.value;
 							case pixel:
 								return coords.to_draw_space (display).from_draw_space.to_extended_space (display);
+							case inverted_pixel:
+								return coords.to_pixel_space (display).from_pixel_space.to_draw_space (display);
 						}
 				}
 			vec to_pixel_space ()(Display.Coords coords, Display display) 
@@ -124,33 +128,47 @@ pure {/*coordinate transformations}*/
 					with (Display.Space) final switch (coords.space)
 						{/*...}*/
 							case draw:
-								return (coords.value - vec(-1,1)) * vec(1,-1) * display.dimensions/2; // REVIEW
+								return (coords.value - vec(-1,1)) * display.dimensions/2;
 							case extended:
 								return coords.to_draw_space (display).from_draw_space.to_pixel_space (display);
 							case pixel:
+								return coords.value;
+							case inverted_pixel:
+								return coords.value * vec(1,-1) + vec(0, display.dimensions.y);
+						}
+				}
+			vec to_inverted_pixel_space ()(Display.Coords coords, Display display) 
+				{/*...}*/
+					with (Display.Space) final switch (coords.space)
+						{/*...}*/
+							case draw:
+								return coords.to_pixel_space (display).from_pixel_space.to_inverted_pixel_space (display);
+							case extended:
+								return coords.to_draw_space (display).from_draw_space.to_pixel_space (display);
+							case pixel:
+								return coords.value * vec(1,-1) + vec(0, display.dimensions.y);
+							case inverted_pixel:
 								return coords.value;
 						}
 				}
 		}
 		public {/*range}*/
-			auto to_draw_space (T)(T geometry, Display display)
-				if (is (ElementType!T == Display.Coords))
+			string transform_space (string transform)()
 				{/*...}*/
-					return display.repeat (geometry.length).zip (geometry)
-						.map!(τ => τ[1].to_draw_space (τ[0]));
+					return q{
+						auto } ~transform~ q{ (T)(T geometry, Display display)
+							if (is (ElementType!T == Display.Coords))
+							}`{`q{
+								return display.repeat (geometry.length).zip (geometry)
+									.map!(τ => τ[1].} ~transform~ q{ (τ[0]));
+							}`}`q{
+					};
 				}
-			auto to_extended_space (T)(T geometry, Display display)
-				if (is (ElementType!T == Display.Coords))
-				{/*...}*/
-					return display.repeat (geometry.length).zip (geometry)
-						.map!(τ => τ[1].to_extended_space (τ[0]));
-				}
-			auto to_pixel_space (T)(T geometry, Display display)
-				if (is (ElementType!T == Display.Coords))
-				{/*...}*/
-					return display.repeat (geometry.length).zip (geometry)
-						.map!(τ => τ[1].to_pixel_space (τ[0]));
-				}
+
+			mixin(transform_space!q{to_draw_space});
+			mixin(transform_space!q{to_extended_space});
+			mixin(transform_space!q{to_pixel_space});
+			mixin(transform_space!q{to_inverted_pixel_space});
 		}
 	}
 	public {/*traits}*/
@@ -296,7 +314,7 @@ final class Display: Service
 				}
 		}
 		public {/*coordinates}*/
-			enum Space {draw, extended, pixel}
+			enum Space {draw, extended, pixel, inverted_pixel}
 			struct Coords
 				{/*...}*/
 					pure nothrow:
