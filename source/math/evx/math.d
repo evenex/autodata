@@ -20,5 +20,3 @@ public:
 public:
 	alias map = evx.functional.map;
 	alias reduce = evx.functional.reduce;
-	alias abs = evx.units.abs;
-	alias approx = evx.units.approx;

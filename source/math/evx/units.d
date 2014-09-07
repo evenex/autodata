@@ -13,11 +13,10 @@ private {/*imports}*/
 		import std.array;
 	}
 	private {/*evx}*/
-		import evx.logic; 
-		import evx.arithmetic;
+		import evx.utils; 
 		import evx.traits; 
 		import evx.meta;
-		import evx.analysis;
+		import evx.math;
 	}
 
 	alias zip = std.algorithm.zip;
@@ -335,6 +334,11 @@ public {/*unit}*/
 					}
 
 				alias text = toString;
+
+				static from_string (string input)
+					{/*...}*/
+						return Unit (input.extract_number.to!double);
+					}
 			}
 			pure const nothrow @property {/*conversion}*/
 				Scalar to_scalar ()
@@ -371,6 +375,13 @@ public {/*unit}*/
 			this (Unit quantity)
 				{/*...}*/
 					this.scalar = quantity.scalar;
+				}
+
+			static if (0)
+			this (String)(String input)
+				if (isSomeString!String)
+				{/*...}*/
+					this = from_string (input);
 				}
 		}
 }

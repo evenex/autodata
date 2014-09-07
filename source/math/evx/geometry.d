@@ -166,7 +166,7 @@ public {/*polygons}*/
 		}
 		body {/*...}*/
 			return ℕ[0..samples].map!(i => 2*π*i/samples) 
-				.map!(t => Vec(cos(t), sin(t))) // XXX PERFECT case for uniform constructor syntax here
+				.map!(t => Vec(cos(t), sin(t)))
 				.map!(v => radius*v + center);
 		}
 

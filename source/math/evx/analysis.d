@@ -38,21 +38,29 @@ public {/*rounding}*/
 	*/
 	auto floor (T)(T value)
 		{/*...}*/
-			return value - (value % T (1.0));
+			return value - (value % T(1));
 		}
 
-	/* generic replacement for std.math.floor 
+	/* generic replacement for std.math.ceil 
 	*/
 	auto ceil (T)(T value)
 		{/*...}*/
-			return value.floor + T (1.0);
+			static if (hasLength!T)
+				return T(value[].map!(x => ceil (x)));
+			else {/*...}*/
+				auto floor = value.floor;
+
+				if (value == floor)
+					return value;
+				else return floor + T(1);
+			}
 		}
 
 	/* pure replacement for std.math.round 
 	*/
 	auto round (T)(T value)
 		{/*...}*/
-			if (value % T (1.0) < T (0.5))
+			if (value % T(1.0) < T(0.5))
 				return value.floor;
 			else return value.ceil;
 		}
@@ -354,7 +362,7 @@ public {/*calculus}*/
 		if (not(is(T == Interval!U, U) || isInputRange!T))
 		{/*...}*/
 			static if (__traits(compiles, infinite!T))
-				return value.abs == infinite!T;
+				return value.abs == infinite!T; // BUG this will fail on vectors with one infinite component
 			else return false;
 		}
 	bool is_finite (T)(T value)

@@ -545,8 +545,7 @@ public {/*sequence}*/
 						assert (i != infinity);
 					}
 					body {/*...}*/
-						//T (func (initial, i + start)); // XXX UCS
-						return cast(T) func (initial, i + start);
+						return T(func (initial, i + start));
 					}
 
 				static assert (is_indexable!Sequence);

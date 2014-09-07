@@ -493,7 +493,7 @@ final class Display: Service
 		import core.thread;
 		import std.datetime;
 
-		auto colors = [red, orange, yellow, green, cyan, blue, purple, magenta, black, gray, white];
+		auto colors = [red, orange, yellow, green, cyan, blue, purple, magenta, black, grey, white];
 
 		scope gfx = new Display;
 		gfx.start; scope (exit) gfx.stop;

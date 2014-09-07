@@ -498,7 +498,7 @@ public {/*construction}*/
 										}`}`q{
 								};
 
-								static if (not (isDelegate!Type || isFunctionPointer!Type || isBuiltinType!Type)) // XXX we can get rid of isBuiltinType with UCS
+								static if (not (isSomeFunction!Type))
 									setter ~= q{
 										auto ref } ~name~ q{ (Args...)(Args args)
 											}`{`q{

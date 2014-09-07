@@ -9,6 +9,7 @@ private {/*imports}*/
 		import std.range;
 		import std.math; 
 		import std.conv;
+		import std.string;
 	}
 	private {/*evx}*/
 		import evx.utils; 
@@ -28,6 +29,14 @@ private {/*imports}*/
 	alias sum = evx.arithmetic.sum;
 }
 
+static if (0)
+unittest {/*string parsing}*/
+	enum x = `[3, 2, 1]`;
+
+	auto v = Vector!(3, int)(x);
+
+	assert (v[].equal ([3,2,1]));
+}
 pure:
 
 struct Vector (uint n, Component = double)
@@ -46,9 +55,8 @@ struct Vector (uint n, Component = double)
 					return `[` ~output[0..$-2]~ `]`;
 				}
 
-			static if (1)
 			@property toString (Args...)(Args args) // REVIEW this allows unit abbreviation override to propagate to elements
-				if (Args.length > 2) // HACK otherwise we print blanks, why?
+				if (Args.length > 2)
 				{/*...}*/
 					string output;
 
@@ -273,6 +281,23 @@ struct Vector (uint n, Component = double)
 			this (Component component)
 				{/*...}*/
 					this.components[] = component;
+				}
+
+			static if (0)
+			this (string input)
+				{/*...}*/
+					foreach (ref i; components)
+						{/*...}*/
+							auto split = input.findSplitBefore (`,`);
+
+							auto i_string = split[0];
+							input = split[1];
+
+							if (i_string.empty)
+								assert (0, `bad string → vector conversion`);
+
+							i = i_string.extract_number.to!Component;
+						}
 				}
 		}
 		public {/*conv}*/
@@ -774,9 +799,7 @@ pure {/*unary functions}*/
 				{/*...}*/
 					alias T = ElementType!V;
 
-					static if (is (typeof(T.__ctor)))
-						return T (v[].map!(t => (t/unity!T)^^p).sum ^^ (1.0/p)); // XXX UNIFORM CONSTRUCTOR SYNTAX PLS
-					else return cast(T) (v[].map!(t => abs (t/unity!T)^^p).sum ^^ (1.0/p));
+					return T (v[].map!(t => (t/T(1))^^p).sum ^^ (1.0/p));
 				}
 		}
 	auto unit (V)(V v) 
@@ -786,9 +809,9 @@ pure {/*unary functions}*/
 
 			immutable norm = v.norm;
 
-			if (norm == zero!T)
-				return vector!(V.length) (zero!T / unity!T);
-			else return vector!(V.length) (v[].map!(t => t/norm)); // XXX UCS for static arrays?
+			if (norm == T(0))
+				return vector!(V.length) (T(0)/T(1));
+			else return vector!(V.length) (v[].map!(t => t/norm));
 		}
 }
 pure {/*binary functions}*/
