@@ -18,27 +18,30 @@ private import evx.service;
 alias map = evx.functional.map;
 
 public {/*mappings}*/
-	vec to_view_space (Cam)(vec from_world_space, Cam camera) pure
+	vec to_view_space (Cam)(Position from_world_space, Cam camera)
 		{/*...}*/
-			auto v = from_world_space;
-			auto c = camera.world_center; 
+			auto v = from_world_space.dimensionless;
+			auto c = camera.world_center.dimensionless;
 			auto s = camera.world_scale;
+
 			return (v-c)/s;
 		}
-	auto to_view_space (T, Cam)(T from_world_space, Cam camera)
-		if (is_geometric!T)
+	auto to_view_space (R, Cam)(R from_world_space, Cam camera)
+		if (is_geometric!R)
 		{/*...}*/
 			return from_world_space.map!(v => v.to_view_space (camera));
 		}
-	vec to_world_space (Cam)(vec from_view_space, Cam camera) pure
+
+	Position to_world_space (Cam)(vec from_view_space, Cam camera)
 		{/*...}*/
 			auto v = from_view_space;
 			auto c = camera.world_center;
-			auto s = camera.world_scale;
+			auto s = camera.world_scale[].map!meters.Position;
+
 			return v*s+c;
 		}
-	auto to_world_space (T, Cam)(T from_view_space, Cam camera)
-		if (is_geometric!T)
+	auto to_world_space (R, Cam)(R from_view_space, Cam camera)
+		if (is_geometric!R)
 		{/*...}*/
 			return from_view_space.map!(v => v.to_world_space (camera));
 		}

@@ -36,20 +36,18 @@ template identity_element (Element...)
 
 		auto of_type (T)()
 			{/*...}*/
-				static if (isNumeric!T)
-					return cast(T) element;
+				static if (__traits(compiles, T(element)))
+					return T(element);
+				else static if (isAggregateType!T)
+					return T(staticMap!(of_type, FieldTypeTuple!T));
 				else static if (isStaticArray!T)
 					{/*...}*/
-						T array;
+						Unqual!T array;
 
 						array[] = of_type!(ElementType!T);
 
 						return array;
 					}
-				else static if (__traits(compiles, T(element)))
-					return T(element);
-				else static if (__traits(compiles, T(staticMap!(of_type, FieldTypeTuple!T))))
-					return T(staticMap!(of_type, FieldTypeTuple!T));
 				else static assert (0, `can't compute ` ~element.text~ ` for ` ~T.stringof);
 			}
 	}

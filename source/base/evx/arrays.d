@@ -1027,9 +1027,9 @@ struct Associative (Array, Lookup...)
 				{/*...}*/
 					return find (key)? true:false;
 				}
-			bool opBinaryRight (string op = `in`)(Key key)
+			Item* opBinaryRight (string op = `in`)(Key key)
 				{/*...}*/
-					return this.contains (key);
+					return find (key);
 				}
 
 			alias opIndex = get;

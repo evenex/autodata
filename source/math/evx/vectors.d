@@ -30,37 +30,9 @@ private {/*imports}*/
 	alias sum = evx.arithmetic.sum;
 }
 
-pure:
-
 struct Vector (uint n, Component = double)
 	if (supports_arithmetic!Component && n > 1)
 	{/*...}*/
-		public {/*text}*/
-			alias text = toString; // REVIEW this may be improper use of a text override
-
-			@property toString ()
-				{/*...}*/
-					string output;
-
-					foreach (component; this[])
-						output ~= component.text~ `, `;
-
-					return `[` ~output[0..$-2]~ `]`;
-				}
-
-			@property toString (Args...)(Args args) // REVIEW this allows unit abbreviation override to propagate to elements
-				if (Args.length > 2)
-				{/*...}*/
-					string output;
-
-					foreach (component; this[])
-						output ~= component.text (args)~ `, `;
-
-					return `[` ~output[0..$-2]~ `]`;
-				}
-		}
-
-		pure:
 		enum length = n;
 
 		public:
@@ -247,6 +219,16 @@ struct Vector (uint n, Component = double)
 		public {/*array}*/
 			mixin ArrayInterface!(components, length);
 		}
+		public {/*infinity}*/
+			bool is_infinite ()
+				{/*...}*/
+					return not (this.is_finite);
+				}
+			bool is_finite ()
+				{/*...}*/
+					return this[].filter!(x => x.is_infinite).empty;
+				}
+		}
 		public {/*ctor}*/
 			this (R)(R range)
 				if (isInputRange!R)
@@ -321,14 +303,28 @@ struct Vector (uint n, Component = double)
 					else static assert (0, `cannot convert ` ~Vector.stringof~ ` to ` ~T.stringof);
 				}
 		}
-		public {/*infinity}*/
-			bool is_infinite ()
+		public {/*text}*/
+			alias text = toString; // REVIEW this may be improper use of a text override
+
+			@property toString ()
 				{/*...}*/
-					return not (this.is_finite);
+					string output;
+
+					foreach (component; this[])
+						output ~= component.text~ `, `;
+
+					return `[` ~output[0..$-2]~ `]`;
 				}
-			bool is_finite ()
+
+			@property toString (Args...)(Args args) // REVIEW this allows unit abbreviation override to propagate to elements
+				if (Args.length > 2)
 				{/*...}*/
-					return this[].filter!(x => x.is_infinite).empty;
+					string output;
+
+					foreach (component; this[])
+						output ~= component.text (args)~ `, `;
+
+					return `[` ~output[0..$-2]~ `]`;
 				}
 		}
 

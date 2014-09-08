@@ -152,7 +152,6 @@ final class CollisionDynamics (ClientId = size_t): Service
 								foreach (geometry; geometries)
 									{/*...}*/
 										assert (geometry.length > 2);
-										import evx.utils;
 
 										assert (geometry.area.dimensionless > Scalar.epsilon,
 											"attempted to create collision body with zero volume");
@@ -339,58 +338,11 @@ final class CollisionDynamics (ClientId = size_t): Service
 		}
 		public {/*queries}*/
 			// REFACTOR
-			struct BodyInterface
-				{/*...}*/
-					ClientId id;
-					Body* body_option;
-					Upload* upload_option;
-					CollisionDynamics dynamics;
-
-					this (ref Body physical_body)
-						{/*...}*/
-							body_option = &physical_body;
-						}
-					this (ref Upload upload, CollisionDynamics dynamics)
-						{/*...}*/
-							id = upload.id;
-							upload_option = &upload;
-							this.dynamics = dynamics;
-						}
-
-					private bool body_uploaded ()
-						{/*...}*/
-							while (bodies_locked)//REVIEW
-								{}
-							body_option = dynamics.bodies.find (id);
-							
-							return body_option? true:false;
-						}
-					@property auto ref opDispatch (string op)()
-						{/*...}*/
-							if (body_option || body_uploaded) mixin(q{
-								return body_option.} ~op~ q{;
-							}); else mixin(q{
-								return upload_option.} ~op~ q{;
-							});
-						}
-					@property auto ref opDispatch (string op, Args...)(scope lazy Args args)
-						{/*...}*/
-							if (body_option || body_uploaded) mixin(q{
-								return body_option.} ~op~ q{ (args);
-							}); else mixin(q{
-								return upload_option.} ~op~ q{;
-							}); 
-						}
-				}
 			auto get_body (ClientId id)
 				{/*...}*/
-					if (id in bodies)
-						return BodyInterface (bodies[id]);
-					else foreach (ref upload; buffer.uploads.write[])
-						if (upload.id == id)
-							return BodyInterface (upload, this);
-
-					assert (0, `body ` ~id.text~ ` does not exist`);
+					if (auto result = id in bodies)
+						return result;
+					else assert (0, `body ` ~id.text~ ` not uploaded, cannot access`);
 				}
 
 			void expedite_queries ()

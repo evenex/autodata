@@ -52,8 +52,7 @@ template DoubleBuffer (T, uint size)
 				shared {/*swap}*/
 					void swap ()
 						{/*...}*/
-							write_index.atomicOp!`+=` (1);
-							write_index.atomicOp!`%=` (2);
+							atomicStore (write_index, (write_index+1)%2);
 
 							(cast()this).buffer[write_index].clear;
 						}
@@ -125,21 +124,15 @@ template TripleBuffer (T, uint size, uint poll_frequency = 4_000)
 				shared {/*swap}*/
 					void writer_swap ()
 						{/*...}*/
-							while ((write_index + 2) % 3 != read_index)
+							while (not (cas (&write_index, (read_index+1)%3, (write_index+1)%3)))
 								Thread.sleep (wait_period);
-
-							write_index.atomicOp!`+=` (1);
-							write_index.atomicOp!`%=` (3);
 
 							(cast()buffer[write_index]).clear;
 						}
 					void reader_swap ()
 						{/*...}*/
-							while ((write_index + 1) % 3 != read_index)
+							while (not (cas (&read_index, (write_index+1)%3, (read_index+1)%3)))
 								Thread.sleep (wait_period);
-
-							read_index.atomicOp!`+=` (1);
-							read_index.atomicOp!`%=` (3);
 						}
 				}
 				shared {/*append}*/

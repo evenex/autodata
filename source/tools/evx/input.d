@@ -1,9 +1,11 @@
-module tools.input;
+module evx.input;
 
 private {/*imports}*/
 	private {/*std}*/
 		import std.datetime;
 		import std.exception;
+		import std.range;
+		import std.traits;
 	}
 	private {/*evx}*/
 		import evx.utils;
@@ -14,6 +16,8 @@ private {/*imports}*/
 	private {/*glfw3}*/
 		import derelict.glfw3.glfw3;
 	}
+
+	alias map = evx.functional.map;
 }
 
 final class Input
@@ -148,7 +152,9 @@ final class Input
 					assert (display.is_running);
 				}
 				body {/*...}*/
+					import evx.utils;
 					active_display = display;
+
 					display.access_rendering_context (
 						(){/*...}*/
 							auto window = glfwGetCurrentContext();
@@ -163,7 +169,14 @@ final class Input
 					);
 
 					key_map.lookup[`base`] = [Key.esc: main_escape_function];
-					mouse_map.lookup[`base`] = [Mouse.left: (bool _){}];
+					mouse_map.lookup[`base`] = [Mouse.left: (bool){}];
+
+					foreach (k; EnumMembers!Key)
+						keys[k] = false;
+					foreach (b; EnumMembers!Mouse)
+						buttons[b] = false;
+
+					events = new typeof(events);
 				}
 			~this ()
 				{/*...}*/
