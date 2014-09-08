@@ -104,12 +104,11 @@ alias Σ = sum;
 
 /* compute the least common multiple of two numbers 
 */
-pure lcm (T)(T a, T b) // TODO over more than two numbers
+pure lcm (T)(T a, T b)
 	{/*...}*/
 		if (a == 0 || b == 0)
 			return a*b;
-		else try return a * (b / gcd (a,b));
-			catch (Exception) assert (0);
+		else return a * (b / gcd (a,b));
 	}
 	unittest {/*...}*/
 		assert (lcm (21, 6) == 42);
@@ -133,4 +132,11 @@ template is_even (size_t n)
 template is_odd (size_t n)
 	{/*...}*/
 		enum is_odd = not (is_even);
+	}
+template is_multiple_of (size_t m)
+	{/*...}*/
+		template is_multiple_of (size_t n)
+			{/*...}*/
+				enum is_multiple_of = n % m == 0;
+			}
 	}

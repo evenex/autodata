@@ -55,7 +55,6 @@ public {/*strings}*/
 			return input[i..min($, j+1)];
 		}
 }
-pure nothrow:
 public debug {/*}*/
 	/* pure nothrow writeln 
 	*/
@@ -66,7 +65,7 @@ public debug {/*}*/
 					stderr.write (arg, ` `);
 				stderr.writeln;
 			}
-			catch (Exception) assert (0);
+			catch (Exception) assert (0, `pwriteln failed`);
 		}
 		
 	/* print a function call with arguments 
@@ -77,7 +76,7 @@ public debug {/*}*/
 			
 			debug try foreach (arg; args)
 				call ~= arg.text~ `, `;
-			catch (Exception) assert (0); // UPLOAD
+			catch (Exception) assert (0, `function call to string failed`);
 				
 			if (call.length == 0)
 				return name;
@@ -122,7 +121,7 @@ public debug {/*}*/
 				
 				return (*cast(ulong*) &tid).text[$-digits..$];
 			}
-			catch (Exception) assert (0);
+			catch (Exception) assert (0, `tid_string failed`);
 		}
 }
 public {/*UDA tags}*/
@@ -167,7 +166,7 @@ debug (profiler) {/*}*/
 								this.exit_time = Clock.currTime;
 								this.exit_status = exit_status;
 							}
-						catch (Exception) assert (0);
+						catch (Exception) assert (0, `profiler end failed`);
 					}
 					
 				void checkpoint (T...)(T marks)
@@ -180,7 +179,7 @@ debug (profiler) {/*}*/
 								
 								pwriteln (check, ` `, marks);
 							}
-						catch (Exception) assert (0);
+						catch (Exception) assert (0, `profiler checkpoint failed`);
 					}
 			}
 			public {/*~}*/
@@ -209,7 +208,7 @@ debug (profiler) {/*}*/
 
 							pwriteln (profiler_enter_indent, `in(` ~tid_string~ `):`, func_name, `at`, entry_time.toISOExtString["2014-05-15".length..$]);
 						}
-						catch (Exception) assert (0);
+						catch (Exception) assert (0, `profiler ctor failed`);
 					}
 				@disable this ();
 			}
@@ -229,11 +228,11 @@ debug (profiler) {/*}*/
 		}
 
 	public {/*formatting}*/
-		auto profiler_enter_indent ()
+		auto profiler_enter_indent ()()
 			{/*...}*/
 				debug return '\t'.repeat (indent++);
 			}
-		auto profiler_exit_indent ()
+		auto profiler_exit_indent ()()
 			{/*...}*/
 				debug return '\t'.repeat (--indent);
 			}

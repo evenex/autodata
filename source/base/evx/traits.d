@@ -7,6 +7,7 @@ private {/*imports}*/
 	}
 	private {/*evx}*/
 		import evx.logic;
+		import evx.algebra;
 		import evx.utils;
 	}
 }
@@ -224,8 +225,10 @@ public {/*type capabilities}*/
 	*/
 	template supports_arithmetic (T)
 		{/*...}*/
+			enum one = unity!(const(Unqual!T));
+
 			enum supports_arithmetic = __traits(compiles,
-				{T x, y; static assert (__traits(compiles, x+y, x-y, x*y, x/y));}
+				{auto x = one, y = one; static assert (__traits(compiles, x+y, x-y, x*y, x/y));}
 			);
 		}
 }

@@ -7,11 +7,8 @@ private {/*imports}*/
 	}
 }
 
-nothrow:
-
 /* sample a gaussian distribution */
-auto gaussian ()
+auto gaussian ()()
 	{/*...}*/
-		try return normalDistributionInverse (uniform (0.0, 1.0));
-		catch (Exception) assert (0);
+		return normalDistributionInverse (uniform (0.0, 1.0));
 	}

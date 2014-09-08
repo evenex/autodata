@@ -679,10 +679,13 @@ private {/*shaders}*/
 			}
 		abstract class Shader (ArtStyle): ShaderInterface
 			{/*...}*/
-				protected alias visual_type = ArtStyle; // REFACTOR visual/style
+				mixin AutoInitialize;
+				alias Style = ArtStyle;
+
 				public:
 				public {/*render list}*/
-					Appendable!(Order!ArtStyle[]) render_list; // TODO autoinit?
+					@(Initialize!512)
+					Appendable!(Order!ArtStyle[]) render_list;
 				}
 				protected:
 				shared final {/*shader interface}*/
@@ -813,6 +816,8 @@ private {/*shaders}*/
 							gl.DetachShader (program, frag_shader);
 
 							gl.UseProgram (program);
+
+							auto_initialize;
 						}
 				}
 			}

@@ -20,6 +20,9 @@ private {/*imports}*/
 	}
 
 	alias zip = std.algorithm.zip;
+	alias floor = evx.analysis.floor;
+	alias ceil = evx.analysis.ceil;
+	alias round = evx.analysis.round;
 }
 
 unittest {/*demo}*/
@@ -100,74 +103,142 @@ public {/*unit}*/
 		{/*...}*/
 			public:
 			pure const nothrow {/*math}*/
-				auto abs ()
-					{/*...}*/
-						return Unit (.abs (this.scalar));
-					}
+				pure {/*unary}*/
+					auto abs ()
+						{/*...}*/
+							return Unit (.abs (this.scalar));
+						}
+					auto sgn ()
+						{/*...}*/
+							return scalar < 0.0? -1: 1;
+						}
+				}
+				pure {/*approx}*/
+					auto approx (Unit a, real tolerance = 1./10_000)
+						{/*...}*/
+							return this.scalar.approx (a.scalar, tolerance);
+						}
+				}
+				pure {/*exponents}*/
+					auto squared ()()
+						{/*...}*/
+							return this.pow!2;
+						}
+					alias sq = squared;
 
-				auto approx (Unit a, real tolerance = 1./10_000)
-					{/*...}*/
-						return this.scalar.approx (a.scalar, tolerance);
-					}
+					auto sqrt ()()
+						if (allSatisfy!(is_even, In_Pow))
+						{/*...}*/
+							template div2 (T...)
+								if (T.length == 1)
+								{/*...}*/
+									enum div2 = T[0]/2;
+								}
 
-				auto squared ()()
-					{/*...}*/
-						return this.pow!2;
-					}
-				alias sq = squared;
+							auto ret = combine_dimension!(subtract, Unit, Unit!(In_Dim, staticMap!(div2, In_Pow)));
 
-				auto sqrt ()()
-					if (allSatisfy!(is_even, In_Pow))
-					{/*...}*/
-						template div2 (T...)
-							if (T.length == 1)
-							{/*...}*/
-								enum div2 = T[0]/2;
-							}
+							ret.scalar = .sqrt (this.scalar);
 
-						auto ret = combine_dimension!(subtract, Unit, Unit!(In_Dim, staticMap!(div2, In_Pow)));
+							return ret;
+						}
 
-						ret.scalar = .sqrt (this.scalar);
+					auto cubed ()()
+						{/*...}*/
+							return this.pow!3;
+						}
+					alias cu = cubed;
 
-						return ret;
-					}
+					auto cbrt ()()
+						if (allSatisfy!(is_multiple_of!3, In_Pow))
+						{/*...}*/
+							template div3 (T...)
+								if (T.length == 1)
+								{/*...}*/
+									enum div3 = T[0]/3;
+								}
 
-				auto power (long exponent)()
-					{/*...}*/
-						static if (exponent > 0)
-							auto ret = raise_dimension!(Unit, exponent);
-						else static if (exponent < 0)
-							auto ret = raise_dimension!(typeof(1/this), -exponent);
+							auto ret = combine_dimension!(subtract, Unit, Unit!(In_Dim, staticMap!(div3, In_Pow)));
 
-						static if (exponent == 0)
-							Scalar ret = 1.0;
-						else ret.scalar = this.scalar^^exponent;
+							ret.scalar = .cbrt (this.scalar);
 
-						return ret;
-					}
-				alias pow = power;
+							return ret;
+						}
 
-				auto opDispatch (string op)()
-					{/*...}*/
-						mixin(q{
-							static if (__traits(compiles, Unit (} ~op~ q{ (scalar))))
-								return Unit (} ~op~ q{ (scalar));
-							else static assert (0);
-						});
-					}
-				auto opDispatch (string op)(const auto ref Unit that)
-					{/*...}*/
-						mixin(q{
-							static if (__traits(compiles, Unit (this.scalar.} ~op~ q{ (that.scalar))))
-								return Unit (this.scalar.} ~op~ q{ (that.scalar));
-							else static if (__traits(compiles, this.scalar.} ~op~ q{ (that.scalar)))
-								return this.scalar.} ~op~ q{ (that.scalar);
-							else static assert (0);
-						});
-					}
+					auto power (long exponent)()
+						{/*...}*/
+							static if (exponent > 0)
+								auto ret = raise_dimension!(Unit, exponent);
+							else static if (exponent < 0)
+								auto ret = raise_dimension!(typeof(1/this), -exponent);
+
+							static if (exponent == 0)
+								Scalar ret = 1.0;
+							else ret.scalar = this.scalar^^exponent;
+
+							return ret;
+						}
+					alias pow = power;
+				}
+				pure {/*NaN}*/
+					auto isNaN ()
+						{/*...}*/
+							return .isNaN (scalar);
+						}
+
+					auto get_NaN_payload ()
+						in {/*...}*/
+							assert (this.isNaN);
+						}
+						body {/*...}*/
+							return getNaNPayload (scalar);
+						}
+
+					auto set_NaN_payload (ulong payload)
+						in {/*...}*/
+							assert (payload >= 0x3_FFFF_FFFF_FFFF);
+						}
+						out {/*...}*/
+							assert (this.isNaN);
+						}
+						body {/*...}*/
+							return Unit (NaN (payload));
+						}
+				}
+				pure {/*next}*/
+					auto next_up ()
+						{/*...}*/
+							return Unit (nextUp (scalar));
+						}
+					auto next_down ()
+						{/*...}*/
+							return Unit (nextDown (scalar));
+						}
+				}
+				pure {/*rounding}*/
+					auto floor ()
+						{/*...}*/
+							return Unit (.floor (scalar));
+						}
+
+					auto ceil ()
+						{/*...}*/
+							return Unit (.ceil (scalar));
+						}
+
+					auto round ()
+						{/*...}*/
+							return Unit (.round (scalar));
+						}
+				}
+				pure {/*is_infinite}*/
+					auto is_infinite ()
+						{/*...}*/
+							return .is_infinite (scalar);
+						}
+				}
 			}
 			pure const nothrow {/*comparison}*/
-				mixin CompareBy!to_scalar;
+				mixin CompareBy!dimensionless;
 			}
 			pure const nothrow {/*operators}*/
 				auto opUnary (string op)()
@@ -341,14 +412,14 @@ public {/*unit}*/
 					}
 			}
 			pure const nothrow @property {/*conversion}*/
-				Scalar to_scalar ()
+				Scalar dimensionless ()
 					{/*...}*/
 						return scalar;
 					}
 
 				template opCast (T : Scalar)
 					{/*...}*/
-						alias opCast = to_scalar;
+						alias opCast = dimensionless;
 					}
 			}
 

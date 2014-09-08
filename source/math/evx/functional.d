@@ -270,11 +270,15 @@ public {/*zip}*/
 
 					static assert (.isOutputRange!(Zipped, ZipTuple));
 				}
-			static if (allSatisfy!(hasLength, Ranges)) // TODO infinite ranges shouldn't count here
+			static if (allSatisfy!(hasLength, Ranges))
 				@property {/*...}*/
 					auto length () const
-						{/*...}*/
-							return ranges[0].length; // TODO nix the [0]
+						out (result) {/*...}*/
+							foreach (range; ranges)
+								assert (result == range.length);
+						}
+						body {/*...}*/
+							return ranges[0].length;
 						}
 
 					static if (is(ReturnType!(Ranges[0].length) == CommonDollar))
@@ -285,8 +289,12 @@ public {/*zip}*/
 			static if (allSatisfy!(is_continuous_range, Ranges))
 				@property {/*...}*/
 					auto measure () const
-						{/*...}*/
-							return ranges[0].measure; // TODO i don't want any [0] going on, instead iterate over all ranges and select the correct measure according to some infinity-respecting rules
+						out (result) {/*...}*/
+							foreach (range; ranges)
+								assert (result == range.measure);
+						}
+						body {/*...}*/
+							return ranges[0].measure;
 						}
 
 					static if (is(ReturnType!(Ranges[0].measure) == CommonDollar))
@@ -298,7 +306,6 @@ public {/*zip}*/
 			alias CommonIndex = CommonType!(staticMap!(IndexTypes, Ranges));
 			alias CommonDollar = CommonType!(staticMap!(DollarType, Ranges));
 
-			// if any have length/measure, and those that don't are infinite... and if so, all their lengths/measures are the same, except for those that are infinite
 			private:
 			private {/*defs}*/
 				alias ZipTuple = Tuple!(staticMap!(Unqual, staticMap!(ElementType, Ranges))); 
@@ -339,14 +346,14 @@ public {/*zip}*/
 					in {/*...}*/
 						static if (is_continuous!CommonIndex)
 							{/*...}*/
-								auto measure = ranges[0].measure; // TODO
+								auto measure = ranges[0].measure;
 
 								foreach (range; ranges)
 									assert (range.measure == measure);
 							}
 						static if (allSatisfy!(hasLength, Ranges))
 							{/*...}*/
-								auto length = ranges[0].length; // TODO
+								auto length = ranges[0].length;
 
 								foreach (range; ranges)
 									assert (range.length == length, 

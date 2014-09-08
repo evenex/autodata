@@ -31,6 +31,8 @@ public enum {/*Color palette}*/
 
 struct Color
 	{/*...}*/
+		mixin NormalizedInvariance;
+
 		pure nothrow:
 		@(Normalized.positive) {/*components}*/
 			double 	r = 1.0, 
@@ -167,9 +169,6 @@ struct Color
 					return this;
 				}
 		}
-
-		mixin NormalizedInvariance;
-
 	};
 unittest {/*...}*/
 	assert (red + blue == magenta);

@@ -60,7 +60,7 @@ template binary_search (alias compare, Equivalence equivalence = Equivalence.int
 			if (hasLength!R && is_indexable!R)
 			in {/*...}*/
 				debug try assert (range.isSorted!compare);
-				catch (Exception) assert (0);
+				catch (Exception) assert (0, `sort check failed`);
 			}
 			body {/*...}*/
 				if (range.empty)

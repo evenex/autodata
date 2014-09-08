@@ -27,14 +27,13 @@ public {/*forwarding}*/
 				{/*...}*/
 					int result;
 
-					try foreach (ref element; container)
+					foreach (ref element; container)
 						{/*...}*/
 							result = op (element);
 
 							if (result) 
 								break;
 						}
-					catch (Exception) assert (0);
 
 					return result;
 				}
@@ -42,14 +41,13 @@ public {/*forwarding}*/
 				{/*...}*/
 					int result;
 
-					try foreach (i, ref element; container)
+					foreach (i, ref element; container)
 						{/*...}*/
 							result = op (i, element);
 
 							if (result) 
 								break;
 						}
-					catch (Exception) assert (0);
 
 					return result;
 				}
@@ -224,6 +222,8 @@ public {/*initialization}*/
 		{/*...}*/
 			void auto_initialize ()
 				{/*...}*/
+					import evx.traits;
+
 					alias This = typeof(this);
 					foreach (member; __traits(allMembers, This))
 						static if (__traits(compiles, __traits(getMember, This, member)))
@@ -1012,9 +1012,8 @@ public {/*code generation}*/
 
 			string code;
 
-			try foreach (i, T; Types)
+			foreach (i, T; Types)
 				code ~= T.stringof~` `~prefix~`_`~i.text~suffix;
-			catch (Exception) assert (0);
 
 			return code;
 		}

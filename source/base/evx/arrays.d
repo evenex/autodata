@@ -334,7 +334,7 @@ struct Dynamic (Array, PolicyList...)
 		);
 
 		public:
-		public {/*[‥]}*/
+		public {/*[┄]}*/
 			mixin ArrayInterface!(array, dynamic_length);
 		}
 		public {/*mutation}*/
@@ -417,6 +417,8 @@ struct Dynamic (Array, PolicyList...)
 				{/*...}*/
 					static if (__traits(compiles, Array (args)))
 						array = Array (args);
+					else static if (__traits(compiles, new ElementType!Array[args]))
+						array = new ElementType!Array[args];
 					else array = args;
 				}
 		}
@@ -1307,7 +1309,7 @@ else struct Array (T, Reallocation reallocation = Reallocation.permitted)
 			}
 		this (R)(R range)
 			{/*...}*/
-				auto data = new T[range.length];
+				data = new T[range.length];
 				range.copy (data);
 			}
 

@@ -9,7 +9,7 @@ private {/*imports}*/
 		import std.range;
 		import std.math;
 	}
-	private {/*import evx}*/
+	private {/*evx}*/
 		import evx.utils; 
 		import evx.traits; 
 		import evx.range;
@@ -32,7 +32,6 @@ private {/*imports}*/
 	alias reduce = evx.functional.reduce;
 }
 
-pure: // REVIEW nothrow was here, invalidated by daq display routines
 public {/*traits}*/
 	/* test if a type can be used by this library 
 	*/
@@ -45,18 +44,9 @@ public {/*traits}*/
 	*/
 	template is_vector (T)
 		{/*...}*/
-			const T vector = T.init;
-
-			static if (is (T.is_basis_vector == enum))
-				enum is_vector = true;
-			else enum is_vector =  __traits(compiles, 
-				(-vector.x, -vector.y),
-				(+vector.x, +vector.y),
-
-				(vector.x + vector.y), 
-				(vector.x - vector.y),
-				(vector.x * vector.y),
-			);
+			static if (is(typeof(T.x) == typeof(T.y)))
+				enum is_vector = supports_arithmetic!(typeof(T.x));
+			else enum is_vector = false;
 		}
 }
 public {/*vectors}*/
@@ -126,8 +116,8 @@ public {/*vectors}*/
 		{/*...}*/
 			static if (is_Unit!(ElementType!Vec))
 				return atan2 (
-					a.det (b).to_scalar,
-					a.dot (b).to_scalar
+					a.det (b).to!double,
+					a.dot (b).to!double
 				);
 			else return atan2 (
 				a.det (b),
@@ -176,13 +166,13 @@ public {/*polygons}*/
 	auto square (T, Vec = vec)(const T side, const Vec center = zero!Vec)
 		if (is_Unit!T)
 		{/*...}*/
-			return square (side.to_scalar, center)
+			return square (side.to!double, center)
 				.map!(v => vector (T(v.x), T(v.y)));
 		}
 	auto circle (uint samples = 24, Vec = vec, T = ElementType!Vec)(const T radius, const Vec center = zero!Vec)
 		if (is_Unit!T)
 		{/*...}*/
-			return circle!samples (radius.to_scalar, center)
+			return circle!samples (radius.to!double, center)
 				.map!(v => vector (T(v.x), T(v.y)));
 		}
 
@@ -324,7 +314,7 @@ public {/*axis-aligned bounding boxes}*/
 	*/
 	struct Box (T)
 		{/*...}*/
-			pure @property: // REVIEW nothrow was here, invalidated by daq display routines
+			@property:
 			const {/*corners}*/
 				Vec opDispatch (string op)()
 					if (op.canFind (`left`, `center`, `right`))

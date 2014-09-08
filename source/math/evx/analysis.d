@@ -46,7 +46,7 @@ public {/*rounding}*/
 	auto ceil (T)(T value)
 		{/*...}*/
 			static if (hasLength!T)
-				return T(value[].map!(x => ceil (x)));
+				return T(value[].map!(x => x.ceil));
 			else {/*...}*/
 				auto floor = value.floor;
 
@@ -361,8 +361,10 @@ public {/*calculus}*/
 	bool is_infinite (T)(T value)
 		if (not(is(T == Interval!U, U) || isInputRange!T))
 		{/*...}*/
-			static if (__traits(compiles, infinite!T))
-				return value.abs == infinite!T; // BUG this will fail on vectors with one infinite component
+			static if (hasLength!T)
+				return value[].filter!(x => x.is_finite).empty;
+			else static if (__traits(compiles, infinite!T))
+				return value.abs == infinite!T;
 			else return false;
 		}
 	bool is_finite (T)(T value)
@@ -485,7 +487,7 @@ public {/*normalization}*/
 
 					alias This = typeof(this);
 
-					try debug foreach (member; __traits(allMembers, This))
+					debug foreach (member; __traits(allMembers, This))
 						{/*...}*/
 							immutable string error_msg = `"` ~member~ ` is not normalized ("` ` ~` ~member~ `.text~ ")"`;
 							
@@ -496,7 +498,6 @@ public {/*normalization}*/
 								assert (} ~member~ q{.between (0.0, 1.0),} ~error_msg~ q{);
 							});
 						}
-					catch (Exception) assert (0);
 				}
 		}
 		unittest {/*...}*/
@@ -524,7 +525,7 @@ public {/*normalization}*/
 
 				bool thrown;
 
-				void attempt (void delegate() action) nothrow
+				void attempt (void delegate() action)
 					{try {action(); t.test;} catch (Throwable) {thrown = true;}}
 
 				attempt ({t.a = 9.0;});

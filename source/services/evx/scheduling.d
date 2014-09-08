@@ -169,6 +169,8 @@ class Scheduler: Service
 
 		alias Notification = Scheduler.Notification;
 
+		enum window = 5.milliseconds;
+
 		{/*serial}*/
 			foreach (i; 0..5)
 				{/*...}*/
@@ -178,12 +180,12 @@ class Scheduler: Service
 							alias receive = std.concurrency.receive;
 							int result;
 							S.start ();
-							S.enqueue (1.milliseconds, 0x1);
-							S.enqueue (2.milliseconds, 0x2);
+							S.enqueue (window, 0x1);
+							S.enqueue (2 * window, 0x2);
 							receive ((Notification x) {assert (x == 0x1);});
 							receive ((Notification x) {assert (x == 0x2);});
-							S.enqueue (2.milliseconds, 0x2);
-							S.enqueue (1.milliseconds, 0x1);
+							S.enqueue (2 * window, 0x2);
+							S.enqueue (window, 0x1);
 							receive ((Notification x) {assert (x == 0x1);});
 							receive ((Notification x) {assert (x == 0x2);});
 							S.stop ();
@@ -197,17 +199,17 @@ class Scheduler: Service
 
 			foreach (i, ref s; all)   	s = new Scheduler;
 			foreach (i, ref s; all)   	s.start ();
-			foreach (i, ref s; all)   	s.enqueue (2*(1+i).milliseconds, i);
+			foreach (i, ref s; all)   	s.enqueue (window*(1+i), i);
 			foreach (i, ref s; all)  	receive ((Notification x) {assert (x == i);});
 			foreach (i, ref s; right)	s.stop ();
-			foreach (i, ref s; left)  	s.enqueue (2*(1+i).milliseconds, i);
+			foreach (i, ref s; left)  	s.enqueue (window*(1+i), i);
 			foreach (i, ref s; left)  	receive ((Notification x) {assert (x == i);});
 			foreach (i, ref s; left)  	s.stop ();
 			foreach (i, ref s; right) 	s.start ();
-			foreach (i, ref s; right) 	s.enqueue (2*(1+i).milliseconds, i);
+			foreach (i, ref s; right) 	s.enqueue (window*(1+i), i);
 			foreach (i, ref s; right) 	receive ((Notification x) {assert (x == i);});
 			foreach (i, ref s; all)   	s.start ();
-			foreach (i, ref s; all) 	s.enqueue (2*(1+i).milliseconds, i);
+			foreach (i, ref s; all) 	s.enqueue (window*(1+i), i);
 			foreach (i, ref s; all)  	receive ((Notification x) {assert (x == i);});
 			foreach (i, ref s; all)		s.stop ();
 		}
@@ -246,7 +248,7 @@ auto auto_sync (alias scheduler, alias action)()
 			body {/*...}*/
 				scheduler = cast(Scheduler)new_scheduler;
 
-				scheduler.enqueue (1/framerate, framerate.to_scalar.to!long);
+				scheduler.enqueue (1/framerate, framerate.to!double.to!long);
 
 				Service.reply (Synced ());
 

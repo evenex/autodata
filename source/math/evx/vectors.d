@@ -25,6 +25,7 @@ private {/*imports}*/
 
 	alias zip = evx.functional.zip;
 	alias map = evx.functional.map;
+	alias filter = evx.functional.filter;
 	alias reduce = evx.functional.reduce;
 	alias sum = evx.arithmetic.sum;
 }
@@ -318,6 +319,16 @@ struct Vector (uint n, Component = double)
 					else static if (__traits(compiles, T (this[])))
 						return T (this[]);
 					else static assert (0, `cannot convert ` ~Vector.stringof~ ` to ` ~T.stringof);
+				}
+		}
+		public {/*infinity}*/
+			bool is_infinite ()
+				{/*...}*/
+					return not (this.is_finite);
+				}
+			bool is_finite ()
+				{/*...}*/
+					return this[].filter!(x => x.is_infinite).empty;
 				}
 		}
 
@@ -746,6 +757,11 @@ struct Vector (uint n, Component = double)
 		import evx.units;
 		enum y = `[0.001 kg, 0.002 kg, 0.003 kg, 0.005 kg]`;
 		assert (Vector!(4, Kilograms)(y) == [1.grams, 2.grams, 3.grams, 5.grams]);
+	}
+	unittest {/*finiteness check}*/
+		assert (vector (infinity, infinity).is_infinite);
+		assert (vector (infinity, 1.0, 2.0).is_infinite);
+		assert (vector (0.0, 1.0, 2.0).is_finite);
 	}
 
 template vector (uint length)

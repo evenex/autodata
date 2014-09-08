@@ -58,7 +58,7 @@ struct Image
 			{/*...}*/
 				tga = `tga`
 			}
-		this (string path) // BUG this wont be platform independent
+		this (string path)
 			{/*...}*/
 				auto file = File (path, `r`);
 
