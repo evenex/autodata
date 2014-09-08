@@ -68,17 +68,11 @@ public {/*map}*/
 			static if (isInputRange!R)
 				{/*...}*/
 					auto ref front ()
-						in {/*...}*/
-							assert (not (empty));
-						}
-						body {/*...}*/
+						{/*...}*/
 							return func (range.front);
 						}
 					void popFront ()
-						in {/*...}*/
-							assert (not (empty));
-						}
-						body {/*...}*/
+						{/*...}*/
 							range.popFront;
 						}
 					bool empty ()
@@ -100,17 +94,11 @@ public {/*map}*/
 			static if (isBidirectionalRange!R)
 				{/*...}*/
 					auto ref back ()
-						in {/*...}*/
-							assert (not (empty));
-						}
-						body {/*...}*/
+						{/*...}*/
 							return func (range.back);
 						}
 					void popBack ()
-						in {/*...}*/
-							assert (not (empty));
-						}
-						body {/*...}*/
+						{/*...}*/
 							range.popBack;
 						}
 
@@ -206,17 +194,11 @@ public {/*zip}*/
 			static if (allSatisfy!(isInputRange, Ranges))
 				@property {/*...}*/
 					auto ref front ()
-						in {/*...}*/
-							assert (not (empty));
-						}
-						body {/*...}*/
+						{/*...}*/
 							return zip_with!`.front`;
 						}
 					void popFront ()
-						in {/*...}*/
-							assert (not (empty));
-						}
-						body {/*...}*/
+						{/*...}*/
 							foreach (ref range; ranges)
 								range.popFront;
 						}
@@ -243,17 +225,11 @@ public {/*zip}*/
 			static if (allSatisfy!(isBidirectionalRange, Ranges))
 				@property {/*...}*/
 					auto ref back ()
-						in {/*...}*/
-							assert (not (empty));
-						}
-						body {/*...}*/
+						{/*...}*/
 							return zip_with!`.back`;
 						}
 					void popBack ()
-						in {/*...}*/
-							assert (not (empty));
-						}
-						body {/*...}*/
+						{/*...}*/
 							foreach (ref range; ranges)
 								range.popBack;
 						}

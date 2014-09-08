@@ -1,28 +1,32 @@
-module services.collision;
+module evx.collision;
 
-import core.atomic;
+private {/*imports}*/
+	private {/*core}*/
+		import core.atomic;
+	}
+	private {/*std}*/
+		import std.conv;
+		import std.algorithm;
+		import std.range;
+		import std.traits;
+		import std.math;
+		import std.string;
+	}
+	private {/*evx}*/
+		import evx.utils;
+		import evx.traits;
+		import evx.math;
+		import evx.meta;
+		import evx.service;
+		import evx.future;
+		import evx.arrays;
+		import evx.buffers;
+		import evx.range;
+	}
 
-import std.conv;
-import std.algorithm;
-import std.range;
-import std.traits;
-import std.math;
-import std.string;
-
-import evx.utils;
-import evx.traits;
-import evx.math;
-import evx.meta;
-import evx.service;
-import evx.future;
-import evx.arrays;
-import evx.buffers;
-import evx.range;
-
-alias map = evx.functional.map;
-alias sum = evx.arithmetic.sum;
-
-// TODO UNIT SAFE
+	alias map = evx.functional.map;
+	alias sum = evx.arithmetic.sum;
+}
 
 private {/*library}*/
 	struct cp
@@ -36,12 +40,15 @@ private {/*library}*/
 		}
 }
 
-private struct RequestUpdate {};
-private struct RequestUpload {};
-private struct RequestQuery {};
-private struct Confirmation {}
+private {/*sync primitives}*/
+	struct RequestUpdate {}
+	struct RequestUpload {}
+	struct RequestQuery {}
+	struct Confirmation {}
+}
 
 alias Position = Vector!(2, Meters);
+alias Displacement = Position;
 alias Velocity = Vector!(2, typeof(meters/second));
 alias Force = Vector!(2, Newtons);
 
@@ -92,9 +99,9 @@ final class CollisionDynamics (ClientId = size_t): Service
 							{/*...}*/
 								return cp.BodyGetForce (body_id).vector[].map!(f => f.newtons).Force;
 							}
-						uint layer ()
+						auto layer ()
 							{/*...}*/
-								return cp.ShapeGetLayers (shape_ids[0]); // REVIEW
+								return shape_ids[].map!(shape => cp.ShapeGetLayers (shape));
 							}
 					}
 					@property {/*set}*/
@@ -145,6 +152,8 @@ final class CollisionDynamics (ClientId = size_t): Service
 								foreach (geometry; geometries)
 									{/*...}*/
 										assert (geometry.length > 2);
+										import evx.utils;
+
 										assert (geometry.area.dimensionless > Scalar.epsilon,
 											"attempted to create collision body with zero volume");
 									}
@@ -184,7 +193,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 												case polygon:
 													{/*...}*/
 														auto len = geometry.length.to!int;
-														auto poly = Array!fvec (geometry[].map!(p => p.dimensionless));
+														auto poly = Array!fvec (geometry[].map!dimensionless);
 														auto hull = Array!fvec (len);
 
 														cp.ConvexHull (len, cast(cpVect*)poly[].ptr, cast(cpVect*)hull[].ptr, null, 0.0);
@@ -282,11 +291,25 @@ final class CollisionDynamics (ClientId = size_t): Service
 							return contigious (shapes[]);
 						}
 
+					auto is_ready ()
+						{/*...}*/
+							return server !is null && not (geometry.empty)
+								&& not (
+									any (chain (
+										position.isNaN[],
+										velocity.isNaN[],
+									))
+									|| mass.isNaN
+									|| damping.isNaN
+								);
+						}
+
 					this (ClientId id, CollisionDynamics server)
 						{/*...}*/
 							this.id = id;
 							this.server = server;
 							this.velocity = zero!Velocity;
+							this.damping = zero!Scalar;
 						}
 				}
 			void expedite_uploads ()
@@ -303,6 +326,8 @@ final class CollisionDynamics (ClientId = size_t): Service
 				}
 				body {/*...}*/
 					buffer.uploads ~= uploads.only;
+
+					// return BodyInterface (buffer.uploads.write[].back, this); TODO maybe BodyIn/terface would be better of as a Future wrapper
 				}
 			auto new_body (ClientId)(ClientId id)
 				{/*...}*/
@@ -383,7 +408,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 						}
 					struct Box
 						{/*...}*/
-							fvec[2] corners;
+							Position[2] corners;
 							Appender!ClientId stream;
 
 							@property void result (bool finished)
@@ -402,7 +427,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 						}
 					struct RayCast
 						{/*...}*/
-							fvec[2] ray;
+							Position[2] ray;
 							Delivery!Incidence result;
 						}
 					struct RayCastExcluding
@@ -423,7 +448,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 					double ray_time;
 				}
 
-			void box_query (Array)(fvec[2] corners, ref Future!Array result)
+			void box_query (Array)(Position[2] corners, ref Future!Array result)
 				in {/*...}*/
 					static assert (isOutputRange!(Array, ClientId), Array.stringof~ `cant take `~ClientId.stringof);
 
@@ -432,7 +457,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 				body {/*...}*/
 					buffer.queries.box ~= Query.Box (corners, Query.Appender!ClientId (x => result.stream.put (x), &result.finalize));
 				}
-			void ray_cast (fvec[2] ray, ref Future!Incidence result)
+			void ray_cast (Position[2] ray, ref Future!Incidence result)
 				in {/*...}*/
 					assert (this.is_running, "attempted query before starting service (currently "~this.status.text~")");
 				}
@@ -619,7 +644,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 										auto id = query.id;
 									else ClientId id;
 
-									auto ray = query.ray;
+									auto ray = query.ray[].map!dimensionless;
 
 									auto layers = CP_ALL_LAYERS;
 									auto group = CP_NO_GROUP;
@@ -640,7 +665,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 							else static if (is (T == Query.RayCastExcluding))
 								{/*...}*/
 									auto id = query.id;
-									auto ray = query.ray;
+									auto ray = query.ray[].map!dimensionless;
 
 									auto layer = bodies[id].layer;
 									bodies[id].layer = 0x0;
@@ -662,7 +687,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 								}
 							else static if (is (T == Query.Box))
 								{/*...}*/
-									auto box = cp.BB (query.corners[].bounding_box.bounds_tuple.expand);
+									auto box = cp.BB (query.corners[].map!dimensionless.bounding_box.bounds_tuple.expand);
 									auto layers = CP_ALL_LAYERS;
 									auto group = CP_NO_GROUP;
 
@@ -694,6 +719,8 @@ final class CollisionDynamics (ClientId = size_t): Service
 
 					foreach (ref upload; buffer.uploads.read[])
 						{/*...}*/
+							assert (upload.is_ready, `upload not ready: ` ~upload.text);
+
 							with (upload) if (position != position)
 								position = geometry.mean;
 
@@ -888,9 +915,9 @@ unittest {/*queries}*/
 
 	Future!(Appendable!(Id[32]))[3] futures;
 
-	p.box_query ([fvec(-1),fvec(1)], futures[0]);
-	p.box_query ([fvec(-2),fvec(0)], futures[1]);
-	p.box_query ([fvec(-3),fvec(-2)], futures[2]);
+	p.box_query ([Position (-1.meters), Position (1.meter)], futures[0]);
+	p.box_query ([Position (-2.meters), Position (0.meters)], futures[1]);
+	p.box_query ([Position (-3.meters), Position (-2.meters)], futures[2]);
 	// standard query
 	p.update;
 
@@ -902,9 +929,9 @@ unittest {/*queries}*/
 
 	destroy (futures);
 
-	p.box_query ([fvec(999),fvec(1001)], futures[0]);
-	p.box_query ([fvec(300),fvec(400)], futures[1]);
-	p.box_query ([fvec(-9999),fvec(9999)], futures[2]);
+	p.box_query ([Position (999.meters), Position (1001.meters)], futures[0]);
+	p.box_query ([Position (300.meters), Position (400.meters)], futures[1]);
+	p.box_query ([Position (-9999.meters), Position (9999.meters)], futures[2]);
 
 	p.expedite_queries;
 

@@ -1,7 +1,17 @@
 module evx.future;
 
-import evx.utils;
-import evx.math;
+private {/*imports}*/
+	private {/*core}*/
+		import core.thread;
+	}
+	private {/*std}*/
+		import std.datetime;
+	}
+	private {/*evx}*/
+		import evx.utils;
+		import evx.math;
+	}
+}
 
 unittest {/*demo}*/
 	import std.exception;
@@ -75,9 +85,6 @@ struct Future (T)
 		public {/*client interface}*/
 			void await (size_t poll_frequency = 1000)
 				{/*...}*/
-					import core.thread; // REVIEW
-					import std.datetime;
-
 					immutable wait_period = (1_000_000_000/poll_frequency).nsecs;
 
 					while (not (realized))

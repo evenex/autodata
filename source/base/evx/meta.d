@@ -570,7 +570,7 @@ public {/*construction}*/
 
 	/* apply an array interface over a pointer and length variable 
 	*/
-	mixin template ArrayInterface (alias pointer, alias length)
+	mixin template ArrayInterface (alias pointer, alias length_property)
 		if (is_sliceable!(typeof(pointer)))
 		{/*...}*/
 			import evx.traits:
@@ -600,12 +600,14 @@ public {/*construction}*/
 					{/*...}*/
 						return length;
 					}
+				auto length () const
+					{/*...}*/
+						return length_property;
+					}
 			}
 			public {/*=}*/
 				auto opSliceAssign (U)(auto ref U that, size_t i, size_t j)
 					in {/*...}*/
-						import std.range: hasLength;
-
 						static if (hasLength!U)
 							assert (that.length == j-i, `length mismatch for range assignment`);
 					}

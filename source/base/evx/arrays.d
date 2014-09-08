@@ -408,9 +408,19 @@ struct Dynamic (Array, PolicyList...)
 				{/*...}*/
 					static if (__traits(compiles, Array (range)))
 						array = Array (range);
+					else static if (hasLength!R)
+						{/*...}*/
+							static if (isDynamicArray!Array)
+								{/*...}*/
+									array.length = range.length;
+									range.copy (array[]);
+								}
+							else static if (isStaticArray!Array)
+								range.copy (array[]);
+						}
 					else array = range;
 
-					dynamic_length = array.length;
+					dynamic_length = range.length;
 				}
 
 			this (Args...)(auto ref Args args)

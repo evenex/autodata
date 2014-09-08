@@ -82,6 +82,11 @@ public {/*convenience functions}*/
 		{/*...}*/
 			return unit (scalar) * unit * unit;
 		}
+
+	auto dimensionless (U)(U unit)
+		{/*...}*/
+			return unit.dimensionless;
+		}
 }
  
 alias Scalar = double;

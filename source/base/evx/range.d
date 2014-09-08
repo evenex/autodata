@@ -16,19 +16,6 @@ private {/*imports}*/
 	alias zip = evx.functional.zip;
 }
 
-/* generate a foreach index for a custom range 
-	this exploits the automatic tuple foreach index unpacking trick which is obscure and under controversy
-	reference: https://issues.dlang.org/show_bug.cgi?id=7361
-*/
-auto enumerate (R)(R range) // REVIEW purity broken by opencv
-	if (isInputRange!R && hasLength!R)
-	{/*...}*/
-		return ℕ[0..range.length].zip (range);
-	}
-
-
-pure:
-
 /* construct a ForwardRange out of a range of ranges such that the inner ranges appear concatenated 
 */
 struct Contigious (R)
@@ -259,3 +246,14 @@ debug void verify_length (R)(R range)
 		if (length != count)
 			assert (0, R.stringof~ ` length (` ~count.text~ `) doesn't match reported length (` ~length.text~ `)`);
 	}
+
+/* generate a foreach index for a custom range 
+	this exploits the automatic tuple foreach index unpacking trick which is obscure and under controversy
+	reference: https://issues.dlang.org/show_bug.cgi?id=7361
+*/
+auto enumerate (R)(R range)
+	if (isInputRange!R && hasLength!R)
+	{/*...}*/
+		return ℕ[0..range.length].zip (range);
+	}
+
