@@ -141,15 +141,15 @@ public {/*vectors}*/
 public {/*polygons}*/
 	/* shape generators 
 	*/
-	auto square (T = double, Vec = vec)(const T side = unity!T, const Vec center = zero!Vec)
+	auto square (T = double)(const T side = unity!T, const Vector!(2,T) center = zero!(Vector!(2,T)))
 		in {/*...}*/
-			assert (side > 0.0);
+			assert (side > zero!T);
 		}
 		body {/*...}*/
 			return [vec(1,1), vec(-1,1), vec(-1,-1), vec(1,-1)]
 				.map!(v => v*side/2 + center);
 		}
-	auto circle (uint samples = 24, Vec = vec, T = ElementType!Vec)(const T radius = unity!T, const Vec center = zero!Vec)
+	auto circle (uint samples = 24, T = double)(const T radius = unity!T, const Vector!(2,T) center = zero!(Vector!(2,T)))
 		in {/*...}*/
 			assert (radius > zero!T, "circle radius must be positive");
 		}

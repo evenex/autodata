@@ -104,8 +104,8 @@ class Camera (Capture)
 			void delegate(Capture) program;
 		}
 		private {/*properties}*/
-			Position world_center = 0.meter.Position;
-			vec world_scale = 1.vec;
+			Position world_center = zero!Position;
+			vec world_scale = unity!vec;
 
 			Position[2] view_bounds ()
 				{/*...}*/

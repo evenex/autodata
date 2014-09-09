@@ -256,6 +256,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 							}
 					}
 				}
+
 			private struct Upload
 				{/*...}*/
 					public:
@@ -311,11 +312,13 @@ final class CollisionDynamics (ClientId = size_t): Service
 							this.damping = zero!Scalar;
 						}
 				}
+
 			void expedite_uploads ()
 				{/*...}*/
 					send (RequestUpload ());
 					receive ((Confirmation _){});
 				}
+
 			@Upload void add (Args...)(Args uploads)
 				if (allSatisfy!(is_type_of!Upload, Args))
 				in {/*...}*/
@@ -326,6 +329,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 				body {/*...}*/
 					buffer.uploads ~= uploads.only;
 				}
+
 			auto new_body (ClientId)(ClientId id)
 				{/*...}*/
 					return Upload (id, this);
@@ -470,7 +474,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 					{/*postprocess}*/
 						foreach (ref dynamic_body; bodies)
 							with (dynamic_body) if (damping > 0.0)
-								velocity = velocity*(1.0 - damping).to!fvec;
+								velocity = velocity*(1.0 - damping);
 					}
 
 					answer_queries;
