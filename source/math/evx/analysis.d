@@ -82,8 +82,8 @@ public {/*comparison}*/
 		{/*...}*/
 			alias C = CommonType!(staticMap!(ElementType, T, U));
 
-			foreach (τ; zip (a,b))
-				if (τ[0].approx (τ[1], relative_tolerance))
+			foreach (x,y; zip (a,b))
+				if (x.approx (y, relative_tolerance))
 					continue;
 				else return false;
 

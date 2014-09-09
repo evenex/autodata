@@ -29,6 +29,7 @@ public {/*map}*/
 	struct Mapped (R, alias func)
 		{/*...}*/
 			alias Index = IndexTypes!R[0];
+			enum is_n_ary_function = __traits(compiles, func (range.front.expand));
 			
 			static if (is_indexable!(R, Index))
 				{/*...}*/
@@ -41,7 +42,9 @@ public {/*map}*/
 							else static assert (0);
 						}
 						body {/*...}*/
-							return func (range[i]);
+							static if (is_n_ary_function)
+								return func (range[i].expand);
+							else return func (range[i]);
 						}
 				}
 
@@ -69,7 +72,9 @@ public {/*map}*/
 				{/*...}*/
 					auto ref front ()
 						{/*...}*/
-							return func (range.front);
+							static if (is_n_ary_function)
+								return func (range.front.expand);
+							else return func (range.front);
 						}
 					void popFront ()
 						{/*...}*/
@@ -95,7 +100,9 @@ public {/*map}*/
 				{/*...}*/
 					auto ref back ()
 						{/*...}*/
-							return func (range.back);
+							static if (is_n_ary_function)
+								return func (range.back.expand);
+							else return func (range.back);
 						}
 					void popBack ()
 						{/*...}*/

@@ -161,7 +161,7 @@ struct Vector (uint n, Component = double)
 					auto u = vector!length (v[]);
 
 					mixin(q{
-						return vector!length (zip (this[], u[]).map!(τ => τ[0] } ~op~ q{ τ[1]));
+						return vector!length (zip (this[], u[]).map!((a, b) => a } ~op~ q{ b));
 					});
 				}
 			auto opBinaryRight (string op, V)(V v) const
@@ -173,7 +173,7 @@ struct Vector (uint n, Component = double)
 					auto u = vector!length (v[]);
 
 					mixin(q{
-						return vector!length (zip (u[], this[]).map!(τ => τ[0] } ~op~ q{ τ[1]));
+						return vector!length (zip (u[], this[]).map!((a,b) => a } ~op~ q{ b));
 					});
 				}
 			auto opOpAssign (string op, V)(V v)
@@ -184,7 +184,7 @@ struct Vector (uint n, Component = double)
 					else auto u = vector!length (v[]);
 
 					mixin(q{
-						this = zip (this[], u[]).map!(τ => τ[0] } ~op~ q{ τ[1]);
+						this = zip (this[], u[]).map!((a,b) => a } ~op~ q{ b);
 					});
 
 					return this;
@@ -830,7 +830,7 @@ pure {/*binary functions}*/
 		if (is_sliceable!V)
 		{/*...}*/
 			return u[].zip (v[])
-				.map!(τ => τ[0]*τ[1])
+				.map!((a,b) => a*b)
 				.sum;
 		}
 

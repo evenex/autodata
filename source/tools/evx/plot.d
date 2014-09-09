@@ -103,8 +103,8 @@ struct Plot (Data, Style style)
 				body {/*...}*/
 					if (data.empty) return;
 
-					auto y_data = data.map!(τ => τ[0]);
-					auto x_data = data.map!(τ => τ[1]);
+					auto y_data = data.map!((y,x) => y);
+					auto x_data = data.map!((y,x) => x);
 
 					auto get_limit (string axis, string side)()
 						{/*...}*/
@@ -154,7 +154,7 @@ struct Plot (Data, Style style)
 						{/*...}*/
 							display.draw (_color.alpha (0.25), plot_field[].from_extended_space.to_draw_space (display));
 							display.draw (_color, 
-								data.map!(τ => vec(τ[1].to!double, τ[0].to!double))
+								data.map!((y,x) => vec(x.to!double, y.to!double))
 									.map!(v => v - vec(x_min.to!double, y_min.to!double))
 									.map!(v => v / vec((x_max-x_min).to!double, (y_max-y_min).to!double))
 									.map!(v => v * vec(plot_field.width, plot_field.height))

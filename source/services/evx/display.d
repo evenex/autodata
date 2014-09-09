@@ -160,7 +160,7 @@ pure {/*coordinate transformations}*/
 							if (is (ElementType!T == Display.Coords))
 							}`{`q{
 								return display.repeat (geometry.length).zip (geometry)
-									.map!(τ => τ[1].} ~transform~ q{ (τ[0]));
+									.map!((gfx, v) => v.} ~transform~ q{ (gfx));
 							}`}`q{
 					};
 				}

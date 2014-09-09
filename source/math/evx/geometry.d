@@ -142,7 +142,6 @@ public {/*polygons}*/
 	/* shape generators 
 	*/
 	auto square (T = double, Vec = vec)(const T side = unity!T, const Vec center = zero!Vec)
-		if (isNumeric!T)
 		in {/*...}*/
 			assert (side > 0.0);
 		}
@@ -151,29 +150,13 @@ public {/*polygons}*/
 				.map!(v => v*side/2 + center);
 		}
 	auto circle (uint samples = 24, Vec = vec, T = ElementType!Vec)(const T radius = unity!T, const Vec center = zero!Vec)
-		if (isNumeric!T)
 		in {/*...}*/
-			assert (radius > 0.0, "circle radius must be positive");
+			assert (radius > zero!T, "circle radius must be positive");
 		}
 		body {/*...}*/
 			return ℕ[0..samples].map!(i => 2*π*i/samples) 
-				.map!(t => Vec(cos(t), sin(t)))
+				.map!(t => vector (cos(t), sin(t)))
 				.map!(v => radius*v + center);
-		}
-
-	/* dimensioned shape generators
-	*/
-	auto square (T, Vec = vec)(const T side, const Vec center = zero!Vec)
-		if (is_Unit!T)
-		{/*...}*/
-			return square (side.to!double, center)
-				.map!(v => vector (T(v.x), T(v.y)));
-		}
-	auto circle (uint samples = 24, Vec = vec, T = ElementType!Vec)(const T radius, const Vec center = zero!Vec)
-		if (is_Unit!T)
-		{/*...}*/
-			return circle!samples (radius.to!double, center)
-				.map!(v => vector (T(v.x), T(v.y)));
 		}
 
 	/* get the distance of a polygon's furthest point from its centroid 

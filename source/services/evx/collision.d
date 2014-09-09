@@ -325,8 +325,6 @@ final class CollisionDynamics (ClientId = size_t): Service
 				}
 				body {/*...}*/
 					buffer.uploads ~= uploads.only;
-
-					// return BodyInterface (buffer.uploads.write[].back, this); TODO maybe BodyIn/terface would be better of as a Future wrapper
 				}
 			auto new_body (ClientId)(ClientId id)
 				{/*...}*/
@@ -768,7 +766,7 @@ unittest {/*threads}*/
 	}
 	test;
 	std.concurrency.spawn (&test);
-	std.concurrency.receive ((bool _){});
+	std.concurrency.receive ((bool){});
 }
 unittest {/*shape deduction}*/
 	alias Body = CollisionDynamics!().Body;

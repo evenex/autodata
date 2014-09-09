@@ -46,7 +46,7 @@ Because of the nondeterministic nature of the GC, Invalid Memory
 */
 template DoubleBuffer (T, uint size)
 	{/*...}*/
-		final class DoubleBuffer
+		synchronized final class DoubleBuffer
 			{/*...}*/
 				public: 
 				shared {/*swap}*/
@@ -118,7 +118,7 @@ template DoubleBuffer (T, uint size)
 template TripleBuffer (T, uint size, uint poll_frequency = 4_000)
 	{/*...}*/
 		static immutable wait_period = (1_000_000_000/poll_frequency).nsecs;
-		final class TripleBuffer
+		final class TripleBuffer // REVIEW synchronization
 			{/*...}*/
 				public:
 				shared {/*swap}*/
