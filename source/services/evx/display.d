@@ -84,6 +84,15 @@ pure {/*coordinate transformations}*/
 					return geometry.map!(v => Display.Coords (v, Display.Space.pixel));
 				else static assert (0);
 			}
+		auto from_inverted_pixel_space (T)(T geometry) 
+			if (is (T == vec) || is_geometric!T)
+			{/*...}*/
+				static if (is (T == vec))
+					return Display.Coords (geometry, Display.Space.inverted_pixel);
+				else static if (is_geometric!T)
+					return geometry.map!(v => Display.Coords (v, Display.Space.pixel));
+				else static assert (0);
+			}
 	}
 	public {/*to}*/
 		public {/*element}*/
@@ -97,10 +106,10 @@ pure {/*coordinate transformations}*/
 								{/*...}*/
 									auto min = display.dimensions[].reduce!min;
 
-									return coords.value * (min.vec / display.dimensions);
+									return coords.value * (min / display.dimensions);
 								}
 							case pixel:
-								return 2 * coords.value/display.dimensions + vec(-1,1);
+								return 2 * coords.value/display.dimensions - 1.vec;
 							case inverted_pixel:
 								return coords.to_pixel_space (display).from_pixel_space.to_draw_space (display);
 						}
@@ -113,14 +122,14 @@ pure {/*coordinate transformations}*/
 								{/*...}*/
 									auto min = display.dimensions[].reduce!min;
 
-									return coords.value * (display.dimensions / min.vec);
+									return coords.value * (display.dimensions / min);
 								}
 							case extended:
 								return coords.value;
 							case pixel:
 								return coords.to_draw_space (display).from_draw_space.to_extended_space (display);
 							case inverted_pixel:
-								return coords.to_pixel_space (display).from_pixel_space.to_draw_space (display);
+								return coords.to_pixel_space (display).from_pixel_space.to_extended_space (display);
 						}
 				}
 			vec to_pixel_space ()(Display.Coords coords, Display display) 
@@ -128,7 +137,7 @@ pure {/*coordinate transformations}*/
 					with (Display.Space) final switch (coords.space)
 						{/*...}*/
 							case draw:
-								return (coords.value - vec(-1,1)) * display.dimensions/2;
+								return (coords.value + 1.vec) * display.dimensions/2;
 							case extended:
 								return coords.to_draw_space (display).from_draw_space.to_pixel_space (display);
 							case pixel:
@@ -144,7 +153,7 @@ pure {/*coordinate transformations}*/
 							case draw:
 								return coords.to_pixel_space (display).from_pixel_space.to_inverted_pixel_space (display);
 							case extended:
-								return coords.to_draw_space (display).from_draw_space.to_pixel_space (display);
+								return coords.to_draw_space (display).from_draw_space.to_inverted_pixel_space (display);
 							case pixel:
 								return coords.value * vec(1,-1) + vec(0, display.dimensions.y);
 							case inverted_pixel:

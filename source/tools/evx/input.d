@@ -285,10 +285,8 @@ final class Input
 				}
 			void pointer_callback (GLFWwindow*, double xpos, double ypos)
 				{/*...}*/
-					try mouse_pointer = vec(xpos, ypos).from_pixel_space.to_extended_space (active_display);
+					try mouse_pointer = vec(xpos, ypos).from_inverted_pixel_space.to_extended_space (active_display);
 					catch (Exception) assert (0, `coordinate transform failed`);
-
-					mouse_pointer.y *= -1;
 				}
 		}
 	}

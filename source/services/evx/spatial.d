@@ -1,4 +1,4 @@
-module evx.collision;
+module evx.spatial;
 
 private {/*imports}*/
 	private {/*core}*/
@@ -54,7 +54,7 @@ alias Force = Vector!(2, Newtons);
 
 private enum MAX_SHAPES = 8;
 
-final class CollisionDynamics (ClientId = size_t): Service
+final class SpatialDynamics (ClientId = size_t): Service
 	if (ClientId.sizeof <= (void*).sizeof)
 	{/*...}*/
 		alias Id = ClientId;
@@ -71,7 +71,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 				{/*...}*/
 					BodyId body_id;
 					Appendable!(ShapeId[MAX_SHAPES]) shape_ids;
-					CollisionDynamics world;
+					SpatialDynamics world;
 
 					Scalar velocity_damping = 0.0;
 
@@ -283,7 +283,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 
 					private:
 					ClientId id;
-					CollisionDynamics server;
+					SpatialDynamics server;
 					Appendable!(Position[][MAX_SHAPES]) shapes;
 
 					@property auto geometry ()
@@ -304,7 +304,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 								);
 						}
 
-					this (ClientId id, CollisionDynamics server)
+					this (ClientId id, SpatialDynamics server)
 						{/*...}*/
 							this.id = id;
 							this.server = server;
@@ -333,6 +333,11 @@ final class CollisionDynamics (ClientId = size_t): Service
 			auto new_body (ClientId)(ClientId id)
 				{/*...}*/
 					return Upload (id, this);
+				}
+
+			auto n_bodies ()
+				{/*...}*/
+					return bodies.size;
 				}
 		}
 		public {/*actions}*/
@@ -446,7 +451,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 			this () {auto_initialize;}
 		}
 		static shared {/*time}*/
-			immutable real Δt = 0.016667; // TODO set custom
+			immutable Δt = 0.016667.seconds;
 			private ulong t = 0;
 			auto time ()
 				{/*...}*/
@@ -468,7 +473,7 @@ final class CollisionDynamics (ClientId = size_t): Service
 					buffer.swap;
 					process_uploads;
 
-					cp.SpaceStep (space, Δt);
+					cp.SpaceStep (space, Δt.dimensionless);
 					t.atomicOp!`+=` (1);
 
 					{/*postprocess}*/
@@ -760,7 +765,7 @@ unittest {/*threads}*/
 	import std.concurrency;
 
 	static void test () {/*...}*/
-		scope lC = new CollisionDynamics!();
+		scope lC = new SpatialDynamics!();
 		auto C = cast(shared)lC;
 		C.initialize ();
 		C.process ();
@@ -773,7 +778,7 @@ unittest {/*threads}*/
 	std.concurrency.receive ((bool){});
 }
 unittest {/*shape deduction}*/
-	alias Body = CollisionDynamics!().Body;
+	alias Body = SpatialDynamics!().Body;
 	import std.datetime;
 
 	assert (Body.deduce_shape (circle) == Body.Type.circle);
@@ -791,9 +796,9 @@ unittest {/*body upload}*/
 	import core.thread;
 	import std.datetime;
 
-	alias Body = CollisionDynamics!().Body;
+	alias Body = SpatialDynamics!().Body;
 
-	auto P = new CollisionDynamics!();
+	auto P = new SpatialDynamics!();
 	P.start; scope (exit) P.stop;
 
 	auto triangle = [vec(-1,-1), vec(-1,0), vec(0,-1)]
@@ -834,9 +839,9 @@ unittest {/*queries}*/
 	import std.datetime;
 	// TODO all other queries
 
-	alias Id = CollisionDynamics!().Id;
+	alias Id = SpatialDynamics!().Id;
 
-	auto p = new CollisionDynamics!();
+	auto p = new SpatialDynamics!();
 	p.start; scope (exit) p.stop;
 	
 	auto sq = [fvec(0),fvec(1,0),fvec(1),fvec(0,1)]

@@ -285,7 +285,7 @@ final class Scribe
 
 					cards[] = cards[].map!transform
 						.map!(v => v + card_box.offset_to (alignment, draw_box))
-						.map!(v => v.from_pixel_space.to_draw_space (display) + translation);
+						.map!(v => v.from_pixel_space.to_extended_space (display) + translation);
 
 					return cards;
 				}
@@ -306,7 +306,7 @@ final class Scribe
 			texture_font_t*[size_t] font;
 		}
 		private {/*settings}*/
-			enum font_path = "./font/VeraMono.ttf";
+			enum font_path = "./font/DejaVuSansMono.ttf";
 			const size_t[] font_sizes;
 		}
 		private {/*services}*/

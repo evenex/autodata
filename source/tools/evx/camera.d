@@ -3,7 +3,7 @@ module evx.camera;
 import std.traits;
 import std.algorithm;
 
-import evx.collision;
+import evx.spatial;
 import evx.display;
 import evx.display: GLenum;
 
@@ -49,7 +49,7 @@ public {/*mappings}*/
 
 class Camera (Capture)
 	{/*...}*/
-		alias World = CollisionDynamics!Capture;
+		alias World = SpatialDynamics!Capture;
 
 		public {/*controls}*/
 			void set_program (void delegate(Capture) program)
@@ -88,6 +88,12 @@ class Camera (Capture)
 					return capture.stream;
 				}
 		}
+		@property {/*}*/
+			auto zoom_factor ()
+				{/*...}*/
+					return 1/world_scale.norm;
+				}
+		}
 		public {/*ctor}*/
 			this (World world, Display display)
 				{/*...}*/
@@ -97,7 +103,7 @@ class Camera (Capture)
 
 					this.world_scale = display.dimensions;
 				}
-			this () {assert (0, `must initialize camera with collision and display`);} // OUTSIDE BUG @disable this() => linker error
+			this () {assert (0, `must initialize camera with spatial and display`);} // OUTSIDE BUG @disable this() => linker error
 		}
 		private:
 		private {/*program}*/
@@ -123,8 +129,8 @@ class Camera (Capture)
 
 unittest
 	{/*...}*/
-		alias Id = CollisionDynamics!().Id;
-		auto world = new CollisionDynamics!();
+		alias Id = SpatialDynamics!().Id;
+		auto world = new SpatialDynamics!();
 		auto display = new Display;
 
 		world.start; scope (exit) world.stop;
