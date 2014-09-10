@@ -137,6 +137,7 @@ public {/*vectors}*/
 		{/*...}*/
 			return (a-b).norm;
 		}
+	alias distance_to = distance;
 }
 public {/*polygons}*/
 	/* shape generators 
@@ -149,14 +150,17 @@ public {/*polygons}*/
 			return [vec(1,1), vec(-1,1), vec(-1,-1), vec(1,-1)]
 				.map!(v => v*side/2 + center);
 		}
-	auto circle (uint samples = 24, T = double)(const T radius = unity!T, const Vector!(2,T) center = zero!(Vector!(2,T)))
-		in {/*...}*/
-			assert (radius > zero!T, "circle radius must be positive");
-		}
-		body {/*...}*/
-			return ℕ[0..samples].map!(i => 2*π*i/samples) 
-				.map!(t => vector (cos(t), sin(t)))
-				.map!(v => radius*v + center);
+	template circle (uint samples = 24)
+		{/*...}*/
+			auto circle (T = double)(const T radius = unity!T, const Vector!(2,T) center = zero!(Vector!(2,T)))
+				in {/*...}*/
+					assert (radius > zero!T, "circle radius must be positive");
+				}
+				body {/*...}*/
+					return ℕ[0..samples].map!(i => 2*π*i/samples) 
+						.map!(t => vector (cos(t), sin(t)))
+						.map!(v => radius*v + center);
+				}
 		}
 
 	/* get the distance of a polygon's furthest point from its centroid 

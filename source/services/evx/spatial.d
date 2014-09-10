@@ -63,6 +63,7 @@ final class SpatialDynamics (ClientId = size_t): Service
 			alias SimulationSpace = cpSpace*;
 			alias ShapeId = cpShape*;
 			alias BodyId = cpBody*;
+			alias Collision = cpArbiter*;
 		}
 		public:
 		public {/*bodies}*/
@@ -458,6 +459,10 @@ final class SpatialDynamics (ClientId = size_t): Service
 					return t * Δt;
 				}
 		}
+				@property on_collision (void delegate(ClientId,ClientId) on_collide) // REFACTOR
+					{/*...}*/
+						this.on_collide = on_collide;
+					}
 		protected:
 		shared override {/*interface}*/ // OUTSIDE BUG DMD segfault if I tag with @Service
 			import dchip.all;
@@ -466,6 +471,11 @@ final class SpatialDynamics (ClientId = size_t): Service
 				{/*...}*/
 					space = cp.SpaceNew ();
 					cp.SpaceSetCollisionSlop (space, 0.01);
+					cp.SpaceSetDefaultCollisionHandler (
+						space,
+						&collision_callback,
+						null, null, null, null
+					);
 					return true;
 				}
 			bool process ()
@@ -583,13 +593,17 @@ final class SpatialDynamics (ClientId = size_t): Service
 				}
 		}
 		shared {/*processing substages}*/
+			static ClientId get_id (ShapeId shape) // REFACTOR
+				{/*...}*/
+					return retrieve (cp.ShapeGetUserData (shape));
+				}
+			static ClientId get_id (BodyId body_id) // REFACTOR
+				{/*...}*/
+					return retrieve (cp.BodyGetUserData (body_id));
+				}
+
 			shared void answer_queries ()
 				{/*...}*/
-					static ClientId get_id (cpShape* shape)
-						{/*...}*/
-							return retrieve (cp.ShapeGetUserData (shape));
-						}
-
 					auto answer (T)(T query)
 						in {/*...}*/
 							static if (is (T == Query.Box))
@@ -700,11 +714,28 @@ final class SpatialDynamics (ClientId = size_t): Service
 				}
 		}
 		private: 
+			static bool collision_callback (Collision collision, SimulationSpace space, void* data)
+				{/*...}*/
+					BodyId a, b;
+
+					if (on_collide !is null)
+						foreach (_; 0..cp.ArbiterGetCount (collision))
+							{/*...}*/
+								cp.ArbiterGetBodies (collision, &a, &b);
+
+								on_collide (get_id (a), get_id (b));
+							}
+
+					return true;
+				}
+
 
 		__gshared {/*data}*/
 			SimulationSpace space;
 
 			mixin AutoInitialize;
+
+			void delegate(ClientId,ClientId) on_collide;
 
 			@Initialize!(2^^12) 
 			Associative!(Array!Body, ClientId)  // REVIEW
@@ -818,6 +849,8 @@ unittest {/*body upload}*/
 		.shape (triangle)
 	);
 
+	P.expedite_uploads;
+
 	auto a = P.get_body (0);
 	auto b = P.get_body (1);
 
@@ -828,7 +861,7 @@ unittest {/*body upload}*/
 
 	P.update;
 	auto start = Clock.currTime;
-	while (a.position == Position (1.meter)) // BUG race condition, tried to check position while upload in progress.
+	while (a.position == Position (1.meter))
 		{/*...}*/
 			assert (Clock.currTime - start < 2.seconds, `waited too long for body to update`);
 			Thread.sleep (100.msecs);

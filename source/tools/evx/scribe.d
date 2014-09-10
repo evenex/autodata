@@ -285,7 +285,8 @@ final class Scribe
 
 					cards[] = cards[].map!transform
 						.map!(v => v + card_box.offset_to (alignment, draw_box))
-						.map!(v => v.from_pixel_space.to_extended_space (display) + translation);
+						.map!(v => v.from_pixel_space.to_extended_space (display) + translation)
+						.map!(v => v.from_extended_space.to_draw_space (display));
 
 					return cards;
 				}
@@ -581,7 +582,7 @@ unittest {/*...}*/
 	import core.thread;
 	import std.datetime;
 
-	static immutable hold_time = 1.seconds;
+	static immutable hold_time = 14.seconds;
 
 	static void test ()
 		{/*...}*/

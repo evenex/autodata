@@ -151,7 +151,7 @@ unittest
 			.mass (1.kilogram)
 			.shape (triangle.map!(v => v - triangle.mean))
 		);
-		world.update;
+		world.expedite_uploads;
 
 		auto x = world.get_body (handle);
 
