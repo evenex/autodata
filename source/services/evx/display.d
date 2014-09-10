@@ -268,6 +268,10 @@ final class Display: Service
 			{/*...}*/
 				access_rendering_context (() => gl.ClearColor (color.vector.tuple.expand));
 			}
+		void screenshot () // TODO
+			{/*...}*/
+				
+			}
 
 		public {/*drawing}*/
 			void draw (T) (Color color, T geometry, GeometryMode mode = GeometryMode.l_loop) 
@@ -375,6 +379,11 @@ final class Display: Service
 						enforce (window !is null);
 						glfwMakeContextCurrent (window);
 						glfwSwapInterval (0);
+
+						glfwSetWindowSizeCallback (window, &resize_window_callback);
+						glfwSetFramebufferSizeCallback (window, &resize_framebuffer_callback);
+
+						glfwSetWindowUserPointer (window, cast(void*)this);
 					}
 					{/*GL}*/
 						DerelictGL3.load ();
@@ -393,6 +402,7 @@ final class Display: Service
 						gl.BlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 					}
 					initialize_shaders (shaders);
+
 					return true;
 				}
 			bool process ()
@@ -497,7 +507,7 @@ final class Display: Service
 			Scheduler animation;
 		}
 		private {/*data}*/
-			@(`pixel`) uvec screen_dims = uvec(800, 800);
+			@(Space.pixel) uvec screen_dims;
 
 			shared BufferGroup!(
 				TripleBuffer!(fvec, 2^^16), 
@@ -509,10 +519,20 @@ final class Display: Service
 			) buffer;
 		}
 		static:
-		extern (C) {/*callbacks}*/
-			void error_callback (int, const (char)* error) nothrow
+		extern (C) nothrow {/*callbacks}*/
+			void error_callback (int, const (char)* error)
 				{/*...}*/
 					fprintf (stderr, "error glfw: %s\n", error);
+				}
+			void resize_window_callback (GLFWwindow* window, int width, int height)
+				{/*...}*/
+					(cast(Display) glfwGetWindowUserPointer (window))
+						.screen_dims = uvec (width, height);
+				}
+			void resize_framebuffer_callback (GLFWwindow* window, int width, int height)
+				{/*...}*/
+					try gl.Viewport (0, 0, width, height);
+					catch (Exception ex) assert (0, ex.msg);
 				}
 		}
 	}
@@ -626,6 +646,7 @@ public {/*openGL}*/
 					while ((error = glGetError ()) != GL_NO_ERROR)
 						{/*...}*/
 							string error_msg;
+
 							final switch (error)
 								{/*...}*/
 									case GL_INVALID_ENUM:

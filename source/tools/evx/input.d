@@ -23,6 +23,19 @@ private {/*imports}*/
 final class Input
 	{/*...}*/
 		public:
+		enum Mode {text, action}
+
+		Mode mode;
+
+		void enter_text_mode ()
+			{/*...}*/
+				this.mode = Mode.text;
+			}
+		void enter_action_mode ()
+			{/*...}*/
+				this.mode = Mode.action;
+			}
+
 		public {/*interface}*/
 			void bind (T)(T input, void delegate(bool) action)
 				{/*...}*/
@@ -43,6 +56,20 @@ final class Input
 							map.current_map.remove (input);
 						}
 					else map[input] = action;
+				}
+			void push_context (string context)
+				{/*...}*/
+					mouse_map.push (context);
+					key_map.push (context);
+				}
+			void pop_context ()
+				{/*...}*/
+					mouse_map.pop;
+					key_map.pop;
+				}
+			void on_pop (void delegate() on_pop)
+				{/*...}*/
+					key_map.on_pop = on_pop;
 				}
 
 			const @property keys_pressed (R)(R range)
@@ -162,8 +189,8 @@ final class Input
 							enforce (window !is null);
 
 							glfwSetInputMode (window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-							glfwSetKeyCallback (window, &key_callback);
-							glfwSetMouseButtonCallback (window, &button_callback);
+							glfwSetKeyCallback (window, &action_key_callback);
+							glfwSetMouseButtonCallback (window, &mouse_button_callback);
 							glfwSetCursorPosCallback (window, &pointer_callback);
 						}
 					);
@@ -222,12 +249,19 @@ final class Input
 			struct Map (T)
 				{/*...}*/
 					alias current_map this;
+					void delegate() on_pop;
 					public:
 					public {/*interface}*/
 						void pop ()
 							{/*...}*/
 								assert (context.length > 1, `attempt to pop base input map`);
 								--context.length;
+
+								if (on_pop !is null)
+									{/*...}*/
+										on_pop ();
+										on_pop = null;
+									}
 							}
 						void push (string context)
 							{/*...}*/
@@ -261,7 +295,7 @@ final class Input
 
 		static nothrow:
 		extern (C) {/*callbacks}*/
-			void key_callback (GLFWwindow*, int key, int scancode, int state, int mods)
+			void action_key_callback (GLFWwindow*, int key, int scancode, int state, int mods)
 				{/*...}*/
 					if (state == GLFW_REPEAT)
 						return;
@@ -272,7 +306,11 @@ final class Input
 
 					events ~= event;
 				}
-			void button_callback (GLFWwindow*, int button, int state, int mods)
+			void text_key_callback (GLFWwindow*, uint character)
+				{/*...}*/
+					
+				}
+			void mouse_button_callback (GLFWwindow*, int button, int state, int mods)
 				{/*...}*/
 					if (state == GLFW_REPEAT)
 						return;

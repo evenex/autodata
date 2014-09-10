@@ -47,7 +47,7 @@ public {/*mappings}*/
 		}
 }
 
-class Camera (Capture)
+final class Camera (Capture)
 	{/*...}*/
 		alias World = SpatialDynamics!Capture;
 

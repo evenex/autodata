@@ -93,8 +93,7 @@ final class Scribe
 					assert (size in font);
 				}
 				body {/*...}*/
-					auto scale = font[size].height.vec / display.dimensions;
-					return scale[].reduce!max;
+					return font[size].height / display.dimensions.y;
 				}
 
 			const available_sizes ()
