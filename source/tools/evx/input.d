@@ -278,7 +278,7 @@ final class Input
 		__gshared {/*state}*/
 			Display active_display;
 
-			Appendable!(dchar[128]) text_buffer;
+			Appendable!(dchar[36], Overflow.blocked) text_buffer;
 
 			Map!Key key_map;
 			bool[Key] keys;
@@ -366,8 +366,7 @@ final class Input
 				{/*...}*/
 					auto character = cast(dchar)character_code;
 
-					if (text_buffer.length < text_buffer.capacity)
-						text_buffer ~= character;
+					text_buffer ~= character;
 				}
 			void mouse_button_callback (GLFWwindow*, int button, int state, int mods)
 				{/*...}*/

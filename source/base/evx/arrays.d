@@ -324,11 +324,11 @@ public {/*policies}*/
 		{/*...}*/
 			/* pass the overflow to the underlying buffer, and let it deal with the condition
 			*/
-			propagate,
+			propagated,
 
 			/* silently abort the append 
 			*/
-			block
+			blocked
 		}
 }
 
@@ -543,7 +543,7 @@ struct Appendable (Array, PolicyList...)
 	{/*...}*/
 		private mixin PolicyAssignment!(
 			Policies!(
-				`overflow`, Overflow.propagate,
+				`overflow`, Overflow.propagated,
 			),
 			PolicyList
 		);
@@ -582,7 +582,7 @@ struct Appendable (Array, PolicyList...)
 		public {/*qualified}*/
 			void ref_append (ref T item)
 				{/*...}*/
-					static if (overflow is Overflow.block)
+					static if (overflow is Overflow.blocked)
 						{/*...}*/
 							if (array.length + 1 > array.capacity)
 								return;
@@ -593,7 +593,7 @@ struct Appendable (Array, PolicyList...)
 				}
 			void lazy_append (scope lazy T item)
 				{/*...}*/
-					static if (overflow is Overflow.block)
+					static if (overflow is Overflow.blocked)
 						{/*...}*/
 							if (array.length + 1 > array.capacity)
 								return;
@@ -605,7 +605,7 @@ struct Appendable (Array, PolicyList...)
 			void range_append (R)(R range)
 				if (isForwardRange!R)
 				{/*...}*/
-					static if (overflow is Overflow.block)
+					static if (overflow is Overflow.blocked)
 						{/*...}*/
 							if (array.length + range.length > array.capacity)
 								return;

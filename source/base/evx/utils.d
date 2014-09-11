@@ -55,10 +55,10 @@ public {/*strings}*/
 			return input[i..min($, j+1)];
 		}
 }
-public debug {/*}*/
+public {/*debug}*/
 	/* pure nothrow writeln 
 	*/
-	auto pwriteln (Args...)(Args args)
+	debug auto pwriteln (Args...)(Args args)
 		{/*...}*/
 			debug try {/*...}*/
 				foreach (arg; args)
@@ -67,6 +67,7 @@ public debug {/*}*/
 			}
 			catch (Exception) assert (0, `pwriteln failed`);
 		}
+	else void pwriteln (Args...)(Args){}
 		
 	/* print a function call with arguments 
 	*/
@@ -87,7 +88,7 @@ public debug {/*}*/
 	*/
 	template error_suppression (int line = __LINE__)
 		{/*...}*/
-			debug string error_suppression ()
+			string error_suppression ()
 				{/*...}*/
 					enum ID = __LINE__.text;
 		
@@ -109,7 +110,6 @@ public debug {/*}*/
 						}`}`q{
 					};
 				}
-			else string error_suppression = ``;
 		}
 
 	/* get the thread id of the current thread as a string truncated to some digits 
@@ -122,6 +122,7 @@ public debug {/*}*/
 				return (*cast(ulong*) &tid).text[$-digits..$];
 			}
 			catch (Exception) assert (0, `tid_string failed`);
+			else return `???`;
 		}
 }
 public {/*UDA tags}*/
@@ -231,10 +232,12 @@ debug (profiler) {/*}*/
 		auto profiler_enter_indent ()()
 			{/*...}*/
 				debug return '\t'.repeat (indent++);
+				else return ``;
 			}
 		auto profiler_exit_indent ()()
 			{/*...}*/
 				debug return '\t'.repeat (--indent);
+				else return ``;
 			}
 	}
 	private {/*formatting}*/

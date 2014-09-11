@@ -67,7 +67,7 @@ struct Contigious (R)
 	{/*...}*/
 		public:
 		@property {/*range}*/
-			const length ()
+			auto length ()
 				{/*...}*/
 					return ranges.map!(r => r.length).sum;
 				}

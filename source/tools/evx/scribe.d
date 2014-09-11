@@ -29,6 +29,7 @@ private {/*imports}*/
 	alias reduce = evx.functional.reduce;
 }
 
+// TODO respect newline characters
 static if (0) version = from_file; //TEMP until i figure out whats going on with this lib
 
 final class Scribe
@@ -249,6 +250,11 @@ final class Scribe
 									pen = carriage_return (pen);
 
 									newline_positions ~= i - word.length + 1;
+								}
+							else if (glyph.symbol == '\n')
+								{/*...}*/
+									newline_positions ~= i;
+									pen = vec(0, pen.y - font.height);
 								}
 
 							cards[$-4..$] = cards[$-4..$].map!(v => v - vec(-offset.x, dims.y - offset.y));

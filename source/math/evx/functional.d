@@ -583,7 +583,7 @@ public {/*sequence}*/
 					body {/*...}*/
 						return this[0];
 					}
-				const empty ()
+				auto empty ()
 					{/*...}*/
 						return this.length == 0;
 					}
