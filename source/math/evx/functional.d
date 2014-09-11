@@ -487,6 +487,16 @@ public {/*reduce}*/
 						{/*...}*/
 							Accumulator accumulator;
 
+							if (range.length == 0)
+								{/*...}*/
+									static if (__traits(compiles, zero!Accumulator))
+										return zero!Accumulator;
+									else assert (0, 
+										`cannot reduce empty ` ~R.stringof~ 
+										` where Accumulator ` ~Accumulator.stringof~ ` has no zero.`
+									);
+								}
+
 							static if (functions.length == 1)
 								accumulator = range.front;
 							else foreach (i, f; functions)
