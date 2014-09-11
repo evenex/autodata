@@ -580,11 +580,11 @@ public {/*axis-aligned bounding boxes}*/
 
 	/* moves a bounding box so that a given alignment point on it has the given position 
 	*/
-	auto move_to (T)(ref Box!T box, Alignment alignment, Vector!(2, T) position)
+	auto move_to (T)(Box!T box, Alignment alignment, Vector!(2, T) position)
 		{/*...}*/
 			immutable offset = box.offset_to (alignment, bounding_box (position.repeat (2)));
 
-			return box.verts[].map!(v => v + offset).copy (box.verts[]);
+			return box.verts[].map!(v => v + offset).bounding_box;
 		}
 		unittest {/*...}*/
 			auto a = square (1).bounding_box;

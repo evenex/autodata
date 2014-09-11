@@ -16,15 +16,16 @@ import evx.arrays;
 private import evx.service;
 
 alias map = evx.functional.map;
+alias reduce = evx.functional.reduce;
 
 public {/*mappings}*/
-	vec to_view_space (Cam)(Position from_world_space, Cam camera)
+	vec to_view_space (Cam)(Position from_world_space, Cam camera) // BUG the problem is that vec can't interop with display coords right now
 		{/*...}*/
 			auto v = from_world_space.dimensionless;
 			auto c = camera.world_center.dimensionless;
 			auto s = camera.world_scale;
 
-			return (v-c)/s;
+			return ((v-c)/s);
 		}
 	auto to_view_space (R, Cam)(R from_world_space, Cam camera)
 		if (is_geometric!R)
@@ -69,7 +70,7 @@ final class Camera (Capture)
 					assert (z >= 0, `attempted negative zoom`);
 				}
 				body {/*...}*/
-					world_scale /= z;
+					_zoom_factor *= z;
 				}
 			auto capture ()
 				in {/*...}*/
@@ -91,7 +92,7 @@ final class Camera (Capture)
 		@property {/*}*/
 			auto zoom_factor ()
 				{/*...}*/
-					return 1/world_scale.norm;
+					return _zoom_factor;
 				}
 		}
 		public {/*ctor}*/
@@ -101,7 +102,7 @@ final class Camera (Capture)
 					this.display = display;
 					this.program = program;
 
-					this.world_scale = display.dimensions;
+					this._world_scale = display.dimensions;
 				}
 			this () {assert (0, `must initialize camera with spatial and display`);} // OUTSIDE BUG @disable this() => linker error
 		}
@@ -110,13 +111,18 @@ final class Camera (Capture)
 			void delegate(Capture) program;
 		}
 		private {/*properties}*/
+		double _zoom_factor = 1.0;
 			Position world_center = zero!Position;
-			vec world_scale = unity!vec;
+			vec world_scale ()
+				{/*...}*/
+					return _world_scale / _zoom_factor;
+				}
+			vec _world_scale = unity!vec;
 
 			Position[2] view_bounds ()
 				{/*...}*/
 					alias c = world_center;
-					immutable s = world_scale[].map!(α => α.meters).Position;
+					immutable s = display.dimensions[].map!meters.Position / _zoom_factor;
 
 					return [c+s, c-s];
 				}

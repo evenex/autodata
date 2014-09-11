@@ -158,8 +158,7 @@ struct Plot (Data, Style style)
 									.map!(v => v - vec(x_min.to!double, y_min.to!double))
 									.map!(v => v / vec((x_max-x_min).to!double, (y_max-y_min).to!double))
 									.map!(v => v * vec(plot_field.width, plot_field.height))
-									.map!(v => v + plot_field.low_left)
-									.from_extended_space.to_draw_space (display),
+									.map!(v => v + plot_field.low_left),
 								GeometryMode.l_strip
 							);
 						}

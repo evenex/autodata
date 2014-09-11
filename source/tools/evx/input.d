@@ -6,12 +6,16 @@ private {/*imports}*/
 		import std.exception;
 		import std.range;
 		import std.traits;
+		import std.algorithm;
+		import std.conv;
 	}
 	private {/*evx}*/
 		import evx.utils;
 		import evx.math;
 		import evx.display;
+		import evx.scribe;
 		import evx.buffers;
+		import evx.arrays;
 	}
 	private {/*glfw3}*/
 		import derelict.glfw3.glfw3;
@@ -23,6 +27,7 @@ private {/*imports}*/
 final class Input
 	{/*...}*/
 		public:
+
 		enum Mode {text, action}
 
 		Mode mode;
@@ -30,10 +35,45 @@ final class Input
 		void enter_text_mode ()
 			{/*...}*/
 				this.mode = Mode.text;
+
+				active_display.access_rendering_context = ()
+					{/*...}*/
+						auto window = glfwGetCurrentContext();
+
+						enforce (window !is null);
+
+						glfwSetKeyCallback (window, &text_key_callback);
+						glfwSetCharCallback (window, &text_character_callback);
+					};
+
+				foreach (ref key_pressed; keys.byValue)
+					key_pressed = false;
 			}
 		void enter_action_mode ()
 			{/*...}*/
 				this.mode = Mode.action;
+
+				active_display.access_rendering_context = ()
+					{/*...}*/
+						auto window = glfwGetCurrentContext();
+
+						enforce (window !is null);
+
+						glfwSetKeyCallback (window, &action_key_callback);
+						glfwSetCharCallback (window, null);
+					};
+
+				foreach (ref key_pressed; keys.byValue)
+					key_pressed = false;
+			}
+
+		string get_text_input ()
+			{/*...}*/
+				return text_buffer[].to!string;
+			}
+		void clear_text_input ()
+			{/*...}*/
+				return text_buffer.clear;
 			}
 
 		public {/*interface}*/
@@ -182,18 +222,17 @@ final class Input
 					import evx.utils;
 					active_display = display;
 
-					display.access_rendering_context (
-						(){/*...}*/
+					active_display.access_rendering_context = ()
+						{/*...}*/
 							auto window = glfwGetCurrentContext();
 
 							enforce (window !is null);
 
 							glfwSetInputMode (window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-							glfwSetKeyCallback (window, &action_key_callback);
+							glfwSetKeyCallback (window, &action_key_callback); // XXX
 							glfwSetMouseButtonCallback (window, &mouse_button_callback);
 							glfwSetCursorPosCallback (window, &pointer_callback);
-						}
-					);
+						};
 
 					key_map.lookup[`base`] = [Key.esc: main_escape_function];
 					mouse_map.lookup[`base`] = [Mouse.left: (bool){}];
@@ -238,6 +277,8 @@ final class Input
 		}
 		__gshared {/*state}*/
 			Display active_display;
+
+			Appendable!(dchar[128]) text_buffer;
 
 			Map!Key key_map;
 			bool[Key] keys;
@@ -306,9 +347,27 @@ final class Input
 
 					events ~= event;
 				}
-			void text_key_callback (GLFWwindow*, uint character)
+			void text_key_callback (GLFWwindow*, int key, int scancode, int state, int mods)
 				{/*...}*/
-					
+					auto event = Event (key, cast(bool)state);
+
+					if (Unicode.ascii.canFind (event.key))
+						return;
+					else if (event.key == Key.backspace && (event.pressed || state == GLFW_REPEAT) && text_buffer.length > 0)
+						text_buffer.shrink (1);
+					else if (state == GLFW_REPEAT)
+						return;
+
+					keys[event.key] = event.pressed;
+
+					events ~= event;
+				}
+			void text_character_callback (GLFWwindow*, uint character_code)
+				{/*...}*/
+					auto character = cast(dchar)character_code;
+
+					if (text_buffer.length < text_buffer.capacity)
+						text_buffer ~= character;
 				}
 			void mouse_button_callback (GLFWwindow*, int button, int state, int mods)
 				{/*...}*/

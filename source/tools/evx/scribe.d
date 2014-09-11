@@ -40,7 +40,7 @@ final class Scribe
 					return Text (this, text.to!dstring)
 						.color (black)
 						.size (font_sizes[0])
-						.inside (only (-1.vec, 1.vec))
+						.inside (display.extended_bounds)
 						.wrap_width (-1)
 						.rotate (0.0)
 						.translate (0.vec)
@@ -284,8 +284,7 @@ final class Scribe
 
 					cards[] = cards[].map!transform
 						.map!(v => v + card_box.offset_to (alignment, draw_box))
-						.map!(v => v.from_pixel_space.to_extended_space (display) + translation)
-						.map!(v => v.from_extended_space.to_draw_space (display));
+						.map!(v => v.from_pixel_space.to_extended_space (display) + translation);
 
 					return cards;
 				}
@@ -470,6 +469,7 @@ struct Table
 struct Unicode
 	{/*...}*/
 		__gshared: 
+
 		const {/*character maps}*/
 			dchar[] ascii;
 			dchar[string] arrow;
@@ -479,15 +479,16 @@ struct Unicode
 			dchar[] all;
 			alias all this;
 		}
-		private {/*☀}*/
-			shared static this ()
-				{/*...}*/
+
+		shared static this ()
+			{/*...}*/
+				{/*initialize character maps}*/
 					{/*ascii}*/
-						ascii = 
-						` !"#$%&'()*+,-./0123456789:;<=>?`
-						`@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`
-						"`abcdefghijklmnopqrstuvwxyz{|}~"
-						;
+						ascii =
+							` !"#$%&'()*+,-./0123456789:;<=>?`
+							`@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`
+							"`abcdefghijklmnopqrstuvwxyz{|}~"
+							;
 					}
 					{/*arrow}*/
 						arrow = [
@@ -571,10 +572,10 @@ struct Unicode
 							`crosshair`	:'✛',
 						];
 					}
-					all = chain (ascii, arrow.byValue, symbol.byValue).array;
 				}
-			@disable this();
-		}
+				all = chain (ascii, arrow.byValue, symbol.byValue).array;
+			}
+		@disable this();
 	}
 
 unittest {/*...}*/

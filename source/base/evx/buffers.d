@@ -62,9 +62,9 @@ template DoubleBuffer (T, uint size)
 						{/*...}*/
 							(cast()this).buffer[write_index] ~= data;
 						}
-					void opOpAssign (string op: `~`, U)(U that)
+					template opOpAssign (string op: `~`)
 						{/*...}*/
-							this.put (that);
+							alias opOpAssign = put;
 						}
 				}
 				shared @property {/*buffers}*/

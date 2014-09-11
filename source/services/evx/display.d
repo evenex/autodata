@@ -57,7 +57,7 @@ enum PixelFormat
 
 pure {/*coordinate transformations}*/
 	public {/*from}*/
-		auto from_draw_space (T)(T geometry) 
+		auto from_draw_space (T)(T geometry)  // TODO auto re-map
 			if (is (T == vec) || is_geometric!T)
 			{/*...}*/
 				static if (is (T == vec))
@@ -72,7 +72,7 @@ pure {/*coordinate transformations}*/
 				static if (is (T == vec))
 					return Display.Coords (geometry, Display.Space.extended);
 				else static if (is_geometric!T)
-					return geometry.map!(v => Display.Coords (v, Display.Space.extended));
+					return geometry.map!(v => Display.Coords (v[].vec, Display.Space.extended));
 				else static assert (0);
 			}
 		auto from_pixel_space (T)(T geometry) 
@@ -278,7 +278,7 @@ final class Display: Service
 				if (is_geometric!T || is_in_display_space!T)
 				{/*↓}*/
 					static if (is (ElementType!T == Coords))
-						draw (0, geometry.to_draw_space (this), geometry.map!(c => c.value), color, mode);
+						draw (0, geometry, geometry.map!(c => c.value), color, mode);
 					else draw (0, geometry, geometry, color, mode);
 				}
 			void draw (T1, T2) (GLuint texture, T1 geometry, T2 tex_coords, Color color = black.alpha (0), GeometryMode mode = GeometryMode.t_fan)
@@ -299,7 +299,7 @@ final class Display: Service
 			
 					static if (is (ElementType!T1 == Coords))
 						buffer.vertices ~= geometry.to_draw_space (this);
-					else buffer.vertices ~= geometry;
+					else buffer.vertices ~= geometry.from_extended_space.to_draw_space (this);
 
 					buffer.texture_coords ~= tex_coords;
 					buffer.orders ~= RenderOrder (order);
@@ -344,9 +344,13 @@ final class Display: Service
 						}
 				}
 
-			@(Space.pixel) @property auto dimensions () pure nothrow const
+			@(Space.pixel) @property dimensions () pure nothrow const
 				{/*...}*/
 					return screen_dims[].vec;
+				}
+			@(Space.extended) @property extended_bounds ()
+				{/*...}*/
+					return [0.vec, dimensions].from_pixel_space.to_extended_space (this).bounding_box;
 				}
 		}
 		public {/*ctors}*/

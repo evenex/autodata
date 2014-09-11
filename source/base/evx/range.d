@@ -21,8 +21,6 @@ private {/*imports}*/
 struct Contigious (R)
 	if (allSatisfy!(is_indexable, R, ElementType!R) && not (isForwardRange!(ElementType!R)))
 	{/*...}*/
-		pure nothrow:
-
 		public:
 		@property {/*range}*/
 			const length ()
@@ -42,12 +40,12 @@ struct Contigious (R)
 							i = 0;
 						}
 				}
-			const empty ()
+			auto empty ()
 				{/*...}*/
 					return j >= ranges.length;
 				}
 
-			inout save ()
+			auto save ()
 				{/*...}*/
 					return this;
 				}
@@ -67,8 +65,6 @@ struct Contigious (R)
 struct Contigious (R)
 	if (allSatisfy!(isForwardRange, R, ElementType!R))
 	{/*...}*/
-		pure nothrow:
-
 		public:
 		@property {/*range}*/
 			const length ()
@@ -86,11 +82,11 @@ struct Contigious (R)
 					if (ranges.front.empty)
 						ranges.popFront;
 				}
-			const empty ()
+			auto empty ()
 				{/*...}*/
 					return ranges.empty;
 				}
-			inout save ()
+			auto save ()
 				{/*...}*/
 					return this;
 				}
