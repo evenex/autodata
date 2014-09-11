@@ -317,6 +317,19 @@ public {/*policies}*/
 			/* throw an assert error on overflow 
 			*/
 		}
+
+	/* specify Appendable array behavior on overflow
+	*/
+	enum Overflow
+		{/*...}*/
+			/* pass the overflow to the underlying buffer, and let it deal with the condition
+			*/
+			propagate,
+
+			/* silently abort the append 
+			*/
+			block
+		}
 }
 
 /* dynamic array over any type equipped with an array interface 
@@ -524,10 +537,17 @@ struct Dynamic (Array, PolicyList...)
 	appendable arrays define the append primitive, which is equivalent to put and ~=
 	appending creates no temporary copies of either lvalues or rvalues
 */
-struct Appendable (Array)
+struct Appendable (Array, PolicyList...)
 	if (__traits(compiles, Dynamic!Array)
 	&& not (is_ordered_array!Array))
 	{/*...}*/
+		private mixin PolicyAssignment!(
+			Policies!(
+				`overflow`, Overflow.propagate,
+			),
+			PolicyList
+		);
+
 		public {/*aliasing}*/
 			static if (is_dynamic_array!Array)
 				alias ArrayType = Array;
@@ -562,21 +582,38 @@ struct Appendable (Array)
 		public {/*qualified}*/
 			void ref_append (ref T item)
 				{/*...}*/
+					static if (overflow is Overflow.block)
+						{/*...}*/
+							if (array.length + 1 > array.capacity)
+								return;
+						}
+
 					array.grow (1);
 					array[$-1] = item;
 				}
 			void lazy_append (scope lazy T item)
 				{/*...}*/
+					static if (overflow is Overflow.block)
+						{/*...}*/
+							if (array.length + 1 > array.capacity)
+								return;
+						}
+
 					array.grow (1);
 					array[$-1] = item;
 				}
 			void range_append (R)(R range)
 				if (isForwardRange!R)
 				{/*...}*/
-					auto saved = range.save;
+					static if (overflow is Overflow.block)
+						{/*...}*/
+							if (array.length + range.length > array.capacity)
+								return;
+						}
+
 					auto start = array.length;
 
-					array.grow (saved.length);
+					array.grow (range.length);
 
 					range.move (array[start..$]);
 				}
