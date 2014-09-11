@@ -351,16 +351,18 @@ final class Input
 				{/*...}*/
 					auto event = Event (key, cast(bool)state);
 
-					if (Unicode.ascii.canFind (event.key))
+					if (event.key in key_map)
+						{/*...}*/
+							keys[event.key] = event.pressed;
+
+							events ~= event;
+						}
+					else if (Unicode.ascii.canFind (event.key))
 						return;
 					else if (event.key == Key.backspace && (event.pressed || state == GLFW_REPEAT) && text_buffer.length > 0)
 						text_buffer.shrink (1);
 					else if (state == GLFW_REPEAT)
 						return;
-
-					keys[event.key] = event.pressed;
-
-					events ~= event;
 				}
 			void text_character_callback (GLFWwindow*, uint character_code)
 				{/*...}*/

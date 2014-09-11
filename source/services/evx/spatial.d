@@ -660,13 +660,13 @@ final class SpatialDynamics (ClientId = size_t): Service
 								}
 							else static if (is (T == Query.Box))
 								{/*...}*/
-									auto box = cp.BB (query.corners[].map!dimensionless.bounding_box.bounds_tuple.expand);
+									auto box = cp.BB (query.corners[].map!dimensionless.bounding_box.extents.expand);
 									auto layers = CP_ALL_LAYERS;
 									auto group = CP_NO_GROUP;
 
 									cp.SpaceBBQuery (space, box, layers, group, 
 										(cpShape* shape, void* stream) 
-											{(*cast(Query.Appender!ClientId*) stream).append (get_id (shape));}, // this is not ref, why does it route to ref?
+											{(*cast(Query.Appender!ClientId*) stream).append (get_id (shape));},
 										&query.stream
 									);
 									return true;

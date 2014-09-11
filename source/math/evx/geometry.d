@@ -434,12 +434,12 @@ public {/*axis-aligned bounding boxes}*/
 				}
 			}
 			const {/*tuples}*/
-				auto vertex_tuple ()
+				auto corners ()
 					{/*...}*/
 						alias v = verts;
 						return τ(v[0], v[1], v[2], v[3]);
 					}
-				auto bounds_tuple ()
+				auto extents ()
 					{/*...}*/
 						return τ(left, bottom, right, top);
 					}

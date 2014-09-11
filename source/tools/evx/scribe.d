@@ -29,7 +29,7 @@ private {/*imports}*/
 	alias reduce = evx.functional.reduce;
 }
 
-// TODO respect newline characters
+// TODO maybe one big invisible card that is font_height * n_lines high? either way we need to align to the font not the card
 static if (0) version = from_file; //TEMP until i figure out whats going on with this lib
 
 final class Scribe
@@ -168,7 +168,7 @@ final class Scribe
 		}
 		private:
 		private {/*ops}*/
-			void output (Text order)
+			size_t output (Text order)
 				in {/*...}*/
 					assert (display, "tried to write but scribe has no display");
 				}
@@ -176,7 +176,7 @@ final class Scribe
 					auto text = order.text;
 					auto color = order.color;
 					auto size = order.size;
-					if (text.empty) return;
+					if (text.empty) return 0;
 
 					auto glyphs = text.map!(c => glyph (c, size, color));
 
@@ -189,6 +189,8 @@ final class Scribe
 
 							display.draw (glyph.texture, geometry, tex_coords, glyph.color);
 						}
+
+					return cards.n_lines;
 				}
 
 			auto typeset (R)(R glyphs, Text order)
@@ -198,7 +200,7 @@ final class Scribe
 				}
 				body {/*...}*/
 					Appendable!(size_t[2^^8]) newline_positions;
-					auto cards = Appendable!(vec[])(new vec[4*text.length]);
+					auto cards = Typeset (text.length);
 
 					auto size = order.size;
 					auto font = this.font[size];
@@ -279,6 +281,7 @@ final class Scribe
 
 							cards[4*line_start..4*line_stop] += vec(justification, 0);
 						}
+					cards.n_lines = newline_positions.length;
 
 					immutable scale = order.scale;
 					immutable translation = order.translate;
@@ -441,9 +444,9 @@ struct Text
 			);
 		}
 		@property {/*fulfillment}*/
-			void opCall ()
+			auto opCall ()
 				{/*...}*/
-					scribe.output (this);
+					return scribe.output (this);
 				}
 		}
 		private:
@@ -470,6 +473,18 @@ struct Table
 			}
 		Entry[] entries;
 		Color borders;
+	}
+private struct Typeset
+	{/*...}*/
+		Appendable!(vec[]) cards;
+		size_t n_lines;
+
+		alias cards this;
+
+		this (size_t length)
+			{/*...}*/
+				cards = typeof(cards)(new vec[4*length]);
+			}
 	}
 
 struct Unicode
