@@ -587,7 +587,10 @@ public {/*construction}*/
 					}
 				auto opSlice (size_t i, size_t j)
 					in {/*...}*/
-						assert (i <= j && j <= length);
+						assert (i <= j && j <= length,
+							ElementType!(typeof(pointer[])).stringof~ 
+							` slice [` ~i.text~ `..` ~j.text~ `] exceeds length (` ~length.text~ `)`
+						);
 					}
 					body {/*...}*/
 						return pointer[i..j];
@@ -920,10 +923,12 @@ public {/*extraction}*/
 			static if (__traits(compiles, R.init[$]))
 				{/*...}*/
 					static if (hasMember!(R, `opDollar`))
-						alias DollarType = typeof (R.opDollar);
+						alias DollarType = Unqual!(ReturnType!(R.opDollar));
 					else alias DollarType = size_t;
 				}
 			else alias DollarType = void;
+
+			pragma(msg, R, ` `, __traits(compiles, R.init[$]));
 		}
 }
 public {/*processing}*/
