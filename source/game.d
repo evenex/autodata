@@ -1,4 +1,3 @@
-// TODO align text on bottom line, use offset or whatever
 // TODO nice textboxes
 // TODO nice consoles
 // TODO picking
@@ -57,7 +56,7 @@ struct CommandLine
 		void draw (BoundingBox box, Display gfx, Scribe txt, Input usr)
 			{/*...}*/
 				box = box.move_to (Alignment.top_left, box.bottom_left);
-				with (box) bottom = top - 2 * txt.font_height (txt.available_sizes[0])/0.9;
+				with (box) bottom = top - 1.2 * txt.font_height (txt.available_sizes[0])/0.9;
 
 				gfx.draw (black.alpha (0.5), box[], GeometryMode.t_fan);
 				gfx.draw (color.alpha (0.3), box[], GeometryMode.l_loop);
@@ -73,7 +72,7 @@ struct CommandLine
 					txt.write (' '.repeat (usr.get_text_input.length).text~ `_`)
 						.color (color)
 						.inside (box)
-						.align_to (Alignment.bottom_left)
+						.align_to (Alignment.center_left)
 					();
 			}
 	}
@@ -166,6 +165,7 @@ struct Item
 		Physical* physical;
 	}
 
+static if (0)
 void main ()
 	{/*...}*/
 		bool game_terminated;
@@ -416,6 +416,71 @@ void main ()
 				if (Clock.currTime > clock + frametime_target.to_duration)
 					pwriteln (`missed frametime target`);
 				while (Clock.currTime < clock + frametime_target.to_duration)
-					{}
+					{Thread.sleep (100.nsecs);}
+			}
+	}
+
+void main ()
+	{/*...}*/
+		struct Tag
+			{/*...}*/
+				ulong code;
+
+				__gshared string[ulong] translate;
+
+				this (string tag)
+					{/*...}*/
+						this.code = typeid(string).getHash (&tag);
+						
+						if (code !in translate)
+							translate[code] = tag;
+					}
+			}
+		struct Info
+			{/*...}*/
+				mixin TypeUniqueId;
+
+				__gshared Info[string] dictionary;
+
+				string title;
+				Tag domain;
+				string details;
+
+				Appendable!(Indices[]) links;
+
+				this (string title, Tag domain, string details)
+					{/*...}*/
+						this.title = title;
+						this.domain = domain;
+						this.details = details;
+
+						foreach (word; details.split)
+							{/*...}*/
+								if (word in dictionary)
+									links ~= word;
+							}
+
+						dictionary[title] = this;
+					}
+
+				auto display (Scribe txt, BoundingBox box)
+					{/*...}*/
+						// TODO some words different colors
+					}
+			}
+
+
+		auto a = Info (``, Tag (`general`), `the sky is blue the grass is green`);
+
+		// TODO look tool - high-order spatial location info, then cast a view and report individual objects. clicking on object names will yield further info.
+		void look ()
+			{/*...}*/
+				// lookup player location
+				// get info tree for location
+				// traverse info tree
+				// cast view, report items and their relative locations
+				// someday - also report situational awareness stuff, like current mission, or i just saw a guy over there, etc
+
+					// more info on item - lookup info tree for item and traverse
 			}
 	}

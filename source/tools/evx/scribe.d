@@ -89,12 +89,12 @@ final class Scribe
 					return g;
 				}
 
-			const font_height (size_t size)
+			auto font_height (size_t size)
 				in {/*...}*/
 					assert (size in font);
 				}
 				body {/*...}*/
-					return font[size].height / display.dimensions.y;
+					return [0.vec, font[size].height.vec].from_pixel_space.to_extended_space (display).reduce!subtract.y.abs;
 				}
 
 			const available_sizes ()
@@ -218,6 +218,7 @@ final class Scribe
 					else wrap_width = (wrap_width * î.vec.rotate (rotation)).from_extended_space.to_pixel_space (display).norm;
 
 					newline_positions ~= 0;
+					auto card_box = [0.vec, pen].bounding_box;
 					foreach (i, glyph; enumerate (glyphs))
 						{/*set card coordinates in pixel-space}*/
 							auto offset = glyph.offset;
@@ -241,9 +242,9 @@ final class Scribe
 										.map!(j => j + cutoff)
 										.map!(j => cards[4*j..4*(j+1)]);
 
-									auto Δx = word.empty? 
-										pen.x + glyph.advance - glyph.offset.x
-										: word[0][0].x - glyph.offset.x;
+									auto Δx = (word.empty? 
+										pen.x + glyph.advance : word[0][0].x
+									) - glyph.offset.x;
 									auto carriage_return = (vec v) => v - vec(Δx, font.height);
 
 									foreach (ref letter; word)
@@ -262,10 +263,14 @@ final class Scribe
 							cards[$-4..$] = cards[$-4..$].map!(v => v - vec(-offset.x, dims.y - offset.y));
 
 							pen.x += glyph.advance;
+
+							with (card_box) width = max (width, pen.x);
 						}
 					newline_positions ~= glyphs.length;
+					cards.n_lines = newline_positions.length;
 
-					auto card_box = cards[].bounding_box;
+					card_box.height = max (pen.y.abs, font.height);
+					card_box = card_box.move_to (Alignment.top_left, 0.vec);
 					auto alignment = order.alignment;
 
 					foreach (i, line_start; newline_positions[0..$-1])
@@ -281,7 +286,7 @@ final class Scribe
 
 							cards[4*line_start..4*line_stop] += vec(justification, 0);
 						}
-					cards.n_lines = newline_positions.length;
+
 
 					immutable scale = order.scale;
 					immutable translation = order.translate;
