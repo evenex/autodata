@@ -165,7 +165,6 @@ struct Item
 		Physical* physical;
 	}
 
-static if (0)
 void main ()
 	{/*...}*/
 		bool game_terminated;
@@ -420,6 +419,7 @@ void main ()
 			}
 	}
 
+static if (0)
 void main ()
 	{/*...}*/
 		struct Tag

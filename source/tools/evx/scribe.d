@@ -178,11 +178,11 @@ final class Scribe
 					auto size = order.size;
 					if (text.empty) return 0;
 
-					auto glyphs = text.map!(c => glyph (c, size, color));
+					auto glyphs = Appendable!(Glyph[])();
 
 					auto cards = typeset (glyphs, order);
 
-					foreach (i, glyph; enumerate (glyphs))
+					foreach (i, glyph; enumerate (glyphs[]))
 						{/*...}*/
 							auto geometry = cards[4*i..4*i+4];
 							auto tex_coords = glyph.roi[].bounding_box[].flip!`vertical`;
@@ -193,7 +193,19 @@ final class Scribe
 					return cards.n_lines;
 				}
 
-			auto typeset (R)(R glyphs, Text order)
+struct Typeset
+	{/*...}*/
+		Appendable!(vec[]) cards;
+		size_t n_lines;
+
+		alias cards this;
+
+		this (size_t length)
+			{/*...}*/
+				cards = typeof(cards)(new vec[4*length]);
+			}
+	}
+			auto typeset (R)(ref R glyphs, Text order) // TEMP ref
 				if (is (ElementType!R == Glyph))
 				in {/*...}*/
 					assert (order.size in font);
@@ -203,6 +215,7 @@ final class Scribe
 					auto cards = Typeset (text.length);
 
 					auto size = order.size;
+					auto color = order.color;
 					auto font = this.font[size];
 
 					vec pen = vec(0, -font.ascender);
@@ -218,54 +231,70 @@ final class Scribe
 					else wrap_width = (wrap_width * î.vec.rotate (rotation)).from_extended_space.to_pixel_space (display).norm;
 
 					newline_positions ~= 0;
-					auto card_box = [0.vec, pen].bounding_box;
-					foreach (i, glyph; enumerate (glyphs))
-						{/*set card coordinates in pixel-space}*/
-							auto offset = glyph.offset;
-							auto dims   = glyph.dims;
+					auto card_box = [0.vec, pen].bounding_box; 
+					// ↑ ctor
 
-							cards ~= [
-								pen,
-								pen + vec(dims.x, 0),
-								pen + dims,
-								pen + vec(0, dims.y)
-							];
+					auto append (dstring text)
+						{/*...}*/
+							if (text.length == 0)
+								return glyphs[0..0];
 
-							if (pen.x + dims.x > wrap_width)
-								{/*word wrap}*/
-									auto length = glyphs[0..i+1].retro.countUntil!(g => g.symbol.isWhite);
-									if (length < 0)
-										length = i+1;
-									auto cutoff = i+1 - length;
-										
-									auto word = ℕ[0..length]
-										.map!(j => j + cutoff)
-										.map!(j => cards[4*j..4*(j+1)]);
+							auto start = glyphs.length;
 
-									auto Δx = (word.empty? 
-										pen.x + glyph.advance : word[0][0].x
-									) - glyph.offset.x;
-									auto carriage_return = (vec v) => v - vec(Δx, font.height);
+							glyphs ~= text.map!(c => glyph (c, size, color));
 
-									foreach (ref letter; word)
-										letter.map!carriage_return.copy (letter);
+							foreach (i, glyph; glyphs[].enumerate[start..glyphs.length]) // BUG undefined __dollar for enumerate
+								{/*set card coordinates in pixel-space}*/
+									auto offset = glyph.offset;
+									auto dims   = glyph.dims;
 
-									pen = carriage_return (pen);
+									cards ~= [
+										pen,
+										pen + vec(dims.x, 0),
+										pen + dims,
+										pen + vec(0, dims.y)
+									];
 
-									newline_positions ~= i - word.length + 1;
+									if (pen.x + dims.x > wrap_width)
+										{/*word wrap}*/
+											auto length = glyphs[0..i+1].retro.countUntil!(g => g.symbol.isWhite);
+											if (length < 0)
+												length = i+1;
+											auto cutoff = i+1 - length;
+												
+											auto word = ℕ[0..length]
+												.map!(j => j + cutoff)
+												.map!(j => cards[4*j..4*(j+1)]);
+
+											auto Δx = (word.empty? 
+												pen.x + glyph.advance : word[0][0].x
+											) - glyph.offset.x;
+											auto carriage_return = (vec v) => v - vec(Δx, font.height);
+
+											foreach (ref letter; word)
+												letter.map!carriage_return.copy (letter);
+
+											pen = carriage_return (pen);
+
+											newline_positions ~= i - word.length + 1;
+										}
+									else if (glyph.symbol == '\n')
+										{/*...}*/
+											newline_positions ~= i;
+											pen = vec(0, pen.y - font.height);
+										}
+
+									cards[$-4..$] = cards[$-4..$].map!(v => v - vec(-offset.x, dims.y - offset.y));
+
+									pen.x += glyph.advance;
+
+									with (card_box) width = max (width, pen.x);
 								}
-							else if (glyph.symbol == '\n')
-								{/*...}*/
-									newline_positions ~= i;
-									pen = vec(0, pen.y - font.height);
-								}
 
-							cards[$-4..$] = cards[$-4..$].map!(v => v - vec(-offset.x, dims.y - offset.y));
-
-							pen.x += glyph.advance;
-
-							with (card_box) width = max (width, pen.x);
+							return glyphs[start..$];
 						}
+					append (order.text);
+
 					newline_positions ~= glyphs.length;
 					cards.n_lines = newline_positions.length;
 
@@ -478,18 +507,6 @@ struct Table
 			}
 		Entry[] entries;
 		Color borders;
-	}
-private struct Typeset
-	{/*...}*/
-		Appendable!(vec[]) cards;
-		size_t n_lines;
-
-		alias cards this;
-
-		this (size_t length)
-			{/*...}*/
-				cards = typeof(cards)(new vec[4*length]);
-			}
 	}
 
 struct Unicode

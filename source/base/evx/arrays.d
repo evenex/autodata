@@ -361,18 +361,13 @@ struct Dynamic (Array, PolicyList...)
 						{/*...}*/
 							if (dynamic_length + n > capacity)
 								{/*...}*/
+									auto new_size = capacity == 0? 
+										n: max (2*array.length, array.length + n);
+
 									static if (supports_reallocation!Array)
-										{/*...}*/
-											if (capacity == 0)
-												array.reallocate (2);
-											else array.reallocate (capacity * 2);
-										}
+										array.reallocate (new_size);
 									else static if (isDynamicArray!Array)
-										{/*...}*/
-											if (capacity == 0)
-												array.length = 2;
-											array.length *= 2;
-										}
+										array.length = new_size;
 									else assert (0,
 										Array.stringof~ ` capacity ` ~capacity.text~ ` exceeded during ` ~n.text~ ` allocation`
 									);
