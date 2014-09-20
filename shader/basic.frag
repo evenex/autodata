@@ -22,7 +22,7 @@ void main (void) {
 			frag_color = color;
 			break;
 		case TEXT:
-			frag_color = vec4 (color.rgb, color.a * texture (tex, tex_coords).a);
+			frag_color = vec4 (color.rgb, color.a * texture (tex, tex_coords).r);
 			break;
 		case SPRITE:
 			frag_color = texture (tex, tex_coords);
