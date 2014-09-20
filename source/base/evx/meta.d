@@ -927,8 +927,6 @@ public {/*extraction}*/
 					else alias DollarType = size_t;
 				}
 			else alias DollarType = void;
-
-			pragma(msg, R, ` `, __traits(compiles, R.init[$]));
 		}
 }
 public {/*processing}*/

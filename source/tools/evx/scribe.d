@@ -30,8 +30,6 @@ private {/*imports}*/
 }
 
 // TODO maybe one big invisible card that is font_height * n_lines high? either way we need to align to the font not the card
-static if (0) version = from_file; //TEMP until i figure out whats going on with this lib
-
 final class Scribe
 	{/*...}*/
 		public:
@@ -131,10 +129,7 @@ final class Scribe
 
 							foreach (size; font_sizes)
 								{/*...}*/
-									version(from_file)
 									font[size] = texture_font_new_from_file (atlas, size, font_path); 
-									else
-									font[size] = texture_font_new (atlas, font_path, size);
 
 									assert (font[size] !is null, `couldn't load font from ` ~font_path);
 
@@ -167,83 +162,69 @@ final class Scribe
 				}
 		}
 		private:
-		private {/*ops}*/
-			size_t output (Text order)
-				in {/*...}*/
-					assert (display, "tried to write but scribe has no display");
-				}
-				body {/*...}*/
-					auto text = order.text;
-					auto color = order.color;
-					auto size = order.size;
-					if (text.empty) return 0;
+		public {/*ops}*/ // TEMP
+			struct Typeset
+				{/*...}*/
+					BoundingBox card_box;
 
-					auto glyphs = Appendable!(Glyph[])();
+					Appendable!(vec[]) cards;
+					Appendable!(size_t[]) newline_positions;
+					Appendable!(Glyph[]) glyphs;
 
-					auto cards = typeset (glyphs, order);
+					size_t size;
+					Color color;
+					vec pen;
+					Scribe scribe;
+					double wrap_width;
+					immutable double rotation;
+					BoundingBox draw_box;
+					Alignment alignment;
+					double scale;
+					vec translation;
 
-					foreach (i, glyph; enumerate (glyphs[]))
+					this (Text order)
 						{/*...}*/
-							auto geometry = cards[4*i..4*i+4];
-							auto tex_coords = glyph.roi[].bounding_box[].flip!`vertical`;
+							this.cards = typeof(cards)(4*order.text.length);
 
-							display.draw (glyph.texture, geometry, tex_coords, glyph.color);
+							this.scribe = order.scribe;
+							this.size = order.size;
+							this.color = order.color;
+							auto font = scribe.font[size];
+
+							this.pen = vec(0, -font.ascender);
+
+							immutable bounds = order.bounds;
+							this.draw_box = bounds[].from_extended_space.to_pixel_space (scribe.display).bounding_box;
+
+							this.rotation = order.rotate;
+							this.wrap_width = order.wrap_width;
+							this.alignment = order.alignment;
+							this.scale = order.scale;
+							this.translation = order.translate;
+
+							if (wrap_width < 0) 
+								wrap_width = draw_box.width;
+							else wrap_width = (wrap_width * î.vec.rotate (rotation)).from_extended_space.to_pixel_space (scribe.display).norm;
+
+							newline_positions ~= 0;
+							this.card_box = [0.vec, pen].bounding_box; 
 						}
 
-					return cards.n_lines;
-				}
-
-struct Typeset
-	{/*...}*/
-		Appendable!(vec[]) cards;
-		size_t n_lines;
-
-		alias cards this;
-
-		this (size_t length)
-			{/*...}*/
-				cards = typeof(cards)(new vec[4*length]);
-			}
-	}
-			auto typeset (R)(ref R glyphs, Text order) // TEMP ref
-				if (is (ElementType!R == Glyph))
-				in {/*...}*/
-					assert (order.size in font);
-				}
-				body {/*...}*/
-					Appendable!(size_t[2^^8]) newline_positions;
-					auto cards = Typeset (text.length);
-
-					auto size = order.size;
-					auto color = order.color;
-					auto font = this.font[size];
-
-					vec pen = vec(0, -font.ascender);
-
-					immutable bounds = order.bounds;
-					auto draw_box = bounds[].from_extended_space.to_pixel_space (display).bounding_box;
-
-					immutable rotation = order.rotate;
-					auto wrap_width = order.wrap_width;
-
-					if (wrap_width < 0) 
-						wrap_width = draw_box.width;
-					else wrap_width = (wrap_width * î.vec.rotate (rotation)).from_extended_space.to_pixel_space (display).norm;
-
-					newline_positions ~= 0;
-					auto card_box = [0.vec, pen].bounding_box; 
-					// ↑ ctor
-
-					auto append (dstring text)
+					auto append (String)(String input_text)
+						if (isSomeString!String)
 						{/*...}*/
+							//HACK
+							auto text = input_text.to!dstring;
+
 							if (text.length == 0)
 								return glyphs[0..0];
 
+							auto font = scribe.font[size];
 							auto start = glyphs.length;
 
-							glyphs ~= text.map!(c => glyph (c, size, color));
+							glyphs ~= text.map!(c => scribe.glyph (c, size, color));
 
-							foreach (i, glyph; glyphs[].enumerate[start..glyphs.length]) // BUG undefined __dollar for enumerate
+							foreach (i, glyph; glyphs[].enumerate[start..$])
 								{/*set card coordinates in pixel-space}*/
 									auto offset = glyph.offset;
 									auto dims   = glyph.dims;
@@ -279,7 +260,7 @@ struct Typeset
 											newline_positions ~= i - word.length + 1;
 										}
 									else if (glyph.symbol == '\n')
-										{/*...}*/
+										{/*line break}*/
 											newline_positions ~= i;
 											pen = vec(0, pen.y - font.height);
 										}
@@ -291,45 +272,65 @@ struct Typeset
 									with (card_box) width = max (width, pen.x);
 								}
 
+							card_box.height = max (pen.y.abs, font.height);
+							card_box = card_box.move_to (Alignment.top_left, 0.vec);
+
 							return glyphs[start..$];
 						}
-					append (order.text);
 
-					newline_positions ~= glyphs.length;
-					cards.n_lines = newline_positions.length;
+					auto finalize ()
+						{/*...}*/
+							newline_positions ~= glyphs.length;
+							foreach (i, line_start; newline_positions[0..$-1])
+								{/*justify lines}*/
+									auto line_stop = newline_positions[i+1];
 
-					card_box.height = max (pen.y.abs, font.height);
-					card_box = card_box.move_to (Alignment.top_left, 0.vec);
-					auto alignment = order.alignment;
+									if (line_stop == line_start)
+										continue;
 
-					foreach (i, line_start; newline_positions[0..$-1])
-						{/*justify lines}*/
-							auto line_stop  = newline_positions[i+1];
+									auto line_box = cards[4*line_start..4*line_stop].bounding_box;
 
-							if (line_stop == line_start)
-								continue;
+									auto justification = line_box.offset_to (alignment, card_box).x;
 
-							auto line_box = cards[4*line_start..4*line_stop].bounding_box;
+									cards[4*line_start..4*line_stop] += vec(justification, 0);
+								}
 
-							auto justification = line_box.offset_to (alignment, card_box).x;
+							immutable p = pen;
+							pure transform (vec v) { return scale*((v-p/2).rotate (rotation) + p/2);}
 
-							cards[4*line_start..4*line_stop] += vec(justification, 0);
+							card_box = card_box[].map!transform.bounding_box;
+
+							cards[] = cards[].map!transform
+								.map!(v => v + card_box.offset_to (alignment, draw_box))
+								.map!(v => v.from_pixel_space.to_extended_space (scribe.display) + translation);
+
+							return cards;
 						}
+				}
 
+			void draw (ref Typeset typeset)
+				{/*...}*/
+					foreach (i, glyph; enumerate (typeset.glyphs[]))
+						{/*...}*/
+							auto geometry = typeset.cards[4*i..4*i+4];
+							auto tex_coords = glyph.roi[].bounding_box[].flip!`vertical`;
 
-					immutable scale = order.scale;
-					immutable translation = order.translate;
+							display.draw (glyph.texture, geometry, tex_coords, glyph.color);
+						}
+				}
 
-					immutable p = pen;
-					pure transform (vec v) { return scale*((v-p/2).rotate (rotation) + p/2);}
+			auto output (Text order)
+				in {/*...}*/
+					assert (display, "tried to write but scribe has no display");
+				}
+				body {/*...}*/
+					if (order.text.empty) return;
 
-					card_box = card_box[].map!transform.bounding_box;
+					auto typeset = Typeset (order);
+					typeset.append (order.text);
+					typeset.finalize;
 
-					cards[] = cards[].map!transform
-						.map!(v => v + card_box.offset_to (alignment, draw_box))
-						.map!(v => v.from_pixel_space.to_extended_space (display) + translation);
-
-					return cards;
+					draw (typeset);
 				}
 
 			void reset ()
@@ -361,12 +362,8 @@ struct Typeset
 			void function (texture_atlas_t* self)
 				texture_atlas_delete;
 
-			version(from_file)
 			texture_font_t* function (texture_atlas_t* atlas, const float size, const char* filename)
 				texture_font_new_from_file;
-			else
-			texture_font_t* function (texture_atlas_t* atlas, const char* filename, const float size)
-				texture_font_new;
 
 			size_t function (texture_font_t* self, const dchar* charcodes) 
 				texture_font_load_glyphs;

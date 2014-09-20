@@ -14,9 +14,11 @@ import evx.range;
 import evx.arrays;
 import evx.colors;
 import evx.input;
+import evx.future;
 
 alias zip = evx.functional.zip;
 alias map = evx.functional.map;
+alias filter = evx.functional.filter;
 alias reduce = evx.functional.reduce;
 
 struct Entity
@@ -91,11 +93,11 @@ struct Console
 				display = TextBox (txt.write (history).color (color).align_to (Alignment.bottom_left));
 				input = CommandLine (usr.get_text_input);
 
-				auto n_lines = display.draw (box, gfx);
+				display.draw (box, gfx);
 				input.draw (box, gfx, txt, usr);
 
-				if (n_lines * txt.font_height (txt.available_sizes[0]) > box.height)
-					history = history[$/4..$];
+		//		if (n_lines * txt.font_height (txt.available_sizes[0]) > box.height) TEMP
+		//			history = history[$/4..$]; TEMP
 			}
 		void print (string text)
 			{/*...}*/
@@ -165,6 +167,7 @@ struct Item
 		Physical* physical;
 	}
 
+static if (0)
 void main ()
 	{/*...}*/
 		bool game_terminated;
@@ -419,9 +422,19 @@ void main ()
 			}
 	}
 
-static if (0)
 void main ()
 	{/*...}*/
+		import evx.utils;
+
+		auto gfx = new Display (800, 600); // BUG invalid default window size?
+
+		gfx.start; scope (exit) gfx.stop;
+		auto txt = new Scribe (gfx, [18]);
+
+		bool quitting;
+		auto usr = new Input (gfx, (bool){quitting = true;});
+
+		import std.variant;
 		struct Tag
 			{/*...}*/
 				ulong code;
@@ -440,37 +453,116 @@ void main ()
 			{/*...}*/
 				mixin TypeUniqueId;
 
-				__gshared Info[string] dictionary;
+				struct Link
+					{/*...}*/
+						string label;
+						Info.Id target;
+						BoundingBox box;
+					}
+				struct Text
+					{/*...}*/
+						string text;
+					}
 
+				__gshared Id[string] dictionary;
+				__gshared Info[Id] database;
+
+				Id id;
 				string title;
 				Tag domain;
-				string details;
-
-				Appendable!(Indices[]) links;
+				Dynamic!(Algebraic!(Link, Text)[]) details;
 
 				this (string title, Tag domain, string details)
 					{/*...}*/
+						this.id = Id.create;
 						this.title = title;
 						this.domain = domain;
-						this.details = details;
-
-						foreach (word; details.split)
+						foreach (detail; details.splitter)
 							{/*...}*/
-								if (word in dictionary)
-									links ~= word;
+								this.details.grow (1);
+								if (auto id = detail in dictionary)
+									this.details[$-1] = Link (detail, *id);
+								else this.details[$-1] = Text (detail);
 							}
 
-						dictionary[title] = this;
+						dictionary[title] = this.id;
+						database[id] = this;
 					}
 
-				auto display (Scribe txt, BoundingBox box)
+				auto display (Display gfx, Scribe txt, BoundingBox box)
 					{/*...}*/
-						// TODO some words different colors
+						auto typeset = txt.Typeset (txt.write (``).color (white).inside (box));// HACK
+
+						foreach (word; details[])
+							{/*...}*/
+								auto glyphs = typeset.append (word.visit!(
+										(Text text) => text.text,
+										(Link link) => link.label,
+								));
+
+								word.visit!(
+										(Text text) {},
+										(Link link) {foreach (ref glyph; glyphs) glyph.color = red;},
+								);
+
+
+								typeset.append (` `);
+							}
+
+						typeset.finalize;
+						gfx.draw (white, box[]);
+						txt.draw (typeset); // REFACTOR
 					}
 			}
 
 
+		auto hud = new SpatialDynamics!(Info.Id);
+		hud.start; scope (exit) hud.stop;
+
+		auto s = Info (`sky`, Tag (`general`), `the sky is up`);
+		auto q = Info (`grass`, Tag (`specific`), `something you smoke`);
 		auto a = Info (``, Tag (`general`), `the sky is blue the grass is green`);
+
+		auto infobox = [0.vec, 1.vec].scale (0.5).bounding_box;
+		usr.bind (Input.Mouse.left, (bool clicked) {
+			if (clicked) 
+				{/*...}*/
+					auto pos = usr.pointer[].map!meters.Position;
+					Future!(Appendable!(Info.Id[])) result;
+					hud.box_query ([pos + 0.1.meters, pos - 0.1.meters], result);
+
+					hud.expedite_queries;
+					result.await;
+
+					import evx.utils;
+					result[].filter!(id => id in Info.database).pwriteln;
+				}
+		});
+
+		with (hud) add (new_body (a.id)
+			.mass (1.kilogram)
+			.position (zero!Position)
+			.shape (infobox[].map!(v => Position (v.x.meters, v.y.meters)))
+		);
+		hud.expedite_uploads;
+
+		{/*wait}*/
+			import core.thread;
+			import std.datetime;
+
+			while (not(quitting))
+				{/*...}*/
+					a.display (gfx, txt, infobox);
+					gfx.render;
+					usr.process;
+					txt.write (Unicode.symbol[`crosshair`])
+						.color (blue*white)
+						.align_to (Alignment.center)
+						.translate (usr.pointer)
+					();
+					Thread.sleep (20.msecs);
+				}
+		}
 
 		// TODO look tool - high-order spatial location info, then cast a view and report individual objects. clicking on object names will yield further info.
 		void look ()

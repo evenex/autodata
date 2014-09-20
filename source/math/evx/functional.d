@@ -118,7 +118,7 @@ public {/*map}*/
 							return this.range.length; // REVIEW need 'this' in 2.066.. only for const methods?
 						}
 
-					static if (is(DollarType!R == size_t)) // BUG
+					static if (is(DollarType!R == size_t))
 						alias opDollar = length;
 
 					static assert (hasLength!Mapped);
@@ -130,8 +130,7 @@ public {/*map}*/
 							return range.measure;
 						}
 
-					//static if (is(ReturnType!(R.measure) == DollarType!R))
-					static if (not(is(DollarType!R == size_t))) // BUG infinite recursion in: static if (is(ReturnType!(Ranges[0].measure) == DollarType!R))
+					static if (not(is(DollarType!R == size_t)))
 						alias opDollar = measure;
 
 					static assert (is_continuous_range!Mapped);
@@ -265,7 +264,7 @@ public {/*zip}*/
 							return ranges[0].length;
 						}
 
-					static if (is(CommonDollar == size_t)) // BUG should actually be based on returntype of length but causes infinite recursion at CT
+					static if (is(CommonDollar == size_t))
 						alias opDollar = length;
 
 					static assert (hasLength!Zipped);
@@ -281,7 +280,7 @@ public {/*zip}*/
 							return ranges[0].measure;
 						}
 
-					static if (not(is(CommonDollar == size_t))) // BUG infinite recursion in: static if (is(ReturnType!(Ranges[0].measure) == CommonDollar))
+					static if (not(is(CommonDollar == size_t)))
 						alias opDollar = measure;
 
 					static assert (is_continuous_range!Zipped);

@@ -410,7 +410,7 @@ final class SpatialDynamics (ClientId = size_t): Service
 
 			void box_query (Array)(Position[2] corners, ref Future!Array result)
 				in {/*...}*/
-					static assert (isOutputRange!(Array, ClientId), Array.stringof~ `cant take `~ClientId.stringof);
+					static assert (isOutputRange!(Array, ClientId), Array.stringof~ ` cant take `~ClientId.stringof);
 
 					assert (this.is_running, "attempted query before starting service (currently "~this.status.text~")");
 				}
