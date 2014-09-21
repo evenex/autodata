@@ -184,7 +184,7 @@ public {/*polygons}*/
 		{/*...}*/
 			return 0.5 * Σ (polygon
 				.adjacent_pairs
-				.map!(v => v[0].det (v[1]))
+				.map!((u,v) => u.det (v))
 			).abs;
 		}
 		unittest {/*...}*/
@@ -382,7 +382,9 @@ public {/*axis-aligned bounding boxes}*/
 						}
 					void top (T y)
 						in {/*...}*/
-							assert (y > bottom);
+							assert (y > bottom,
+								`bounding box exceeded bounds (` ~y.text~ ` <= ` ~bottom.text~ `)`
+							);
 						}
 						body {/*...}*/
 							verts[2].y = y;
@@ -580,7 +582,7 @@ public {/*axis-aligned bounding boxes}*/
 
 	/* moves a bounding box so that a given alignment point on it has the given position 
 	*/
-	auto move_to (T)(Box!T box, Alignment alignment, Vector!(2, T) position)
+	auto align_to (T)(Box!T box, Alignment alignment, Vector!(2, T) position)
 		{/*...}*/
 			immutable offset = box.offset_to (alignment, bounding_box (position.repeat (2)));
 
@@ -591,14 +593,14 @@ public {/*axis-aligned bounding boxes}*/
 
 			assert (a.center.approx (0.vec));
 
-			a.move_to (Alignment.center, ĵ.vec);
+			a = a.align_to (Alignment.center, ĵ.vec);
 			assert (a.center.approx (ĵ.vec));
 
-			a.move_to (Alignment.top_center, ĵ.vec);
+			a = a.align_to (Alignment.top_center, ĵ.vec);
 			assert (a.center.approx (ĵ.vec / 2));
 			assert (a.bottom_center.approx (0.vec));
 
-			a.move_to (Alignment.top_right, 1.vec);
+			a = a.align_to (Alignment.top_right, 1.vec);
 			assert (a.bottom_left.approx (0.vec));
 		}
 

@@ -52,8 +52,11 @@ abstract class Service
 						{/*...}*/
 							mode = Mode.terminating; 
 
-							foreach (callback; stop_callbacks)
-								callback ();
+							static if (0)
+							foreach (callback; stop_callbacks) // OUTSIDE BUG? calling the callbacks causes failure. maybe the scribe is getting dtor'd before stop, since stop is often occurring at scope exit?
+								{/*...}*/
+									callback ();
+								}
 
 							send (Stop.signal);
 							wait;

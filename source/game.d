@@ -57,7 +57,7 @@ struct CommandLine
 
 		void draw (BoundingBox box, Display gfx, Scribe txt, Input usr)
 			{/*...}*/
-				box = box.move_to (Alignment.top_left, box.bottom_left);
+				box = box.align_to (Alignment.top_left, box.bottom_left);
 				with (box) bottom = top - 1.2 * txt.font_height (txt.available_sizes[0])/0.9;
 
 				gfx.draw (black.alpha (0.5), box[], GeometryMode.t_fan);
@@ -364,7 +364,7 @@ void main ()
 				auto pointer_box = square (0.2, usr.pointer).bounding_box;
 				if (parser_up)
 					{/*...}*/
-						cmd.draw (gfx.extended_bounds[].scale (vec(1,1/4.)).bounding_box.move_to (Alignment.top_left, gfx.extended_bounds.top_left), gfx, txt, usr);
+						cmd.draw (gfx.extended_bounds[].scale (vec(1,1/4.)).bounding_box.align_to (Alignment.top_left, gfx.extended_bounds.top_left), gfx, txt, usr);
 					}
 				else {/*handle action input}*/
 					with (Input) fred.physical.velocity = usr.keys_pressed ([
@@ -422,6 +422,7 @@ void main ()
 			}
 	}
 
+static if (0)
 void main ()
 	{/*...}*/
 		import evx.utils;
@@ -575,4 +576,9 @@ void main ()
 
 					// more info on item - lookup info tree for item and traverse
 			}
+	}
+
+void main ()
+	{/*...}*/
+		
 	}

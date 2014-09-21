@@ -168,30 +168,35 @@ struct Plot (Data, Style style)
 							auto x_ticks = x_field[].translate (vec(0, h_0)).bounding_box;
 							auto y_ticks = y_field[].translate (vec(h_0, 0)).bounding_box;
 
+							static if (0)
 							scribe.write (_title)
 								.size (_text_size)
 								.color (_color)
 								.align_to (Alignment.top_center)
 								.inside (title_field)
 							();
+							static if (0)
 							scribe.write (x_label~ ` ` ~_x_units)
 								.size (_text_size)
 								.color (_color)
 								.align_to (Alignment.top_center)
 								.inside (x_field)
 							();
+							static if (0)
 							scribe.write (x_min.to!double)
 								.size (_text_size)
 								.color (_color)
 								.align_to (Alignment.top_left)
 								.inside (x_ticks)
 							();
+							static if (0)
 							scribe.write (x_max.to!double)
 								.size (_text_size)
 								.color (_color)
 								.align_to (Alignment.top_right)
 								.inside (x_ticks)
 							();
+							static if (0)
 							scribe.write (y_label~ ` ` ~_y_units)
 								.size (_text_size)
 								.color (_color)
@@ -200,6 +205,7 @@ struct Plot (Data, Style style)
 								.wrap_width (y_field.height)
 								.inside (y_field)
 							();
+							static if (0)
 							scribe.write (y_min.to!double)
 								.size (_text_size)
 								.color (_color)
@@ -208,6 +214,7 @@ struct Plot (Data, Style style)
 								.wrap_width (y_field.height)
 								.inside (y_ticks)
 							();
+							static if (0)
 							scribe.write (y_max.to!double)
 								.size (_text_size)
 								.color (_color)
@@ -217,6 +224,7 @@ struct Plot (Data, Style style)
 								.inside (y_ticks)
 							();
 
+							static if (0)
 							draw_data_in (plot_field);
 						}
 					else static if (style is Style.minimal)
@@ -381,7 +389,7 @@ struct Plot (Data, Style style)
 
 			auto bounds = bounding_box ([-1.vec, 1.vec]);
 		}
-		const {/*measurements}*/
+		private {/*measurements}*/
 			auto h_0 ()
 				in {/*...}*/
 					assert (scribe !is null,

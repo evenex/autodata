@@ -89,7 +89,11 @@ final class Scribe
 
 			auto font_height (size_t size)
 				in {/*...}*/
-					assert (size in font);
+					assert (display, `display is null`);
+					assert (size in font, `no such size (` ~size.text~ `)`);
+				}
+				out (result) {/*...}*/
+					assert (result != 0);
 				}
 				body {/*...}*/
 					return [0.vec, font[size].height.vec].from_pixel_space.to_extended_space (display).reduce!subtract.y.abs;
@@ -99,12 +103,14 @@ final class Scribe
 				{/*...}*/
 					return font_sizes;
 				}
-
-			void connect_to (Display display)
+		}
+		public {/*ctor}*/
+			this (Display display, size_t[] sizes = [12])
 				in {/*...}*/
 					assert (display);
 				}
 				body {/*...}*/
+					this (sizes);
 					alias received_before = receiveTimeout;
 
 					display.access_rendering_context 
@@ -114,7 +120,8 @@ final class Scribe
 						display.on_stop (&reset);
 				}
 		}
-		public {/*ctor}*/
+		private:
+		private {/*ctor}*/
 			this (size_t[] sizes = [12])
 				{/*...}*/
 					load_library;
@@ -124,7 +131,6 @@ final class Scribe
 
 					void load_texture_atlas ()
 						{/*...}*/
-
 							atlas = texture_atlas_new (atlas_size.x, atlas_size.y, 1);
 
 							foreach (size; font_sizes)
@@ -152,16 +158,7 @@ final class Scribe
 					mixin(error_suppression);
 					load_texture_atlas ();
 				}
-			this (Display display, size_t[] sizes = [12])
-				in {/*...}*/
-					assert (display);
-				}
-				body {/*...}*/
-					this (sizes);
-					connect_to (display);
-				}
 		}
-		private:
 		public {/*ops}*/ // TEMP
 			struct Typeset
 				{/*...}*/
@@ -273,7 +270,7 @@ final class Scribe
 								}
 
 							card_box.height = max (pen.y.abs, font.height);
-							card_box = card_box.move_to (Alignment.top_left, 0.vec);
+							card_box = card_box.align_to (Alignment.top_left, 0.vec);
 
 							return glyphs[start..$];
 						}
@@ -387,22 +384,125 @@ final class Scribe
 				}
 			struct texture_font_t
 				{/*...}*/
-					void* glyphs; // Vector of glyphs contained in this font. 
-					texture_atlas_t* atlas; // Atlas structure to store glyphs data. 
-					char* filename; // Font filename 
-					float size; // Font size 
-					int hinting; // Whether to use autohint when rendering font 
-					int outline_type; // Outline type (0 = None, 1 = line, 2 = inner, 3 = outer) 
-					float outline_thickness; // Outline thickness 
-					int filtering; //  Whether to use our own lcd filter.
-					int kerning; // Whether to use kerning if available 
-					ubyte lcd_weights[5]; // LCD filter weights 
-					float height; // This field is simply used to compute a default line spacing (i.e., the baseline-to-baseline distance) when writing text with this font. Note that it usually is larger than the sum of the ascender and descender taken as absolute values. There is also no guarantee that no glyphs extend above or below subsequent baselines when using this distance.
-					float linegap; // This field is the distance that must be placed between two lines of text. The baseline-to-baseline distance should be computed as: ascender - descender + linegap 
-					float ascender; // The ascender is the vertical distance from the horizontal baseline to the highest 'character' coordinate in a font face. Unfortunately, font formats define the ascender differently. For some, it represents the ascent of all capital latin characters (without accents), for others it is the ascent of the highest accented character, and finally, other formats define it as being equal to bbox.yMax. 
-					float descender; // The descender is the vertical distance from the horizontal baseline to the lowest 'character' coordinate in a font face. Unfortunately, font formats define the descender differently. For some, it represents the descent of all capital latin characters (without accents), for others it is the ascent of the lowest accented character, and finally, other formats define it as being equal to bbox.yMin. This field is negative for values below the baseline. 
-					float underline_position; // The position of the underline line for this face. It is the center of the underlining stem. Only relevant for scalable formats. 
-					float underline_thickness; // The thickness of the underline for this face. Only relevant for scalable formats. 
+					/**
+					 * Vector of glyphs contained in this font.
+					 */
+					void* glyphs;
+
+					/**
+					 * Atlas structure to store glyphs data.
+					 */
+					texture_atlas_t* atlas;
+					
+					/**
+					 * font location
+					 */
+					enum Location {
+						TEXTURE_FONT_FILE = 0,
+						TEXTURE_FONT_MEMORY,
+					};
+					Location location;
+
+					union {
+						/**
+						 * Font filename, for when location == TEXTURE_FONT_FILE
+						 */
+						char* filename;
+
+						/**
+						 * Font memory address, for when location == TEXTURE_FONT_MEMORY
+						 */
+						struct Memory {
+							const void* base;
+							size_t size;
+						};
+						Memory memory;
+					};
+
+					/**
+					 * Font size
+					 */
+					float size;
+					
+					/**
+					 * Whether to use autohint when rendering font
+					 */
+					int hinting;
+
+					/**
+					 * Outline type (0 = None, 1 = line, 2 = inner, 3 = outer)
+					 */
+					int outline_type;
+
+					/**
+					 * Outline thickness
+					 */
+					float outline_thickness;
+
+					/** 
+					 * Whether to use our own lcd filter.
+					 */
+					int filtering;
+
+					/**
+					 * Whether to use kerning if available
+					 */
+					int kerning;
+
+					/**
+					 * LCD filter weights
+					 */
+					ubyte lcd_weights[5];
+
+					/**
+					 * This field is simply used to compute a default line spacing (i.e., the
+					 * baseline-to-baseline distance) when writing text with this font. Note
+					 * that it usually is larger than the sum of the ascender and descender
+					 * taken as absolute values. There is also no guarantee that no glyphs
+					 * extend above or below subsequent baselines when using this distance.
+					 */
+					float height;
+
+					/**
+					 * This field is the distance that must be placed between two lines of
+					 * text. The baseline-to-baseline distance should be computed as:
+					 * ascender - descender + linegap
+					 */
+					float linegap;
+
+					/**
+					 * The ascender is the vertical distance from the horizontal baseline to
+					 * the highest 'character' coordinate in a font face. Unfortunately, font
+					 * formats define the ascender differently. For some, it represents the
+					 * ascent of all capital latin characters (without accents), for others it
+					 * is the ascent of the highest accented character, and finally, other
+					 * formats define it as being equal to bbox.yMax.
+					 */
+					float ascender;
+
+					/**
+					 * The descender is the vertical distance from the horizontal baseline to
+					 * the lowest 'character' coordinate in a font face. Unfortunately, font
+					 * formats define the descender differently. For some, it represents the
+					 * descent of all capital latin characters (without accents), for others it
+					 * is the ascent of the lowest accented character, and finally, other
+					 * formats define it as being equal to bbox.yMin. This field is negative
+					 * for values below the baseline.
+					 */
+					float descender;
+
+					/**
+					 * The position of the underline line for this face. It is the center of
+					 * the underlining stem. Only relevant for scalable formats.
+					 */
+					float underline_position;
+
+					/**
+					 * The thickness of the underline for this face. Only relevant for scalable
+					 * formats.
+					 */
+					float underline_thickness;
+
 				}
 			struct texture_glyph_t
 				{/*...}*/

@@ -511,7 +511,7 @@ final class Display: Service
 			Scheduler animation;
 		}
 		private {/*data}*/
-			@(Space.pixel) uvec screen_dims;
+			@(Space.pixel) uvec screen_dims = uvec(800,600);
 
 			shared BufferGroup!(
 				TripleBuffer!(fvec, 2^^16), 

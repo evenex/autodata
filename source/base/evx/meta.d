@@ -375,7 +375,7 @@ public {/*initialization}*/
 					else enum is_C_function = false;
 				}
 		}
-		unittest {/*...}*/
+		version (GSL) unittest {/*...}*/
 			static struct GSLVector
 				{/*...}*/
 					size_t size = 3;
@@ -588,7 +588,7 @@ public {/*construction}*/
 				auto opSlice (size_t i, size_t j)
 					in {/*...}*/
 						assert (i <= j && j <= length,
-							ElementType!(typeof(pointer[])).stringof~ 
+							ElementType!(typeof(pointer)).stringof~ 
 							` slice [` ~i.text~ `..` ~j.text~ `] exceeds length (` ~length.text~ `)`
 						);
 					}

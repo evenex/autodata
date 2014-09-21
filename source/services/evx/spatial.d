@@ -881,7 +881,7 @@ unittest {/*queries}*/
 		.map!(v => v[].map!(p => p.meters).Position)
 		.bounding_box;
 		
-	sq.move_to (Alignment.center, 0.meters.Position);
+	sq = sq.align_to (Alignment.center, 0.meters.Position);
 
 	with (p) add (
 		new_body (0)
