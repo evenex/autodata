@@ -36,7 +36,20 @@ private {/*definitions}*/
 	alias ShapeId = cpShape*;
 	alias BodyId = cpBody*;
 	alias Collision = cpArbiter*;
-	alias ClientId = void*;
+	struct SpatialId
+		{/*...}*/
+			void* data;
+			alias data this;
+
+			auto as (T)()
+				{/*...}*/
+					return data.unvoid!T;
+				}
+			this (T)(T data)
+				{/*...}*/
+					this.data = data.voidptr;
+				}
+		}
 }
 
 private {/*library}*/
@@ -57,7 +70,7 @@ alias Displacement = Position;
 alias Velocity = Vector!(2, Speed);
 alias Force = Vector!(2, Newtons);
 
-private enum MAX_SHAPES = 8;
+private enum MAX_SHAPES = 4;
 
 struct Body
 	{/*...}*/
@@ -140,10 +153,10 @@ struct Body
 			Scalar velocity_damping = 0.0;
 		}
 		private {/*ctor/free}*/
-			this (R...)(SimulationSpace space, ClientId client_id, Kilograms mass, R geometries)
+			this (R...)(SimulationSpace space, SpatialId spatial_id, Kilograms mass, R geometries)
 				if (allSatisfy!(is_geometric, R))
 				in {/*...}*/
-					assert (mass == mass, `mass of body ` ~client_id.text~ ` not specified`);
+					assert (mass == mass, `mass of body ` ~spatial_id.text~ ` not specified`);
 
 					foreach (geometry; geometries)
 						{/*...}*/
@@ -159,7 +172,7 @@ struct Body
 					else this.body_id = cp.BodyNew (mass.to!float, 1.0);
 
 					cp.SpaceAddBody (space, body_id);
-					cp.BodySetUserData (body_id, client_id);
+					cp.BodySetUserData (body_id, spatial_id);
 
 					static if (R.length > 1)
 						auto areas = geometries[].map!area;
@@ -204,7 +217,7 @@ struct Body
 				
 							cp.BodySetMoment (body_id, moment);
 							cp.SpaceAddShape (space, shape_id);
-							cp.ShapeSetUserData (shape_id, client_id);
+							cp.ShapeSetUserData (shape_id, spatial_id);
 						}
 				}
 
@@ -254,7 +267,7 @@ struct Body
 	}
 struct Incidence
 	{/*...}*/
-		ClientId body_id;
+		SpatialId body_id;
 		fvec surface_normal;
 		double ray_time;
 	}
@@ -263,17 +276,16 @@ final class SpatialDynamics
 	{/*...}*/
 		public:
 		public {/*bodies}*/
-			auto new_body (T, R...)(T client_id, Kilograms mass, R geometries)
+			auto new_body (T, R...)(T spatial_id, Kilograms mass, R geometries)
 				if (R.length > 0)
 				in {/*...}*/
-					static assert (T.sizeof == (void*).sizeof);
-					assert (client_id.voidptr !in bodies, client_id.text~ ` already exists`);
+					assert (SpatialId (spatial_id) !in bodies, spatial_id.text~ ` already exists`);
 				}
 				out {/*...}*/
-					assert (client_id.voidptr in bodies, `failed to add ` ~client_id.text);
+					assert (SpatialId (spatial_id) in bodies, `failed to add ` ~spatial_id.text);
 				}
 				body {/*...}*/
-					auto id = client_id.voidptr;
+					auto id = SpatialId (spatial_id);
 
 					this.bodies.insert (
 						id, Body (
@@ -286,14 +298,18 @@ final class SpatialDynamics
 
 					return bodies[id];
 				}
-			auto get_body (ClientId id)
+			auto get_body (T)(T spatial_id)
 				{/*...}*/
+					auto id = SpatialId (spatial_id);
+
 					if (auto result = id in bodies)
 						return result;
 					else assert (0, `body ` ~id.text~ ` not uploaded, cannot access`);
 				}
-			auto delete_body (ClientId id)
+			auto delete_body (T)(T spatial_id)
 				{/*...}*/
+					auto id = SpatialId (spatial_id);
+
 					bodies[id].free;
 					bodies.remove (id);
 				}
@@ -327,39 +343,47 @@ final class SpatialDynamics
 		public {/*queries}*/
 			void box_query (Array)(Position[2] corners, ref Array result)
 				in {/*...}*/
-					static assert (isOutputRange!(Array, ClientId), Array.stringof~ ` cant take `~ClientId.stringof);
+					alias Id = ElementType!Array;
+
+					static assert (is(typeof(SpatialId(Id.init))));
+					static assert (isOutputRange!(Array, Id), Array.stringof~ ` cant put `~Id.stringof);
 				}
 				body {/*...}*/
+					alias Id = ElementType!Array;
+
 					auto box = cp.BB (corners[].map!dimensionless.bounding_box.extents.expand);
 					auto layers = CP_ALL_LAYERS;
 					auto group = CP_NO_GROUP;
 
 					cp.SpaceBBQuery (space, box, layers, group, 
 						(cpShape* shape, void* stream) 
-							{(cast(Array*)stream).put (get_id (shape));},
+							{(cast(Array*)stream).put (get_id (shape).as!Id);},
 						&result
 					);
 				}
 
 			Incidence ray_cast (Position[2] ray)
 				{/*...}*/
-					return ray_query (ClientId.init, ray);
+					return ray_query (SpatialId.init, ray);
 				}
 
-			Incidence ray_cast_excluding (T)(T id, Position[2] ray)
+			Incidence ray_cast_excluding (T)(T spatial_id, Position[2] ray)
 				{/*...}*/
+					auto id = SpatialId (id);
 					auto layer = bodies[id].layer;
+
 					bodies[id].layer = 0x0;
 
-					auto result =  ray_cast (ray);
+					auto result = ray_cast (ray);
 
 					bodies[id].layer = CP_ALL_LAYERS;
 
 					return result;
 				}
 
-			Incidence ray_query (T)(T id, Position[2] ray)
+			Incidence ray_query (T)(T spatial_id, Position[2] ray)
 				{/*...}*/
+					auto id = SpatialId (spatial_id);
 					auto seg = ray[].map!dimensionless.map!(to!cpVect);
 
 					auto layers = CP_ALL_LAYERS;
@@ -367,7 +391,7 @@ final class SpatialDynamics
 
 					cpSegmentQueryInfo info;
 
-					if (id != ClientId.init)
+					if (id != SpatialId.init)
 						foreach (shape; bodies[id].shape_ids)
 							cp.ShapeSegmentQuery (shape, seg[0], seg[1], &info);
 					else cp.SpaceSegmentQueryFirst (space, seg[0], seg[1], 
@@ -376,7 +400,7 @@ final class SpatialDynamics
 
 					if (info.shape)
 						return Incidence (get_id (info.shape), info.n.vector, info.t);
-					else return Incidence (ClientId.init, 0.fvec, 1.0);
+					else return Incidence (SpatialId.init, 0.fvec, 1.0);
 				}
 		}
 		public {/*ctor/dtor}*/
@@ -402,7 +426,7 @@ final class SpatialDynamics
 				}
 		}
 		public {/*callbacks}*/
-			@property on_collision (void delegate(ClientId,ClientId) on_collide)
+			@property on_collision (void delegate(SpatialId,SpatialId) on_collide)
 				{/*...}*/
 					this.on_collide = on_collide;
 				}
@@ -428,22 +452,22 @@ final class SpatialDynamics
 		private {/*get_id}*/
 			static get_id (ShapeId shape)
 				{/*...}*/
-					return cp.ShapeGetUserData (shape);
+					return SpatialId (cp.ShapeGetUserData (shape));
 				}
 			static get_id (BodyId body_id)
 				{/*...}*/
-					return cp.BodyGetUserData (body_id);
+					return SpatialId (cp.BodyGetUserData (body_id));
 				}
 		}
 		private {/*data}*/
 			SimulationSpace space;
 
-			void delegate(ClientId,ClientId) on_collide;
+			void delegate(SpatialId,SpatialId) on_collide;
 
 			mixin AutoInitialize;
 
 			@Initialize!(2^^12) 
-			Associative!(Array!Body, ClientId) bodies;
+			Associative!(Array!Body, SpatialId) bodies;
 				
 			@Initialize!()
 			Appendable!(Position, 2^^12) vertices;
@@ -455,22 +479,22 @@ final class SpatialDynamics
 unittest {/*demo}*/
 	scope phy = new SpatialDynamics;
 
-	auto b1 = phy.new_body (cast(void*)1, 1.kilogram, square!Meters)
+	auto b1 = phy.new_body (1, 1.kilogram, square!Meters)
 		.velocity (vec(0, 10)*meters/second);
 
 	assert (b1.position == zero!Position);
 	phy.update;
 	assert (b1.position != zero!Position);
 
-	Appendable!(ClientId[3]) hits;
+	Appendable!(SpatialId[3]) hits;
 	phy.box_query (([zero!Position, unity!Position].vector!2 * 10).array, hits);
-	assert (hits[].equal ([cast(void*)1]));
+	assert (hits[].equal ([SpatialId (1)]));
 
-	auto b2 = phy.new_body (cast(void*)2, 1.kilogram, square!Meters)
+	auto b2 = phy.new_body (2, 1.kilogram, square!Meters)
 		.position (vec(0,1)*meters);
 
 	bool collided;
-	phy.on_collide = (ClientId a, ClientId b) {collided = true;};
+	phy.on_collide = (SpatialId a, SpatialId b) {collided = true;};
 
 	int iter_count = 0;
 	while (not (collided || iter_count > 1_000))

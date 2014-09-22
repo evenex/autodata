@@ -28,6 +28,23 @@ public {/*concurrency}*/
 			return receiveTimeout (limit.to_duration, ops);
 		}
 }
+public {/*void casting}*/
+	auto voidptr (T)(T data)
+		if (T.sizeof == (void*).sizeof)
+		{/*...}*/
+			static if (is (void* == T))
+				return data;
+			else return cast(void*)(*cast(size_t*)(&data));
+		}
+
+	auto unvoid (T)(void* ptr)
+		if (T.sizeof == (void*).sizeof)
+		{/*...}*/
+			static if (is (void* == T))
+				return ptr;
+			else return T(cast(size_t)ptr);
+		}
+}
 public {/*C compatibility}*/
 	/* forward a set of arguments, converting strings into null-terminated c-strings
 	*/
@@ -143,7 +160,7 @@ public {/*tuples}*/
 }
 public {/*indices}*/
 	alias Index = size_t;
-	alias Indices = Interval!Index;
+	alias Indices = Interval!Index; // REVIEW perhaps interval and indices and index all belong in ordinal?
 }
 debug (profiler) {/*}*/
 	/* write information about the thread environment to the output 
@@ -245,8 +262,3 @@ debug (profiler) {/*}*/
 		debug static uint indent = 0;
 	}
 }
-/* REFACTOR*/ auto voidptr (T)(T data)
-	if (T.sizeof == (void*).sizeof)
-	{/*...}*/
-		return cast(void*)(*cast(size_t*)(&data));
-	}

@@ -429,7 +429,7 @@ void main ()
 		auto gfx = new Display;
 
 		gfx.start; scope (exit) gfx.stop;
-		auto txt = new Scribe (gfx, [18]);
+		auto txt = new Scribe (gfx, [14]);
 
 		bool quitting;
 		auto usr = new Input (gfx, (bool){quitting = true;});
@@ -465,12 +465,13 @@ void main ()
 					}
 
 				__gshared Id[string] dictionary;
-				__gshared Info[Id] database;
+				__gshared Info*[Id] database;
 
 				Id id;
 				string title;
 				Tag domain;
 				Dynamic!(Algebraic!(Link, Text)[]) details;
+				Color link_color = red;
 
 				this (string title, Tag domain, string details)
 					{/*...}*/
@@ -486,7 +487,6 @@ void main ()
 							}
 
 						dictionary[title] = this.id;
-						database[id] = this;
 					}
 
 				auto display (Display gfx, Scribe txt, BoundingBox box)
@@ -502,9 +502,8 @@ void main ()
 
 								word.visit!(
 										(Text text) {},
-										(Link link) {foreach (ref glyph; glyphs) glyph.color = red;},
+										(Link link) {foreach (ref glyph; glyphs) glyph.color = link_color;},
 								);
-
 
 								typeset.append (` `);
 							}
@@ -515,35 +514,56 @@ void main ()
 					}
 			}
 
-		auto hud = new SpatialDynamics;
+		scope world = new SpatialDynamics;
+		scope scene = new SpatialDynamics;
+		scope hud = new SpatialDynamics;
 
 		auto s = Info (`sky`, Tag (`general`), `the sky is up`);
+		Info.database[s.id] = &s;
 		auto q = Info (`grass`, Tag (`specific`), `something you smoke`);
+		Info.database[q.id] = &q;
 		auto a = Info (``, Tag (`general`), `the sky is blue the grass is green`);
+		Info.database[a.id] = &a;
 
-		auto infobox = [0.vec, 1.vec].scale (0.5).bounding_box;
+		auto infobox = [-1.vec, 1.vec].scale (0.2).bounding_box;
 		usr.bind (Input.Mouse.left, (bool clicked) {
 			if (clicked) 
 				{/*...}*/
-					auto pos = usr.pointer[].map!meters.Position;
-					Appendable!(void*[]) result;
+					auto pos = usr.pointer * meters;
+
+					Appendable!(Info.Id[]) result;
 					hud.box_query ([pos + 0.1.meters, pos - 0.1.meters], result);
 
-					import evx.utils;
-					result[].filter!(id => Info.Id (cast(size_t)id) in Info.database).pwriteln;
+					auto pick = result[].filter!(id => id in Info.database);
+
+					if (pick.empty) return;
+					else {/*...}*/
+						with (Info.database[pick.front])
+							if (link_color == green)
+								link_color = red;
+							else if (link_color == red)
+								link_color = green;
+					}
 				}
 		});
 
-		hud.new_body (a.id, 1.kilogram, infobox[].map!(v => Position (v.x.meters, v.y.meters)))
+		hud.new_body (a.id, 1.kilogram, infobox[].map!(v => v*meters))
 			.position (zero!Position);
+		hud.new_body (q.id, 1.kilogram, infobox[].map!(v => v*meters))
+			.position (unity!Position/2);
+		hud.new_body (s.id, 1.kilogram, infobox[].map!(v => v*meters))
+			.position (-unity!Position/2);
 
-		{/*wait}*/
+		{/*loop}*/
 			import core.thread;
 			import std.datetime;
 
-			while (not(quitting))
+			void loop ()
 				{/*...}*/
-					a.display (gfx, txt, infobox);
+					a.display (gfx, txt, infobox[].translate (hud.get_body (a.id).position[].map!dimensionless.vec).bounding_box);
+					q.display (gfx, txt, infobox[].translate (hud.get_body (q.id).position[].map!dimensionless.vec).bounding_box);
+					s.display (gfx, txt, infobox[].translate (hud.get_body (s.id).position[].map!dimensionless.vec).bounding_box);
+
 					gfx.render;
 					usr.process;
 					txt.write (Unicode.symbol[`crosshair`])
@@ -551,9 +571,17 @@ void main ()
 						.align_to (Alignment.center)
 						.translate (usr.pointer)
 					();
+				}
+
+			while (not(quitting))
+				{/*...}*/
+					loop;
 					Thread.sleep (20.msecs);
 				}
 		}
+
+		// TODO with phy, txt, generate wordboxes => (strings) → [spatial_ids of wordboxes]
+		// REVIEW SpatialId instead of voidcasting?
 
 		// TODO look tool - high-order spatial location info, then cast a view and report individual objects. clicking on object names will yield further info.
 		void look ()
