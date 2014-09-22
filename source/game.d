@@ -220,7 +220,7 @@ void main ()
 		auto fred = new_human (`fred`, origin, red);
 		auto bob = new_human (`bob`, origin + 2.meters.Position, blue);
 
-		auto M1911A1 = new_item (`M1911A1`, origin - Position (2.meters, 0.meters), vector (500.millimeters, 300.millimeters), green);
+		auto gun = new_item (`M1911A1`, origin - Position (2.meters, 0.meters), vector (500.millimeters, 300.millimeters), green);
 
 		cam.set_program = (SpatialId spatial_id)
 			{/*draw}*/
@@ -292,6 +292,9 @@ void main ()
 		auto cmd = Console (green);
 		void delegate()[string] commands = [
 			`look`: {cmd.print = `you are inside an endless grey hell. everything is generic vector art, and you look down in horror to discover that you yourself are a nondescript red circle`;},
+			`bob`: {cmd.print = `bob is an ugly twat. you hate him so much`;},
+			`gun`: {cmd.print = gun.location == Item.Location.inventory? `you have the gun in your hands`:`its a gun! quick, use it to shoot bob!`;},
+			`shoot bob`: {cmd.print = gun.location == Item.Location.inventory? `FUCK YES BOB IS FUCKING DEAD`:`alas you cannot for YOU HAVE NO GUN!!!!! ARGH!!!!!`;},
 			`exit`: {game_terminated = true;},
 			`quit`: {game_terminated = true;},
 		];
