@@ -19,7 +19,7 @@ alias map = evx.functional.map;
 alias reduce = evx.functional.reduce;
 
 public {/*mappings}*/
-	vec to_view_space (Cam)(Position from_world_space, Cam camera) // BUG the problem is that vec can't interop with display coords right now
+	vec to_view_space (Position from_world_space, Camera camera) // BUG the problem is that vec can't interop with display coords right now
 		{/*...}*/
 			auto v = from_world_space.dimensionless;
 			auto c = camera.world_center.dimensionless;
@@ -27,13 +27,13 @@ public {/*mappings}*/
 
 			return ((v-c)/s);
 		}
-	auto to_view_space (R, Cam)(R from_world_space, Cam camera)
+	auto to_view_space (R)(R from_world_space, Camera camera)
 		if (is_geometric!R)
 		{/*...}*/
 			return from_world_space.map!(v => v.to_view_space (camera));
 		}
 
-	Position to_world_space (Cam)(vec from_view_space, Cam camera)
+	Position to_world_space (vec from_view_space, Camera camera)
 		{/*...}*/
 			auto v = from_view_space;
 			auto c = camera.world_center;
@@ -41,16 +41,18 @@ public {/*mappings}*/
 
 			return v*s+c;
 		}
-	auto to_world_space (R, Cam)(R from_view_space, Cam camera)
+	auto to_world_space (R)(R from_view_space, Camera camera)
 		if (is_geometric!R)
 		{/*...}*/
 			return from_view_space.map!(v => v.to_world_space (camera));
 		}
 }
 
-final class Camera (Capture)
+alias Capture = void*;
+
+final class Camera
 	{/*...}*/
-		alias World = SpatialDynamics!Capture;
+		alias World = SpatialDynamics;
 
 		public {/*controls}*/
 			void set_program (void delegate(Capture) program)
@@ -77,16 +79,13 @@ final class Camera (Capture)
 					assert (world !is null);
 				}
 				body {/*...}*/
-					Future!(Appendable!(Capture[2^^10])) capture;
+					Appendable!(Capture[2^^8]) capture;
 
 					world.box_query (view_bounds, capture);
-					
-					world.expedite_queries; // TEMP
-					capture.await; // TEMP
 
 					if (program) foreach (x; capture)
 						program (x);
-					return capture.stream;
+					return capture;
 				}
 		}
 		@property {/*}*/
@@ -133,6 +132,7 @@ final class Camera (Capture)
 		}
 	}
 
+static if (0) // TODO broken unittest
 unittest
 	{/*...}*/
 		alias Id = SpatialDynamics!().Id;
@@ -142,7 +142,7 @@ unittest
 		world.start; scope (exit) world.stop;
 		display.start; scope (exit) display.stop;
 
-		auto cam = new Camera!Id (world, display);
+		auto cam = new Camera (world, display);
 
 		auto frame = cam.capture;
 		assert (frame.length == 0);

@@ -68,6 +68,7 @@ public {/*debug}*/
 			catch (Exception) assert (0, `pwriteln failed`);
 		}
 	else void pwriteln (Args...)(Args){}
+	alias pl = pwriteln;
 		
 	/* print a function call with arguments 
 	*/
@@ -244,3 +245,8 @@ debug (profiler) {/*}*/
 		debug static uint indent = 0;
 	}
 }
+/* REFACTOR*/ auto voidptr (T)(T data)
+	if (T.sizeof == (void*).sizeof)
+	{/*...}*/
+		return cast(void*)(*cast(size_t*)(&data));
+	}

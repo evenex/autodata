@@ -14,7 +14,7 @@ import evx.range;
 import evx.arrays;
 import evx.colors;
 import evx.input;
-import evx.future;
+import evx.utils;
 
 alias zip = evx.functional.zip;
 alias map = evx.functional.map;
@@ -29,8 +29,8 @@ struct Entity
 	}
 
 alias Id = Entity.Id;
-alias Physics = SpatialDynamics!Id;
-alias Camera = evx.camera.Camera!Id;
+alias Physics = SpatialDynamics;
+
 
 struct TextBox
 	{/*...}*/
@@ -116,7 +116,7 @@ struct Physical
 		Id id;
 		Physics physics;
 
-		Physics.Body* cached;
+		Body* cached;
 		size_t n_bodies;
 
 		this (Id id, Physics physics)
@@ -141,7 +141,7 @@ struct Physical
 				if (n_bodies != physics.n_bodies)
 					{/*...}*/
 						n_bodies = physics.n_bodies;
-						cached = physics.get_body (id);
+						cached = physics.get_body (id.voidptr);
 					}
 			}
 	}
@@ -422,12 +422,11 @@ void main ()
 			}
 	}
 
-static if (0)
 void main ()
 	{/*...}*/
 		import evx.utils;
 
-		auto gfx = new Display (800, 600); // BUG invalid default window size?
+		auto gfx = new Display;
 
 		gfx.start; scope (exit) gfx.stop;
 		auto txt = new Scribe (gfx, [18]);
@@ -516,9 +515,7 @@ void main ()
 					}
 			}
 
-
-		auto hud = new SpatialDynamics!(Info.Id);
-		hud.start; scope (exit) hud.stop;
+		auto hud = new SpatialDynamics;
 
 		auto s = Info (`sky`, Tag (`general`), `the sky is up`);
 		auto q = Info (`grass`, Tag (`specific`), `something you smoke`);
@@ -529,23 +526,16 @@ void main ()
 			if (clicked) 
 				{/*...}*/
 					auto pos = usr.pointer[].map!meters.Position;
-					Future!(Appendable!(Info.Id[])) result;
+					Appendable!(void*[]) result;
 					hud.box_query ([pos + 0.1.meters, pos - 0.1.meters], result);
 
-					hud.expedite_queries;
-					result.await;
-
 					import evx.utils;
-					result[].filter!(id => id in Info.database).pwriteln;
+					result[].filter!(id => Info.Id (cast(size_t)id) in Info.database).pwriteln;
 				}
 		});
 
-		with (hud) add (new_body (a.id)
-			.mass (1.kilogram)
-			.position (zero!Position)
-			.shape (infobox[].map!(v => Position (v.x.meters, v.y.meters)))
-		);
-		hud.expedite_uploads;
+		hud.new_body (a.id, 1.kilogram, infobox[].map!(v => Position (v.x.meters, v.y.meters)))
+			.position (zero!Position);
 
 		{/*wait}*/
 			import core.thread;
@@ -576,9 +566,4 @@ void main ()
 
 					// more info on item - lookup info tree for item and traverse
 			}
-	}
-
-void main ()
-	{/*...}*/
-		
 	}
