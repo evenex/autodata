@@ -87,6 +87,7 @@ struct Console
 		CommandLine input;
 
 		string history;
+		size_t recall_index;
 
 		void draw (BoundingBox box, Display gfx, Scribe txt, Input usr)
 			{/*...}*/
@@ -95,9 +96,6 @@ struct Console
 
 				display.draw (box, gfx);
 				input.draw (box, gfx, txt, usr);
-
-		//		if (n_lines * txt.font_height (txt.available_sizes[0]) > box.height) TEMP
-		//			history = history[$/4..$]; TEMP
 			}
 		void print (string text)
 			{/*...}*/
@@ -108,6 +106,17 @@ struct Console
 				history ~= usr.get_text_input~ "\n";
 
 				usr.clear_text_input;
+
+				recall_index = 0;
+			}
+
+		void recall (Input usr)
+			{/*...}*/
+				auto split = history.splitter ("\n").retro.drop (2*recall_index++);
+
+				if (split.empty)
+					return;
+				else usr.set_text_input = split.front;
 			}
 	}
 
@@ -297,6 +306,7 @@ void main ()
 			`shoot bob`: {cmd.print = gun.location == Item.Location.inventory? `FUCK YES BOB IS FUCKING DEAD`:`alas you cannot for YOU HAVE NO GUN!!!!! ARGH!!!!!`;},
 			`exit`: {game_terminated = true;},
 			`quit`: {game_terminated = true;},
+			`warp`: {fred.physical.position = zero!Position;},
 		];
 		void parse (string input)
 			{/*...}*/
@@ -314,6 +324,10 @@ void main ()
 			});
 			usr.bind (Input.Key.tilde, (bool pressed) {/*}*/
 				if (pressed) usr.pop_context;
+			});
+			usr.bind (Input.Key.up, (bool pressed) {/*}*/
+				if (pressed)
+					cmd.recall (usr);
 			});
 			usr.pop_context;
 

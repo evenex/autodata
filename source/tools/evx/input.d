@@ -71,6 +71,11 @@ final class Input
 			{/*...}*/
 				return text_buffer[].to!string;
 			}
+		void set_text_input (string text)
+			{/*...}*/
+				text_buffer.clear;
+				text_buffer ~= text;
+			}
 		void clear_text_input ()
 			{/*...}*/
 				return text_buffer.clear;
