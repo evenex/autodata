@@ -307,23 +307,13 @@ struct Vector (uint n, Component = double)
 			alias text = toString; // REVIEW this may be improper use of a text override
 
 			@property toString (Args...)(Args args)
-				if (__traits(compiles, component.toString (args)))
 				{/*...}*/
 					string output;
 
 					foreach (component; this[])
-						output ~= component.toString (args)~ `, `;
-
-					return `[` ~output[0..$-2]~ `]`;
-				}
-
-			@property toString ()()
-				if (not (__traits(compiles, component.toString (args))))
-				{/*...}*/
-					string output;
-
-					foreach (component; this[])
-						output ~= component.text~ `, `;
+						static if (__traits(compiles, component.toString (args)))
+							output ~= component.toString (args)~ `, `;
+						else output ~= component.text~ `, `;
 
 					return `[` ~output[0..$-2]~ `]`;
 				}

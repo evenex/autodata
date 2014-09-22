@@ -150,9 +150,9 @@ struct Plot (Data, Style style)
 						else _y_units = `(` ~_y_units~ `)`;
 					}
 
-					void draw_data_in (BoundingBox plot_field)
+					void draw_data ()
 						{/*...}*/
-							display.draw (_color.alpha (0.25), plot_field[].from_extended_space.to_draw_space (display));
+							display.draw (_color.alpha (0.25), plot_field[]);
 							display.draw (_color, 
 								data.map!((y,x) => vec(x.to!double, y.to!double))
 									.map!(v => v - vec(x_min.to!double, y_min.to!double))
@@ -168,35 +168,30 @@ struct Plot (Data, Style style)
 							auto x_ticks = x_field[].translate (vec(0, h_0)).bounding_box;
 							auto y_ticks = y_field[].translate (vec(h_0, 0)).bounding_box;
 
-							static if (0)
 							scribe.write (_title)
 								.size (_text_size)
 								.color (_color)
 								.align_to (Alignment.top_center)
 								.inside (title_field)
 							();
-							static if (0)
 							scribe.write (x_label~ ` ` ~_x_units)
 								.size (_text_size)
 								.color (_color)
 								.align_to (Alignment.top_center)
 								.inside (x_field)
 							();
-							static if (0)
 							scribe.write (x_min.to!double)
 								.size (_text_size)
 								.color (_color)
 								.align_to (Alignment.top_left)
 								.inside (x_ticks)
 							();
-							static if (0)
 							scribe.write (x_max.to!double)
 								.size (_text_size)
 								.color (_color)
 								.align_to (Alignment.top_right)
 								.inside (x_ticks)
 							();
-							static if (0)
 							scribe.write (y_label~ ` ` ~_y_units)
 								.size (_text_size)
 								.color (_color)
@@ -205,7 +200,6 @@ struct Plot (Data, Style style)
 								.wrap_width (y_field.height)
 								.inside (y_field)
 							();
-							static if (0)
 							scribe.write (y_min.to!double)
 								.size (_text_size)
 								.color (_color)
@@ -214,7 +208,6 @@ struct Plot (Data, Style style)
 								.wrap_width (y_field.height)
 								.inside (y_ticks)
 							();
-							static if (0)
 							scribe.write (y_max.to!double)
 								.size (_text_size)
 								.color (_color)
@@ -224,8 +217,7 @@ struct Plot (Data, Style style)
 								.inside (y_ticks)
 							();
 
-							static if (0)
-							draw_data_in (plot_field);
+							draw_data;
 						}
 					else static if (style is Style.minimal)
 						{/*...}*/
@@ -264,7 +256,7 @@ struct Plot (Data, Style style)
 								.inside (y_field)
 							();
 
-							draw_data_in (plot_field);
+							draw_data;
 						}
 				}
 			
@@ -459,10 +451,11 @@ auto plot (Style style = Style.standard, Data)(Data data)
 
 		return Plot!(Data, style) (data);
 	}
-	unittest {/*...}*/
+void main ()
+	/*unittest*/ {/*...}*/
 		import std.math;
 
-		scope gfx = new Display (400,400);
+		scope gfx = new Display (600,400);
 		gfx.start; scope (exit) gfx.stop;
 		scope txt = new Scribe (gfx, [20]);
 
@@ -479,7 +472,7 @@ auto plot (Style style = Style.standard, Data)(Data data)
 		gfx.render;
 
 		import std.datetime: msecs;
-		core.thread.Thread.sleep (1000.msecs);
+		core.thread.Thread.sleep (10000.msecs);
 	}
 	unittest {/*units}*/
 		import std.math;
