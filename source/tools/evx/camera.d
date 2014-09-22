@@ -48,10 +48,10 @@ public {/*mappings}*/
 		}
 }
 
-alias Capture = void*;
-
 final class Camera
 	{/*...}*/
+		alias Capture = SpatialId;
+
 		alias World = SpatialDynamics;
 
 		public {/*controls}*/

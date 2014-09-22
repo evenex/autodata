@@ -36,20 +36,6 @@ private {/*definitions}*/
 	alias ShapeId = cpShape*;
 	alias BodyId = cpBody*;
 	alias Collision = cpArbiter*;
-	struct SpatialId
-		{/*...}*/
-			void* data;
-			alias data this;
-
-			auto as (T)()
-				{/*...}*/
-					return data.unvoid!T;
-				}
-			this (T)(T data)
-				{/*...}*/
-					this.data = data.voidptr;
-				}
-		}
 }
 
 private {/*library}*/
@@ -72,6 +58,20 @@ alias Force = Vector!(2, Newtons);
 
 private enum MAX_SHAPES = 4;
 
+struct SpatialId
+	{/*...}*/
+		void* data;
+		alias data this;
+
+		auto as (T)()
+			{/*...}*/
+				return data.unvoid!T;
+			}
+		this (T)(T data)
+			{/*...}*/
+				this.data = data.voidptr;
+			}
+	}
 struct Body
 	{/*...}*/
 		enum Type {none, circle, polygon}
@@ -92,7 +92,7 @@ struct Body
 				}
 			Scalar damping ()
 				{/*...}*/
-					return velocity_damping;
+					return world.bodies[SpatialDynamics.get_id (body_id)].velocity_damping;
 				}
 			Force applied_force ()
 				{/*...}*/
@@ -123,10 +123,11 @@ struct Body
 				}
 			auto damping (Scalar new_damping)
 				in {/*...}*/
+					assert (world);
 					assert (mass.is_finite);
 				}
 				body {/*...}*/
-					velocity_damping = new_damping;
+					world.bodies[SpatialDynamics.get_id (body_id)].velocity_damping = new_damping;
 
 					return this;
 				}
@@ -153,7 +154,7 @@ struct Body
 			Scalar velocity_damping = 0.0;
 		}
 		private {/*ctor/free}*/
-			this (R...)(SimulationSpace space, SpatialId spatial_id, Kilograms mass, R geometries)
+			this (R...)(SpatialDynamics world, SpatialId spatial_id, Kilograms mass, R geometries)
 				if (allSatisfy!(is_geometric, R))
 				in {/*...}*/
 					assert (mass == mass, `mass of body ` ~spatial_id.text~ ` not specified`);
@@ -167,6 +168,10 @@ struct Body
 						}
 				}
 				body {/*...}*/
+					this.world = world;
+
+					auto space = world.space;
+
 					if (mass.is_infinite)
 						this.body_id = cp.BodyNewStatic;
 					else this.body_id = cp.BodyNew (mass.to!float, 1.0);
@@ -289,7 +294,7 @@ final class SpatialDynamics
 
 					this.bodies.insert (
 						id, Body (
-							space,
+							this,
 							id,
 							mass, 
 							geometries

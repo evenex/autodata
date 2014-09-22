@@ -167,7 +167,6 @@ struct Item
 		Physical* physical;
 	}
 
-static if (0)
 void main ()
 	{/*...}*/
 		bool game_terminated;
@@ -177,7 +176,6 @@ void main ()
 		auto cam = new Camera (phy, gfx);
 
 		gfx.start; scope (exit) gfx.stop;
-		phy.start; scope (exit) phy.stop;
 
 		auto usr = new Input (gfx, (bool pressed){if (pressed) game_terminated = true;});
 		auto txt = new Scribe (gfx, [12, 18, 32, 128]);
@@ -193,12 +191,9 @@ void main ()
 			{/*...}*/
 				auto eid = Id.create;
 
-				with (phy) add (new_body (eid)
+				phy.new_body (eid, 70.kilograms, circle (1.meter))
 					.position (position)
-					.mass (70.kilograms)
-					.shape (circle (1.meter))
-					.damping (0.05)
-				);
+					.damping (0.05);
 
 				entities[eid] = Entity (name);
 				physical[eid] = Physical (eid, phy);
@@ -211,12 +206,9 @@ void main ()
 			{/*...}*/
 				auto eid = Id.create;
 
-				with (phy) add (new_body (eid)
+				phy.new_body (eid, 1.kilogram, bounding_box ([zero!Position + dimensions/2, zero!Position - dimensions/2])[])
 					.position (position)
-					.mass (1.kilogram)
-					.shape (bounding_box ([zero!Position + dimensions/2, zero!Position - dimensions/2])[])
-					.damping (0.1)
-				);
+					.damping (0.1);
 
 				entities[eid] = Entity (name);
 				physical[eid] = Physical (eid, phy);
@@ -230,8 +222,10 @@ void main ()
 
 		auto M1911A1 = new_item (`M1911A1`, origin - Position (2.meters, 0.meters), vector (500.millimeters, 300.millimeters), green);
 
-		cam.set_program = (Id id)
+		cam.set_program = (SpatialId spatial_id)
 			{/*draw}*/
+				auto id = spatial_id.as!Id;
+
 				void draw_human (ref Human human)
 					{/*...}*/
 						auto position = human.physical.position;
@@ -272,9 +266,11 @@ void main ()
 					draw_item (*aspect);
 			};
 
-		phy.on_collision = (Id a, Id b)
+		phy.on_collision = (SpatialId id_a, SpatialId id_b)
 			{/*...}*/
 				Id object;
+				auto a = id_a.as!Id;
+				auto b = id_b.as!Id;
 
 				if (a == fred.id)
 					object = b;
@@ -295,7 +291,9 @@ void main ()
 
 		auto cmd = Console (green);
 		void delegate()[string] commands = [
-			`look`: {cmd.print = `you are inside an endless grey hell. everything is generic vector art, and you look down in horror to discover that you yourself are a nondescript red circle`;}
+			`look`: {cmd.print = `you are inside an endless grey hell. everything is generic vector art, and you look down in horror to discover that you yourself are a nondescript red circle`;},
+			`exit`: {game_terminated = true;},
+			`quit`: {game_terminated = true;},
 		];
 		void parse (string input)
 			{/*...}*/
@@ -422,6 +420,7 @@ void main ()
 			}
 	}
 
+static if (0)
 void main ()
 	{/*...}*/
 		import evx.utils;
