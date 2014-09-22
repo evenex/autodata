@@ -7,6 +7,7 @@ private {/*imports}*/
 	}
 	private {/*evx}*/
 		import evx.functional;
+		import evx.algebra;
 		import evx.logic;
 	}
 }
