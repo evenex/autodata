@@ -16,7 +16,7 @@ pure nothrow:
 /* the set¹ of natural numbers 
 	1. actually a subset of cardinality 2⁶⁴
 */
-static ℕ () {return 0L.sequence!((n,i) => n + i);}
+static ℕ () {return zero!size_t.sequence!((n,i) => n + i);}
 
 /* a < b 
 */ 
