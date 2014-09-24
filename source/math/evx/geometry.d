@@ -620,7 +620,7 @@ public {/*axis-aligned bounding boxes}*/
 				 ex_c = exterior.center;
 			immutable s = exterior.dimensions / interior.dimensions;
 
-			return inner[].map!(v => (v - in_c) * s + ex_c);
+			return inner.map!(v => (v - in_c) * s + ex_c); // REVIEW [] operator for priming ranges
 		}
 		unittest {/*...}*/
 			auto a = square (1);

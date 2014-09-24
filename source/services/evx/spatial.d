@@ -914,6 +914,7 @@ auto collision_group (R...)(R bodies)
 					cp.ShapeSetGroup (shape, group_id);
 			}
 	}
+static if (0)
 void main ()
 	{/*...}*/
 		import evx.display;
@@ -924,7 +925,7 @@ void main ()
 		phy.Δt = 1/240.hertz;
 		phy.gravity = vec(0, -9.8)*meters/second/second;
 		
-		auto gfx = new Display (1000, 1000);
+		auto gfx = new Display (1920, 1280); // TODO get monitor info, resolution, fullscreen, etc
 		gfx.start; scope (exit) gfx.stop;
 		gfx.background (white);
 
@@ -1000,8 +1001,11 @@ void main ()
 
 		cp.SpaceSetIterations (phy.space, 100);
 
-		import opencv;
-		auto video = new Video.Output (`out.avi`, gfx.dimensions[].map!(to!int).ivec.to!CvSize);
+		version (recording)
+			{/*...}*/
+				import opencv;
+				auto video = new Video.Output (`out.avi`, gfx.dimensions[].map!(to!int).ivec.to!CvSize);
+			}
 
 		while (not (simulation_terminated))
 			{/*...}*/
@@ -1019,12 +1023,14 @@ void main ()
 				foreach (seg; chain.segments)
 					with (seg) velocity = velocity * 0.1;
 
-				auto image = Image (gfx.dimensions[].map!(to!int).ivec.tuple.expand);
-				void[] image_data = new void[gfx.dimensions[].product.to!size_t * 3];
+				version (recording) {/*}*/
+					auto image = Image (gfx.dimensions[].map!(to!int).ivec.tuple.expand);
+					void[] image_data = new void[gfx.dimensions[].product.to!size_t * 3];
 
-				gfx.screenshot (image_data);
-				cv.SetData (image, image_data.ptr, gfx.dimensions.x.to!int * 3); // dst, src, row_size (bytes)
-				image.flip;
-				video.put (image);
+					gfx.screenshot (image_data);
+					cv.SetData (image, image_data.ptr, gfx.dimensions.x.to!int * 3); // dst, src, row_size (bytes)
+					image.flip;
+					video.put (image);
+				}
 			}
 	}
