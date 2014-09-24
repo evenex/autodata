@@ -1000,6 +1000,9 @@ void main ()
 
 		cp.SpaceSetIterations (phy.space, 100);
 
+		import opencv;
+		auto video = new Video.Output (`out.avi`, gfx.dimensions[].map!(to!int).ivec.to!CvSize);
+
 		while (not (simulation_terminated))
 			{/*...}*/
 				import std.datetime;
@@ -1016,7 +1019,12 @@ void main ()
 				foreach (seg; chain.segments)
 					with (seg) velocity = velocity * 0.1;
 
-				while (Clock.currTime - t < 30.milliseconds.to_duration)
-					{}
+				auto image = Image (gfx.dimensions[].map!(to!int).ivec.tuple.expand);
+				void[] image_data = new void[gfx.dimensions[].product.to!size_t * 3];
+
+				gfx.screenshot (image_data);
+				cv.SetData (image, image_data.ptr, gfx.dimensions.x.to!int * 3); // dst, src, row_size (bytes)
+				image.flip;
+				video.put (image);
 			}
 	}
