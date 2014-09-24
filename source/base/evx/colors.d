@@ -76,6 +76,10 @@ struct Color
 				}
 		}
 		public {/*ops}*/
+			Color opCall (double alpha)
+				{/*...}*/
+					return this.alpha (alpha);
+				}
 			Color opBinary (string op) (Color color)
 				{/*...}*/
 					Color ret = this;

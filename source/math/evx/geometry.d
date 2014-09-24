@@ -129,6 +129,7 @@ public {/*vectors}*/
 			assert (ĵ.vec.bearing_to (î.vec).approx (-π/2));
 			assert (vec(1,-1).bearing_to (î.vec).approx (π/4));
 		}
+	alias angle_between = bearing_to;
 
 	/* compute the distance between two points 
 	*/
@@ -275,9 +276,13 @@ public {/*polygons}*/
 	auto rotate (T, U = ElementType!(ElementType!T), V = ElementType!T)(T geometry, U θ, V center = V.init)
 		if (is_geometric!T)
 		{/*...}*/
-			immutable c = center == V.init? geometry.mean: center;
+			immutable c = center.binary_equal (V.init)? geometry.mean: center;
 
 			return geometry.map!(v => (v-c).rotate (θ) + c);
+		}
+		unittest {/*...}*/
+			foreach (i; [vec(0,1), vec(0,2), vec(3,9)].rotate (12))
+				assert (not (i.isNaN));
 		}
 
 	/* scale a polygon without moving its centroid 

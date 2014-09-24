@@ -1,5 +1,7 @@
 module evx.vectors;
 
+version = cannot_instantiate_toString_template; // REVIEW why this happens
+
 private {/*imports}*/
 	private {/*std}*/
 		import std.algorithm; 
@@ -306,7 +308,19 @@ struct Vector (uint n, Component = double)
 		public {/*text}*/
 			alias text = toString; // REVIEW this may be improper use of a text override
 
-			@property toString (Args...)(Args args)
+			version (cannot_instantiate_toString_template)
+			@property toString ()
+				{/*...}*/
+					string output;
+
+					foreach (component; this[])
+						{/*...}*/
+							output ~= component.text~ `, `;
+						}
+					
+					return `[` ~output[0..$-2]~ `]`;
+				}
+			else @property toString (Args...)(Args args)
 				{/*...}*/
 					string output;
 

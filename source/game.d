@@ -38,7 +38,7 @@ struct TextBox
 
 		auto draw (BoundingBox box, Display gfx)
 			{/*...}*/
-				gfx.draw (black.alpha (0.5), box[], GeometryMode.t_fan);
+				gfx.draw (black (0.5), box[], GeometryMode.t_fan);
 				gfx.draw (text.color.alpha (0.3), box[], GeometryMode.l_loop);
 
 				box.width = box.width - 0.02;
@@ -60,7 +60,7 @@ struct CommandLine
 				box = box.align_to (Alignment.top_left, box.bottom_left);
 				with (box) bottom = top - 1.2 * txt.font_height (txt.available_sizes[0])/0.9;
 
-				gfx.draw (black.alpha (0.5), box[], GeometryMode.t_fan);
+				gfx.draw (black (0.5), box[], GeometryMode.t_fan);
 				gfx.draw (color.alpha (0.3), box[], GeometryMode.l_loop);
 
 				with (box) width = width - 0.02;
@@ -162,6 +162,12 @@ struct Human
 		Entity* entity;
 		Physical* physical;
 		Appendable!(Item*[]) inventory;
+
+		auto health = 100;
+		bool is_dead ()
+			{/*...}*/
+				return health == 0;
+			}
 	}
 struct Item
 	{/*...}*/
@@ -176,6 +182,7 @@ struct Item
 		Physical* physical;
 	}
 
+static if (0)
 void main ()
 	{/*...}*/
 		bool game_terminated;
@@ -254,8 +261,8 @@ void main ()
 						auto position = item.physical.position;
 				
 						gfx.draw (item.color*black*grey, 
-							[origin - item.dimensions, origin + item.dimensions]
-							.bounding_box[]
+							(vector (origin - item.dimensions, origin + item.dimensions)/2)
+							[].bounding_box[]
 							.translate (position)
 							.map!(v => v.to_view_space (cam)),
 						GeometryMode.t_fan);
@@ -301,9 +308,9 @@ void main ()
 		auto cmd = Console (green);
 		void delegate()[string] commands = [
 			`look`: {cmd.print = `you are inside an endless grey hell. everything is generic vector art, and you look down in horror to discover that you yourself are a nondescript red circle`;},
-			`bob`: {cmd.print = `bob is an ugly twat. you hate him so much`;},
+			`bob`: {cmd.print = bob.is_dead? `bob is dead! fuck bob!`: `bob is an ugly twat. you hate him so much`;},
 			`gun`: {cmd.print = gun.location == Item.Location.inventory? `you have the gun in your hands`:`its a gun! quick, use it to shoot bob!`;},
-			`shoot bob`: {cmd.print = gun.location == Item.Location.inventory? `FUCK YES BOB IS FUCKING DEAD`:`alas you cannot for YOU HAVE NO GUN!!!!! ARGH!!!!!`;},
+			`shoot bob`: {cmd.print = gun.location == Item.Location.inventory? (bob.health = 0, `FUCK YES BOB IS FUCKING DEAD`):`alas you cannot for YOU HAVE NO GUN!!!!! ARGH!!!!!`;},
 			`exit`: {game_terminated = true;},
 			`quit`: {game_terminated = true;},
 			`warp`: {fred.physical.position = zero!Position;},

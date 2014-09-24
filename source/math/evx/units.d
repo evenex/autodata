@@ -409,8 +409,6 @@ public {/*unit}*/
 						else return scalar.text~ ` ` ~abbreviation;
 					}
 
-				alias text = toString;
-
 				static from_string (string input)
 					{/*...}*/
 						return Unit (input.extract_number.to!double);

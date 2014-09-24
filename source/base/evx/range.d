@@ -19,13 +19,15 @@ private {/*imports}*/
 /* construct a ForwardRange out of a range of ranges such that the inner ranges appear concatenated 
 */
 struct Contigious (R)
-	if (allSatisfy!(is_indexable, R, ElementType!R) && not (isForwardRange!(ElementType!R)))
+	if (allSatisfy!(is_indexable, R, ElementType!R))
 	{/*...}*/
 		public:
 		@property {/*range}*/
 			const length ()
 				{/*...}*/
-					return ranges.map!(r => r.length).sum;
+					import std.traits;
+					auto s = cast(Unqual!R)ranges; // HACK to shed constness so that sum can operate
+					return s.map!(r => r.length).sum;
 				}
 
 			auto ref front ()
@@ -49,6 +51,7 @@ struct Contigious (R)
 				{/*...}*/
 					return this;
 				}
+			alias opSlice = save;
 		}
 		public {/*ctor}*/
 			this (R ranges)
@@ -63,7 +66,7 @@ struct Contigious (R)
 		}
 	}
 struct Contigious (R)
-	if (allSatisfy!(isForwardRange, R, ElementType!R))
+	if (allSatisfy!(isForwardRange, R, ElementType!R) && not (is_indexable!(ElementType!R)))
 	{/*...}*/
 		public:
 		@property {/*range}*/

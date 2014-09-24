@@ -11,6 +11,7 @@ private {/*imports}*/
 		import std.traits;
 		import std.math;
 		import std.string;
+		import std.functional;
 	}
 	private {/*evx}*/
 		import evx.utils;
@@ -36,6 +37,8 @@ private {/*definitions}*/
 	alias ShapeId = cpShape*;
 	alias BodyId = cpBody*;
 	alias Collision = cpArbiter*;
+	alias SpringId = cpConstraint*;
+	alias PinId = cpConstraint*;
 }
 
 private {/*library}*/
@@ -56,7 +59,8 @@ alias Displacement = Position;
 alias Velocity = Vector!(2, Speed);
 alias Force = Vector!(2, Newtons);
 
-private enum MAX_SHAPES = 4;
+private enum MAX_N_SHAPES = 4;
+private enum MAX_N_FORCES = 4;
 
 struct SpatialId
 	{/*...}*/
@@ -98,17 +102,33 @@ struct Body
 				{/*...}*/
 					return cp.BodyGetForce (body_id).vector[].map!(f => f.newtons).Force;
 				}
+			Scalar angle ()
+				{/*...}*/
+					return cp.BodyGetAngle (body_id);
+				}
 			auto layer ()
 				{/*...}*/
 					return shape_ids[].map!(shape => cp.ShapeGetLayers (shape)); // BUG lazy evaluation across coroutine boundaries could prove disasterous but voldemort types discourage storage so it may not be an issue... as long as coroutine savable context is limited to a well-defined state struct then it should be ok
+				}
+			auto id ()
+				{/*...}*/
+					return SpatialId (cp.BodyGetUserData (body_id));
 				}
 		}
 		@property {/*set}*/
 			auto position (Position new_position)
 				{/*...}*/
 					cp.BodySetPos (body_id, new_position.dimensionless.to!cpVect);
-					auto space = cp.BodyGetSpace (body_id);
-					cp.SpaceReindexShapesForBody (space, body_id);
+
+					reindex_shapes;
+
+					return this;
+				}
+			auto angle (Scalar new_angle)
+				{/*...}*/
+					cp.BodySetAngle (body_id, new_angle);
+
+					reindex_shapes;
 
 					return this;
 				}
@@ -145,10 +165,16 @@ struct Body
 					return this;
 				}
 		}
+		public {/*actions}*/
+			void apply_force (Force force, Position contact = zero!Position)
+				{/*...}*/
+					cp.BodyApplyForce (body_id, force.dimensionless.to!cpVect, contact.dimensionless.to!cpVect);
+				}
+		}
 		private:
 		private {/*data}*/
 			BodyId body_id;
-			Appendable!(ShapeId[MAX_SHAPES]) shape_ids;
+			Appendable!(ShapeId[MAX_N_SHAPES]) shape_ids;
 			SpatialDynamics world;
 
 			Scalar velocity_damping = 0.0;
@@ -173,16 +199,31 @@ struct Body
 					auto space = world.space;
 
 					if (mass.is_infinite)
-						this.body_id = cp.BodyNewStatic;
-					else this.body_id = cp.BodyNew (mass.to!float, 1.0);
+						{/*...}*/
+							this.body_id = cp.BodyNewStatic; 
+							assert (cp.BodyIsStatic (this.body_id));
+							this.body_id.space = world.space; // HACK but otherwise we'll segfault on methods that require the body's space, if the body is static...
+							assert (cp.BodyIsStatic (this.body_id));
+						}
+					else this.body_id = cp.BodyNew (mass.to!double, 1.0);
 
-					cp.SpaceAddBody (space, body_id);
+					if (mass.is_infinite)
+						assert (cp.BodyIsStatic (this.body_id));
+
+					if (not (cp.BodyIsStatic (body_id)))
+						cp.SpaceAddBody (space, body_id);
+
+					if (mass.is_infinite)
+						assert (cp.BodyIsStatic (this.body_id));
+
 					cp.BodySetUserData (body_id, spatial_id);
 
 					static if (R.length > 1)
 						auto areas = geometries[].map!area;
 					else auto areas = [geometries.area];
 
+					if (mass.is_infinite)
+						assert (cp.BodyIsStatic (this.body_id));
 					auto Σ_areas = sum (areas);
 					
 					foreach (i, geometry; geometries)
@@ -190,6 +231,8 @@ struct Body
 							double moment;
 
 							auto component_mass = (mass * areas[i] / Σ_areas).dimensionless;
+					if (mass.is_infinite)
+						assert (cp.BodyIsStatic (this.body_id));
 
 							with (Body.Type) final switch (deduce_shape (geometry))
 								{/*create simulation data}*/
@@ -198,7 +241,7 @@ struct Body
 											auto radius = geometry.radius.dimensionless;
 											auto center = geometry.mean.dimensionless.to!cpVect;
 
-											moment = cp.BodyGetMoment (body_id) + cp.MomentForCircle (component_mass, 0.0, radius, center);
+											moment = cp.MomentForCircle (component_mass, 0.0, radius, center);
 											this.shape_ids ~= cp.CircleShapeNew (body_id, radius, center);
 
 											break;
@@ -206,12 +249,12 @@ struct Body
 									case polygon:
 										{/*...}*/
 											auto len = geometry.length.to!int;
-											auto poly = Array!fvec (geometry[].map!dimensionless);
-											auto hull = Array!fvec (len);
+											auto poly = Array!vec (geometry[].map!dimensionless);
+											auto hull = Array!vec (len);
 
 											cp.ConvexHull (len, cast(cpVect*)poly[].ptr, cast(cpVect*)hull[].ptr, null, 0.0);
 
-											moment = cp.BodyGetMoment (body_id) + cp.MomentForPoly (component_mass, len, cast(cpVect*)hull[].ptr, cpvzero);
+											moment = cp.MomentForPoly (component_mass, len, cast(cpVect*)hull[].ptr, cpvzero);
 											this.shape_ids ~= cp.PolyShapeNew (body_id, len, cast(cpVect*)hull[].ptr, cpvzero);
 
 											break;
@@ -220,10 +263,24 @@ struct Body
 								}
 							auto shape_id = shape_ids.back;
 				
-							cp.BodySetMoment (body_id, moment);
+					if (mass.is_infinite)
+						assert (cp.BodyIsStatic (this.body_id));
+							if (not (cp.BodyIsStatic (body_id)))
+								cp.BodySetMoment (body_id, cp.BodyGetMoment (body_id) + moment);
+
+					if (mass.is_infinite)
+						assert (cp.BodyIsStatic (this.body_id));
 							cp.SpaceAddShape (space, shape_id);
+					if (mass.is_infinite)
+						assert (cp.BodyIsStatic (this.body_id));
+
 							cp.ShapeSetUserData (shape_id, spatial_id);
+					if (mass.is_infinite)
+						assert (cp.BodyIsStatic (this.body_id));
 						}
+
+					if (mass.is_infinite)
+						assert (cp.BodyIsStatic (this.body_id));
 				}
 
 			void free ()
@@ -240,7 +297,17 @@ struct Body
 					cp.BodyFree (body_id);
 				}
 		}
-		pure static {/*shape deduction}*/
+		private {/*upkeep}*/
+			void reindex_shapes ()
+				{/*...}*/
+					auto space = cp.BodyGetSpace (body_id);
+					
+					if (cp.BodyIsStatic (body_id))
+						cp.SpaceReindexStatic (space);
+					else cp.SpaceReindexShapesForBody (space, body_id);
+				}
+		}
+		static {/*shape deduction}*/
 			auto deduce_shape (T)(T geometry)
 				if (is_geometric!T)
 				{/*...}*/
@@ -273,13 +340,366 @@ struct Body
 struct Incidence
 	{/*...}*/
 		SpatialId body_id;
-		fvec surface_normal;
+		vec surface_normal;
 		double ray_time;
+	}
+
+auto phy_id () // TEMP
+	{/*...}*/
+		static size_t id;
+
+		return ++id;
+	}
+
+struct Spring // REVIEW does this belong separate from SD?
+	{/*...}*/
+		alias Stiffness = typeof(newtons/meter);
+		alias Damping = typeof(newtons/(meters/second));
+
+		public:
+		@property {/*get}*/
+			Position[2] anchors ()
+				{/*...}*/
+					return [cp.DampedSpringGetAnchr1 (id).vector * meters, cp.DampedSpringGetAnchr2 (id).vector * meters];
+				}
+
+			Meters resting_length ()
+				{/*...}*/
+					return cp.DampedSpringGetRestLength (id).meters;
+				}
+			
+			Stiffness stiffness ()
+				{/*...}*/
+					return cp.DampedSpringGetStiffness (id).newtons/meter;
+				}
+
+			Damping damping ()
+				{/*...}*/
+					return cp.DampedSpringGetDamping (id).kilograms/second;
+				}
+
+			Meters length ()
+				{/*...}*/
+					auto endpoints = (anchors.vector + 
+						anchor_site[].map!(b => τ(b.position, b.angle))
+							.map!((x,θ) => x.rotate (θ))
+					);
+
+					return distance (endpoints.tuple.expand);
+				}
+		}
+		@property {/*set}*/
+			auto damping (Damping c)
+				{/*...}*/
+					cp.DampedSpringSetDamping (id, c.dimensionless);
+
+					return this;
+				}
+			auto stiffness (Stiffness k)
+				{/*...}*/
+					cp.DampedSpringSetStiffness (id, k.dimensionless);
+
+					return this;
+				}
+			auto resting_length (Meters length)
+				{/*...}*/
+					cp.DampedSpringSetRestLength (id, length.dimensionless);
+
+					return this;
+				}
+			auto anchors (Position[2] anchors)
+				{/*...}*/
+					cp.DampedSpringSetAnchr1 (id, anchors[0].dimensionless.to!cpVect);
+					cp.DampedSpringSetAnchr2 (id, anchors[1].dimensionless.to!cpVect);
+
+					return this;
+				}
+		}
+		public {/*ctor}*/
+			this (Body a, Body b)
+				in {/*...}*/
+					assert (a.world is b.world);
+				}
+				body {/*...}*/
+					this.id = cp.DampedSpringNew (
+						a.body_id, b.body_id, zero!cpVect, zero!cpVect,
+						0, 0, 0
+					);
+
+					anchor_site[0] = a;
+					anchor_site[1] = b;
+
+					cp.SpaceAddConstraint (a.world.space, id);
+				}
+		}
+		private:
+		private {/*data}*/
+			SpringId id;
+			Body[2] anchor_site;
+		}
+	}
+struct RotarySpring
+	{/*...}*/
+		alias Stiffness = typeof(newtons/meter);
+		alias Damping = typeof(newtons/(meters/second));
+
+		public:
+		@property {/*get}*/
+			Scalar resting_angle ()
+				{/*...}*/
+					return cp.DampedRotarySpringGetRestAngle (id);
+				}
+			
+			Stiffness stiffness ()
+				{/*...}*/
+					return cp.DampedRotarySpringGetStiffness (id).newtons/meter;
+				}
+
+			Damping damping ()
+				{/*...}*/
+					return cp.DampedRotarySpringGetDamping (id).kilograms/second;
+				}
+
+			Scalar angle ()
+				{/*...}*/
+					auto endpoints = anchor_site[].map!(b => b.position);
+
+					return angle_between (endpoints.vector!2.tuple.expand);
+				}
+		}
+		@property {/*set}*/
+			auto damping (Damping c)
+				{/*...}*/
+					cp.DampedRotarySpringSetDamping (id, c.dimensionless);
+
+					return this;
+				}
+			auto stiffness (Stiffness k)
+				{/*...}*/
+					cp.DampedRotarySpringSetStiffness (id, k.dimensionless);
+
+					return this;
+				}
+			auto resting_angle (Scalar angle)
+				{/*...}*/
+					cp.DampedRotarySpringSetRestAngle (id, angle);
+
+					return this;
+				}
+		}
+		public {/*ctor}*/
+			this (Body a, Body b)
+				in {/*...}*/
+					assert (a.world is b.world);
+				}
+				body {/*...}*/
+					this.id = cp.DampedRotarySpringNew (
+						a.body_id, b.body_id, 0, 0, 0
+					);
+
+					anchor_site[0] = a;
+					anchor_site[1] = b;
+
+					cp.SpaceAddConstraint (a.world.space, id);
+				}
+		}
+		private:
+		private {/*data}*/
+			SpringId id;
+			Body[2] anchor_site;
+		}
+	}
+struct Rope (size_t n_segments)
+	{/*...}*/
+		Kilograms mass ()
+			{/*...}*/
+				return _mass;
+			}
+		Meters length ()
+			{/*...}*/
+				return _length;
+			}
+		Meters radius ()
+			{/*...}*/
+				return _radius;
+			}
+
+		Meters diameter ()
+			{/*...}*/
+				return radius * 2;
+			}
+
+		auto geometry ()
+			{/*...}*/
+				auto test (Position x, Scalar θ, int sgn = 1) 
+					{return x + radius * î.vec.rotate (θ) * sgn;}
+
+				return chain (
+					segment_geometry.translate (segments[0].position).rotate (segments[0].angle)[0..2],
+					roundRobin (
+						segments[].map!(b => τ(b.position, b.angle, +1)).map!(τ => test (τ.expand)),
+						segments[].map!(b => τ(b.position, b.angle, -1)).map!(τ => test (τ.expand)),
+					), 
+					segment_geometry.translate (segments[$-1].position).rotate (segments[$-1].angle).retro[0..2],
+				);
+			}
+
+		auto segment_mass ()
+			{/*...}*/
+				return mass/n_segments;
+			}
+		auto segment_length ()
+			{/*...}*/
+				return length/n_segments;
+			}
+		auto segment_geometry ()
+			{/*...}*/
+				return square.map!(v => v * vector (diameter, segment_length * 1.5)); // HACK to avoid passthru, we must overlap segments. TODO this more methodically
+			}
+
+		this (SpatialDynamics phy, Kilograms mass, Meters length, Meters radius)
+			{/*...}*/
+				this._mass = mass;
+				this._length = length;
+				this._radius = radius;
+
+				foreach (i; 0..n_segments)
+					{/*build segments}*/
+						segments ~= phy.new_body (phy_id, segment_mass, segment_geometry)
+							.position (i * (-ĵ.vec) * segment_length);
+					}
+
+				foreach (i; 0..n_segments-1)
+					{/*add springs}*/
+						auto anchor = vector (radius, 0.meters);
+
+						springs ~= Spring (segments[i], segments[i+1])
+							.resting_length (segments[i].position.distance_to (segments[i+1].position))
+							.anchors ([anchor, anchor]);
+
+						springs ~= Spring (segments[i], segments[i+1])
+							.resting_length (segments[i].position.distance_to (segments[i+1].position))
+							.anchors ([-anchor, -anchor]);
+					}
+
+				foreach (seg; segments[])
+					{/*disable self-collision}*/
+						foreach (shape; seg.shape_ids[])
+							cp.ShapeSetGroup (shape, segments[].front.id.as!size_t);
+					}
+			}
+
+		auto stiffness (Spring.Stiffness k)
+			{/*...}*/
+				foreach (spring; springs)
+					spring.stiffness = k;
+
+				return this;
+			}
+		auto stiffness ()
+			{/*...}*/
+				return springs[0].stiffness;
+			}
+
+		auto damping (Spring.Damping c)
+			{/*...}*/
+				foreach (spring; springs)
+					spring.damping = c;
+
+				return this;
+			}
+		auto damping ()
+			{/*...}*/
+				return springs[0].damping;
+			}
+
+		auto position (Position x)
+			{/*...}*/
+				auto Δx = x - segments[0].position;
+
+				foreach (seg; segments[])
+					with (seg) position = position + Δx;
+
+				return this;
+			}
+		auto rotate (Scalar θ)
+			{/*...}*/
+				
+			}
+
+		private:
+
+		Appendable!(Body[n_segments]) segments;
+		Appendable!(Spring[2*(n_segments-1)]) springs; // TODO
+
+		Kilograms _mass;
+		Meters _length;
+		Meters _radius;
+	}
+struct Bag (size_t n_segments)
+	{/*...}*/
+		Rope!n_segments skeleton;
+		Appendable!(RotarySpring[n_segments-1]) rotary_springs;
+
+		this (SpatialDynamics phy, Kilograms mass, Meters length, Meters radius)
+			{/*...}*/
+				skeleton = Rope!n_segments (phy, mass, length, radius);
+
+				foreach (i; 0..n_segments-1)
+					rotary_springs ~= RotarySpring (skeleton.segments[i], skeleton.segments[i+1]);
+			}
+
+		auto stiffness (Spring.Stiffness k)
+			{/*...}*/
+				foreach (spring; rotary_springs)
+					spring.stiffness = k;
+
+				skeleton.stiffness = k;
+
+				return this;
+			}
+
+		auto damping (Spring.Damping c)
+			{/*...}*/
+				foreach (spring; rotary_springs)
+					spring.damping = c;
+
+				skeleton.damping = c;
+
+				return this;
+			}
+
+		auto position (Position x)
+			{/*...}*/
+				skeleton.position = x;
+
+				return this;
+			}
+
+		alias skeleton this;
+	}
+struct Pin
+	{/*...}*/
+		PinId id;
+
+		this (Body a, Body b)
+			{/*...}*/
+				this.id = cp.PinJointNew (a.body_id, b.body_id, zero!cpVect, zero!cpVect);
+
+				cp.SpaceAddConstraint (a.world.space, id);
+			}
 	}
 
 final class SpatialDynamics
 	{/*...}*/
 		public:
+		public {/*forces}*/
+			void add_fundamental_force (F)(F force)
+				if (is(typeof(force (SpatialId.init)) == Force))
+				{/*...}*/
+					fundamental_forces ~= force.toDelegate;
+				}
+		}
 		public {/*bodies}*/
 			auto new_body (T, R...)(T spatial_id, Kilograms mass, R geometries)
 				if (R.length > 0)
@@ -340,8 +760,16 @@ final class SpatialDynamics
 
 					{/*postprocess}*/
 						foreach (ref dynamic_body; bodies)
-							with (dynamic_body) if (damping > 0.0)
-								velocity = velocity*(1.0 - damping);
+							with (dynamic_body) {/*...}*/
+								if (mass.is_infinite)
+									continue;
+
+								foreach (force; fundamental_forces[])
+									apply_force (force (id) * Δt.dimensionless);
+
+								if (damping > zero!Scalar)
+									velocity = velocity * (unity!Scalar - damping);
+							}
 					}
 				}
 		}
@@ -405,7 +833,7 @@ final class SpatialDynamics
 
 					if (info.shape)
 						return Incidence (get_id (info.shape), info.n.vector, info.t);
-					else return Incidence (SpatialId.init, 0.fvec, 1.0);
+					else return Incidence (SpatialId.init, 0.vec, 1.0);
 				}
 		}
 		public {/*ctor/dtor}*/
@@ -469,6 +897,8 @@ final class SpatialDynamics
 
 			void delegate(SpatialId,SpatialId) on_collide;
 
+			Appendable!(Force delegate(SpatialId)[MAX_N_FORCES]) fundamental_forces;
+
 			mixin AutoInitialize;
 
 			@Initialize!(2^^12) 
@@ -484,7 +914,7 @@ final class SpatialDynamics
 unittest {/*demo}*/
 	scope phy = new SpatialDynamics;
 
-	auto b1 = phy.new_body (1, 1.kilogram, square!Meters)
+	auto b1 = phy.new_body (1, 1.kilogram, square (meters))
 		.velocity (vec(0, 10)*meters/second);
 
 	assert (b1.position == zero!Position);
@@ -495,7 +925,7 @@ unittest {/*demo}*/
 	phy.box_query (([zero!Position, unity!Position].vector!2 * 10).array, hits);
 	assert (hits[].equal ([SpatialId (1)]));
 
-	auto b2 = phy.new_body (2, 1.kilogram, square!Meters)
+	auto b2 = phy.new_body (2, 1.kilogram, square (meters))
 		.position (vec(0,1)*meters);
 
 	bool collided;
@@ -519,3 +949,115 @@ unittest {/*shape deduction}*/
 	assert (Body.deduce_shape (pentagon) == Body.Type.polygon);
 	assert (Body.deduce_shape (hexagon) == Body.Type.circle);
 }
+
+auto collision_group (R...)(R bodies)
+	{/*...}*/
+		static size_t id_generator;
+
+		auto group_id = ++id_generator;
+
+		foreach (item; bodies)
+			{/*...}*/
+				static if (isInputRange!(typeof(item)))
+					foreach (dynamic_body; item)
+						foreach (shape; dynamic_body.shape_ids[])
+						cp.ShapeSetGroup (shape, group_id);
+				else foreach (shape; item.shape_ids[])
+					cp.ShapeSetGroup (shape, group_id);
+			}
+	}
+void main ()
+	{/*...}*/
+		import evx.display;
+		import evx.colors;
+		alias map = evx.functional.map;
+
+		auto phy = new SpatialDynamics;
+		phy.Δt = 1/120.hertz;
+		
+		// phy.add_fundamental_force (id =>  phy.get_body (id).mass * -9.8.meters/second.squared * ĵ.vec); OUTSIDE BUG does not compile, says type of delegate is void
+		//phy.add_fundamental_force ((SpatialId id){return phy.get_body (id).mass * -9.8.meters/second.squared * ĵ.vec;});
+		cp.SpaceSetGravity (phy.space, cpVect (0, -9.8));
+
+		auto gfx = new Display (1000, 1000);
+		gfx.start; scope (exit) gfx.stop;
+		gfx.background (white);
+
+		import evx.input;
+		bool simulation_terminated;
+		auto usr = new Input (gfx, (bool){simulation_terminated = true;});
+
+		auto mount_geometry = circle!3 (0.1.meters);
+		auto mount = phy.new_body (phy_id, infinity.kilograms, mount_geometry)
+			.position (vec(0, 1.5) * meters);
+
+		assert (cp.BodyIsStatic (mount.body_id));
+
+		auto chain = Rope!10 (phy, 10.kilogram, 1.meter, 0.01.meters)
+			.stiffness (10_000.newtons/meter)
+			.damping (10.newtons/(meters/second))
+			.position (mount.position);
+
+		auto bag = Bag!10 (phy, 1.kilogram, 1.5.meters, 0.2.meters)
+			.stiffness (1000.newtons/meter)
+			.damping (100.newtons/(meters/second))
+			.position (chain.segments[$-1].position);
+
+		collision_group (mount, chain.segments[], bag.segments[]);
+
+		Pin (bag.segments.front, chain.segments.back);
+		Pin (chain.segments.front, mount);
+
+		// REVIEW do we absolutely need to manually track IDs? maybe should be opt-in
+
+		auto ball_geometry = circle (0.05.meters);
+		auto ball = phy.new_body (phy_id, 0.01.kilogram, ball_geometry)
+			.position (vec(-5, -0.5) * meters)
+			.velocity (12 * î.meters/second);
+
+		ball.velocity = ball.velocity.rotate (π/30);
+
+		import evx.camera;
+		auto cam = new Camera (phy, gfx); {/*...}*/
+			cam.zoom (400);
+			cam.set_program = (Camera.Capture id)
+				{/*draw}*/
+					{/*mount}*/
+						gfx.draw (yellow * black (0.95), mount_geometry.translate (mount.position).to_view_space (cam), GeometryMode.t_strip);
+					}
+					{/*chain}*/
+						gfx.draw (grey (0.95), chain.geometry.to_view_space (cam), GeometryMode.t_strip);
+
+						foreach (seg; chain.segments[])
+							gfx.draw (cyan, chain.segment_geometry.rotate (seg.angle).translate (seg.position).to_view_space (cam));
+					}
+					{/*bag}*/
+						gfx.draw (black (0.95), bag.geometry.to_view_space (cam), GeometryMode.t_strip);
+
+						foreach (seg; bag.segments[])
+							gfx.draw (cyan, bag.segment_geometry.rotate (seg.angle).translate (seg.position).to_view_space (cam));
+					}
+					{/*ball}*/
+						gfx.draw (green (0.8), ball_geometry[].translate (ball.position).to_view_space (cam), GeometryMode.t_fan);
+					}
+
+					gfx.render;
+				};
+		}
+
+		while (not (simulation_terminated))
+			{/*...}*/
+				phy.update;
+				phy.update;
+				usr.process;
+				cam.capture;
+
+				import core.thread;
+				Thread.sleep ((1/60.hertz).to_duration);
+
+				foreach (spring; bag.springs[])
+					{/*...}*/
+						pl (spring.length);
+					}
+			}
+	}

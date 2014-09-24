@@ -32,55 +32,56 @@ final class Input
 
 		Mode mode;
 
-		void enter_text_mode ()
-			{/*...}*/
-				this.mode = Mode.text;
+		public {/*text input}*/
+			void enter_text_mode ()
+				{/*...}*/
+					this.mode = Mode.text;
 
-				active_display.access_rendering_context = ()
-					{/*...}*/
-						auto window = glfwGetCurrentContext();
+					active_display.access_rendering_context = ()
+						{/*...}*/
+							auto window = glfwGetCurrentContext();
 
-						enforce (window !is null);
+							enforce (window !is null);
 
-						glfwSetKeyCallback (window, &text_key_callback);
-						glfwSetCharCallback (window, &text_character_callback);
-					};
+							glfwSetKeyCallback (window, &text_key_callback);
+							glfwSetCharCallback (window, &text_character_callback);
+						};
 
-				foreach (ref key_pressed; keys.byValue)
-					key_pressed = false;
-			}
-		void enter_action_mode ()
-			{/*...}*/
-				this.mode = Mode.action;
+					foreach (ref key_pressed; keys.byValue)
+						key_pressed = false;
+				}
+			void enter_action_mode ()
+				{/*...}*/
+					this.mode = Mode.action;
 
-				active_display.access_rendering_context = ()
-					{/*...}*/
-						auto window = glfwGetCurrentContext();
+					active_display.access_rendering_context = ()
+						{/*...}*/
+							auto window = glfwGetCurrentContext();
 
-						enforce (window !is null);
+							enforce (window !is null);
 
-						glfwSetKeyCallback (window, &action_key_callback);
-						glfwSetCharCallback (window, null);
-					};
+							glfwSetKeyCallback (window, &action_key_callback);
+							glfwSetCharCallback (window, null);
+						};
 
-				foreach (ref key_pressed; keys.byValue)
-					key_pressed = false;
-			}
+					foreach (ref key_pressed; keys.byValue)
+						key_pressed = false;
+				}
 
-		string get_text_input ()
-			{/*...}*/
-				return text_buffer[].to!string;
-			}
-		void set_text_input (string text)
-			{/*...}*/
-				text_buffer.clear;
-				text_buffer ~= text;
-			}
-		void clear_text_input ()
-			{/*...}*/
-				return text_buffer.clear;
-			}
-
+			string get_text_input ()
+				{/*...}*/
+					return text_buffer[].to!string;
+				}
+			void set_text_input (string text)
+				{/*...}*/
+					text_buffer.clear;
+					text_buffer ~= text;
+				}
+			void clear_text_input ()
+				{/*...}*/
+					return text_buffer.clear;
+				}
+		}
 		public {/*interface}*/
 			void bind (T)(T input, void delegate(bool) action)
 				{/*...}*/
@@ -234,7 +235,7 @@ final class Input
 							enforce (window !is null);
 
 							glfwSetInputMode (window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-							glfwSetKeyCallback (window, &action_key_callback); // XXX
+							glfwSetKeyCallback (window, &action_key_callback);
 							glfwSetMouseButtonCallback (window, &mouse_button_callback);
 							glfwSetCursorPosCallback (window, &pointer_callback);
 						};

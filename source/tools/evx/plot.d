@@ -451,8 +451,7 @@ auto plot (Style style = Style.standard, Data)(Data data)
 
 		return Plot!(Data, style) (data);
 	}
-void main ()
-	/*unittest*/ {/*...}*/
+	unittest {/*...}*/
 		import std.math;
 
 		scope gfx = new Display (600,400);

@@ -22,6 +22,16 @@ private {/*imports}*/
 	alias Interval = evx.analysis.Interval;
 }
 
+public {/*binary equality}*/
+	bool binary_equal (T,U)(T a, U b)
+		{/*...}*/
+			alias Binary = ubyte[T.sizeof];
+
+			if (T.sizeof != U.sizeof)
+				return false;
+			else return (*(cast(Binary*)&a))[].equal ((*(cast(Binary*)&b))[]);
+		}
+}
 public {/*concurrency}*/
 	auto received_before (Ops...)(Seconds limit, Ops ops)
 		{/*...}*/
