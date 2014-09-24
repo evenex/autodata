@@ -466,14 +466,14 @@ public {/*reduce}*/
 				if (isInputRange!R)
 				{/*...}*/
 					static if (functions.length == 1)
-						alias Accumulator = typeof(functions[0] (range.front, range.front));
+						alias Accumulator = Unqual!(typeof(functions[0] (range.front, range.front)));
 					else {/*alias Accumulator}*/
 						string generate_accumulator ()
 							{/*...}*/
 								string code;
 
 								foreach (i, f; functions)
-									code ~= q{typeof(functions[} ~i.text~ q{] (range.front, range.front)), };
+									code ~= q{Unqual!(typeof(functions[} ~i.text~ q{] (range.front, range.front))), };
 
 								return q{Tuple!(} ~code[0..$-2]~ q{)};
 							}
