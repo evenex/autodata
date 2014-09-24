@@ -8,12 +8,15 @@
 		"derelict-gl3"  : "~master",
 		"derelict-ft"  	: "~master",
 		"dchip"  		: "~master",
+		"tharsis-prof"	: "~master",
 	},
-	"libs": ["ftgl", "freetype_gl", "gsl", "gslcblas", "opencv_core", "opencv_highgui"],
+	"versions": ["CHIP_ALLOW_PRIVATE_ACCESS", "CHIP_USE_DOUBLES"],
+	"libs": ["freetype-gl", "freetype", "GLEW", "sphinxbase", "pocketsphinx"],
 	"importPaths": [],
 	"targetType": "executable",
 	"buildRequirements": ["disallowDeprecations"],
-	"buildOptions": ["debugInfoC", "alwaysStackFrame"],
+	"buildOptions": ["debugInfo", "alwaysStackFrame"],
+	"_buildOptions": ["releaseMode", "noBoundsCheck"],
 	"_buildOptions": ["releaseMode", "optimize", "inline", "noBoundsCheck"],
 	"postBuildCommands": ["echo '<>>'"]
 }
