@@ -948,8 +948,8 @@ void main ()
 		));
 
 		auto bag = Rope!10 (phy, 90.kilograms, 1.5.meters, 0.2.meters)
-			.stiffness (10_000.newtons/meter)
-			.damping (10_000.newtons/(meters/second))
+			.stiffness (60_000.newtons/meter)
+			.damping (1_000_000.newtons/(meters/second))
 			.position (chain.segments[$-1].position);
 
 		collision_group (mount, chain.segments[], bag.segments[]);
@@ -1000,9 +1000,6 @@ void main ()
 
 		cp.SpaceSetIterations (phy.space, 100);
 
-		import core.thread;
-		alias seconds = evx.units.seconds;
-		Thread.sleep (3.seconds.to_duration);
 		while (not (simulation_terminated))
 			{/*...}*/
 				import std.datetime;
