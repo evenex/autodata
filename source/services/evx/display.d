@@ -268,9 +268,14 @@ final class Display: Service
 			{/*...}*/
 				access_rendering_context (() => gl.ClearColor (color.vector.tuple.expand));
 			}
-		void screenshot () // TODO
-			{/*...}*/
-				
+		void screenshot (void[] image_data) // REVIEW
+			in {/*...}*/
+				assert (image_data.length >= dimensions[].product * 3);
+			}
+			body {/*...}*/
+				access_rendering_context ((){
+					gl.ReadPixels (0, 0, dimensions.x.to!int, dimensions.y.to!int, PixelFormat.bgr, PixelFormat.unsigned_byte, image_data.ptr);
+				});
 			}
 
 		public {/*drawing}*/

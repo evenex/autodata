@@ -53,6 +53,7 @@ private {/*library}*/
 		}
 }
 
+alias Acceleration = typeof(meters/second.squared);
 alias Speed = typeof(meters/second);
 alias Position = Vector!(2, Meters);
 alias Displacement = Position;
@@ -202,19 +203,12 @@ struct Body
 						{/*...}*/
 							this.body_id = cp.BodyNewStatic; 
 							assert (cp.BodyIsStatic (this.body_id));
-							this.body_id.space = world.space; // HACK but otherwise we'll segfault on methods that require the body's space, if the body is static...
 							assert (cp.BodyIsStatic (this.body_id));
 						}
 					else this.body_id = cp.BodyNew (mass.to!double, 1.0);
 
-					if (mass.is_infinite)
-						assert (cp.BodyIsStatic (this.body_id));
-
 					if (not (cp.BodyIsStatic (body_id)))
 						cp.SpaceAddBody (space, body_id);
-
-					if (mass.is_infinite)
-						assert (cp.BodyIsStatic (this.body_id));
 
 					cp.BodySetUserData (body_id, spatial_id);
 
@@ -222,8 +216,6 @@ struct Body
 						auto areas = geometries[].map!area;
 					else auto areas = [geometries.area];
 
-					if (mass.is_infinite)
-						assert (cp.BodyIsStatic (this.body_id));
 					auto Σ_areas = sum (areas);
 					
 					foreach (i, geometry; geometries)
@@ -231,8 +223,6 @@ struct Body
 							double moment;
 
 							auto component_mass = (mass * areas[i] / Σ_areas).dimensionless;
-					if (mass.is_infinite)
-						assert (cp.BodyIsStatic (this.body_id));
 
 							with (Body.Type) final switch (deduce_shape (geometry))
 								{/*create simulation data}*/
@@ -263,48 +253,40 @@ struct Body
 								}
 							auto shape_id = shape_ids.back;
 				
-					if (mass.is_infinite)
-						assert (cp.BodyIsStatic (this.body_id));
 							if (not (cp.BodyIsStatic (body_id)))
 								cp.BodySetMoment (body_id, cp.BodyGetMoment (body_id) + moment);
 
-					if (mass.is_infinite)
-						assert (cp.BodyIsStatic (this.body_id));
 							cp.SpaceAddShape (space, shape_id);
-					if (mass.is_infinite)
-						assert (cp.BodyIsStatic (this.body_id));
 
 							cp.ShapeSetUserData (shape_id, spatial_id);
-					if (mass.is_infinite)
-						assert (cp.BodyIsStatic (this.body_id));
 						}
 
-					if (mass.is_infinite)
-						assert (cp.BodyIsStatic (this.body_id));
 				}
 
 			void free ()
 				{/*...}*/
-					auto space = cp.BodyGetSpace (body_id);
-
-					foreach (shape; shape_ids[])
+					if (not (cp.BodyIsRogue (body_id)))
 						{/*...}*/
-							cp.SpaceRemoveShape (space, shape);
-							cp.ShapeFree (shape);
+							auto space = world.space;
+
+							foreach (shape; shape_ids[])
+								{/*...}*/
+									cp.SpaceRemoveShape (space, shape);
+									cp.ShapeFree (shape);
+								}
+
+							cp.SpaceRemoveBody (space, body_id);
 						}
 
-					cp.SpaceRemoveBody (space, body_id);
 					cp.BodyFree (body_id);
 				}
 		}
 		private {/*upkeep}*/
 			void reindex_shapes ()
 				{/*...}*/
-					auto space = cp.BodyGetSpace (body_id);
-					
 					if (cp.BodyIsStatic (body_id))
-						cp.SpaceReindexStatic (space);
-					else cp.SpaceReindexShapesForBody (space, body_id);
+						cp.SpaceReindexStatic (world.space);
+					else cp.SpaceReindexShapesForBody (world.space, body_id);
 				}
 		}
 		static {/*shape deduction}*/
@@ -557,41 +539,12 @@ struct Rope (size_t n_segments)
 				return square.map!(v => v * vector (diameter, segment_length * 1.5)); // HACK to avoid passthru, we must overlap segments. TODO this more methodically
 			}
 
-		this (SpatialDynamics phy, Kilograms mass, Meters length, Meters radius)
-			{/*...}*/
-				this._mass = mass;
-				this._length = length;
-				this._radius = radius;
-
-				foreach (i; 0..n_segments)
-					{/*build segments}*/
-						segments ~= phy.new_body (phy_id, segment_mass, segment_geometry)
-							.position (i * (-ĵ.vec) * segment_length);
-					}
-
-				foreach (i; 0..n_segments-1)
-					{/*add springs}*/
-						auto anchor = vector (radius, 0.meters);
-
-						springs ~= Spring (segments[i], segments[i+1])
-							.resting_length (segments[i].position.distance_to (segments[i+1].position))
-							.anchors ([anchor, anchor]);
-
-						springs ~= Spring (segments[i], segments[i+1])
-							.resting_length (segments[i].position.distance_to (segments[i+1].position))
-							.anchors ([-anchor, -anchor]);
-					}
-
-				foreach (seg; segments[])
-					{/*disable self-collision}*/
-						foreach (shape; seg.shape_ids[])
-							cp.ShapeSetGroup (shape, segments[].front.id.as!size_t);
-					}
-			}
-
 		auto stiffness (Spring.Stiffness k)
 			{/*...}*/
 				foreach (spring; springs)
+					spring.stiffness = k;
+
+				foreach (spring; rotary_springs)
 					spring.stiffness = k;
 
 				return this;
@@ -604,6 +557,9 @@ struct Rope (size_t n_segments)
 		auto damping (Spring.Damping c)
 			{/*...}*/
 				foreach (spring; springs)
+					spring.damping = c;
+
+				foreach (spring; rotary_springs)
 					spring.damping = c;
 
 				return this;
@@ -627,56 +583,50 @@ struct Rope (size_t n_segments)
 				
 			}
 
+		this (SpatialDynamics phy, Kilograms mass, Meters length, Meters radius)
+			{/*...}*/
+				this._mass = mass;
+				this._length = length;
+				this._radius = radius;
+
+				foreach (i; 0..n_segments)
+					{/*build segments}*/
+						segments ~= phy.new_body (phy_id, segment_mass, segment_geometry)
+							.position (i * (-ĵ.vec) * segment_length);
+					}
+
+				foreach (i; 0..n_segments-1)
+					{/*add springs}*/
+						auto anchor = vector (radius, 0.meters);
+
+						springs ~= Spring (segments[i], segments[i+1])
+							.resting_length (segments[i].position.distance_to (segments[i+1].position))
+							.anchors ([anchor, anchor]);
+
+						springs ~= Spring (segments[i], segments[i+1])
+							.resting_length (segments[i].position.distance_to (segments[i+1].position))
+							.anchors ([-anchor, -anchor]);
+
+						rotary_springs ~= RotarySpring (segments[i], segments[i+1]);
+					}
+
+				foreach (seg; segments[])
+					{/*disable self-collision}*/
+						foreach (shape; seg.shape_ids[])
+							cp.ShapeSetGroup (shape, segments[].front.id.as!size_t);
+					}
+			}
+
+
 		private:
 
 		Appendable!(Body[n_segments]) segments;
-		Appendable!(Spring[2*(n_segments-1)]) springs; // TODO
+		Appendable!(Spring[2*(n_segments-1)]) springs;
+		Appendable!(RotarySpring[n_segments-1]) rotary_springs;
 
 		Kilograms _mass;
 		Meters _length;
 		Meters _radius;
-	}
-struct Bag (size_t n_segments)
-	{/*...}*/
-		Rope!n_segments skeleton;
-		Appendable!(RotarySpring[n_segments-1]) rotary_springs;
-
-		this (SpatialDynamics phy, Kilograms mass, Meters length, Meters radius)
-			{/*...}*/
-				skeleton = Rope!n_segments (phy, mass, length, radius);
-
-				foreach (i; 0..n_segments-1)
-					rotary_springs ~= RotarySpring (skeleton.segments[i], skeleton.segments[i+1]);
-			}
-
-		auto stiffness (Spring.Stiffness k)
-			{/*...}*/
-				foreach (spring; rotary_springs)
-					spring.stiffness = k;
-
-				skeleton.stiffness = k;
-
-				return this;
-			}
-
-		auto damping (Spring.Damping c)
-			{/*...}*/
-				foreach (spring; rotary_springs)
-					spring.damping = c;
-
-				skeleton.damping = c;
-
-				return this;
-			}
-
-		auto position (Position x)
-			{/*...}*/
-				skeleton.position = x;
-
-				return this;
-			}
-
-		alias skeleton this;
 	}
 struct Pin
 	{/*...}*/
@@ -693,13 +643,6 @@ struct Pin
 final class SpatialDynamics
 	{/*...}*/
 		public:
-		public {/*forces}*/
-			void add_fundamental_force (F)(F force)
-				if (is(typeof(force (SpatialId.init)) == Force))
-				{/*...}*/
-					fundamental_forces ~= force.toDelegate;
-				}
-		}
 		public {/*bodies}*/
 			auto new_body (T, R...)(T spatial_id, Kilograms mass, R geometries)
 				if (R.length > 0)
@@ -752,6 +695,16 @@ final class SpatialDynamics
 					return elapsed_ticks * Δt;
 				}
 		}
+		public {/*gravity}*/
+			auto gravity (Vector!(2, Acceleration) gravity)
+				{/*...}*/
+					cp.SpaceSetGravity (space, gravity.dimensionless.to!cpVect);
+				}
+			Vector!(2, Acceleration) gravity ()
+				{/*...}*/
+					return cp.SpaceGetGravity (space).vector * meters/second/second;
+				}
+		}
 		public {/*update}*/
 			void update ()
 				{/*...}*/
@@ -763,9 +716,6 @@ final class SpatialDynamics
 							with (dynamic_body) {/*...}*/
 								if (mass.is_infinite)
 									continue;
-
-								foreach (force; fundamental_forces[])
-									apply_force (force (id) * Δt.dimensionless);
 
 								if (damping > zero!Scalar)
 									velocity = velocity * (unity!Scalar - damping);
@@ -897,8 +847,6 @@ final class SpatialDynamics
 
 			void delegate(SpatialId,SpatialId) on_collide;
 
-			Appendable!(Force delegate(SpatialId)[MAX_N_FORCES]) fundamental_forces;
-
 			mixin AutoInitialize;
 
 			@Initialize!(2^^12) 
@@ -973,12 +921,9 @@ void main ()
 		alias map = evx.functional.map;
 
 		auto phy = new SpatialDynamics;
-		phy.Δt = 1/120.hertz;
+		phy.Δt = 1/240.hertz;
+		phy.gravity = vec(0, -9.8)*meters/second/second;
 		
-		// phy.add_fundamental_force (id =>  phy.get_body (id).mass * -9.8.meters/second.squared * ĵ.vec); OUTSIDE BUG does not compile, says type of delegate is void
-		//phy.add_fundamental_force ((SpatialId id){return phy.get_body (id).mass * -9.8.meters/second.squared * ĵ.vec;});
-		cp.SpaceSetGravity (phy.space, cpVect (0, -9.8));
-
 		auto gfx = new Display (1000, 1000);
 		gfx.start; scope (exit) gfx.stop;
 		gfx.background (white);
@@ -991,31 +936,39 @@ void main ()
 		auto mount = phy.new_body (phy_id, infinity.kilograms, mount_geometry)
 			.position (vec(0, 1.5) * meters);
 
-		assert (cp.BodyIsStatic (mount.body_id));
-
-		auto chain = Rope!10 (phy, 10.kilogram, 1.meter, 0.01.meters)
-			.stiffness (10_000.newtons/meter)
-			.damping (10.newtons/(meters/second))
+		auto chain = Rope!10 (phy, 10.kilograms, 1.meter, 0.01.meters)
+			.stiffness (20_000.newtons/meter)
+			.damping (1_000_000.newtons/(meters/second))
 			.position (mount.position);
 
-		auto bag = Bag!10 (phy, 1.kilogram, 1.5.meters, 0.2.meters)
-			.stiffness (1000.newtons/meter)
-			.damping (100.newtons/(meters/second))
+		cp.SpaceAddConstraint (phy.space, cp.SlideJointNew (
+			chain.segments[0].body_id, chain.segments[$-1].body_id,
+			zero!cpVect, zero!cpVect,
+			0.0, chain.length.to!double * 1
+		));
+
+		auto bag = Rope!10 (phy, 90.kilograms, 1.5.meters, 0.2.meters)
+			.stiffness (10_000.newtons/meter)
+			.damping (10_000.newtons/(meters/second))
 			.position (chain.segments[$-1].position);
 
 		collision_group (mount, chain.segments[], bag.segments[]);
 
 		Pin (bag.segments.front, chain.segments.back);
 		Pin (chain.segments.front, mount);
+		RotarySpring (bag.segments.front, chain.segments.back)
+			.stiffness (100_000.newtons/meter)
+			.damping (100_000.newtons/(meter/second))
+			.resting_angle (0);
 
 		// REVIEW do we absolutely need to manually track IDs? maybe should be opt-in
 
 		auto ball_geometry = circle (0.05.meters);
-		auto ball = phy.new_body (phy_id, 0.01.kilogram, ball_geometry)
-			.position (vec(-5, -0.5) * meters)
-			.velocity (12 * î.meters/second);
+		auto ball = phy.new_body (phy_id, 1.kilogram, ball_geometry)
+			.position (vec(-50, -0.5) * meters)
+			.velocity (25 * î.meters/second);
 
-		ball.velocity = ball.velocity.rotate (π/30);
+		ball.velocity = ball.velocity.rotate (π/6.8);
 
 		import evx.camera;
 		auto cam = new Camera (phy, gfx); {/*...}*/
@@ -1028,36 +981,45 @@ void main ()
 					{/*chain}*/
 						gfx.draw (grey (0.95), chain.geometry.to_view_space (cam), GeometryMode.t_strip);
 
+						if (0)
 						foreach (seg; chain.segments[])
 							gfx.draw (cyan, chain.segment_geometry.rotate (seg.angle).translate (seg.position).to_view_space (cam));
 					}
 					{/*bag}*/
 						gfx.draw (black (0.95), bag.geometry.to_view_space (cam), GeometryMode.t_strip);
 
+						if (0)
 						foreach (seg; bag.segments[])
 							gfx.draw (cyan, bag.segment_geometry.rotate (seg.angle).translate (seg.position).to_view_space (cam));
 					}
 					{/*ball}*/
-						gfx.draw (green (0.8), ball_geometry[].translate (ball.position).to_view_space (cam), GeometryMode.t_fan);
+						gfx.draw (green*black (0.8), ball_geometry[].translate (ball.position).to_view_space (cam), GeometryMode.t_fan);
 					}
-
-					gfx.render;
 				};
 		}
 
+		cp.SpaceSetIterations (phy.space, 100);
+
+		import core.thread;
+		alias seconds = evx.units.seconds;
+		Thread.sleep (3.seconds.to_duration);
 		while (not (simulation_terminated))
 			{/*...}*/
+				import std.datetime;
+				auto t = Clock.currTime;
+
+				phy.update;
+				phy.update;
 				phy.update;
 				phy.update;
 				usr.process;
 				cam.capture;
+				gfx.render;
 
-				import core.thread;
-				Thread.sleep ((1/60.hertz).to_duration);
+				foreach (seg; chain.segments)
+					with (seg) velocity = velocity * 0.1;
 
-				foreach (spring; bag.springs[])
-					{/*...}*/
-						pl (spring.length);
-					}
+				while (Clock.currTime - t < 30.milliseconds.to_duration)
+					{}
 			}
 	}
