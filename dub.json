@@ -11,7 +11,7 @@
 		"tharsis-prof"	: "~master",
 	},
 	"versions": ["CHIP_ALLOW_PRIVATE_ACCESS", "CHIP_USE_DOUBLES"],
-	"libs": ["freetype-gl", "freetype", "GLEW", "sphinxbase", "pocketsphinx"],
+	"libs": ["opencv_core", "opencv_highgui", "GL", "freetype-gl", "freetype", "GLEW", "sphinxbase", "pocketsphinx"],
 	"importPaths": [],
 	"targetType": "executable",
 	"buildRequirements": ["disallowDeprecations"],
