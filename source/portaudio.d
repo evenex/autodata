@@ -38,6 +38,7 @@ module portaudio;
  * license above.
  */
 
+import evx.arrays;
 import evx.meta;
 import evx.utils;
 import evx.math;
@@ -50,7 +51,11 @@ public {/*portaudio.h types}*/
 	 Note that with the exception of paNoError, all PaErrorCodes are negative.
 	*/
 
-	alias PaError = int;
+	struct PaError
+		{/*...}*/
+			int data;
+			alias data this;
+		}
 	enum PaErrorCode
 	{
 		paNoError = 0,
@@ -615,6 +620,8 @@ struct pa
 
 						if (err != PaErrorCode.paNoError)
 							assert (0, "PortAudio error on " ~function_call_to_string!call (args)~ ": " ~Pa_GetErrorText (err).text);
+
+						return err;
 					});
 					else mixin(q{
 						return } ~call~ q{ (c_args.expand);
@@ -1249,55 +1256,167 @@ struct pa
 
 struct Audio
 	{/*...}*/
+		class Device
+			{/*...}*/
+				public:
+				@property {/*}*/
+					string name ()
+						{/*...}*/
+							return info.name.text;
+						}
+					auto host_api ()
+						{/*...}*/
+							return info.hostApi;
+						}
+					auto max_input_channels ()
+						{/*...}*/
+							return info.maxInputChannels;
+						}
+					auto max_output_channels ()
+						{/*...}*/
+							return info.maxOutputChannels;
+						}
+
+					auto default_low_input_latency ()
+						{/*...}*/
+							return info.defaultLowInputLatency.seconds;
+						}
+					auto default_low_output_latency ()
+						{/*...}*/
+							return info.defaultLowOutputLatency.seconds;
+						}
+					auto default_high_input_latency ()
+						{/*...}*/
+							return info.defaultHighInputLatency.seconds;
+						}
+					auto default_high_output_latency ()
+						{/*...}*/
+							return info.defaultHighOutputLatency.seconds;
+						}
+
+					auto default_sampling_rate ()
+						{/*...}*/
+							return info.defaultSampleRate.hertz;
+						}
+				}
+				public {/*ctor}*/
+					this (T)(T index)
+						if (isIntegral!T)
+						{/*...}*/
+							this.index = index.to!int;
+
+							assert (info.structVersion == 2);
+						}
+				}
+				private:
+				private {/*data}*/
+					int index; 
+				}
+				private {/*info}*/
+					auto info ()
+						{/*...}*/
+							return pa.GetDeviceInfo (index.to!int);
+						}
+				}
+			}
 		class Output
 			{/*...}*/
 				enum ulong frames_per_buffer = 256;
-				Hertz sampling_rate;
-				PaStream* stream;
 
-				void* data;
+				public:
+				public {/*ctor/dtor}*/
+					this (Hertz sampling_rate = 44100.hertz)
+						{/*...}*/
+							this._sampling_rate = sampling_rate;
 
-				extern (C) static int output_callback (const void* input_buffer, void* output_buffer,
-					ulong frames_per_buffer,
-					const PaStreamCallbackTimeInfo* time_info,
-					PaStreamCallbackFlags status_flags,
-					void* user_data)
-					{/*...}*/
-						// TESTING constant signal
-						auto output = cast(float*)output_buffer;
+							pa.OpenDefaultStream (&stream, 0, 2, paFloat32, 
+								sampling_rate.to!double, frames_per_buffer, 
+								&output_callback, data
+							);
+						}
+					~this ()
+						{/*...}*/
+							pa.CloseStream (stream);
+						}
+				}
+				public {/*controls}*/
+					void start ()
+						{/*...}*/
+							pa.StartStream (stream);
+						}
+					void stop ()
+						{/*...}*/
+							pa.StopStream (stream);
+						}
+				}
+				public {/*state}*/
+					bool is_active ()
+						{/*...}*/
+							return pa.IsStreamActive (stream)? true:false;
+						}
+					bool is_stopped ()
+						{/*...}*/
+							return pa.IsStreamStopped (stream)? true:false;
+						}
 
-						foreach (i; 0..frames_per_buffer)
-							{/*...}*/
-								*output++ = 0.0;  /* left */
-								*output++ = 0.0;  /* right */
-							}
+					auto latency ()
+						{/*...}*/
+							return (get_stream_info.outputLatency.seconds);
+						}
+					auto sampling_rate ()
+						{/*...}*/
+							return (get_stream_info.sampleRate.hertz);
+						}
 
-						return 0;
-					}
+					auto time ()
+						{/*...}*/
+							return pa.GetStreamTime (stream).seconds;
+						}
+					auto cpu_load ()
+						{/*...}*/
+							return pa.GetStreamCpuLoad (stream);
+						}
+				}
+				private:
+				private {/*data}*/
+					Hertz _sampling_rate;
+					PaStream* stream;
+					void* data;
+				}
+				private {/*info}*/
+					auto get_stream_info ()
+						out (info) {/*...}*/
+							assert (info.structVersion == 1);
+						}
+						body {/*...}*/
+							return pa.GetStreamInfo (stream);
+						}
+				}
+				static extern (C) {/*callback}*/
+					int output_callback (const void* input_buffer, void* output_buffer,
+						ulong frames_per_buffer,
+						const PaStreamCallbackTimeInfo* time_info,
+						PaStreamCallbackFlags status_flags,
+						void* user_data)
+						{/*...}*/
+							// TESTING constant signal
+							auto output = cast(float*)output_buffer;
 
-				this (Hertz sampling_rate = 44100.hertz)
-					{/*...}*/
-						this.sampling_rate = sampling_rate;
+							foreach (i; 0..frames_per_buffer)
+								{/*...}*/
+									*output++ = 0.0;  /* left */
+									*output++ = 0.0;  /* right */
+								}
 
-						pa.OpenDefaultStream (&stream, 0, 2, paFloat32, 
-							sampling_rate.to!double, frames_per_buffer, 
-							&output_callback, data
-						);
-					}
-				~this ()
-					{/*...}*/
-						pa.CloseStream (stream);
-					}
-
-				void start ()
-					{/*...}*/
-						pa.StartStream (stream);
-					}
-				void stop ()
-					{/*...}*/
-						pa.StopStream (stream);
-					}
+							return 0;
+						}
+				}
 			}
+	}
+
+auto all_sound_devices ()
+	{/*...}*/
+		return Dynamic!(Audio.Device[])(ℕ[0..pa.GetDeviceCount].map!(i => new Audio.Device (i)));
 	}
 
 void tutorial ()
@@ -1362,12 +1481,6 @@ void tutorial ()
 
 void main ()
 	{/*...}*/
-		scope stream = new Audio.Output ();
-
-		stream.start;
-
-		import core.thread;
-		Thread.sleep (3.seconds);
-
-		stream.stop;
+		foreach (dev; all_sound_devices)
+			pl (dev.name);
 	}
