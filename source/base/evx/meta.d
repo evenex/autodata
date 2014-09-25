@@ -298,6 +298,8 @@ public {/*initialization}*/
 		{/*...}*/
 			static assert (is(typeof(this)), `mixin requires host struct`);
 
+			import evx.traits;
+			import evx.logic;
 			import std.traits: allSatisfy, isSomeString;
 
 			static private {/*code generation}*/
@@ -323,7 +325,7 @@ public {/*initialization}*/
 						};
 
 						foreach (symbol; __traits (allMembers, typeof(this)))
-							static if (is_C_function!symbol)
+							static if (is_C_function!symbol && not (mixin(q{is_type!} ~symbol)))
 								code ~= q{
 									foreach (lib; libs)
 										}`{`q{
