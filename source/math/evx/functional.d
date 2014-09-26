@@ -291,7 +291,7 @@ public {/*zip}*/
 
 			private:
 			private {/*defs}*/
-				alias ZipTuple = Tuple!(staticMap!(Unqual, staticMap!(ElementType, Ranges))); 
+				alias ZipTuple = Tuple!(staticMap!(Unqual, staticMap!(ElementType, Ranges)));  // REVIEW const problems
 
 				static if (is(CommonIndex == void))
 					alias Indices = .Indices;
@@ -376,6 +376,7 @@ public {/*filter}*/
 	struct Filtered (R, alias match)
 		{/*...}*/
 			R range;
+			enum is_n_ary_function = __traits(compiles, match (range.front.expand));
 
 			auto ref front ()
 				{/*...}*/
@@ -384,9 +385,7 @@ public {/*filter}*/
 			void popFront ()
 				{/*...}*/
 					range.popFront;
-
-					while (not (empty || match (front)))
-						range.popFront;
+					seek_front;
 				}
 			bool empty ()
 				{/*...}*/
@@ -413,8 +412,8 @@ public {/*filter}*/
 						}
 					void popBack ()
 						{/*...}*/
-							while (not (empty || match (back)))
-								range.popBack;
+							range.popBack;
+							seek_back;
 						}
 
 					static assert (isBidirectionalRange!Filtered);
@@ -423,14 +422,33 @@ public {/*filter}*/
 			this (R range)
 				{/*...}*/
 					this.range = range;
-					
-					if (not (empty || match (range.front)))
-						popFront;
+
+					seek_front;
 
 					static if (isBidirectionalRange!R)
-						if (not (empty || match (range.back)))
-							popBack;
+						seek_back;
 				}
+
+			private {/*seek}*/
+				void seek_front ()
+					{/*...}*/
+						static if (is_n_ary_function)
+							while (not (empty || match (front.expand)))
+								range.popFront;
+						else while (not (empty || match (front)))
+							range.popFront;
+					}
+
+				static if (isBidirectionalRange!R)
+					void seek_back ()
+						{/*...}*/
+							static if (is_n_ary_function)
+								while (not (empty || match (back.expand)))
+									range.popBack;
+							else while (not (empty || match (back)))
+								range.popBack;
+						}
+			}
 		}
 
 	/* replacement for std.algorithm.filter 

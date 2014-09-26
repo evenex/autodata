@@ -152,15 +152,31 @@ struct Plot (Data, Style style)
 
 					void draw_data ()
 						{/*...}*/
-							display.draw (_color.alpha (0.25), plot_field[]);
-							display.draw (_color, 
-								data.map!((y,x) => vec(x.to!double, y.to!double))
-									.map!(v => v - vec(x_min.to!double, y_min.to!double))
-									.map!(v => v / vec((x_max-x_min).to!double, (y_max-y_min).to!double))
-									.map!(v => v * vec(plot_field.width, plot_field.height))
-									.map!(v => v + plot_field.low_left),
-								GeometryMode.l_strip
-							);
+							void draw_zero_line ()
+								{/*...}*/
+									auto zero_y = (1 - y_max/(y_max-y_min)) * plot_field.height + plot_field.bottom;
+
+									display.draw (_color (0.2), [vec(plot_field.left, zero_y), vec(plot_field.right, zero_y)]);
+								}
+							void draw_border ()
+								{/*...}*/
+									display.draw (_color.alpha (0.25), plot_field[]);
+								}
+							void draw_signal ()
+								{/*...}*/
+									display.draw (_color, 
+										data.map!((y,x) => vec(x.to!double, y.to!double))
+											.map!(v => v - vec(x_min.to!double, y_min.to!double))
+											.map!(v => v / vec((x_max-x_min).to!double, (y_max-y_min).to!double))
+											.map!(v => v * vec(plot_field.width, plot_field.height))
+											.map!(v => v + plot_field.low_left),
+										GeometryMode.l_strip
+									);
+								}
+
+							draw_zero_line;
+							draw_border;
+							draw_signal;
 						}
 
 					static if (style is Style.standard)

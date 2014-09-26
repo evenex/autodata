@@ -116,11 +116,11 @@ struct Vector (uint n, Component = double)
 				if (is_vector_tuple!V || is_vector_array!V || isInputRange!V)
 				{/*...}*/
 					static if (is_vector_tuple!V)
-						return this[].approx (that.vector[]);
+						return this[].approx (that.vector[], relative_tolerance);
 					else static if (is_vector_array!V)
-						return this[].approx (that[]);
+						return this[].approx (that[], relative_tolerance);
 					else static if (isInputRange!V)
-						return this[].approx (that);
+						return this[].approx (that, relative_tolerance);
 					else static assert (0);
 				}
 
@@ -713,7 +713,7 @@ struct Vector (uint n, Component = double)
 		static assert (zero!(typeof(v)) == [0,0,0]);
 		static assert (unity!(typeof(v)) == [1,1,1]);
 	}
-	unittest {/*geometry and dimensional analysis}*/
+	unittest {/*dimensioned geometry}*/
 		import evx.units;
 		import evx.geometry;
 
