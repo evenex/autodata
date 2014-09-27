@@ -18,13 +18,13 @@ private import evx.service;
 mixin(FunctionalToolkit!());
 
 public {/*mappings}*/
-	vec to_view_space (Position from_world_space, Camera camera) // BUG the problem is that vec can't interop with display coords right now
+	Display.Coords to_view_space (Position from_world_space, Camera camera) // BUG the problem is that vec can't interop with display coords right now
 		{/*...}*/
 			auto v = from_world_space.dimensionless;
 			auto c = camera.world_center.dimensionless;
 			auto s = camera.world_scale;
 
-			return ((v-c)/s);
+			return Display.Coords ((v-c)/s, Display.Space.draw);
 		}
 	auto to_view_space (R)(R from_world_space, Camera camera)
 		if (is_geometric!R)
@@ -99,8 +99,6 @@ final class Camera
 					this.world = world;
 					this.display = display;
 					this.program = program;
-
-					this._world_scale = display.dimensions;
 				}
 			this () {assert (0, `must initialize camera with spatial and display`);} // OUTSIDE BUG @disable this() => linker error
 		}
@@ -109,18 +107,18 @@ final class Camera
 			void delegate(Capture) program;
 		}
 		private {/*properties}*/
-		double _zoom_factor = 1.0;
+			double _zoom_factor = 1.0;
 			Position world_center = zero!Position;
 			vec world_scale ()
 				{/*...}*/
-					return _world_scale / _zoom_factor;
+					return display.dimensions / _zoom_factor;
 				}
 			vec _world_scale = unity!vec;
 
 			Position[2] view_bounds ()
 				{/*...}*/
 					alias c = world_center;
-					immutable s = display.dimensions[].map!meters.Position / _zoom_factor;
+					immutable s = world_scale[].map!meters.Position;
 
 					return [c+s, c-s];
 				}
