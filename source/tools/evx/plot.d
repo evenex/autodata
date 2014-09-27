@@ -17,9 +17,7 @@ private {/*imports}*/
 		import evx.scribe;
 	}
 
-	alias zip = evx.functional.zip;
-	alias map = evx.functional.map;
-	alias reduce = evx.functional.reduce;
+	mixin(FunctionalToolkit!());
 }
 
 alias versus = zip;

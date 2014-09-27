@@ -15,8 +15,7 @@ import evx.arrays;
 
 private import evx.service;
 
-alias map = evx.functional.map;
-alias reduce = evx.functional.reduce;
+mixin(FunctionalToolkit!());
 
 public {/*mappings}*/
 	vec to_view_space (Position from_world_space, Camera camera) // BUG the problem is that vec can't interop with display coords right now

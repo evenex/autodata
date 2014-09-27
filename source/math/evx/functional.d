@@ -23,6 +23,19 @@ private {/*imports}*/
 */
 template λ (alias F) {alias λ = F;}
 
+/* alias disambiguation for functional primitives 
+*/
+template FunctionalToolkit ()
+	{/*...}*/
+		enum FunctionalToolkit = q{
+			alias map = evx.functional.map;
+			alias zip = evx.functional.zip;
+			alias filter = evx.functional.filter;
+			alias reduce = evx.functional.reduce;
+			alias sequence = evx.functional.sequence;
+		};
+	}
+
 public {/*map}*/
 	/* replacement for std.algorithm.MapResult 
 	*/
@@ -505,7 +518,7 @@ public {/*reduce}*/
 						{/*...}*/
 							Accumulator accumulator;
 
-							if (range.length == 0)
+							if (range.empty)
 								{/*...}*/
 									static if (__traits(compiles, zero!Accumulator))
 										return zero!Accumulator;

@@ -16,7 +16,3 @@ public:
 	import evx.arithmetic;
 	import evx.ordinal;
 	import evx.algebra;
-
-public:
-	alias map = evx.functional.map;
-	alias reduce = evx.functional.reduce;

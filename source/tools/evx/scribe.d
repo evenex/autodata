@@ -24,9 +24,7 @@ private {/*imports}*/
 		import evx.range;
 	}
 
-	alias map = evx.functional.map;
-	alias zip = evx.functional.zip;
-	alias reduce = evx.functional.reduce;
+	mixin(FunctionalToolkit!());
 }
 
 // TODO maybe one big invisible card that is font_height * n_lines high? either way we need to align to the font not the card

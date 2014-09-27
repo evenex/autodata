@@ -27,9 +27,7 @@ private {/*imports}*/
 		import evx.units;
 	}
 
-	alias map = evx.functional.map;
-	alias zip = evx.functional.zip;
-	alias reduce = evx.functional.reduce;
+	mixin(FunctionalToolkit!());
 }
 
 public {/*traits}*/

@@ -19,9 +19,7 @@ private {/*imports}*/
 		import evx.meta;
 	}
 
-	alias zip = evx.functional.zip;
-	alias map = evx.functional.map;
-	alias reduce = evx.functional.reduce;
+	mixin(FunctionalToolkit!());
 }
 
 template infinite (T)

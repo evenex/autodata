@@ -25,10 +25,7 @@ private {/*imports}*/
 		import evx.functional; 
 	}
 
-	alias zip = evx.functional.zip;
-	alias map = evx.functional.map;
-	alias filter = evx.functional.filter;
-	alias reduce = evx.functional.reduce;
+	mixin(FunctionalToolkit!());
 	alias sum = evx.arithmetic.sum;
 }
 

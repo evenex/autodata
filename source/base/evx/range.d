@@ -12,9 +12,10 @@ private {/*imports}*/
 		import evx.math;
 	}
 
-	alias map = evx.functional.map;
-	alias zip = evx.functional.zip;
+	mixin(FunctionalToolkit!());
 }
+
+alias contains = std.algorithm.canFind;
 
 /* construct a ForwardRange out of a range of ranges such that the inner ranges appear concatenated 
 */
@@ -255,4 +256,3 @@ auto enumerate (R)(R range)
 	{/*...}*/
 		return ℕ[0..range.length].zip (range);
 	}
-

@@ -22,9 +22,8 @@ private {/*imports}*/
 		import evx.math;
 	}
 
-	alias zip = evx.functional.zip;
-	alias map = evx.functional.map;
-	alias reduce = evx.functional.reduce;
+	mixin(FunctionalToolkit!());
+
 	alias sum = evx.arithmetic.sum;
 	alias allocate_array = std.range.array;
 }

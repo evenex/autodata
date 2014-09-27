@@ -31,9 +31,8 @@ private {/*imports}*/
 		import derelict.opengl3.gl3;
 	}
 
-	alias reduce = evx.functional.reduce;
-	alias map = evx.functional.map;
-	alias zip = evx.functional.zip;
+	mixin(FunctionalToolkit!());
+
 	alias seconds = evx.units.seconds;
 }
 

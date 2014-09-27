@@ -21,7 +21,7 @@ private {/*imports}*/
 		import derelict.glfw3.glfw3;
 	}
 
-	alias map = evx.functional.map;
+	mixin(FunctionalToolkit!());
 }
 
 final class Input

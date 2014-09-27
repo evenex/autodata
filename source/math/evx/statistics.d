@@ -13,9 +13,7 @@ private {/*imports}*/
 		import evx.vectors;
 	}
 
-	alias map = evx.functional.map;
-	alias zip = evx.functional.zip;
-	alias sequence = evx.functional.sequence;
+	mixin(FunctionalToolkit!());
 }
 
 /* compute the mean value over a set */
