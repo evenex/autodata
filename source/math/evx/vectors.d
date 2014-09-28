@@ -272,9 +272,11 @@ struct Vector (uint n, Component = double)
 						}
 				}
 
-			this (Vector that)
+			this (U)(Vector!(length, U) that)
+				if (__traits(compiles, that.x.to!T))
 				{/*...}*/
-					this = that;
+					foreach (i; 0..length)
+						components[i] = that.components[i].to!T;
 				}
 		}
 		public {/*conv}*/
