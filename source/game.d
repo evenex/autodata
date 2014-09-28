@@ -430,7 +430,7 @@ void main ()
 						usr.keys_pressed ([Key.n_minus, Key.n_plus]).zip (
 							[1/zoom_factor, zoom_factor]
 						).map!((pressed, zoom) => pressed? zoom: 1.0)
-							.vector!2[].product
+							.product
 					);
 				}
 				///////

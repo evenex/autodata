@@ -153,7 +153,7 @@ public {/*polygons}*/
 		{/*...}*/
 			auto circle (T = double)(const T radius = unity!T, const Vector!(2,T) center = zero!(Vector!(2,T)))
 				in {/*...}*/
-					assert (radius > zero!T, "circle radius must be positive");
+					assert (radius > zero!T, "circle radius (" ~radius.text~ ") must be positive");
 				}
 				body {/*...}*/
 					return ℕ[0..samples].map!(i => 2*π*i/samples) 
@@ -269,12 +269,12 @@ public {/*polygons}*/
 			return geometry.map!(v => v + Δv);
 		}
 
-	/* rotate a polygon about its centroid 
+	/* rotate a polygon about a given point or its centroid 
 	*/
-	auto rotate (T, U = ElementType!(ElementType!T), V = ElementType!T)(T geometry, U θ, V center = V.init)
+	auto rotate (T, U = ElementType!(ElementType!T), V = ElementType!T)(T geometry, U θ, V pivot = V.init)
 		if (is_geometric!T)
 		{/*...}*/
-			immutable c = center.binary_equal (V.init)? geometry.mean: center;
+			immutable c = pivot.binary_equal (V.init)? geometry.mean: pivot;
 
 			return geometry.map!(v => (v-c).rotate (θ) + c);
 		}
@@ -282,7 +282,7 @@ public {/*polygons}*/
 			foreach (i; [vec(0,1), vec(0,2), vec(3,9)].rotate (12))
 				assert (not (i.isNaN));
 		}
-
+	
 	/* scale a polygon without moving its centroid 
 	*/
 	auto scale (T1, T2)(T1 geometry, T2 scale)

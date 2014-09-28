@@ -40,11 +40,15 @@ alias TextureId = GLuint;
 
 enum GeometryMode
 	{/*...}*/
-		t_fan 	= derelict.opengl3.gl3.GL_TRIANGLE_FAN,
-		t_strip = derelict.opengl3.gl3.GL_TRIANGLE_STRIP,
-		lines 	= derelict.opengl3.gl3.GL_LINES,
-		l_strip = derelict.opengl3.gl3.GL_LINE_STRIP,
-		l_loop 	= derelict.opengl3.gl3.GL_LINE_LOOP
+		triangles = derelict.opengl3.gl3.GL_TRIANGLES,
+		t_fan 	  = derelict.opengl3.gl3.GL_TRIANGLE_FAN,
+		t_strip   = derelict.opengl3.gl3.GL_TRIANGLE_STRIP,
+
+		lines 	  = derelict.opengl3.gl3.GL_LINES,
+		l_strip   = derelict.opengl3.gl3.GL_LINE_STRIP,
+		l_loop 	  = derelict.opengl3.gl3.GL_LINE_LOOP,
+
+		points 	  = derelict.opengl3.gl3.GL_POINTS,
 	}
 
 enum PixelFormat
@@ -164,11 +168,13 @@ public {/*coordinate transformations}*/
 			string transform_space (string transform)()
 				{/*...}*/
 					return q{
-						auto } ~transform~ q{ (T)(T geometry, Display display)
-							if (is (ElementType!T == Display.Coords))
+						auto } ~transform~ q{ (R)(R geometry, Display display)
+							if (is (ElementType!R == Display.Coords))
 							}`{`q{
-								return display.repeat (geometry.length).zip (geometry)
-									.map!((gfx, v) => v.} ~transform~ q{ (gfx));
+								static if (hasLength!R)
+									return display.repeat (geometry.length).zip (geometry)
+										.map!((gfx, v) => v.} ~transform~ q{ (gfx));
+								else return geometry.map!(v => v.} ~transform~ q{ (display));
 							}`}`q{
 					};
 				}
@@ -278,34 +284,34 @@ final class Display: Service
 			}
 
 		public {/*drawing}*/
-			void draw (T) (Color color, T geometry, GeometryMode mode = GeometryMode.l_loop) 
+			void draw (T) (Color color, T geometry, GeometryMode mode = GeometryMode.l_loop, uint layer = 0)
 				if (is_geometric!T || is_in_display_space!T)
 				{/*↓}*/
 					static if (is (ElementType!T == Coords))
-						draw (0, geometry, geometry.map!(c => c.value), color, mode);
-					else draw (0, geometry, geometry, color, mode);
+						draw (0, geometry, geometry.map!(c => c.value), color, mode, layer);
+					else draw (0, geometry, geometry, color, mode, layer);
 				}
-			void draw (T1, T2) (GLuint texture, T1 geometry, T2 tex_coords, Color color = black (0), GeometryMode mode = GeometryMode.t_fan)
-				if (allSatisfy!(Or!(is_geometric, is_in_display_space), T1, T2))
-				in {/*...}*/
-					assert (tex_coords.length == geometry.length, `geometry/texture coords length mismatched`);
+			void draw (R,S) (GLuint texture, R geometry, S tex_coords, Color color = black (0), GeometryMode mode = GeometryMode.t_fan, uint layer = 0)
+				if (allSatisfy!(Or!(is_geometric, is_in_display_space), R, S))
+				out {/*...}*/
+					assert (buffer.texture_coords.length == buffer.vertices.length, `geometry/texture coords length mismatched`);
 				}
 				body {/*...}*/
-					if (geometry.length == 0) return;
+					if (geometry.empty) return;
 
 					uint index  = buffer.vertices.length.to!uint;
-					uint length = geometry.length.to!uint;
-					auto data = Order!() (mode, index, length);
 
-					auto order = Order!Basic (data);
-					order.tex_id = texture;
-					order.base = color;
-			
-					static if (is (ElementType!T1 == Coords))
+					static if (is (ElementType!R == Coords))
 						buffer.vertices ~= geometry.to_draw_space (this);
 					else buffer.vertices ~= geometry.from_extended_space.to_draw_space (this);
 
 					buffer.texture_coords ~= tex_coords;
+
+					uint length = buffer.vertices.length.to!uint - index;
+
+					auto order = Order!Basic (mode, index, length, layer);
+					order.tex_id = texture;
+					order.base = color;
 					buffer.orders ~= RenderOrder (order);
 				}
 		}
@@ -429,7 +435,7 @@ final class Display: Service
 										(Order!ArtStyle order) 
 											{/*...}*/
 												const auto i = staticIndexOf!(ArtStyle, VisualTypes);
-												(cast(Shaders[i])shaders[i]).render_list ~= order;
+												(cast(Shaders[i])shaders[i]).render_list.put (order);
 											}
 									);
 								}
@@ -732,16 +738,21 @@ private {/*shaders}*/
 							assert (protocol_check, ArtStyle.stringof~" shader failed protocol");
 						}
 						body {/*...}*/
-							gl.UseProgram (program);
-							with (cast()this) // REVIEW
-							foreach (order; render_list) 
-								{/*...}*/
-									with (cast(shared)this) // REVIEW
-									preprocess (order);
-									gl.DrawArrays (order.mode, order.index, order.length);
-								}
-							with (cast()this) // REVIEW
-							render_list.clear;
+							with (cast()this) {/*...}*/ // REVIEW
+								render_list[].sort;
+
+								gl.UseProgram (program);
+
+								foreach (order; render_list) 
+									{/*...}*/
+										with (cast(shared)this) // REVIEW
+										preprocess (order);
+
+										gl.DrawArrays (order.mode, order.index, order.length);
+									}
+
+								render_list.clear;
+							}
 						}
 				}
 				shared {/*shader settings}*/
@@ -915,24 +926,29 @@ private {/*orders}*/
 				GLenum mode = int.max;
 				uint index = 0;
 				uint length = 0;
+				uint layer = 0;
 			}
 			public {/*extended}*/
 				ArtStyle visual;
 				alias visual this;
 			}
-			public {/*☀}*/
+			public {/*ctor}*/
 				this (T) (T data)
 					{/*...}*/
-						this (data.mode, data.index, data.length);
+						this (data.mode, data.index, data.length, data.layer);
 						static if (is (T == Order))
 							this.visual = data.visual;
 					}
-				this (GLenum mode, uint index, uint length)
+				this (GLenum mode, uint index, uint length, uint layer = 0)
 					{/*...}*/
 						this.mode = mode;
 						this.index = index;
 						this.length = length;
+						this.layer = layer;
 					}
+			}
+			public {/*sorting}*/
+				mixin CompareBy!layer;
 			}
 		}
 

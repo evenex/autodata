@@ -32,7 +32,7 @@ public {/*mappings}*/
 			return from_world_space.map!(v => v.to_view_space (camera));
 		}
 
-	Position to_world_space (vec from_view_space, Camera camera)
+	Position to_world_space (V)(V from_view_space, Camera camera)
 		{/*...}*/
 			auto v = from_view_space;
 			auto c = camera.world_center;
@@ -78,7 +78,7 @@ final class Camera
 					assert (world !is null);
 				}
 				body {/*...}*/
-					Appendable!(Capture[2^^8]) capture;
+					auto capture = Appendable!(Capture[])(256);
 
 					world.box_query (view_bounds, capture);
 

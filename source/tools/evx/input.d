@@ -28,6 +28,78 @@ final class Input
 	{/*...}*/
 		public:
 
+		enum Key
+			{/*...}*/
+				ignored 	= GLFW_KEY_UNKNOWN,
+				a 			= GLFW_KEY_A,
+				b 			= GLFW_KEY_B,
+				c 			= GLFW_KEY_C,
+				d 			= GLFW_KEY_D,
+				e 			= GLFW_KEY_E,
+				f 			= GLFW_KEY_F,
+				g 			= GLFW_KEY_G,
+				h 			= GLFW_KEY_H,
+				i 			= GLFW_KEY_I,
+				j 			= GLFW_KEY_J,
+				k 			= GLFW_KEY_K,
+				l 			= GLFW_KEY_L,
+				m 			= GLFW_KEY_M,
+				n 			= GLFW_KEY_N,
+				o 			= GLFW_KEY_O,
+				p 			= GLFW_KEY_P,
+				q 			= GLFW_KEY_Q,
+				r 			= GLFW_KEY_R,
+				s 			= GLFW_KEY_S,
+				t 			= GLFW_KEY_T,
+				u 			= GLFW_KEY_U,
+				v 			= GLFW_KEY_V,
+				w 			= GLFW_KEY_W,
+				x 			= GLFW_KEY_X,
+				y 			= GLFW_KEY_Y,
+				z 			= GLFW_KEY_Z,
+				zero 		= GLFW_KEY_0,
+				one 		= GLFW_KEY_1,
+				two 		= GLFW_KEY_2,
+				three 		= GLFW_KEY_3,
+				four 		= GLFW_KEY_4,
+				five 		= GLFW_KEY_5,
+				six 		= GLFW_KEY_6,
+				seven 		= GLFW_KEY_7,
+				eight 		= GLFW_KEY_8,
+				nine 		= GLFW_KEY_9,
+				space 		= GLFW_KEY_SPACE,
+				enter 		= GLFW_KEY_ENTER,
+				tab 		= GLFW_KEY_TAB,
+				esc 		= GLFW_KEY_ESCAPE,
+				up 			= GLFW_KEY_UP,
+				down 		= GLFW_KEY_DOWN,
+				left 		= GLFW_KEY_LEFT,
+				right 		= GLFW_KEY_RIGHT,
+				n_up 		= GLFW_KEY_KP_8,
+				n_down 		= GLFW_KEY_KP_2,
+				n_left 		= GLFW_KEY_KP_4,
+				n_right 	= GLFW_KEY_KP_6,
+				n_plus 		= GLFW_KEY_KP_ADD,
+				n_minus 	= GLFW_KEY_KP_SUBTRACT,
+				left_shift 	= GLFW_KEY_LEFT_SHIFT,
+				right_shift = GLFW_KEY_RIGHT_SHIFT,
+				left_ctrl 	= GLFW_KEY_LEFT_CONTROL,
+				right_ctrl 	= GLFW_KEY_RIGHT_CONTROL,
+				left_alt 	= GLFW_KEY_LEFT_ALT,
+				right_alt 	= GLFW_KEY_RIGHT_ALT,
+				backspace 	= GLFW_KEY_BACKSPACE,
+				tilde 		= GLFW_KEY_GRAVE_ACCENT,
+			}
+		enum Mouse
+			{/*...}*/
+				ignored = GLFW_KEY_UNKNOWN - 1,
+				left 	= GLFW_MOUSE_BUTTON_LEFT,
+				middle	= GLFW_MOUSE_BUTTON_MIDDLE,
+				right 	= GLFW_MOUSE_BUTTON_RIGHT,
+				aux_4 	= GLFW_MOUSE_BUTTON_4,
+				aux_5 	= GLFW_MOUSE_BUTTON_5
+			}
+
 		enum Mode {text, action}
 
 		Mode mode;
@@ -83,6 +155,11 @@ final class Input
 				}
 		}
 		public {/*interface}*/
+			// REVIEW
+			void on_scroll (void delegate(double) action)
+				{/*...}*/
+					_on_scroll = action;
+				}
 			void bind (T)(T input, void delegate(bool) action)
 				{/*...}*/
 					static if (is (T == Key))
@@ -134,79 +211,6 @@ final class Input
 					return mouse_pointer;
 				}
 		}
-		public {/*inputs}*/
-			enum Key
-				{/*...}*/
-					ignored 	= GLFW_KEY_UNKNOWN,
-					a 			= GLFW_KEY_A,
-					b 			= GLFW_KEY_B,
-					c 			= GLFW_KEY_C,
-					d 			= GLFW_KEY_D,
-					e 			= GLFW_KEY_E,
-					f 			= GLFW_KEY_F,
-					g 			= GLFW_KEY_G,
-					h 			= GLFW_KEY_H,
-					i 			= GLFW_KEY_I,
-					j 			= GLFW_KEY_J,
-					k 			= GLFW_KEY_K,
-					l 			= GLFW_KEY_L,
-					m 			= GLFW_KEY_M,
-					n 			= GLFW_KEY_N,
-					o 			= GLFW_KEY_O,
-					p 			= GLFW_KEY_P,
-					q 			= GLFW_KEY_Q,
-					r 			= GLFW_KEY_R,
-					s 			= GLFW_KEY_S,
-					t 			= GLFW_KEY_T,
-					u 			= GLFW_KEY_U,
-					v 			= GLFW_KEY_V,
-					w 			= GLFW_KEY_W,
-					x 			= GLFW_KEY_X,
-					y 			= GLFW_KEY_Y,
-					z 			= GLFW_KEY_Z,
-					zero 		= GLFW_KEY_0,
-					one 		= GLFW_KEY_1,
-					two 		= GLFW_KEY_2,
-					three 		= GLFW_KEY_3,
-					four 		= GLFW_KEY_4,
-					five 		= GLFW_KEY_5,
-					six 		= GLFW_KEY_6,
-					seven 		= GLFW_KEY_7,
-					eight 		= GLFW_KEY_8,
-					nine 		= GLFW_KEY_9,
-					space 		= GLFW_KEY_SPACE,
-					enter 		= GLFW_KEY_ENTER,
-					tab 		= GLFW_KEY_TAB,
-					esc 		= GLFW_KEY_ESCAPE,
-					up 			= GLFW_KEY_UP,
-					down 		= GLFW_KEY_DOWN,
-					left 		= GLFW_KEY_LEFT,
-					right 		= GLFW_KEY_RIGHT,
-					n_up 		= GLFW_KEY_KP_8,
-					n_down 		= GLFW_KEY_KP_2,
-					n_left 		= GLFW_KEY_KP_4,
-					n_right 	= GLFW_KEY_KP_6,
-					n_plus 		= GLFW_KEY_KP_ADD,
-					n_minus 	= GLFW_KEY_KP_SUBTRACT,
-					left_shift 	= GLFW_KEY_LEFT_SHIFT,
-					right_shift = GLFW_KEY_RIGHT_SHIFT,
-					left_ctrl 	= GLFW_KEY_LEFT_CONTROL,
-					right_ctrl 	= GLFW_KEY_RIGHT_CONTROL,
-					left_alt 	= GLFW_KEY_LEFT_ALT,
-					right_alt 	= GLFW_KEY_RIGHT_ALT,
-					backspace 	= GLFW_KEY_BACKSPACE,
-					tilde 		= GLFW_KEY_GRAVE_ACCENT,
-				}
-			enum Mouse
-				{/*...}*/
-					ignored = GLFW_KEY_UNKNOWN - 1,
-					left 	= GLFW_MOUSE_BUTTON_LEFT,
-					middle	= GLFW_MOUSE_BUTTON_MIDDLE,
-					right 	= GLFW_MOUSE_BUTTON_RIGHT,
-					aux_4 	= GLFW_MOUSE_BUTTON_4,
-					aux_5 	= GLFW_MOUSE_BUTTON_5
-				}
-		}
 		public {/*events}*/
 			void process ()
 				{/*...}*/
@@ -238,6 +242,7 @@ final class Input
 							glfwSetKeyCallback (window, &action_key_callback);
 							glfwSetMouseButtonCallback (window, &mouse_button_callback);
 							glfwSetCursorPosCallback (window, &pointer_callback);
+							glfwSetScrollCallback (window, &scroll_callback);
 						};
 
 					key_map.lookup[`base`] = [Key.esc: main_escape_function];
@@ -292,6 +297,9 @@ final class Input
 			Map!Mouse mouse_map;
 			bool[Mouse] buttons;
 			vec mouse_pointer = 0.vec;
+
+			vec scroll_offset;
+			void delegate(double) _on_scroll;
 
 			struct Map (T)
 				{/*...}*/
@@ -391,6 +399,12 @@ final class Input
 				{/*...}*/
 					try mouse_pointer = vec(xpos, ypos).from_inverted_pixel_space.to_extended_space (active_display);
 					catch (Exception) assert (0, `coordinate transform failed`);
+				}
+			void scroll_callback (GLFWwindow*, double x_offset, double y_offset)
+				{/*...}*/
+					if (_on_scroll)						
+						try _on_scroll (y_offset);
+					catch (Exception ex) assert (0, `scroll callback failed`);
 				}
 		}
 	}

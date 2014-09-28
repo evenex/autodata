@@ -42,7 +42,7 @@ public {/*map}*/
 	struct Mapped (R, alias func)
 		{/*...}*/
 			alias Index = IndexTypes!R[0];
-			enum is_n_ary_function = __traits(compiles, func (range.front.expand));
+			enum is_n_ary_function = is(typeof(func (range.front.expand)));
 			
 			static if (is_indexable!(R, Index))
 				{/*...}*/
@@ -389,7 +389,7 @@ public {/*filter}*/
 	struct Filtered (R, alias match)
 		{/*...}*/
 			R range;
-			enum is_n_ary_function = __traits(compiles, match (range.front.expand));
+			enum is_n_ary_function = is(typeof(match (range.front.expand)));
 
 			auto ref front ()
 				{/*...}*/

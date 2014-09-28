@@ -99,7 +99,7 @@ struct Body
 				{/*...}*/
 					return cp.BodyGetForce (body_id).vector[].map!(f => f.newtons).Force;
 				}
-			Scalar angle ()
+			Scalar orientation ()
 				{/*...}*/
 					return cp.BodyGetAngle (body_id);
 				}
@@ -121,9 +121,9 @@ struct Body
 
 					return this;
 				}
-			auto angle (Scalar new_angle)
+			auto orientation (Scalar new_orientation)
 				{/*...}*/
-					cp.BodySetAngle (body_id, new_angle);
+					cp.BodySetAngle (body_id, new_orientation);
 
 					reindex_shapes;
 
@@ -434,7 +434,8 @@ final class SpatialDynamics
 
 					cp.ConvexHull (len, poly[].ptr, hull[].ptr, null, 0.0);
 
-					auto shape = cp.PolyShapeNew (null, len, hull[].ptr, cpvzero);
+					auto temp_body = cp.BodyNew (1,1);
+					auto shape = cp.PolyShapeNew (temp_body, len, hull[].ptr, cpvzero);
 					auto layers = CP_ALL_LAYERS;
 					auto group = CP_NO_GROUP;
 					cp.ShapeSetLayers (shape, layers);
@@ -443,10 +444,43 @@ final class SpatialDynamics
 					cp.SpaceShapeQuery (space, shape,
 						(ShapeId shape, cpContactPointSet* points, void* data)
 							{(cast(Output*)data).put (get_id (shape).as!Id);},
-						&result)
-					;
+						&result
+					);
 
+					cp.BodyFree (temp_body);
 					cp.ShapeFree (shape);
+				}
+
+			void circle_query (Output)(Position center, Meters radius, ref Output result)
+				{/*...}*/
+					alias Id = ElementType!Output;
+
+					auto layers = CP_ALL_LAYERS;
+					auto group = CP_NO_GROUP;
+
+					static if (__traits(compiles, SpatialId.init.as!Id))
+						static put (ShapeId shape, double distance, cpVect point, void* data)
+							{/*...}*/
+								(cast(Output*)data).put (get_id (shape).as!Id);
+							}
+					else static if (__traits(compiles, SpatialId.init.as!(Id.Types[0])))
+						static put (ShapeId shape, double distance, cpVect point, void* data)
+							{/*...}*/
+								(cast(Output*)data).put (τ(get_id (shape).as!(Id.Types[0]), point.vector * meters));
+							}
+					else static assert (0, `output type must put Id or Tuple!(Id, Position)`);
+
+					cp.SpaceNearestPointQuery (space,
+						center.dimensionless.to!cpVect, radius.dimensionless,
+						layers, group,
+						&put, &result
+					);
+				}
+
+			struct Intersection
+				{/*...}*/
+					SpatialId id;
+					Position location;
 				}
 
 			Incidence ray_cast (Position[2] ray)

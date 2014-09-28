@@ -271,6 +271,11 @@ struct Vector (uint n, Component = double)
 							i = i_string.extract_number.to!Component;
 						}
 				}
+
+			this (Vector that)
+				{/*...}*/
+					this = that;
+				}
 		}
 		public {/*conv}*/
 			@property array ()

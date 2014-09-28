@@ -607,9 +607,19 @@ struct Appendable (Array, PolicyList...)
 
 					auto start = array.length;
 
-					array.grow (range.length);
+					static if (hasLength!R)
+						{/*...}*/
+							array.grow (range.length);
 
-					range.move (array[start..$]);
+							range.move (array[start..$]);
+						}
+					else {/*...}*/
+						foreach (ref item; range)
+							{/*...}*/
+								array.grow (1);
+								array.back = item;
+							}
+					}
 				}
 		}
 		public {/*ctor}*/
