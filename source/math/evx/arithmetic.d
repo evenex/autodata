@@ -83,6 +83,7 @@ public {/*tuple arithmetic predicates}*/
 			};
 		}
 }
+// REVIEW ↑ superceded by vector?
 
 /* compute the product of a sequence 
 */

@@ -1361,8 +1361,15 @@ else struct Array (T, Reallocation reallocation = Reallocation.permitted)
 		this (R)(R range)
 			if (is(ElementType!R == T))
 			{/*...}*/
-				data = new T[range.length];
-				range.copy (data);
+				static if (hasLength!R)
+					{/*...}*/
+						data = new T[range.length];
+						range.copy (data);
+					}
+				else {/*...}*/
+					foreach (ref element; range)
+						data ~= element;
+				}
 			}
 
 		void reallocate (size_t new_length)

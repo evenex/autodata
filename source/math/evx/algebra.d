@@ -11,6 +11,13 @@ private {/*imports}*/
 
 pure nothrow:
 
+/* generic identity operator
+*/
+auto identity (T)(T that)
+	{/*...}*/
+		return that;
+	}
+
 /* generate unity (1) for a given type 
 	if T cannot be constructed from 1, then unity recursively attempts to call a constructor with unity for all field types
 */

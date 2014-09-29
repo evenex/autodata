@@ -387,7 +387,7 @@ public {/*zip}*/
 		}
 }
 public {/*filter}*/
-	struct Filtered (R, alias match)
+	struct Filtered (R, alias match = identity)
 		{/*...}*/
 			R range;
 			enum is_n_ary_function = is(typeof(match (range.front.expand)));
