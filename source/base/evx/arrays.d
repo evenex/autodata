@@ -1359,6 +1359,7 @@ else struct Array (T, Reallocation reallocation = Reallocation.permitted)
 				data = that;
 			}
 		this (R)(R range)
+			if (is(ElementType!R == T))
 			{/*...}*/
 				data = new T[range.length];
 				range.copy (data);
