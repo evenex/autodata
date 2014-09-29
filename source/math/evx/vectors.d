@@ -29,7 +29,7 @@ private {/*imports}*/
 	alias sum = evx.arithmetic.sum;
 }
 
-struct Vector (uint n, Component = double)
+struct Vector (size_t n, Component = double)
 	if (supports_arithmetic!Component && n > 1)
 	{/*...}*/
 		enum length = n;
@@ -762,7 +762,7 @@ struct Vector (uint n, Component = double)
 		assert (vector (0.0, 1.0, 2.0).is_finite);
 	}
 
-template vector (uint length)
+template vector (size_t length)
 	if (length > 1)
 	{/*...}*/
 		auto vector (R)(R range)
@@ -805,7 +805,7 @@ template vector ()
 	}
 
 pure {/*unary functions}*/
-	template norm (uint p = 2)
+	template norm (size_t p = 2)
 		{/*...}*/
 			auto norm (V)(V v)
 				if (is_sliceable!V)
@@ -876,7 +876,7 @@ public {/*explicit conversion}*/
 
 			return Vector!(length, Unqual!(ElementType!U))(array[]);
 		}
-	auto vector_from_range (uint length, R)(R range)
+	auto vector_from_range (size_t length, R)(R range)
 		{/*...}*/
 			return Vector!(length, Unqual!(ElementType!R))(range);
 		}
