@@ -271,13 +271,6 @@ struct Vector (uint n, Component = double)
 							i = i_string.extract_number.to!Component;
 						}
 				}
-
-			this (U)(Vector!(length, U) that)
-				if (__traits(compiles, that.x.to!T))
-				{/*...}*/
-					foreach (i; 0..length)
-						components[i] = that.components[i].to!T;
-				}
 		}
 		public {/*conv}*/
 			@property array ()

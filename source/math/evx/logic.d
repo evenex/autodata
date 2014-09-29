@@ -7,17 +7,24 @@ private {/*imports}*/
 	}
 }
 
-pure nothrow:
-
-bool not (T)(const T value)
+template not ()
 	{/*...}*/
-		return !value;
+		bool not (T)(T value)
+			{/*...}*/
+				return !value;
+			}
 	}
-	
-bool not (alias predicate, Args...)(const Args args)
-	if (isSomeFunction!predicate)
+template not (alias predicate)
 	{/*...}*/
-		return not (predicate (args));
+		bool not (T)(T value)
+			if (__traits(compiles, predicate (value)))
+			{/*...}*/
+				return !(predicate (value));
+			}
+		bool not ()()
+			{/*...}*/
+				return !predicate;
+			}
 	}
 
 alias And = templateAnd;

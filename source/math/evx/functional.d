@@ -18,6 +18,7 @@ private {/*imports}*/
 		import evx.range;
 	}
 }
+// TODO someday have is_n_ary_function attempt to expand Tuples all the way down so we can zip(A, zip (B, C)).map!((a,b,c) => a*b*c)
 
 /* aliasable template lambda function 
 */
@@ -576,7 +577,7 @@ public {/*sequence}*/
 						assert (i != infinity);
 					}
 					body {/*...}*/
-						return T(func (initial, i + start));
+						return func (initial, i + start).to!T;
 					}
 
 				static assert (is_indexable!Sequence);

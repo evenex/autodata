@@ -137,6 +137,14 @@ public {/*vectors}*/
 			return (a-b).norm;
 		}
 	alias distance_to = distance;
+
+	/* find among a set of points the one closest to the given point 
+	*/
+	auto closest_to (R, Vec)(R range, Vec point)
+		if (is(ElementType!R == Vec))
+		{/*...}*/
+			return range.reduce!((a,b) => a.distance_to (point) < b.distance_to (point)? a: b);
+		}
 }
 public {/*polygons}*/
 	/* shape generators 
