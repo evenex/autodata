@@ -44,7 +44,7 @@ public {/*map}*/
 		{/*...}*/
 			alias Index = IndexTypes!R[0];
 			enum is_n_ary_function = is(typeof(func (range.front.expand)));
-			
+
 			static if (is_indexable!(R, Index))
 				{/*...}*/
 					auto ref opIndex (Index i)

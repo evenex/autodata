@@ -1356,7 +1356,8 @@ else struct Array (T, Reallocation reallocation = Reallocation.permitted)
 			}
 		this (T[] that)
 			{/*...}*/
-				data = that;
+				data = new T[that.length];
+				data[] = that[];
 			}
 		this (R)(R range)
 			if (is(ElementType!R == T))

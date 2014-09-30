@@ -57,7 +57,7 @@ public {/*vectors}*/
 			static immutable x = base_x;
 			static immutable y = base_y;
 
-			static auto opDispatch (string op)()
+			static opDispatch (string op)()
 				{/*...}*/
 					static if (mixin(q{is (} ~op~ q{)}))
 						{/*...}*/
@@ -74,6 +74,11 @@ public {/*vectors}*/
 					else mixin(q{
 						return vector (x.} ~op~ q{, y.} ~op~ q{);
 					});
+				}
+
+			static opSlice ()
+				{/*...}*/
+					return [base_x, base_y]; // REVIEW dynamic alloc or ctfe?
 				}
 		}
 

@@ -16,14 +16,11 @@ template not ()
 	}
 template not (alias predicate)
 	{/*...}*/
-		bool not (T)(T value)
-			if (__traits(compiles, predicate (value)))
+		bool not (Args...)(Args args)
 			{/*...}*/
-				return !(predicate (value));
-			}
-		bool not ()()
-			{/*...}*/
-				return !predicate;
+				static if (__traits(compiles, predicate (args)))
+					return !(predicate (args));
+				else return !predicate;
 			}
 	}
 
