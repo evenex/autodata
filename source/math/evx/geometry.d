@@ -48,47 +48,24 @@ public {/*traits}*/
 		}
 }
 public {/*vectors}*/
-	/* basis vectors 
-	*/
-	struct BasisVector (real base_x, real base_y)
-		{/*...}*/
-			enum is_basis_vector;
-				
-			static immutable x = base_x;
-			static immutable y = base_y;
-
-			static opDispatch (string op)()
-				{/*...}*/
-					static if (mixin(q{is (} ~op~ q{)}))
-						{/*...}*/
-							mixin(q{
-								alias Construct = } ~op~ q{;
-							});
-
-							static if (__traits(compiles, Construct (x,y)))
-								return Construct (x, y);
-							else static if (__traits(compiles, Construct (x)))
-								return vector (Construct (x), Construct (y));
-							else pragma (msg, `couldn't construct anything from ` ~op);
-						}
-					else mixin(q{
-						return vector (x.} ~op~ q{, y.} ~op~ q{);
-					});
-				}
-
-			static opSlice ()
-				{/*...}*/
-					return [base_x, base_y]; // REVIEW dynamic alloc or ctfe?
-				}
-		}
-
 	/* standard basis 
 	*/
-	immutable î = BasisVector!(1,0)();
-	immutable ĵ = BasisVector!(0,1)();
+	auto î (Vec)()
+		{/*...}*/
+			alias T = ElementType!Vec;
+
+			return Vec(unity!T, zero!T);
+		}
+	auto ĵ (Vec)()
+		{/*...}*/
+			alias T = ElementType!Vec;
+
+			return Vec(zero!T, unity!T);
+		}
+
 	unittest {/*...}*/
-		static assert (î.vec == vec(1,0));
-		static assert (ĵ.vec == vec(0,1));
+		static assert (î!vec == vec(1,0));
+		static assert (ĵ!vec == vec(0,1));
 		
 		import evx.units;
 		static assert (î.meters == Vector!(2, Meters) (1.meter, 0.meters));
@@ -128,9 +105,9 @@ public {/*vectors}*/
 			);
 		}
 		unittest {/*...}*/
-			assert (î.vec.bearing_to (ĵ.vec).approx (π/2));
-			assert (ĵ.vec.bearing_to (î.vec).approx (-π/2));
-			assert (vec(1,-1).bearing_to (î.vec).approx (π/4));
+			assert (î!vec.bearing_to (ĵ!vec).approx (π/2));
+			assert (ĵ!vec.bearing_to (î!vec).approx (-π/2));
+			assert (vec(1,-1).bearing_to (î!vec).approx (π/4));
 		}
 	alias angle_between = bearing_to;
 
@@ -256,11 +233,11 @@ public {/*polygons}*/
 				.equal (square.bounding_box[])
 			);
 
-			auto triangle = [-î.vec, ĵ.vec, î.vec];
+			auto triangle = [-î!vec, ĵ!vec, î!vec];
 			assert (triangle.flip!`horizontal`.equal (triangle.retro));
 
 			assert (triangle.flip!`vertical`
-				.approx ([-î.vec, -ĵ.vec, î.vec].map!(v => v + vec(0, 2.0/3)))
+				.approx ([-î!vec, -ĵ!vec, î!vec].map!(v => v + vec(0, 2.0/3)))
 			);
 
 			import evx.units;
@@ -589,10 +566,10 @@ public {/*axis-aligned bounding boxes}*/
 					assert (compute_offset (top_right) 		== 	1.vec);
 					assert (compute_offset (bottom_left) 	== -1.vec);
 
-					assert (compute_offset (center_right) 	== 	î.vec);
-					assert (compute_offset (top_center) 	== 	ĵ.vec);
-					assert (compute_offset (center_left) 	== -î.vec);
-					assert (compute_offset (bottom_center) 	== -ĵ.vec);
+					assert (compute_offset (center_right) 	== 	î!vec);
+					assert (compute_offset (top_center) 	== 	ĵ!vec);
+					assert (compute_offset (center_left) 	== -î!vec);
+					assert (compute_offset (bottom_center) 	== -ĵ!vec);
 				}
 		}
 
@@ -609,11 +586,11 @@ public {/*axis-aligned bounding boxes}*/
 
 			assert (a.center.approx (0.vec));
 
-			a = a.align_to (Alignment.center, ĵ.vec);
-			assert (a.center.approx (ĵ.vec));
+			a = a.align_to (Alignment.center, ĵ!vec);
+			assert (a.center.approx (ĵ!vec));
 
-			a = a.align_to (Alignment.top_center, ĵ.vec);
-			assert (a.center.approx (ĵ.vec / 2));
+			a = a.align_to (Alignment.top_center, ĵ!vec);
+			assert (a.center.approx (ĵ!vec / 2));
 			assert (a.bottom_center.approx (0.vec));
 
 			a = a.align_to (Alignment.top_right, 1.vec);

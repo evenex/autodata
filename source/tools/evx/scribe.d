@@ -199,7 +199,7 @@ final class Scribe
 
 							if (wrap_width < 0) 
 								wrap_width = draw_box.width;
-							else wrap_width = (wrap_width * î.vec.rotate (rotation)).from_extended_space.to_pixel_space (scribe.display).norm;
+							else wrap_width = (wrap_width * î!vec.rotate (rotation)).from_extended_space.to_pixel_space (scribe.display).norm;
 
 							newline_positions ~= 0;
 							this.card_box = [0.vec, pen].bounding_box; 

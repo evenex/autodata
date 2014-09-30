@@ -375,7 +375,7 @@ void main ()
 					foreach (i, item; enumerate (fred.inventory[]))
 						txt.write (item.entity.name)
 							.color (red)
-							.translate (-i * ĵ.vec / 10)
+							.translate (-i * ĵ!vec / 10)
 							.align_to (Alignment.top_right)
 						();
 				}
@@ -420,7 +420,7 @@ void main ()
 							.color (red.alpha (0.3))
 							.size (32)
 							.inside (pointer_box[].translate ((usr.pointer - fred.physical.position.to_view_space (cam)).unit * cam.zoom_factor / 1000))
-							.rotate (î.vec.bearing_to ((usr.pointer - fred.physical.position.to_view_space (cam)).unit))
+							.rotate (î!vec.bearing_to ((usr.pointer - fred.physical.position.to_view_space (cam)).unit))
 							.align_to (Alignment.center)
 							.wrap_width (999)
 						();

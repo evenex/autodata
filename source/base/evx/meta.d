@@ -582,7 +582,7 @@ public {/*construction}*/
 			public {/*[┄]}*/
 				ref auto opIndex (size_t i)
 					in {/*...}*/
-						assert (i < length, `access (` ~i.text~ `) out of bounds (` ~length.text~ `) for ` ~ElementType!(typeof(this[])).stringof);
+						assert (i < length, `access (` ~i.text~ `) out of bounds (` ~length.text~ `) for ` ~typeof(this).stringof);
 					}
 					body {/*...}*/
 						return pointer[i];

@@ -198,68 +198,68 @@ public {/*coordinate transformations}*/
 		scope gfx = new Display;
 		gfx.start; scope (exit) gfx.stop;
 		{/*identity}*/
-			assert (î.vec.approx (î.vec.from_draw_space.to_draw_space (gfx)));
-			assert (î.vec.approx (î.vec.from_extended_space.to_extended_space (gfx)));
-			assert (î.vec.approx (î.vec.from_pixel_space.to_pixel_space (gfx)));
+			assert (î!vec.approx (î!vec.from_draw_space.to_draw_space (gfx)));
+			assert (î!vec.approx (î!vec.from_extended_space.to_extended_space (gfx)));
+			assert (î!vec.approx (î!vec.from_pixel_space.to_pixel_space (gfx)));
 		}
 		{/*inverse}*/
-			assert (î.vec.approx (
-				î.vec.from_draw_space.to_extended_space (gfx)
+			assert (î!vec.approx (
+				î!vec.from_draw_space.to_extended_space (gfx)
 					.from_extended_space.to_draw_space (gfx)
 			));
-			assert (î.vec.approx (
-				î.vec.from_draw_space.to_pixel_space (gfx)
+			assert (î!vec.approx (
+				î!vec.from_draw_space.to_pixel_space (gfx)
 					.from_pixel_space.to_draw_space (gfx)
 			));
 
-			assert (î.vec.approx (
-				î.vec.from_extended_space.to_draw_space (gfx)
+			assert (î!vec.approx (
+				î!vec.from_extended_space.to_draw_space (gfx)
 					.from_draw_space.to_extended_space (gfx)
 			));
-			assert (î.vec.approx (
-				î.vec.from_extended_space.to_pixel_space (gfx)
+			assert (î!vec.approx (
+				î!vec.from_extended_space.to_pixel_space (gfx)
 					.from_pixel_space.to_extended_space (gfx)
 			));
 
-			assert (î.vec.approx (
-				î.vec.from_pixel_space.to_draw_space (gfx)
+			assert (î!vec.approx (
+				î!vec.from_pixel_space.to_draw_space (gfx)
 					.from_draw_space.to_pixel_space (gfx)
 			));
-			assert (î.vec.approx (
-				î.vec.from_pixel_space.to_extended_space (gfx)
+			assert (î!vec.approx (
+				î!vec.from_pixel_space.to_extended_space (gfx)
 					.from_extended_space.to_pixel_space (gfx)
 			));
 		}
 		{/*cycle}*/
-			assert (î.vec.approx (
-				î.vec.from_draw_space.to_extended_space (gfx)
+			assert (î!vec.approx (
+				î!vec.from_draw_space.to_extended_space (gfx)
 					.from_extended_space.to_pixel_space (gfx)
 					.from_pixel_space.to_draw_space (gfx)
 			));
-			assert (î.vec.approx (
-				î.vec.from_draw_space.to_pixel_space (gfx)
+			assert (î!vec.approx (
+				î!vec.from_draw_space.to_pixel_space (gfx)
 					.from_pixel_space.to_extended_space (gfx)
 					.from_extended_space.to_draw_space (gfx)
 			));
 
-			assert (î.vec.approx (
-				î.vec.from_extended_space.to_draw_space (gfx)
+			assert (î!vec.approx (
+				î!vec.from_extended_space.to_draw_space (gfx)
 					.from_draw_space.to_pixel_space (gfx)
 					.from_pixel_space.to_extended_space (gfx)
 			));
-			assert (î.vec.approx (
-				î.vec.from_extended_space.to_pixel_space (gfx)
+			assert (î!vec.approx (
+				î!vec.from_extended_space.to_pixel_space (gfx)
 					.from_pixel_space.to_draw_space (gfx)
 					.from_draw_space.to_extended_space (gfx)
 			));
 
-			assert (î.vec.approx (
-				î.vec.from_pixel_space.to_draw_space (gfx)
+			assert (î!vec.approx (
+				î!vec.from_pixel_space.to_draw_space (gfx)
 					.from_draw_space.to_extended_space (gfx)
 					.from_extended_space.to_pixel_space (gfx)
 			));
-			assert (î.vec.approx (
-				î.vec.from_pixel_space.to_extended_space (gfx)
+			assert (î!vec.approx (
+				î!vec.from_pixel_space.to_extended_space (gfx)
 					.from_extended_space.to_draw_space (gfx)
 					.from_draw_space.to_pixel_space (gfx)
 			));
