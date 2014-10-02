@@ -105,12 +105,16 @@ void main ()
 		bool step;
 		scope usr = new Input (gfx, (bool yes){if (yes) step = true;});
 
-		auto convex_hull_graham (R)(R points) // TODO auto ref => ref? in_place: internal_alloc
+		auto convex_hull (R)(auto ref R points)
 			if (is_geometric!R)
 			{/*...}*/
+				/* Graham's Scan */
 				alias Vertex = ElementType!R;
 
-				auto vertices = Array!Vertex (points);
+				static if (__traits(isRef, points))
+					alias vertices = points;
+				else auto vertices = Array!Vertex (points);
+
 				vertices[].multiSort!((u,v) => u.y < v.y, (u,v) => u.x < v.x);
 				auto p = vertices[0];
 
@@ -153,7 +157,12 @@ void main ()
 				return hull;
 			}
 
-		convex_hull_graham (vertices[]);
+		auto triangulate (R)(R convex_hull) // TODO assert is_convex_hull?
+			{/*...}*/
+				// TODO next step
+			}
+
+		convex_hull (vertices[]);
 
 		{/*...}*/
 			static if (0)
