@@ -673,7 +673,7 @@ public {/*construction}*/
 					}
 				ref auto back ()
 					in {/*...}*/
-						assert (length);
+						assert (length, `attempted to fetch back of empty array`);
 					}
 					body {/*...}*/
 						import std.range: back;

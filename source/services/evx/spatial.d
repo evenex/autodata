@@ -319,6 +319,11 @@ struct Incidence
 		SpatialId body_id;
 		vec surface_normal;
 		double ray_time;
+
+		bool occurred ()
+			{/*...}*/
+				return surface_normal != zero!vec;
+			}
 	}
 
 final class SpatialDynamics
@@ -424,8 +429,10 @@ final class SpatialDynamics
 				}
 
 			void polygon_query (Output, R)(R polygon, ref Output result)
-				if (can_receive_spatial_ids!Output)
-				{/*...}*/
+				in {/*...}*/
+					static assert (can_receive_spatial_ids!Output, Output.stringof~ ` cant put `~Id.stringof);
+				}
+				body {/*...}*/
 					alias Id = ElementType!Output;
 
 					auto len = polygon.length.to!int;
@@ -452,7 +459,10 @@ final class SpatialDynamics
 				}
 
 			void circle_query (Output)(Position center, Meters radius, ref Output result)
-				{/*...}*/
+				in {/*...}*/
+					static assert (can_receive_spatial_ids!Output, Output.stringof~ ` cant put `~Id.stringof);
+				}
+				body {/*...}*/
 					alias Id = ElementType!Output;
 
 					auto layers = CP_ALL_LAYERS;
@@ -512,12 +522,12 @@ final class SpatialDynamics
 
 					cpSegmentQueryInfo info;
 
-					if (id != SpatialId.init)
-						foreach (shape; bodies[id].shape_ids)
+					if (id == SpatialId.init)
+						cp.SpaceSegmentQueryFirst (space, seg[0], seg[1], 
+							layers, group, &info
+						);
+					else foreach (shape; bodies[id].shape_ids)
 							cp.ShapeSegmentQuery (shape, seg[0], seg[1], &info);
-					else cp.SpaceSegmentQueryFirst (space, seg[0], seg[1], 
-						layers, group, &info
-					);
 
 					if (info.shape)
 						return Incidence (get_id (info.shape), info.n.vector, info.t);

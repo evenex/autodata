@@ -32,9 +32,9 @@ final class Scribe
 	{/*...}*/
 		public:
 		public {/*interface}*/
-			Text write (T)(T text)
+			Text write (Args...)(Args items)
 				{/*...}*/
-					return Text (this, text.to!dstring)
+					return Text (this, text (items).to!dstring)
 						.color (black)
 						.size (font_sizes[0])
 						.inside (display.extended_bounds)

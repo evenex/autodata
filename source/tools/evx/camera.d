@@ -75,7 +75,7 @@ final class Camera
 				}
 			auto capture ()
 				in {/*...}*/
-					assert (world !is null);
+					assert (world !is null, `world has not been instantiated`);
 				}
 				body {/*...}*/
 					auto capture = Appendable!(Capture[])(256);

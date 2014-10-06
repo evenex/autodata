@@ -601,7 +601,7 @@ struct Appendable (Array, PolicyList...)
 				{/*...}*/
 					static if (overflow is Overflow.blocked)
 						{/*...}*/
-							if (array.length + range.length > array.capacity)
+							if (array.length + range.length > array.capacity) // TODO this is not so good blocking behavior... fill with what you can, then block
 								return;
 						}
 

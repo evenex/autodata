@@ -85,6 +85,14 @@ public {/*tuple arithmetic predicates}*/
 }
 // REVIEW ↑ superceded by vector?
 
+template ArithmeticToolkit ()
+	{/*...}*/
+		enum ArithmeticToolkit = q{
+			alias sum = evx.arithmetic.sum;
+			alias product = evx.arithmetic.product;
+		};
+	}
+
 /* compute the product of a sequence 
 */
 auto product (R)(R sequence)
