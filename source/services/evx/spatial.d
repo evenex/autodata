@@ -500,7 +500,7 @@ final class SpatialDynamics
 
 			Incidence ray_cast_excluding (T)(T spatial_id, Position[2] ray)
 				{/*...}*/
-					auto id = SpatialId (id);
+					auto id = SpatialId (spatial_id);
 					auto layer = bodies[id].layer;
 
 					bodies[id].layer = 0x0;

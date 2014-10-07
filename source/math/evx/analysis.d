@@ -22,6 +22,17 @@ private {/*imports}*/
 	mixin(FunctionalToolkit!());
 }
 
+/* alias disambiguation
+*/
+template AnalysisToolkit ()
+	{/*...}*/
+		enum AnalysisToolkit = q{
+			alias floor = evx.analysis.floor;
+			alias ceil = evx.analysis.ceil;
+			alias round = evx.analysis.round;
+		};
+	}
+
 template infinite (T)
 	if (is_continuous!T)
 	{/*...}*/

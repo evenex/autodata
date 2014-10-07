@@ -14,6 +14,8 @@ import evx.utils;
 import evx.spatial;
 import evx.camera;
 
+// TODO if the normal of the surface hit is close enough to π/2.... do an exclusive raycast without that shape, cause its probably a grazing hit?!?!
+
 //vertices[].enumerate.rotate_elements[0..$].map!((i,v) => i).pl; // this preserves the original range
 //vertices[].enumerate.rotate_elements[1..$].map!((i,v) => i).pl; // BUG This winds up kicking out the first AND last element... must be a bug in Cycle? dropOne works, but drop (1) doesn't...
 
@@ -115,13 +117,20 @@ bool is_degenerate (R)(R polygon)
 
 auto is_visible_from (Position b, Position a)
 	{/*...}*/
-		enum ε = 0.005.meters; // XXX this does not seem to affect the success rate of the tiling either way
-		auto γ = (b-a).unit * ε;
-		auto δ = (a-b).rotate (π/2).unit * ε;
+		auto ab = b-a;
 
-		return not (space.ray_cast ([a+γ+δ, b+δ]).occurred
-		&& space.ray_cast ([a+γ-δ, b-δ]).occurred
-		&& space.ray_cast ([a+γ, b]).occurred);
+		auto Δ = ab.unit;
+		auto ε = 0.01;
+		auto δ = Δ * ε * ab.norm;
+		auto ρ = δ.rotate (π/2);
+
+		auto incidences = [
+			space.ray_cast ([a+δ-ρ, b-δ-ρ]),
+			space.ray_cast ([a+δ, b-δ]),
+			space.ray_cast ([a+δ+ρ, b-δ+ρ]),
+		];
+
+		return not!all (incidences.map!(inc => inc.occurred));
 	}
 
 auto overlap (R)(R range, size_t overlap = 1)
@@ -129,15 +138,18 @@ auto overlap (R)(R range, size_t overlap = 1)
 		return chain (range[], range[0..overlap]);
 	}
 
+static if (0)
 void main ()
 	{/*...}*/
 		static if (1)
 		Appendable!(vec[]) vertices;
 		else
-		auto vertices = circle!10.scale (0.25);
+		auto vertices = square.scale (2);
+
+		vertices ~= square.scale (2);
 
 		enum nn = 4;
-		static if (1)
+		static if (0)
 		foreach (i; 0..nn^^2)
 			vertices ~= vec(i/nn, i%nn) / (nn/2.0) - 1.vec;
 			//vertices ~= vec(2*gaussian % 1, 2*gaussian % 1) * 0.5;
@@ -236,11 +248,8 @@ void main ()
 							return;
 
 						temp_bodies[id] = tri;
-						space.new_body (id, infinity.kilograms, tri[].scale (0.95)); // EPSILON
+						space.new_body (id, infinity.kilograms, tri[]);
 					}
-
-				auto vertices = Array!Position (geometry[]);
-				vertices[1..$].sort_by_polar_angle_about (vertices[0]);
 
 				auto triangulations = Triangulation ();
 
@@ -253,7 +262,7 @@ void main ()
 						return result.empty;
 					}
 
-				foreach (v; vertices[])
+				foreach (v; geometry[])
 					{/*...}*/
 						auto ref t_fan (){return triangulations.back;}
 
@@ -261,7 +270,12 @@ void main ()
 
 						t_fan ~= v;
 
-						foreach (u; vertices[].overlap (3).filter!(u => u != v && u.is_visible_from (v)))
+				auto vertices = Array!Position (geometry[].filter!(u => u != v));
+				vertices[].sort_by_polar_angle_about (v);
+
+
+				Triangle[] bad_triangles;
+						foreach (u; vertices[].overlap (3).filter!(u => u.is_visible_from (v)))
 							{/*...}*/
 								if (t_fan.length >= 3)
 									{/*consider new triangle}*/
@@ -269,7 +283,10 @@ void main ()
 
 										if (triangle_is_clear (u,v,w)) // TODO empty -> free function, TODO queries without output array -> construct an output array inside the f'n, TODO return to original syntax (polygon_query).empty | not!empty
 											add_triangle (u,v,w);
-										else t_fan.shrink (1);
+										else {/*}*/
+											t_fan.shrink (1);
+											bad_triangles ~= Triangle([u,v,w]);
+										}
 									}
 
 								t_fan ~= u;
@@ -284,6 +301,10 @@ void main ()
 									txt.write (triangulations.length, ` fans, `, triangulations[].map!(fan => fan.length - 2).sum, ` triangles`)
 										.color (white)										
 									();
+
+									foreach (tr; bad_triangles)
+										gfx.draw (yellow (0.15), tr[].to_view_space (cam), filled);
+
 
 									cam.capture;
 

@@ -1059,7 +1059,7 @@ struct Associative (Array, Lookup...)
 				}
 			auto ref get (Key key)
 				in {/*...}*/
-					assert (this.contains (key));
+					assert (this.contains (key), `key ` ~key.text~ ` not found in ` ~typeof(this).stringof);
 				}
 				body {/*...}*/
 					return *find (key);
