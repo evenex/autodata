@@ -152,6 +152,9 @@ struct Plot (Data, Style style)
 						{/*...}*/
 							void draw_zero_line ()
 								{/*...}*/
+									if (y_min > zero!YType || y_max < zero!YType)
+										return;
+										
 									auto zero_y = (1 - y_max/(y_max-y_min)) * plot_field.height + plot_field.bottom;
 
 									display.draw (_color (0.2), [vec(plot_field.left, zero_y), vec(plot_field.right, zero_y)]);

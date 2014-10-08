@@ -346,7 +346,11 @@ public {/*zip}*/
 								auto measure = ranges[0].measure;
 
 								foreach (range; ranges)
-									assert (range.measure == measure, `range measure mismatch`); // REVIEW approx?
+									assert (range.measure == measure, `range measure mismatch: `
+										~typeof(range).stringof~ ` ` ~range.measure.text~ 
+										` vs `
+										~typeof(ranges[0]).stringof~ ` ` ~measure.text
+									); // REVIEW approx?
 							}
 						static if (allSatisfy!(hasLength, Ranges))
 							{/*...}*/
