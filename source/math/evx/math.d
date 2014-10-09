@@ -16,3 +16,12 @@ public:
 	import evx.arithmetic;
 	import evx.ordinal;
 	import evx.algebra;
+
+template MathToolkit ()
+	{/*...}*/
+		enum MathToolkit = q{
+			mixin(FunctionalToolkit!());
+			mixin(AnalysisToolkit!());
+			mixin(ArithmeticToolkit!());
+		};
+	}

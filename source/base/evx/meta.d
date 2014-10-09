@@ -21,6 +21,8 @@ public {/*forwarding}*/
 	*/
 	mixin template IterateOver (alias container)
 		{/*...}*/
+			import std.traits;
+
 			static assert (is(typeof(this)), `mixin requires host struct`);
 
 			int opApply (scope int delegate(ref typeof(container[0])) op)

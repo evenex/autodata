@@ -13,6 +13,7 @@ import evx.input;
 import evx.utils;
 import evx.spatial;
 import evx.camera;
+import libtriangle;
 
 // TODO if the normal of the surface hit is close enough to π/2.... do an exclusive raycast without that shape, cause its probably a grazing hit?!?!
 
