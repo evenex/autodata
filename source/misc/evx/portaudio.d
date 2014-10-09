@@ -293,7 +293,7 @@ struct Audio
 							auto output = cast(float*)output_buffer;
 							auto input = cast(Stream*)user_data;
 
-							foreach (i; 0..frames_per_buffer)
+							foreach (i; 0..frames_per_buffer.to!size_t)
 								{/*...}*/
 									auto sample = input.sample;
 
@@ -386,7 +386,7 @@ unittest {/*...}*/
 	pa.CloseStream (stream);
 }
 
-static if (0)
+static if (1)
 void main ()
 	{/*...}*/
 		enum Note
