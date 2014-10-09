@@ -17,9 +17,11 @@ private {/*import}*/
 		import evx.colors;
 		import evx.camera;
 		import evx.input;
+		import evx.lsystem;
 	}
+	import libtriangle;
 
-	mixin(FunctionalToolkit!());
+	mixin(MathToolkit!());
 	alias m = meters;
 }
 
@@ -98,4 +100,13 @@ auto rubble (double size)
 			building.shift_down_on (j - i);
 
 		return *(cast(Appendable!(Array!BoundingBox, Overflow.blocked)*)&building);
+	}
+
+void main ()
+	{/*...}*/
+		display_loop!((Display gfx, Input usr, Scribe txt)
+			{/*...}*/
+				
+			}
+		);
 	}
