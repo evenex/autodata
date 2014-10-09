@@ -8,8 +8,6 @@ import evx.math;
 import evx.utils;
 import evx.set;
 
-mixin(MathToolkit!());
-
 struct LSystem (LSymbol)
 	{/*...}*/
 		alias Symbol = LSymbol;
@@ -19,49 +17,46 @@ struct LSystem (LSymbol)
 		alias Axiom = Symbol[];
 		alias Rules = Set!Rule;
 
-		struct Grammar 
+		this (Alphabet alphabet, Axiom initial, Rules production)
 			{/*...}*/
-				Tuple!(Alphabet, `alphabet`, Axiom, `axiom`, Rules, `rules`) definition;
-				Axiom state;
-
-				this (Alphabet alphabet, Axiom initial, Rules production)
-					{/*...}*/
-						definition = typeof(definition)(alphabet, initial, production);
-						state = initial;
-					}
-
-				auto update ()
-					{/*...}*/
-						return state = rewrite (state);
-					}
-
-				Axiom rewrite (Axiom substate)
-					{/*...}*/
-						foreach (rule; definition.rules)
-							{/*...}*/
-								auto found = substate.findSplit (rule.predecessor);
-
-								auto before = found[0];
-								auto match  = found[1];
-								auto after  = found[2];
-
-								if (match.not!empty)
-									return rewrite (before) ~rule.successor~ rewrite (after);
-								else continue;
-							}
-
-						return substate;
-					}
-
-				auto toString ()
-					{/*...}*/
-						return state.text;
-					}
+				definition = typeof(definition)(alphabet, initial, production);
+				state = initial;
 			}
-	}
 
-void main ()
-	{/*...}*/
+		Axiom rewrite (Axiom substate)
+			{/*...}*/
+				foreach (rule; definition.rules)
+					{/*...}*/
+						auto found = substate.findSplit (rule.predecessor);
+
+						auto before = found[0];
+						auto match  = found[1];
+						auto after  = found[2];
+
+						if (match.not!empty)
+							return rewrite (before) ~rule.successor~ rewrite (after);
+						else continue;
+					}
+
+				return substate;
+			}
+
+		auto update ()
+			{/*...}*/
+				return state = rewrite (state);
+			}
+		auto toString ()
+			{/*...}*/
+				return state.text;
+			}
+
+		private:
+		private {/*state}*/
+			Tuple!(Alphabet, `alphabet`, Axiom, `axiom`, Rules, `rules`) definition;
+			Axiom state;
+		}
+	}
+	unittest {/*...}*/
 		with (LSystem!dchar) {/*...}*/
 			enum: Symbol {a = 'A', b = 'B'}
 
@@ -71,7 +66,7 @@ void main ()
 				Rule ([b], [a]),
 			);
 
-			auto algae = Grammar (A, [a], P);
+			auto algae = LSystem!dchar (A, [a], P); // TODO helper ctor
 
 			assert (algae.text == `A`);
 			assert (algae.update.text == `AB`);

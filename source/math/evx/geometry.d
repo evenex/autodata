@@ -127,6 +127,59 @@ public {/*vectors}*/
 		{/*...}*/
 			return range.reduce!((a,b) => a.distance_to (point) < b.distance_to (point)? a: b);
 		}
+
+	/* test if traversing three successive vertices constitutes a left turn 
+	*/
+	bool is_left_turn (V)(V a, V b, V c)
+		{/*...}*/
+			return (b-a).det (c-b) > 0;
+		}
+		unittest {/*...}*/
+			assert (is_left_turn (0.vec, î!vec, 1.vec));
+		}
+
+	/* sort a set of vertices by their polar angle about a given vertex
+	*/
+	auto sort_by_polar_angle_about (R, V = ElementType!R)(auto ref R vertices, V center)
+		{/*...}*/
+			enum x_axis = î!V;
+			auto p = center;
+
+			vertices[].sort!((u,v) => (u-p).bearing_to (x_axis) < (v-p).bearing_to (x_axis));
+		}
+
+	/* sort a set of vertices by their polar angle about the origin
+	*/
+	auto sort_by_polar_angle (R)(auto ref R vertices)
+		{/*...}*/
+			vertices.sort_by_polar_angle_about (zero!(ElementType!R));
+		}
+}
+public {/*edges}*/
+	/* an edge consisting of 2 vertices 
+	*/
+	template Edge (T)
+		{/*...}*/
+			alias Edge = Vector!(2,T)[2];
+		}
+	auto edge (V)(V u, V v)
+		{/*...}*/
+			return Edge!(ElementType!V)([u,v]);
+		}
+
+	/* construct the set of edges of a polygon 
+	*/
+	auto edges (R)(R range)
+		{/*...}*/
+			return range.adjacent_pairs.map!edge;
+		}
+
+	/* test if a vertex lies to the left of an edge 
+	*/
+	bool is_left_of (V, T = ElementType!V)(V v, Edge!T e)
+		{/*...}*/
+			return is_left_turn (e[0], e[1], v);
+		}
 }
 public {/*polygons}*/
 	/* shape generators 
@@ -282,6 +335,13 @@ public {/*polygons}*/
 			immutable s = scale;
 
 			return geometry.map!(v => s*(v-c) + c);
+		}
+
+	/* test if a polygon is degenerate (zero area) 
+	*/
+	bool is_degenerate (R)(R polygon)
+		{/*...}*/
+			return polygon[].area == 0.squared!meters;
 		}
 
 	unittest {/*with evx.units}*/

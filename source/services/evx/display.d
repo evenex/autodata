@@ -363,7 +363,7 @@ final class Display: Service
 					return [0.vec, dimensions].from_pixel_space.to_extended_space (this).bounding_box;
 				}
 		}
-		public {/*ctors}*/
+		public {/*ctor/dtor}*/
 			this (uint width, uint height)
 				{/*...}*/
 					this (uvec(width, height));
@@ -376,6 +376,12 @@ final class Display: Service
 			this ()
 				{/*...}*/
 					buffer = new typeof(buffer);
+
+					start;
+				}
+			~this ()
+				{/*...}*/
+					stop;
 				}
 		}
 		protected:
