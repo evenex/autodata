@@ -1,1 +1,0 @@
-/home/vlad/Projects/fcap/source/opencv.d
