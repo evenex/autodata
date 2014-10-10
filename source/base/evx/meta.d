@@ -17,50 +17,58 @@ private {/*imports}*/
 
 pure:
 public {/*forwarding}*/
+	enum Iteration {constant, mutable}
 	/* forward opApply (foreach) 
 	*/
-	mixin template IterateOver (alias container)
+	mixin template IterateOver (alias container, Iteration iteration = Iteration.mutable)
 		{/*...}*/
 			import std.traits;
 
 			static assert (is(typeof(this)), `mixin requires host struct`);
 
-			int opApply (scope int delegate(ref typeof(container[0])) op)
+			static if (iteration is Iteration.mutable)
 				{/*...}*/
-					int result;
-
-					foreach (ref element; container)
+					int opApply (scope int delegate(ref typeof(container[0])) op)
 						{/*...}*/
-							result = op (element);
+							int result;
 
-							if (result) 
-								break;
+							foreach (ref element; container)
+								{/*...}*/
+									result = op (element);
+
+									if (result) 
+										break;
+								}
+
+							return result;
 						}
-
-					return result;
-				}
-			int opApply (scope int delegate(size_t, ref typeof(container[0])) op)
-				{/*...}*/
-					int result;
-
-					foreach (i, ref element; container)
+					int opApply (scope int delegate(size_t, ref typeof(container[0])) op)
 						{/*...}*/
-							result = op (i, element);
+							int result;
 
-							if (result) 
-								break;
+							foreach (i, ref element; container)
+								{/*...}*/
+									result = op (i, element);
+
+									if (result) 
+										break;
+								}
+
+							return result;
 						}
-
-					return result;
 				}
-			int opApply (scope int delegate(const ref typeof(container[0])) op) const
+			else static if (iteration is Iteration.constant)
 				{/*...}*/
-					return (cast()this).opApply (cast(int delegate(ref typeof(container[0]))) op);
+					int opApply (scope int delegate(const ref typeof(container[0])) op) const
+						{/*...}*/
+							return (cast()this).opApply (cast(int delegate(ref typeof(container[0]))) op);
+						}
+					int opApply (scope int delegate(const size_t, const ref Unqual!(typeof(container[0]))) op) const
+						{/*...}*/
+							return (cast()this).opApply (cast(int delegate(size_t, ref Unqual!(typeof(container[0])))) op);
+						}
 				}
-			int opApply (scope int delegate(const size_t, const ref Unqual!(typeof(container[0]))) op) const
-				{/*...}*/
-					return (cast()this).opApply (cast(int delegate(size_t, ref Unqual!(typeof(container[0])))) op);
-				}
+			else static assert (0);
 		}
 		unittest {/*...}*/
 			import std.conv: to;

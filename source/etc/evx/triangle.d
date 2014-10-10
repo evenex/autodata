@@ -252,6 +252,8 @@ module libtriangle;
 private {/*imports}*/
 	private {/*std}*/
 		import std.conv;
+		import std.range;
+		import std.traits;
 	}
 	private {/*evx}*/
 		import evx.math;
@@ -503,9 +505,10 @@ private struct libtri
 			}
 	}
 
-struct Triangulation
+struct Triangulation (Units)
 	{/*...}*/
-		vec[] vertices;
+		alias Vertex = Vector!(2, Units);
+		Vertex[] vertices;
 		int[] indices;
 
 		this (libtri.Args args)
@@ -513,66 +516,55 @@ struct Triangulation
 				with (args) {/*...}*/
 					assert (numberofcorners == 3);
 
-					vertices = pointlist[0..numberofpoints];
+					vertices = (cast(Vertex*)pointlist)[0..numberofpoints];
 					indices = trianglelist[0..numberoftriangles*3];
 				}
 			}
+
+
+		int opApply (scope int delegate(Vertex[3]) op)
+			{/*...}*/
+				int result;
+				Vector!(3, Vertex) triangle;
+
+				foreach (i; 0..indices.length/3)
+					{/*...}*/
+						triangle = indices[3*i..3*(i+1)].map!(j => vertices[j]);
+						
+						result = op (triangle.array);
+
+						if (result) 
+							break;
+					}
+
+				return result;
+			}
+
+		version (none)
+		mixin IterateOver!triangles; // OUTSIDE BUG need this to access member
+		version (none)
+		auto triangles ()
+			{/*...}*/
+				return indices[].map!(i => vertices[i]).chunks (3);
+				// TODO smart slicing, saving, copying on range ops... using a centralized extraction method
+			}
 	}
 
-auto triangulate (vec[] points)
+auto triangulate (R)(R points)
+	// TODO make these points into vecs and triangulate that shit and return it with the original units
+	if (is_geometric!R)
 	{/*...}*/
-		libtri.Args input = {/*...}*/
-			pointlist: points.ptr,
-			pointattributelist: null,
-			pointmarkerlist: null,
-			numberofpoints: points.length.to!int,
-			numberofpointattributes: 0,
-			trianglelist: null,
-			triangleattributelist: null,
-			trianglearealist: null,
-			neighborlist: null,
-			numberoftriangles: 0,
-			numberofcorners: 0,
-			numberoftriangleattributes: 0,
-			segmentlist: null,
-			segmentmarkerlist: null,
-			numberofsegments: 0,
-			holelist: null,
-			numberofholes: 0,
-			regionlist: null,
-			numberofregions: 0,
-			edgelist: null,
-			edgemarkerlist: null,
-			normlist: null,
-			numberofedges: 0
-		}; 
-		libtri.Args output = {/*...}*/
-			pointlist: null,
-			pointattributelist: null,
-			pointmarkerlist: null,
-			numberofpoints: 0,
-			numberofpointattributes: 0,
-			trianglelist: null,
-			triangleattributelist: null,
-			trianglearealist: null,
-			neighborlist: null,
-			numberoftriangles: 0,
-			numberofcorners: 0,
-			numberoftriangleattributes: 0,
-			segmentlist: null,
-			segmentmarkerlist: null,
-			numberofsegments: 0,
-			holelist: null,
-			numberofholes: 0,
-			regionlist: null,
-			numberofregions: 0,
-			edgelist: null,
-			edgemarkerlist: null,
-			normlist: null,
-			numberofedges: 0
-		}; 
+		alias Units = ElementType!(ElementType!R);
+		static assert (is(RepresentationTypeTuple!Units == TypeTuple!double), RepresentationTypeTuple!Units.stringof);
+
+		libtri.Args input;
+		with (input) {/*...}*/
+			pointlist = cast(vec*)points.ptr;
+			numberofpoints = points.length.to!int;
+		}
+		libtri.Args output; 
 
 		libtri.triangulate (to_c (`QzDq`).expand, &input, &output, null);
 
-		return Triangulation (output);
+		return Triangulation!Units (output);
 	}

@@ -410,6 +410,21 @@ final class SpatialDynamics
 				}
 		}
 		public {/*queries}*/
+			private //TODO
+			static managed_result_query (string type)()
+				{/*...}*/
+					return q{
+						auto } ~type~ q{_query (Args...)(Args args)
+							}`{`q{
+								Appendable!(SpatialId[]) result;
+
+								} ~type~ q{_query (args, result);
+
+								return result;
+							}`}`q{
+					};
+				}
+
 			void box_query (Output)(Position[2] corners, ref Output result)
 				in {/*...}*/
 					static assert (can_receive_spatial_ids!Output, Output.stringof~ ` cant put `~Id.stringof);
@@ -428,7 +443,7 @@ final class SpatialDynamics
 					);
 				}
 
-			void polygon_query (Output, R)(R polygon, ref Output result)
+			void polygon_query (Output, R)(R polygon, ref Output result) // TODO optionally build out own result array if none supplied
 				in {/*...}*/
 					static assert (can_receive_spatial_ids!Output, Output.stringof~ ` cant put `~Id.stringof);
 				}
@@ -486,6 +501,10 @@ final class SpatialDynamics
 						&put, &result
 					);
 				}
+
+			mixin(managed_result_query!`box`);
+			mixin(managed_result_query!`polygon`);
+			mixin(managed_result_query!`circle`);
 
 			struct Intersection
 				{/*...}*/
