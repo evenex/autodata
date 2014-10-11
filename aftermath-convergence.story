@@ -48,6 +48,7 @@ CIA : "Justifies actions based on patriotism"
 Tone Jackson
   A few weeks before the club. Just hit the streets out of prison. Trying and failing to find work honestly - with the negotiation mechanic. Can't stay with family - they are overstretched. Decides as a last resort to sell drugs again to survive. Phones up old contacts - trying to get information and get an opportunities - using negotiation mechanics. Looking to front some drugs. He found something at the club.
   
+  Mid Game: Tone has to get involved with Yancy's operation enough to be useful to parks in a deal.
   
   Late Game: Tone could use negotiation tactics to try and convince Adamsen to give up the CIA bullshit and do good instead (expose the scheme).
   
