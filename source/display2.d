@@ -39,6 +39,37 @@ alias Cvec = Vector!(4, float);
 
 enum GeometryEditing {disabled = false, enabled = true}
 
+template gl_type_enum (T)
+	{/*...}*/
+		alias ConversionTable = TypeTuple!(
+			byte,   GL_BYTE,
+			ubyte,  GL_UNSIGNED_BYTE,
+			short,  GL_SHORT,
+			ushort, GL_UNSIGNED_SHORT,
+			int,    GL_INT,
+			uint,   GL_UNSIGNED_INT,
+			float,  GL_FLOAT,
+			double, GL_DOUBLE
+		);
+
+		enum gl_type_enum = ConversionTable[staticIndexOf!(T, ConversionTable) + 1];
+	}
+template glsl_typename (T)
+	{/*...}*/
+		static if (is_vector!T)
+			{/*...}*/
+				enum stringof = ElementType!T.stringof[0].text ~`vec`~ T.length.text;
+
+				static if (is(ElementType!T == float))
+					enum glsl_typename = stringof[1..$];
+				else enum glsl_typename = stringof;
+			}
+		else static if (isScalarType!T)
+			enum glsl_typename = T.stringof;
+		else static assert (0, `cannot pass ` ~T.stringof~ ` directly to shader`);
+	}
+
+
 public:
 public {/*buffers}*/
 	private {/*base}*/
@@ -77,26 +108,8 @@ public {/*buffers}*/
 							enum GLint length = 1;
 						}
 
-						alias ConversionTable = TypeTuple!(
-							byte,   GL_BYTE,
-							ubyte,  GL_UNSIGNED_BYTE,
-							short,  GL_SHORT,
-							ushort, GL_UNSIGNED_SHORT,
-							int,    GL_INT,
-							uint,   GL_UNSIGNED_INT,
-							float,  GL_FLOAT,
-							double, GL_DOUBLE
-						);
-
-						mixin ParameterSplitter!(
-							`Types`, is_type,
-							`Enums`, is_numerical_param,
-							ConversionTable
-						);
-						static assert (staticIndexOf!(U, Types) >= 0, U.stringof~ ` must be one of ` ~Types.stringof);
-
 						static if (is_vector!T)
-							gl.VertexAttribPointer (0, length, Enums[staticIndexOf!(U, Types)], GL_FALSE, 0, null); // TODO watch out for attribute indices
+							gl.VertexAttribPointer (0, length, gl_type_enum!T, GL_FALSE, 0, null); // TODO watch out for attribute indices
 					}
 
 				void upload (T[] data)
@@ -215,13 +228,13 @@ public {/*shader params}*/
 			template generate_layout_declaration (T, string name, uint index)
 				{/*...}*/
 					enum generate_layout_declaration = q{
-						layout (location = } ~index.text~ q{) in } ~gl_type!(ElementType!T)~ q{ } ~name~ q{;
+						layout (location = } ~index.text~ q{) in } ~glsl_typename!(ElementType!T)~ q{ } ~name~ q{;
 					};
 				}
 			template generate_smooth_declaration (T, string name)
 				{/*...}*/
 					enum generate_smooth_declaration = q{
-						smooth in } ~gl_type!(ElementType!T)~ q{ } ~name~ q{;
+						smooth in } ~glsl_typename!(ElementType!T)~ q{ } ~name~ q{;
 					};
 				}
 		}
@@ -265,13 +278,13 @@ public {/*shader params}*/
 			template generate_smooth_declaration (T, string name)
 				{/*...}*/
 					enum generate_smooth_declaration = q{
-						smooth out } ~gl_type!(ElementType!T)~ q{ } ~name~ q{;
+						smooth out } ~glsl_typename!(ElementType!T)~ q{ } ~name~ q{;
 					};
 				}
 			template generate_declaration (T, string name)
 				{/*...}*/
 					enum generate_declaration = q{
-						out } ~gl_type!(ElementType!T)~ q{ } ~name~ q{;
+						out } ~glsl_typename!(ElementType!T)~ q{ } ~name~ q{;
 					};
 				}
 		}
@@ -328,7 +341,7 @@ public {/*programs}*/
 				alias U = T;
 			}
 
-			enum type = gl_type!U[0].text;
+			enum type = glsl_typename!U[0].text;
 			enum call = "gl.Uniform" ~length~type;
 
 			mixin(q{
@@ -510,7 +523,7 @@ public {/*graph}*/
 										order.graph.buffer.bind;
 
 										with (order)
-										gl.DrawElements (GL_LINES, graph.buffer.indices.length, GL_UNSIGNED_SHORT, null);
+										gl.DrawElements (GL_LINES, graph.buffer.indices.length, gl_type_enum!ushort, null);
 									}
 
 								order.color = order.edge_color;
@@ -665,13 +678,13 @@ public {/*mesh}*/
 								void draw_solid ()
 									{/*...}*/
 										with (order)
-										gl.DrawElements (GL_TRIANGLES, mesh.buffer.indices.length, GL_UNSIGNED_SHORT, null);
+										gl.DrawElements (GL_TRIANGLES, mesh.buffer.indices.length, gl_type_enum!ushort, null);
 									}
 								void draw_wireframe ()
 									{/*...}*/
 										with (order)
 										foreach (i; 0..mesh.buffer.indices.length/3)
-											gl.DrawElements (GL_LINE_LOOP, 3, GL_UNSIGNED_SHORT, (3*i*ushort.sizeof).to!size_t.voidptr);
+											gl.DrawElements (GL_LINE_LOOP, 3, gl_type_enum!ushort, (3*i*ushort.sizeof).to!size_t.voidptr);
 									}
 
 								with (Mode) final switch (order.mode)
@@ -854,21 +867,6 @@ private {/*shader implementation}*/
 		}
 }
 private {/*shader params}*/
-	template gl_type (T)
-		{/*...}*/
-			static if (is_vector!T)
-				{/*...}*/
-					enum stringof = ElementType!T.stringof[0].text ~`vec`~ T.length.text;
-
-					static if (is(ElementType!T == float))
-						enum gl_type = stringof[1..$];
-					else enum gl_type = stringof;
-				}
-			else static if (isScalarType!T)
-				enum gl_type = T.stringof;
-			else static assert (0, `cannot pass ` ~T.stringof~ ` directly to shader`);
-		}
-
 	template per_vertex (T)
 		{/*...}*/
 			enum per_vertex = is(T == U[], U);
@@ -877,7 +875,7 @@ private {/*shader params}*/
 	template generate_uniform_declaration (T, string name)
 		{/*...}*/
 			enum generate_uniform_declaration = q{
-				uniform } ~gl_type!T~ q{ } ~name~ q{;
+				uniform } ~glsl_typename!T~ q{ } ~name~ q{;
 			};
 		}
 
@@ -991,7 +989,7 @@ void test ()
 					{/*...}*/
 						range.end = min (buffer.indices.length, range.end);
 
-						gl.DrawElements (draw_mode, range.length, GL_UNSIGNED_SHORT, (range.start*ushort.sizeof).to!size_t.voidptr);
+						gl.DrawElements (draw_mode, range.length, gl_type_enum!ushort, (range.start*ushort.sizeof).to!size_t.voidptr);
 					}
 
 				void draw (T) (Color color, T geometry, GeometryMode mode = GeometryMode.l_loop, uint layer = 0)
