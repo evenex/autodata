@@ -2,6 +2,7 @@ module evx.display2;
 
 private {/*imports}*/
 	private {/*std}*/
+		import std.algorithm;
 		import std.conv;
 		import std.file;
 		import std.range;
@@ -39,7 +40,19 @@ alias Cvec = Vector!(4, float);
 
 enum GeometryEditing {disabled = false, enabled = true}
 
-template gl_type_enum (T)
+auto string_parameters (Args...)() // REFACTOR to meta
+	{/*...}*/
+		foreach (Arg; Args)
+			{/*...}*/
+				static assert (is(typeof(Arg)));
+				static assert (isBuiltinType!(typeof(Arg)));
+			}
+
+		return Args.tuple.text.retro.findSplitAfter (`(`)[0].text.retro.text;
+	}
+
+/// GLSL metaprogramming stuff
+template glsl_typename_enum (T)
 	{/*...}*/
 		alias ConversionTable = TypeTuple!(
 			byte,   GL_BYTE,
@@ -52,7 +65,7 @@ template gl_type_enum (T)
 			double, GL_DOUBLE
 		);
 
-		enum gl_type_enum = ConversionTable[staticIndexOf!(T, ConversionTable) + 1];
+		enum glsl_typename_enum = ConversionTable[staticIndexOf!(T, ConversionTable) + 1];
 	}
 template glsl_typename (T)
 	{/*...}*/
@@ -68,19 +81,39 @@ template glsl_typename (T)
 			enum glsl_typename = T.stringof;
 		else static assert (0, `cannot pass ` ~T.stringof~ ` directly to shader`);
 	}
+template glsl_declaration (T, Args...)
+	{/*...}*/
+		enum glsl_declaration = glsl_typename!T~ ` ` ~string_parameters!Args;
+	}
 
+// array ctor functions
+auto gpu_array (R)(R range)
+	{/*...}*/
+		alias T = ElementType!R;
+
+		struct GPUArray
+			{mixin GLBuffer!(T, GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW);}
+
+		return GPUArray (range);
+	}
 
 public:
 public {/*buffers}*/
 	private {/*base}*/
-		mixin template GLBuffer (T, GLenum target, GLenum usage = GL_STATIC_DRAW)
+		mixin template GLBuffer (T, GLenum target, GLenum usage)
 			{/*...}*/
+				alias Buffer = typeof(this);
+
+				/////////
+
 				GLuint buffer_object = 0;
 				GLsizei length;
 
+				/////////
+
 				this (R)(R data)
 					{/*...}*/
-						upload (data);
+						this = data;
 					}
 
 				void initialize ()
@@ -98,38 +131,125 @@ public {/*buffers}*/
 					body {/*...}*/
 						gl.BindBuffer (target, buffer_object);
 
-						static if (is_vector!T)
-							{/*...}*/
-								alias U = ElementType!T;
-								enum GLint length = T.length;
-							}
-						else {/*...}*/
-							alias U = T;
-							enum GLint length = 1;
-						}
-
-						static if (is_vector!T)
-							gl.VertexAttribPointer (0, length, gl_type_enum!T, GL_FALSE, 0, null); // TODO watch out for attribute indices
+						static if (is_vector!T) // TODO this should be handled by shader
+							gl.VertexAttribPointer (0, T.length.to!uint, glsl_typename_enum!(ElementType!T), GL_FALSE, 0, null); // TODO watch out for attribute indices
 					}
 
-				void upload (T[] data)
+
+				/////////
+				auto pointer_to (R)(R data)
+					{/*...}*/
+						static if (is(R == T[]))
+							return data.ptr;
+						else return data[].map!(to!T).array.ptr;
+					}
+
+				auto opIndex ()
+					{/*...}*/
+						return this;
+					}
+				auto opIndex (size_t i)
+					{/*...}*/
+						
+					}
+				auto opIndex (size_t[2] slice)
+					{/*...}*/
+						struct Sub
+							{/*...}*/
+								Buffer buffer;
+
+								Indices indices;
+
+								auto length ()
+									{/*...}*/
+										return indices.length;
+									}
+
+								this (Buffer buffer, size_t[2] slice)
+									{/*...}*/
+										this.buffer = buffer;
+										indices = slice;
+									}
+
+								auto opIndex ()
+									{/*...}*/
+										return this;
+									}
+								auto opIndex (size_t i)
+									{/*...}*/
+										return buffer[indices.start + i];
+									}
+								auto opIndex (size_t[2] slice)
+									{/*...}*/
+										return Sub (buffer, (indices.start + slice.vector).array);
+									}
+
+								auto opIndexAssign (T data, size_t i)
+									{/*...}*/
+										this[i..i+1] = (&data)[0..1];
+									}
+								auto opIndexAssign (R)(R data)
+									{/*...}*/
+										this[0..$] = data;
+									}
+								auto opIndexAssign (R)(R data, size_t[2] slice)
+									{/*...}*/
+										auto range = indices.start + slice.vector;
+
+										buffer[range[0]..range[1]] = data;
+									}
+
+								auto opSlice (size_t d:0)(size_t i, size_t j)
+									{/*...}*/
+										return vector (i,j).array;
+									}
+							}
+
+						return Sub (this, slice);
+					}
+				auto opSlice (size_t d:0)(size_t i, size_t j)
+					{/*...}*/
+						return vector (i,j).array;
+					}
+
+				auto opIndexAssign (T data, size_t i)
+					{/*...}*/
+						this[i..i+1] = (&data)[0..1];
+					}
+				auto opIndexAssign (R)(R data)
+					in {/*...}*/
+						assert (range.length == this.length);
+					}
+					body {/*...}*/
+						this[0..$] = data;
+					}
+				auto opIndexAssign (R)(R data, size_t[2] indices)
+					in {/*...}*/
+						assert (indices.interval.size <= length);
+					}
+					body {/*...}*/
+						bind;
+
+						gl.BufferSubData (target, indices[0], indices.interval.size * T.sizeof, pointer_to (data));
+					}
+
+				auto opAssign (Buffer that)
+					{/*...}*/
+						this.buffer_object = that.buffer_object;
+						this.length = that.length;
+					}
+				auto opAssign (R)(R data)
 					{/*...}*/
 						if (buffer_object == 0)
 							initialize;
 
-						bind;
-
 						length = data.length.to!GLsizei;
 
-						gl.BufferData (target, length * T.sizeof, data.ptr, usage);
-					}
-				void upload (R)(R data)
-					if (not(is(R == T[])))
-					{/*...}*/
-						upload (data.map!(to!T).array);
-					}
+						bind;
 
-				void free ()
+						gl.BufferData (target, length * T.sizeof, pointer_to (data), usage);
+					}
+				auto opAssign (typeof(null)) // TODO make sure this shit frees GPU memory
 					{/*...}*/
 						gl.DeleteBuffers (1, &buffer_object);
 
@@ -141,12 +261,12 @@ public {/*buffers}*/
 	public {/*fundamental}*/
 		struct VertexBuffer
 			{/*...}*/
-				mixin GLBuffer!(fvec, GL_ARRAY_BUFFER); // OUTSIDE BUG runtime crash if this is a template struct alias. works as a mixin. wtf??
+				mixin GLBuffer!(fvec, GL_ARRAY_BUFFER, GL_STATIC_DRAW); // OUTSIDE BUG runtime crash if this is a template struct alias. works as a mixin. wtf??
 			}
 
 		struct IndexBuffer
 			{/*...}*/
-				mixin GLBuffer!(ushort, GL_ELEMENT_ARRAY_BUFFER);
+				mixin GLBuffer!(ushort, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW);
 			}
 	}
 	public {/*compound}*/
@@ -163,8 +283,8 @@ public {/*buffers}*/
 				private {/*ctor}*/
 					this (R,S)(R geometry, S triangle_corner_indices)
 						{/*...}*/
-							vertices.upload (geometry);
-							indices.upload (triangle_corner_indices);
+							vertices = geometry;
+							indices = triangle_corner_indices;
 						}
 				}
 				private {/*ops}*/
@@ -174,10 +294,10 @@ public {/*buffers}*/
 							indices.bind;
 						}
 
-					void free ()
+					void free () // TODO opassign
 						{/*...}*/
-							vertices.free;
-							indices.free;
+							vertices = null;
+							indices = null;
 						}
 				}
 				private {/*data}*/
@@ -188,6 +308,12 @@ public {/*buffers}*/
 	}
 }
 public {/*shader params}*/
+	template is_initializer (T...)
+		if (T.length == 1)
+		{/*...}*/
+			enum is_initializer = allSatisfy!(has_trait!`is_initializer`, T);
+		}
+
 	struct Input (Args...)
 		{/*...}*/
 			enum is_input_params;
@@ -195,7 +321,7 @@ public {/*shader params}*/
 			mixin ParameterSplitter!(
 				`Types`, is_type,
 				`Names`, is_string_param,
-				Args
+				Filter!(not!is_initializer, Args)
 			);
 
 			static generate_declarations (AttributeMode mode)()
@@ -212,12 +338,17 @@ public {/*shader params}*/
 										return generate_layout_declaration!(Types[i], Names[i], layout_index)
 											~ generate!(param_index + 1, layout_index + 1);
 									else static if (mode is AttributeMode.smooth)
-										return generate_smooth_declaration!(Types[i], Names[i], layout_index)
+										return generate_smooth_declaration!(Types[i], Names[i])
 											~ generate!(param_index + 1);
 									else static assert (0);
 								}
 							else {/*...}*/
-								return generate_uniform_declaration!(Types[i], Names[i])
+								enum init_index = staticIndexOf!(Names[i], Args) + 1;
+
+								static if (init_index < Args.length)
+									return generate_uniform_declaration!(Types[i], Names[i], Args[init_index])
+											~ generate!(param_index + 1, layout_index);
+								else return generate_uniform_declaration!(Types[i], Names[i])
 										~ generate!(param_index + 1, layout_index);
 							}
 						}
@@ -299,14 +430,20 @@ public {/*shaders}*/
 			alias FragmentShader = Shader!(GL_FRAGMENT_SHADER, Parameters);
 		}
 
+	struct Init (T...)
+		{/*...}*/
+			enum is_initializer;
+			enum value = T;
+		}
+
 	alias BasicShader = ShaderProgram!(
 		VertexShader!(
 			Input!(
-				fvec[], `position`,
-				Cvec,   `color`,
-				fvec,   `translation`,
-				float,  `rotation`,
-				float,  `scale`,
+				fvec[], `position`,		Init!(0,0),
+				Cvec,   `color`,		Init!(1,0,1,1),
+				fvec,   `translation`,	Init!(0,0),
+				float,  `rotation`,		Init!(0),
+				float,  `scale`,		Init!(1),
 			), q{
 				float c = cos(rotation);
 				float s = sin(rotation);
@@ -523,7 +660,7 @@ public {/*graph}*/
 										order.graph.buffer.bind;
 
 										with (order)
-										gl.DrawElements (GL_LINES, graph.buffer.indices.length, gl_type_enum!ushort, null);
+										gl.DrawElements (GL_LINES, graph.buffer.indices.length, GL_UNSIGNED_SHORT, null);
 									}
 
 								order.color = order.edge_color;
@@ -678,13 +815,13 @@ public {/*mesh}*/
 								void draw_solid ()
 									{/*...}*/
 										with (order)
-										gl.DrawElements (GL_TRIANGLES, mesh.buffer.indices.length, gl_type_enum!ushort, null);
+										gl.DrawElements (GL_TRIANGLES, mesh.buffer.indices.length, GL_UNSIGNED_SHORT, null);
 									}
 								void draw_wireframe ()
 									{/*...}*/
 										with (order)
 										foreach (i; 0..mesh.buffer.indices.length/3)
-											gl.DrawElements (GL_LINE_LOOP, 3, gl_type_enum!ushort, (3*i*ushort.sizeof).to!size_t.voidptr);
+											gl.DrawElements (GL_LINE_LOOP, 3, GL_UNSIGNED_SHORT, (3*i*ushort.sizeof).to!size_t.voidptr);
 									}
 
 								with (Mode) final switch (order.mode)
@@ -867,15 +1004,20 @@ private {/*shader implementation}*/
 		}
 }
 private {/*shader params}*/
+
 	template per_vertex (T)
 		{/*...}*/
 			enum per_vertex = is(T == U[], U);
 		}
 
-	template generate_uniform_declaration (T, string name)
+	template generate_uniform_declaration (T, string name, Initializer...)
 		{/*...}*/
-			enum generate_uniform_declaration = q{
-				uniform } ~glsl_typename!T~ q{ } ~name~ q{;
+			static if (Initializer.length == 0)
+				enum generate_uniform_declaration = q{
+					uniform } ~glsl_typename!T~ q{ } ~name~ q{;
+				};
+			else enum generate_uniform_declaration = q{
+				uniform } ~glsl_typename!T~ q{ } ~name~ q{ = } ~glsl_declaration!(T, Initializer[0].value)~ q{;
 			};
 		}
 
@@ -942,9 +1084,11 @@ void main ()
 
 		scope gfx = new GraphicsContext;
 
+		if (0)
 		gfx.in_display_thread (()
 			{/*...}*/
-				gfx.mesh.draw (gfx.mesh.add (square, [0,1,2, 0,2,3]))
+				auto m = gfx.mesh.add (square, [0,1,2, 0,2,3]);
+				gfx.mesh.draw (m)
 					.color (red (0.1))
 					.mode (gfx.mesh.Mode.overlay)
 					.enqueued;
@@ -955,8 +1099,18 @@ void main ()
 					.edge_color (blue)
 					.enqueued;
 
+				gfx.mesh.assets[m].buffer.vertices[0] = 0.2.fvec; // TODO let buffers be carried out
+
 				gfx.mesh.process;
 				gfx.graph.process;
+			}
+		);
+
+		gfx.in_display_thread (()
+			{/*...}*/
+				auto data = [-1.vec, 0.vec, vec(-1,-2)].gpu_array;
+
+				gl.DrawArrays (GL_TRIANGLE_FAN, 0, data.length);
 			}
 		);
 
@@ -970,328 +1124,3 @@ void main ()
 
 	// TODO aspect-ratio correction should be handled by the display... but how? it would have to be applied in the shaders.... so a Display should be necessary to make any draw calls (this is a +)... and also all shaders will have a mandatory parameter "aspect_ratio" and a mandatory final line "gl_Position *= vec4 (aspect_ratio, 1, 1);" so some more common shader meta tools are needed
 
-void test ()
-	{/*...}*/
-		class Display
-			{/*...}*/
-				@Uniform GLuint aspect_ratio_handle;
-				vec aspect_ratio;
-				uvec pixel_dimensions;
-
-			public {/*drawing}*/
-				void draw_vertices (GLenum draw_mode, VertexBuffer buffer, Interval!GLint range = interval (0, GLint.max))
-					{/*...}*/
-						range.end = min (buffer.length, range.end);
-
-						gl.DrawArrays (draw_mode, range.tuple.expand);
-					}
-				void draw_geometry (GLenum draw_mode, GeometryBuffer buffer, Interval!GLint range = interval (0, GLint.max)) 
-					{/*...}*/
-						range.end = min (buffer.indices.length, range.end);
-
-						gl.DrawElements (draw_mode, range.length, gl_type_enum!ushort, (range.start*ushort.sizeof).to!size_t.voidptr);
-					}
-
-				void draw (T) (Color color, T geometry, GeometryMode mode = GeometryMode.l_loop, uint layer = 0)
-					if (is_geometric!T || is_in_display_space!T)
-					{/*↓}*/
-						static if (is (ElementType!T == Coords))
-							draw (0, geometry, geometry.map!(c => c.value), color, mode, layer);
-						else draw (0, geometry, geometry, color, mode, layer);
-					}
-				void draw (R,S) (GLuint texture, R geometry, S tex_coords, Color color = black (0), GeometryMode mode = GeometryMode.t_fan, uint layer = 0)
-					if (allSatisfy!(Or!(is_geometric, is_in_display_space), R, S))
-					out {/*...}*/
-						assert (buffer.texture_coords.length == buffer.vertices.length, `geometry/texture coords length mismatched`);
-					}
-					body {/*...}*/
-						if (geometry.empty) return;
-
-						uint index  = buffer.vertices.length.to!uint;
-
-						static if (is (ElementType!R == Coords))
-							buffer.vertices ~= geometry.to_draw_space (this);
-						else buffer.vertices ~= geometry.from_extended_space.to_draw_space (this);
-
-						buffer.texture_coords ~= tex_coords;
-
-						uint length = buffer.vertices.length.to!uint - index;
-
-						auto order = Order!Basic (mode, index, length, layer);
-						order.tex_id = texture;
-						order.base = color;
-						buffer.orders ~= RenderOrder (order);
-					}
-
-				// TODO coalesce parts of process and draw into ImmediateRenderer
-				bool process ()
-					{/*...}*/
-						if (0)
-						gl.Clear (GL_COLOR_BUFFER_BIT);
-
-						auto vertex_pool = buffer.vertices.read[];
-						auto texture_coord_pool = buffer.texture_coords.read[];
-						auto order_pool = buffer.orders.read[];
-
-						if (order_pool.length)
-							{/*sort orders}*/
-								template take_order (ArtStyle)
-									{/*...}*/
-										alias take_order = λ!(
-											(Order!ArtStyle order) 
-												{/*...}*/
-													const auto i = staticIndexOf!(ArtStyle, VisualTypes);
-													(cast(Shaders[i])shaders[i]).render_list.put (order);
-												}
-										);
-									}
-								foreach (order; order_pool)
-									order.visit!(staticMap!(take_order, VisualTypes));
-							}
-						if (vertex_pool.length) 
-							{/*render orders}*/
-								gl.BindBuffer (GL_ARRAY_BUFFER, vertex_buffer);
-								gl.BufferData (GL_ARRAY_BUFFER, 
-									vec.sizeof * vertex_pool.length, vertex_pool.ptr,
-									GL_STATIC_DRAW
-								);
-								gl.BindBuffer (GL_ARRAY_BUFFER, texture_coord_buffer);
-								gl.BufferData (GL_ARRAY_BUFFER, 
-									vec.sizeof * texture_coord_pool.length, texture_coord_pool.ptr,
-									GL_STATIC_DRAW
-								);
-								foreach (i, shader; shaders)
-									(cast(shared)shader).execute;
-							}
-
-						glfwPollEvents ();
-						glfwSwapBuffers (window);
-
-						return true;
-					}
-			}
-
-				this ()
-					{/*...}*/
-						//stuff
-						set_uniform (aspect_ratio_handle, (1/aspect_ratio).to!fvec);
-					}
-				void resize ()
-					{/*...}*/
-						set_uniform (aspect_ratio_handle, (1/aspect_ratio).to!fvec);
-					}
-
-				// then immediate "easy-draw" methods here
-				public:
-				void background (Color color) // REVIEW
-					{/*...}*/
-						in_display_thread (() => gl.ClearColor (color.vector.tuple.expand));
-					}
-				void screenshot (void[] image_data) // REVIEW
-					in {/*...}*/
-						assert (image_data.length >= dimensions[].product * 3);
-					}
-					body {/*...}*/
-						in_display_thread ((){
-							gl.ReadPixels (0, 0, dimensions.x.to!int, dimensions.y.to!int, PixelFormat.bgr, PixelFormat.unsigned_byte, image_data.ptr);
-						});
-					}
-
-				public {/*controls}*/
-					void render ()
-						in {/*...}*/
-							assert (this.is_running, "attempted to render while Display offline");
-						}
-						body {/*...}*/
-							buffer.writer_swap ();
-							send (RenderCommand());
-						}
-					void in_display_thread (T)(T request, Seconds time_allowed = 1.second)
-						if (isCallable!T)
-						in {/*...}*/
-							static assert (ParameterTypeTuple!T.length == 0);
-							static assert (is (ReturnType!T == void));
-							assert (this.is_running, "attempted to access rendering context while Display offline");
-						}
-						body {/*...}*/
-							send (cast(shared)std.functional.toDelegate (request));
-							assert (received_before (time_allowed, (AccessConfirmation _){}));
-						}
-				}
-				public {/*coordinates}*/
-					enum Space {draw, extended, pixel, inverted_pixel}
-					struct Coords
-						{/*...}*/
-							pure nothrow:
-
-							Space space;
-							vec value;
-							alias value this;
-
-							@disable this ();
-							this (vec value, Space space)
-								{/*...}*/
-									this.value = value;
-									this.space = space;
-								}
-						}
-
-					@(Space.pixel) @property dimensions () pure nothrow const
-						{/*...}*/
-							return screen_dims[].vec;
-						}
-					@(Space.extended) @property extended_bounds ()
-						{/*...}*/
-							return [0.vec, dimensions].from_pixel_space.to_extended_space (this).bounding_box;
-						}
-				}
-				public {/*ctor/dtor}*/
-					this (uint width, uint height)
-						{/*...}*/
-							this (uvec(width, height));
-						}
-					this (uvec dims)
-						{/*...}*/
-							screen_dims = dims;
-							this ();
-						}
-					this ()
-						{/*...}*/
-							buffer = new typeof(buffer);
-
-							start;
-						}
-					~this ()
-						{/*...}*/
-							stop;
-						}
-				}
-				protected:
-				@Service shared override {/*interface}*/
-					bool initialize ()
-						{/*...}*/
-							{/*GLFW}*/
-								DerelictGLFW3.load ();
-								glfwSetErrorCallback (&error_callback);
-								enforce (glfwInit (), "glfwInit failed");
-
-								immutable dims = cast()screen_dims;
-								window = glfwCreateWindow (dims.x.to!uint, dims.y.to!uint, "evx.display", null, null);
-
-								enforce (window !is null);
-								glfwMakeContextCurrent (window);
-								glfwSwapInterval (0);
-
-								glfwSetWindowSizeCallback (window, &resize_window_callback);
-								glfwSetFramebufferSizeCallback (window, &resize_framebuffer_callback);
-
-								glfwSetWindowUserPointer (window, cast(void*)this);
-							}
-							{/*GL}*/
-								DerelictGL3.load ();
-								DerelictGL3.reload ();
-								gl.EnableVertexAttribArray (0);
-					//			gl.EnableVertexAttribArray (1);
-								gl.ClearColor (0.1, 0.1, 0.1, 1.0);
-				//				gl.GenBuffers (1, &vertex_buffer);
-				//				gl.GenBuffers (1, &texture_coord_buffer);
-				//				gl.BindBuffer (GL_ARRAY_BUFFER, vertex_buffer);
-				//				gl.VertexAttribPointer (0, 2, GL_FLOAT, GL_FALSE, 0, null);
-				//				gl.BindBuffer (GL_ARRAY_BUFFER, texture_coord_buffer);
-				//				gl.VertexAttribPointer (1, 2, GL_FLOAT, GL_FALSE, 0, null);
-								// alpha
-								gl.Enable (GL_BLEND);
-								gl.BlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-							}
-							initialize_shaders (shaders);
-
-							return true;
-						}
-					bool listen ()
-						{/*...}*/
-							bool listening = true;
-
-							void render (RenderCommand)
-								{/*...}*/
-									buffer.reader_swap;
-
-									listening = false;
-
-									assert (buffer.texture_coords.read.length == buffer.vertices.read.length, 
-										`vertices and texture coords not 1-to-1`
-									);
-								}
-							void in_display_thread (shared void delegate() request)
-								{/*...}*/
-									request ();
-									reply (AccessConfirmation());
-								}
-								
-							receive (
-								&render, 
-								&in_display_thread,
-								auto_sync!(animation, (){/*...})*/
-									buffer.writer_swap ();
-									buffer.reader_swap ();
-									listening = false;
-								}).expand
-							);
-
-							return listening;
-						}
-					bool terminate()
-						{/*...}*/
-							{/*GLFW}*/
-								glfwMakeContextCurrent (null);
-								glfwDestroyWindow (window);
-								glfwTerminate ();
-							}
-							return true;
-						}
-					const string name ()
-						{/*...}*/
-							return "display";
-						}
-				}
-				private:
-				static {/*context}*/
-					GLFWwindow* window;
-
-					ShaderInterface[] shaders;
-
-					GLuint vertex_buffer;
-					GLuint texture_coord_buffer;
-
-					Scheduler animation;
-				}
-				private {/*data}*/
-					@(Space.pixel) uvec screen_dims = uvec(800,600);
-
-					shared BufferGroup!(
-						TripleBuffer!(fvec, 2^^16), 
-							`vertices`,
-						TripleBuffer!(fvec, 2^^14), 
-							`texture_coords`,
-						TripleBuffer!(RenderOrder, 2^^12), 
-							`orders`
-					) buffer;
-				}
-				static:
-				extern (C) nothrow {/*callbacks}*/
-					void error_callback (int, const (char)* error)
-						{/*...}*/
-							fprintf (stderr, "error glfw: %s\n", error);
-						}
-					void resize_window_callback (GLFWwindow* window, int width, int height)
-						{/*...}*/
-							(cast(Display) glfwGetWindowUserPointer (window))
-								.screen_dims = uvec (width, height);
-						}
-					void resize_framebuffer_callback (GLFWwindow* window, int width, int height)
-						{/*...}*/
-							try gl.Viewport (0, 0, width, height);
-							catch (Exception ex) assert (0, ex.msg);
-						}
-				}
-			}
-	}
