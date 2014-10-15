@@ -1,6 +1,15 @@
 import std.traits;
-import evx.math;
 import std.conv;
+
+/*
+	access (assignable?)
+	copy
+	ptr
+	reserve
+	write
+	extend
+	slice
+*/
 
 
 struct BufferInfo (T)
@@ -17,38 +26,41 @@ struct BufferInfo (T)
 
 		// optional
 		enum can_active_copy = 	__traits(compiles, T.init.copy_to (T.ElementType[].init, 0, 0));
-		enum can_passive_copy =	__traits(compiles, T.init.ptr);
+		enum can_passive_copy =	__traits(compiles, *T.init.ptr == T.ElementType.init);
 
 	}
-string show_ct_info (T)() // REFACTOR to meta
+
+string show_ct_info (T)() // TEMP from meta
 	{/*...}*/
 		string report = T.stringof~ `:`"\n";
 
 		foreach (member; __traits(allMembers, T))
-			static if (mixin(q{is(typeof(T.} ~member~ q{ == true))}))
-			mixin(q{
+			static if (mixin(q{
+				__traits(compiles, }`{`q{ enum can_ctfe = T.} ~member~ q{; }`}`q{)
+				&& is(typeof(T.} ~member~ q{ == true))
+			})) mixin(q{
 				report ~= }`"` ~member~ `"`q{~ ` = ` ~(T.} ~member~ q{? "true":"false")~"\n";
 			});
 
 		return report;
 	}
 
-// we will use size_t for indexing... irregular indexing will have to be mixed in or wrapped, by supplying f: ℕ → ℝ
+// we will use size_t for indexing... continuous indexing will have to be mixed in or wrapped, by supplying f: ℕ → ℝ
 mixin template BufferInterface ()
 	{/*...}*/
-		static assert (BufferInfo!(typeof(this)).supports_buffer_interface,
-			`does not support buffer interface: ` ~show_ct_info!(BufferInfo!(typeof(this)))
-		);
-
 		alias This = typeof(this);
+
+		static assert (BufferInfo!This.supports_buffer_interface,
+			`does not support buffer interface: ` ~show_ct_info!(BufferInfo!This)
+		);
 
 		public:
 		public {/*range}*/
-			auto front ()
+			ref ElementType front ()
 				{/*...}*/
 					return this[0];
 				}
-			auto back ()
+			ref ElementType back ()
 				{/*...}*/
 					return this[$-1];
 				}
@@ -83,7 +95,10 @@ mixin template BufferInterface ()
 		}
 		public {/*opIndex*}*/
 			auto ref opIndex (size_t i)
-				{/*...}*/
+				in {/*...}*/
+					assert (i < length);
+				}
+				body {/*...}*/
 					return access (i);
 				}
 
@@ -93,7 +108,7 @@ mixin template BufferInterface ()
 				}
 			auto opIndex (Slice slice)
 				{/*...}*/
-					return Sub (&this, [slice[0], slice[1]]);
+					return SubBuffer (&this, [slice[0], slice[1]]);
 				}
 
 			auto opIndexAssign (R)(R range)
@@ -118,19 +133,45 @@ mixin template BufferInterface ()
 				{/*...}*/
 					import std.range: repeat;
 
-					this.copy_from (element.repeat (slice.interval.length), slice[0], slice[1]);
+					this.copy_from (element.repeat (slice[1] - slice[0]), slice[0], slice[1]);
 				}
 		}
 		public {/*slicing}*/
 			Slice opSlice (size_t dim: 0)(size_t i, size_t j)
-				{/*...}*/
+				in {/*...}*/
+					assert (i <= j && j <= length);
+				}
+				body {/*...}*/
 					return [i,j];
 				}
 
 			alias Slice = size_t[2];
 		}
+		public {/*appending}*/
+			auto opOpAssign (string op: `~`)(ElementType element)
+				{/*...}*/
+					set_length (length + 1);
+
+					this[$-1] = element;
+				}
+
+			auto opOpAssign (string op: `~`, R)(R range)
+				{/*...}*/
+					auto start = length;
+
+					set_length (length + range.length);
+
+					this[start..$] = range;
+				}
+		}
+		public {/*popping}*/
+			auto pop (size_t count = 1)
+				{/*...}*/
+					set_length (length - count);
+				}
+		}
 		public {/*sub buffers}*/
-			struct Sub
+			struct SubBuffer
 				{/*...}*/
 					public:
 					public {/*range}*/
@@ -159,14 +200,14 @@ mixin template BufferInterface ()
 
 						auto length ()
 							{/*...}*/
-								return bounds.interval.length;
+								return bounds[1] - bounds[0];
 							}
 						alias opDollar = length;
 					}
 					public {/*equality}*/
 						bool opEquals (R)(R range)
 							{/*...}*/
-								if (bounds.interval.size != range.length)
+								if (bounds[1] - bounds[0] != range.length)
 									return false;
 
 								import std.range;
@@ -177,7 +218,7 @@ mixin template BufferInterface ()
 					public {/*opIndex*}*/
 						auto ref opIndex (size_t i)
 							{/*...}*/
-								return buffer.access (bounds[0] + i);
+								return (*buffer)[bounds[0] + i];
 							}
 
 						auto opIndex ()
@@ -185,11 +226,12 @@ mixin template BufferInterface ()
 								return this;
 							}
 						auto opIndex (Slice slice)
-							in {/*...}*/
-								assert ((slice.vector + bounds[0]).array.interval.is_contained_in (this.bounds.interval));
-							}
-							body {/*...}*/
-								return Sub (buffer, (bounds[0] + slice.vector).array);
+							{/*...}*/
+								auto subrange = slice;
+
+								subrange[] += bounds[0];
+
+								return SubBuffer (buffer, subrange);
 							}
 
 						auto opIndexAssign (R)(R range)
@@ -216,38 +258,25 @@ mixin template BufferInterface ()
 					}
 					public {/*slicing}*/
 						Slice opSlice (size_t dim: 0)(size_t i, size_t j)
-							{/*...}*/
+							in {/*...}*/
+								assert (i <= j && j <= length);
+							}
+							body {/*...}*/
 								return [i,j];
 							}
+					}
+					public {/*passive copy}*/
+						static if (__traits(compiles, buffer.ptr == ElementType.init)) // OUTSIDE BUG dmd segfaults if i invoke BufferInfo at this scope... unless its in a static assert
+							ElementType* ptr ()
+								{/*...}*/
+									return buffer.ptr + bounds[0];
+								}
 					}
 					private:
 					private {/*data}*/
 						This* buffer;
 						size_t[2] bounds;
 					}
-				}
-		}
-		public {/*appending}*/
-			auto opOpAssign (string op: `~`)(ElementType element)
-				{/*...}*/
-					set_length (length + 1);
-
-					this[$-1] = element;
-				}
-
-			auto opOpAssign (string op: `~`, R)(R range)
-				{/*...}*/
-					auto start = length;
-
-					set_length (length + range.length);
-
-					this[start..$] = range;
-				}
-		}
-		public {/*popping}*/
-			auto pop (size_t count = 1)
-				{/*...}*/
-					set_length (length - count);
 				}
 		}
 		private:
@@ -296,7 +325,7 @@ void main ()
 
 					mixin BufferInterface;
 				}
-
+pragma(msg, show_ct_info!(BufferInfo!Buffer));
 			Buffer test;
 
 			test = [1,2,3];
