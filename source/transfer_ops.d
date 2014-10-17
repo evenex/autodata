@@ -88,8 +88,6 @@ struct TransferTraits (Buffer)
 
 			static if (is(typeof(buffer.access (0))))
 				alias Element = typeof(buffer.access (0));
-			else static if (is(typeof(buffer[0])))
-				alias Element = typeof(buffer[0]);
 			else static if (is(typeof(buffer.ptr[0])))
 				alias Element = typeof(buffer.ptr[0]);
 			else alias Element = void;
