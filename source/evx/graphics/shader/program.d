@@ -1,4 +1,4 @@
-module evx.graphics.shader.codegen;
+module evx.graphics.shader.program;
 
 private {/*imports}*/
 	import std.algorithm; // REVIEW what you actually need

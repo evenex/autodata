@@ -1,7 +1,7 @@
 module evx.graphics.shader.repo;
 
 private {/*imports}*/
-	import evx.graphics.shader.codegen;
+	import evx.graphics.shader.program;
 
 	import evx.math.geometry.vectors;
 }

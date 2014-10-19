@@ -133,7 +133,7 @@ auto gpu_array (R)(R range)
 		import evx.math.ordinal;
 		import evx.containers.m_array;
 
-		auto display = new Display;
+		scope display = new Display;
 
 		auto vram = ℕ[0..999].gpu_array; // copies data from ram to gpu
 		assert (vram[0..10] == [0,1,2,3,4,5,6,7,8,9]);

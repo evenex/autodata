@@ -1,4 +1,4 @@
-module opengl;
+module evx.graphics.opengl;
 
 private {/*imports}*/
 	import std.string;
