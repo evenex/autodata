@@ -1,28 +1,24 @@
-MODULE_COUNT=$(find -name "*.d" | grep -v "all" | wc -l)
-LINE_COUNT=$(find \( -name "*.d" \) -exec cat \{} \; | wc -l)
-HEADER="$LINE_COUNT lines across $MODULE_COUNT modules:"
-DASHES=$(seq 2 $(echo "$HEADER" | wc -c))
-
-echo ""
+HEADER="--evx toolkit--"
 echo "$HEADER"
-printf '=%0.s' $DASHES
 echo ""
-#\([a-z0-9_]\*[/]\?\) ← this extracts one more directory level
-find -name "*.d" | grep -v "all" | grep -oP [a-z0-9_]\*[.]d | grep -oP [a-z0-9_]\*[.] | tr '.' ' ' | sort
+./info
+
+DASHES=$(seq 2 $(echo "$HEADER" | wc -c))
 
 PENDING_FIXES=$(grep -rn '\<FIXME\>' ./source/ | grep -v Binary | grep -v freetype-gl | grep -v ode[-]0[.]13  | wc -l)
 if [ "$PENDING_FIXES" -gt "0" ]
 then
-	printf '=%0.s' $DASHES
-	echo ""
 	if [ "$PENDING_FIXES" -eq "1" ]
 	then
 		TITLE="$PENDING_FIXES PENDING FIX:"
 	else
 		TITLE="$PENDING_FIXES PENDING FIXES:"
 	fi
-	echo $TITLE
 	DASHES=$(seq 2 $(echo $TITLE | wc -c))
+
+	printf '=%0.s' $DASHES
+	echo ""
+	echo $TITLE
 	printf '=%0.s' $DASHES
 	echo ""
 	grep -rn '\<FIXME\>' ./source/ | grep -v Binary | grep -v freetype-gl | grep -v ode[-]0[.]13 | tr -d  '\t'

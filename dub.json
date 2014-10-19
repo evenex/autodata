@@ -1,5 +1,5 @@
 {
-	"name": "engine_v9",
+	"name": "engine_v10",
 	"description": "TCR engine prototype 9",
 	"copyright": "Copyright © 2014, evenex_code",
 	"authors": ["evenex_code"],
@@ -11,12 +11,13 @@
 		"tharsis-prof"	: "~master",
 	},
 	"versions": ["CHIP_ALLOW_PRIVATE_ACCESS", "CHIP_USE_DOUBLES"],
-	"libs": ["opencv_core", "opencv_highgui", "GL", "freetype-gl", "freetype", "GLEW", "sphinxbase", "pocketsphinx"],
-	"importPaths": [],
+	"libs": ["fann", "portaudio", "opencv_core", "opencv_highgui", "GL", "freetype-gl", "freetype", "GLEW", "triangle"],
+	"_libs": ["GL", "freetype-gl", "freetype", "GLEW", "triangle"],
 	"targetType": "executable",
 	"buildRequirements": ["disallowDeprecations"],
 	"buildOptions": ["debugInfo", "alwaysStackFrame"],
 	"_buildOptions": ["releaseMode", "noBoundsCheck"],
+	"_buildOptions": ["releaseMode", "inline", "noBoundsCheck"],
 	"_buildOptions": ["releaseMode", "optimize", "inline", "noBoundsCheck"],
 	"postBuildCommands": ["echo '<>>'"]
 }
