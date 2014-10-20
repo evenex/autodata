@@ -97,6 +97,32 @@ class ShaderProgram (Vert, Frag)
 				}
 		}
 	}
+	unittest {/*...}*/
+		import evx.graphics.display;
+		import evx.graphics.buffer;
+		import evx.graphics.shader.repo;
+		import evx.math.geometry.vectors;
+		import evx.math.functional;
+
+		mixin(FunctionalToolkit!());
+
+		scope display = new Display;
+		scope shader = new BasicShader;
+
+		auto verts = circle.map!(to!fvec).gpu_array;
+
+		display.attach (shader);
+
+		shader.position (verts)
+			.color (Cvec (1.0, 0.0, 0.0, 0.5));
+
+		gl.DrawArrays (GL_TRIANGLE_FAN, 0, verts.length.to!int);
+
+		display.render;
+
+		import core.thread;
+		Thread.sleep (500.msecs);
+	}
 
 template VertexShader (Parameters...)
 	{/*...}*/
@@ -183,31 +209,3 @@ private {/*implementation}*/
 			}
 		}
 }
-
-void main ()
-	{/*...}*/
-		import evx.graphics.display;
-		import evx.graphics.buffer;
-		import evx.graphics.shader.repo;
-		import evx.math.geometry.vectors;
-		import evx.math.functional;
-
-		mixin(FunctionalToolkit!());
-
-		scope display = new Display;
-		scope shader = new BasicShader;
-
-		auto verts = circle.map!(to!fvec).gpu_array;
-
-		display.attach (shader);
-
-		shader.position (verts)
-			.color (Cvec (1.0, 0.0, 0.0, 0.5));
-
-		gl.DrawArrays (GL_TRIANGLE_FAN, 0, verts.length.to!int);
-
-		display.render;
-
-		import core.thread;
-		Thread.sleep (500.msecs);
-	}

@@ -1,333 +1,338 @@
 module evx.graphics.renderer;
 
 private {/*imports}*/
+	import std.conv;
+
+	import evx.graphics.opengl;
 	import evx.graphics.buffer;
+	import evx.graphics.colors;
+	import evx.graphics.shader.repo;
+
+	import evx.patterns.builder;
+	import evx.math.geometry.vectors;
 }
 
-enum GeometryEditing {disabled = false, enabled = true}
+struct Geometry
+	{/*...}*/
+		VertexBuffer vertices;
+		IndexBuffer indices;
 
-static if (0)
-public {/*graph}*/
-	class GraphRenderer (Policies...)
-		{/*...}*/
-			static {/*policies}*/
-				mixin PolicyAssignment!(
-					DefaultPolicies!(
-						`graph_editable`, GeometryEditing.disabled,
-					),
-					Policies
-				);
-				static assert (not!graph_editable, `editable graph unimplemented`);
+		void bind ()
+			{/*...}*/
+				vertices.buffer.bind;
+				indices.buffer.bind;
 			}
+	}
 
-			private struct Graph
+class MeshRenderer
+	{/*...}*/
+		public:
+		public {/*rendering}*/
+			auto draw (Geometry mesh)
 				{/*...}*/
-					mixin TypeUniqueId;
-
-					vec[] vertices;
-					GeometryBuffer buffer;
+					return Order (this, mesh);
 				}
-			private VertexBuffer node;
 
-			public:
-			public {/*+/- graphs}*/
-				auto add (R,S)(R vertices, S edge_indices)
-					in {/*...}*/
-						assert (edge_indices.length % 2 == 0);
-					}
-					body {/*...}*/
-						auto id = Graph.Id.create;
+			void process ()
+				{/*...}*/
+					shader.activate;
 
-						Graph graph = {vertices: vertices.map!(to!vec).array};
-						graph.buffer = GeometryBuffer (graph.vertices, edge_indices);
+					foreach (order; orders[])
+						process (order);
 
-						assets[id] = graph;
+					orders = null;
+				}
 
-						return id;
-					}
-				auto remove (Graph.Id graph)
-					{/*...}*/
-						assets[graph].buffer = null;
+			void process (Order order)
+				{/*...}*/
+					import evx.math.functional;
+					import evx.graphics.shader.program;
 
-						assets.remove (graph);
-					}
-			}
-			public {/*rendering}*/
-				auto draw (Graph.Id graph)
-					{/*...}*/
-						return Order (this).graph (assets[graph]);
-					}
+					order.mesh.bind;
 
-				void process ()
-					{/*...}*/
-						shader.activate;
+					with (order)
+					shader.position (mesh.vertices)
+						.color (color.vector.to!Cvec)
+						.translation (translate)
+						.rotation (rotate)
+						.scale (scale);
 
-						foreach (order; orders[])
+					void draw_solid ()
+						{/*...}*/
+							with (order)
+							gl.DrawElements (GL_TRIANGLES, mesh.indices.length.to!int, GL_UNSIGNED_SHORT, null);
+						}
+					void draw_wireframe ()
+						{/*...}*/
+							with (order)
+							foreach (i; 0..mesh.indices.length/3)
+								gl.DrawElements (GL_LINE_LOOP, 3, GL_UNSIGNED_SHORT, cast(void*)(3*i*ushort.sizeof));
+						}
+
+					with (Mode) final switch (order.mode)
+						{/*...}*/
+							case solid:
+								draw_solid;
+								break;
+							case wireframe:
+								draw_wireframe;
+								break;
+							case overlay:
+								draw_solid;
+								draw_wireframe;
+								break;
+						}
+				}
+		}
+		public {/*order definition}*/
+			enum Mode {solid, wireframe, overlay}
+
+			struct Order
+				{/*...}*/
+					mixin Builder!(
+						Color,   `color`,
+						vec,     `translate`,
+						double,  `rotate`,
+						double,  `scale`,
+						Mode,    `mode`,
+					);
+
+					public:
+					public {/*fulfillment}*/
+						void enqueued ()
 							{/*...}*/
-								void draw_nodes () // upload one circle at the beginning, then just apply scaling and shit to it
-									{/*...}*/
-										node.bind;
-
-										foreach (v; order.graph.vertices[])
-											{/*...}*/
-												set_uniform (shader.translation, order.translate + v.to!fvec);
-												set_uniform (shader.scale, order.scale * order.node_radius.to!float); // XXX we may have to public-access these or something...
-
-												gl.DrawArrays (GL_TRIANGLE_FAN, 0, node.length);
-											}
-									}
-								void draw_edges ()
-									{/*...}*/
-										order.graph.buffer.bind;
-
-										with (order)
-										gl.DrawElements (GL_LINES, graph.buffer.indices.length, GL_UNSIGNED_SHORT, null);
-									}
-
-								order.color = order.edge_color;
-								shader.set_uniforms (order.to_shader);
-								draw_edges;
-
-								order.color = order.node_color;
-								shader.set_uniforms (order.to_shader);
-								draw_nodes;
+								renderer.enqueue (this);
+							}
+						void immediately ()
+							{/*...}*/
+								renderer.process (this);
 							}
 					}
-			}
-			public {/*order definition}*/
-				struct Order
-					{/*...}*/
-						mixin Builder!(
-							Color,  `node_color`,
-							Color,  `edge_color`,
-							Color,  `color`,
-							vec,    `translate`,
-							double, `rotate`,
-							double, `scale`,
-							double, `node_radius`,
-							Graph,  `graph`,
-						);
+					public {/*ctor}*/
+						this (MeshRenderer renderer, Geometry mesh)
+							{/*...}*/
+								this.renderer = renderer;
+								this.mesh = mesh;
 
-						public:
-						public {/*fulfillment}*/
-							void enqueued ()
-								{/*...}*/
-									renderer.enqueue (this);
-								}
-
-							void immediately ()
-								{/*...}*/
-									assert (0, `immediate mode unimplemented`);
-								}
-						}
-						public {/*ctor}*/
-							this (GraphRenderer renderer)
-								{/*...}*/
-									this.renderer = renderer;
-
-									node_color = yellow;
-									edge_color = blue;
-									node_radius = 0.02;
-									rotate = 0;
-									scale = 1;
-									translate = 0.vec;
-								}
-						}
-						private:
-						private {/*conversion}*/
-							BasicShader.Parameters to_shader ()
-								{/*...}*/
-									return BasicShader.Parameters ()
-										.color (this.color.vector.to!Cvec)
-										.translation (this.translate.to!fvec)
-										.rotation (this.rotate)
-										.scale (this.scale);
-								}
-						}
-						private {/*data}*/
-							GraphRenderer renderer;
-						}
+								color = magenta (0.5);
+								translate = 0.vec;
+								rotate = 0;
+								scale = 1;
+							}
 					}
-			}
-			private:
-			private {/*data}*/
-				BasicShader shader;
-				Graph[Graph.Id] assets;
-				Appendable!(Order[]) orders;
-			}
-			protected {/*ops}*/
-				void enqueue (Order order)
-					{/*...}*/
-						orders ~= order;
+					private:
+					private {/*data}*/
+						Geometry mesh;
+						MeshRenderer renderer;
 					}
 
-				void attach (BasicShader shader)
-					{/*...}*/
-						this.shader = shader;
+				}
+		}
+		private:
+		private {/*data}*/
+			BasicShader shader;
+			Order[] orders;
+		}
+		package {/*ops}*/
+			void enqueue (Order order)
+				{/*...}*/
+					orders ~= order;
+				}
 
-						this.node = VertexBuffer (node_geometry);
+			void attach (BasicShader shader)
+				{/*...}*/
+					this.shader = shader;
+				}
+		}
+	}
+
+		import std.stdio; // TEMP
+class GraphRenderer
+	{/*...}*/
+		public:
+		public {/*rendering}*/
+			auto draw (Geometry graph)
+				{/*...}*/
+					return Order (this, graph);
+				}
+
+			void process ()
+				{/*...}*/
+					shader.activate;
+
+					foreach (order; orders[])
+						process (order);
+
+					orders = null;
+				}
+
+			void process (Order order)
+				{/*...}*/
+					import evx.graphics.shader.program; // TODO all this just to get Cvec... belongs elsewhere
+
+					void draw_nodes ()
+						{/*...}*/
+							node.bind;
+							shader.position (node)
+								.color (order.node_color.vector.to!Cvec)
+								.scale (order.scale * order.node_radius.to!float);
+
+							foreach (v; order.graph.vertices[])
+								{/*...}*/
+									shader.translation (order.translate + v);
+
+									gl.DrawArrays (GL_TRIANGLE_FAN, 0, node.length.to!int);
+								}
+						}
+					void draw_edges ()
+						{/*...}*/
+							order.graph.bind;
+
+							with (order)
+							shader.position (graph.vertices)
+								.color (order.edge_color.vector.to!Cvec)
+								.translation (translate)
+								.rotation (rotate)
+								.scale (scale);
+
+							with (order)
+							gl.DrawElements (GL_LINES, graph.indices.length.to!int, GL_UNSIGNED_SHORT, null);
+						}
+
+					draw_edges;
+					draw_nodes;
+				}
+		}
+		public {/*order definition}*/
+			struct Order
+				{/*...}*/
+					mixin Builder!(
+						Color,  `node_color`,
+						Color,  `edge_color`,
+						Color,  `color`,
+						vec,    `translate`,
+						double, `rotate`,
+						double, `scale`,
+						double, `node_radius`,
+					);
+
+					public:
+					public {/*fulfillment}*/
+						void enqueued ()
+							{/*...}*/
+								renderer.enqueue (this);
+							}
+
+						void immediately ()
+							{/*...}*/
+								renderer.process (this);
+							}
 					}
-			}
+					public {/*ctor}*/
+						this (GraphRenderer renderer, Geometry graph)
+							{/*...}*/
+								this.renderer = renderer;
+								this.graph = graph;
+
+								node_color = yellow;
+								edge_color = blue;
+								node_radius = 0.02;
+								rotate = 0;
+								scale = 1;
+								translate = 0.vec;
+							}
+					}
+					private:
+					private {/*data}*/
+						GraphRenderer renderer;
+						Geometry graph;
+					}
+				}
+		}
+		public {/*ctor}*/
+			this ()
+				{/*...}*/
+					this.node = node_geometry;
+				}
+		}
+		private:
+		private {/*data}*/
+			BasicShader shader;
+			Order[] orders;
+			VertexBuffer node;
 
 			auto node_geometry ()
 				{/*...}*/
+					import evx.math.geometry.polygons;
+
 					return circle!36;
 				}
 		}
-}
-static if (0)
-public {/*mesh}*/
-	class MeshRenderer (Policies...)
-		{/*...}*/
-			static {/*policies}*/
-				mixin PolicyAssignment!(
-					DefaultPolicies!(
-						`mesh_editable`, GeometryEditing.disabled,
-					),
-					Policies
-				);
-				static assert (not!mesh_editable, `editable mesh unimplemented`);
-			}
-
-			private struct Mesh
+		protected {/*ops}*/
+			void enqueue (Order order)
 				{/*...}*/
-					mixin TypeUniqueId;
-
-					GeometryBuffer buffer;
+					orders ~= order;
 				}
 
-			public:
-			public {/*+/- meshes}*/
-				auto add (R,S)(R vertices, S triangle_corner_indices)
-					in {/*...}*/
-						assert (triangle_corner_indices.length % 3 == 0);
-					}
-					body {/*...}*/
-						auto id = Mesh.Id.create;
-
-						assets[id] = Mesh (GeometryBuffer (vertices, triangle_corner_indices));
-
-						return id;
-					}
-				auto remove (Mesh.Id mesh)
-					{/*...}*/
-						assets[mesh].buffer = null;
-
-						assets.remove (mesh);
-					}
-			}
-			public {/*rendering}*/
-				auto draw (Mesh.Id mesh)
-					{/*...}*/
-						return Order (this).mesh (assets[mesh]);
-					}
-
-				void process ()
-					{/*...}*/
-						shader.activate;
-
-						foreach (order; orders[])
-							{/*...}*/
-								order.mesh.buffer.bind;
-								shader.set_uniforms (order.to_shader);
-
-								void draw_solid ()
-									{/*...}*/
-										with (order)
-										gl.DrawElements (GL_TRIANGLES, mesh.buffer.indices.length, GL_UNSIGNED_SHORT, null);
-									}
-								void draw_wireframe ()
-									{/*...}*/
-										with (order)
-										foreach (i; 0..mesh.buffer.indices.length/3)
-											gl.DrawElements (GL_LINE_LOOP, 3, GL_UNSIGNED_SHORT, (3*i*ushort.sizeof).to!size_t.voidptr);
-									}
-
-								with (Mode) final switch (order.mode)
-									{/*...}*/
-										case solid:
-											draw_solid;
-											break;
-										case wireframe:
-											draw_wireframe;
-											break;
-										case overlay:
-											draw_solid;
-											draw_wireframe;
-											break;
-									}
-							}
-					}
-			}
-			public {/*order definition}*/
-				enum Mode {solid, wireframe, overlay}
-
-				struct Order
-					{/*...}*/
-						mixin Builder!(
-							Color,  `color`,
-							vec,    `translate`,
-							double, `rotate`,
-							double, `scale`,
-							Mesh,   `mesh`,
-							Mode,   `mode`,
-						);
-
-						public:
-						public {/*fulfillment}*/
-							void enqueued ()
-								{/*...}*/
-									renderer.enqueue (this);
-								}
-							void immediately ()
-								{/*...}*/
-									assert (0, `immediate mode unimplemented`);
-								}
-						}
-						public {/*ctor}*/
-							this (MeshRenderer renderer)
-								{/*...}*/
-									this.renderer = renderer;
-
-									color = magenta (0.5);
-									translate = 0.vec;
-									rotate = 0;
-									scale = 1;
-								}
-						}
-						private:
-						private {/*conversion}*/
-							BasicShader.Parameters to_shader ()
-								{/*...}*/
-									return BasicShader.Parameters ()
-										.color (this.color.vector.to!Cvec)
-										.translation (this.translate.to!fvec)
-										.rotation (this.rotate)
-										.scale (this.scale);
-								}
-						}
-						private {/*data}*/
-							MeshRenderer renderer;
-						}
-
-					}
-			}
-			private:
-			private {/*data}*/
-				BasicShader shader;
-				Mesh[Mesh.Id] assets;
-				Appendable!(Order[]) orders;
-			}
-			protected {/*ops}*/
-				void enqueue (Order order)
-					{/*...}*/
-						orders ~= order;
-					}
-
-				void attach (BasicShader shader)
-					{/*...}*/
-						this.shader = shader;
-					}
-			}
+			void attach (BasicShader shader)
+				{/*...}*/
+					this.shader = shader;
+				}
 		}
-}
+	}
+
+import evx.graphics.display;
+import evx.math;
+mixin(MathToolkit!());
+void main ()
+	{/*...}*/
+		scope display = new Display;
+		scope shader = new BasicShader;
+		scope mesh = new MeshRenderer;
+		scope graph = new GraphRenderer;
+
+		display.attach (shader);
+		mesh.attach (shader);
+		graph.attach (shader);
+
+		auto geometry = Geometry (
+			VertexBuffer (circle),
+			IndexBuffer ([0,1,2, 2,1,4, 6,7,5, 9,5,3, 2,9,12])
+		);
+
+		foreach (i; 0..80)
+			{/*...}*/
+				mesh.draw (geometry)
+					.color (grey (0.1))
+					.rotate (i*π/24)
+					.enqueued;
+
+				mesh.draw (geometry)
+					.color (white (0.1))
+					.rotate (-i*π/24)
+					.enqueued;
+
+				mesh.process;
+
+				mesh.draw (geometry)
+					.color (blue (0.1))
+					.rotate ((12+i)*π/24)
+					.immediately;
+
+				graph.draw (geometry)
+					.node_color (white (gaussian) * cyan (gaussian))
+					.immediately;
+
+				geometry.indices[] = ℕ[0..geometry.indices.length].map!(i => (24 * gaussian).abs.round.clamp (0,23));
+
+				// STICKING POINT: getting all the order variables loaded into the shader... sometimes they get missed, and the shader doesn't draw
+				// STICKING POINT: remembering to bind buffers
+				// STICKING POINT: attaching shit to other shit
+				// other than that, pretty confortable...
+
+				display.render;
+
+				import core.thread;
+				Thread.sleep (20.msecs);
+			}
+	}

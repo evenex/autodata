@@ -66,6 +66,10 @@ mixin template TransferOps (alias buffer)
 			mixin require!`has_length`;
 		}
 
+		mixin(q{
+			alias } ~__traits(identifier, buffer)~ q{ this;
+		});
+
 		public:
 		public {/*element}*/
 			auto ref front ()
