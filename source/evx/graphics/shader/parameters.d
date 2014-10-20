@@ -11,7 +11,7 @@ private {/*import}*/
 	import evx.codegen.declarations;
 	import evx.traits.classification;
 
-	import opengl;
+	import evx.graphics.opengl;
 }
 
 public {/*shader params}*/

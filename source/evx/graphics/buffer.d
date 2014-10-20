@@ -8,7 +8,7 @@ private {/*imports}*/
 	import evx.operators.buffer;
 	import evx.misc.utils;
 
-	import opengl;
+	import evx.graphics.opengl;
 }
 
 struct GLBuffer (T, GLenum target, GLenum usage)

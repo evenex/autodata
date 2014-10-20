@@ -11,7 +11,7 @@ private {/*imports}*/
 	import std.traits;
 	import std.typecons;
 
-	import opengl;
+	import evx.graphics.opengl;
 
 	import evx.math;
 
