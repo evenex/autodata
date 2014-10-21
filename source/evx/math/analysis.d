@@ -2,7 +2,6 @@ module evx.math.analysis;
 
 private {/*imports}*/
 	import std.algorithm; 
-	import std.math; 
 	import std.typetuple; 
 	import std.traits; 
 	import std.range;
@@ -14,6 +13,7 @@ private {/*imports}*/
 	import evx.math.arithmetic;
 	import evx.math.vectors;
 	import evx.math.ordinal;
+	import evx.math.overloads;
 	import evx.meta;
 
 	mixin(FunctionalToolkit!());
@@ -73,20 +73,11 @@ public {/*rounding}*/
 public {/*comparison}*/
 	enum standard_relative_tolerance = 1e-5;
 
-	/* test if a type overloads approximate equality comparison 
-	*/
-	template overloads_approx (T)
-		{/*...}*/
-			enum overloads_approx = hasMember!(T, `approx`);
-		}
-	
 	/* test if a number or range is approximately equal to another 
 	*/
 	auto approx (T,U)(T a, U b, real relative_tolerance = standard_relative_tolerance)
-		if (allSatisfy!(isInputRange, T, U) && allSatisfy!(Or!(isNumeric, overloads_approx), CommonType!(staticMap!(ElementType, T, U))))
+		if (allSatisfy!(isInputRange, T, U))
 		{/*...}*/
-			alias C = CommonType!(staticMap!(ElementType, T, U));
-
 			foreach (x,y; zip (a,b))
 				if (x.approx (y, relative_tolerance))
 					continue;
@@ -95,14 +86,14 @@ public {/*comparison}*/
 			return true;
 		}
 	auto approx (T,U)(T a, U b, real relative_tolerance = standard_relative_tolerance)
-		if (allSatisfy!(isNumeric, T, U))
+		if (not (anySatisfy!(isInputRange, T, U)))
 		{/*...}*/
 			alias V = CommonType!(T,U);
 
 			auto abs_a = abs (a);
 			auto abs_b = abs (b);
 
-			if (abs_a + abs_b < relative_tolerance)
+			if ((abs_a + abs_b).to!double < relative_tolerance)
 				return true;
 
 			auto ε = max (abs_a, abs_b) * relative_tolerance;
@@ -113,7 +104,7 @@ public {/*comparison}*/
 	/* a.approx (b) && b.approx (c) && ...
 	*/
 	bool all_approx_equal (Args...)(Args args)
-		if (Args.length > 1 && allSatisfy!(Or!(isNumeric, overloads_approx), Args))
+		if (Args.length > 1)
 		{/*...}*/
 			foreach (i,_; args[0..$-1])
 				if (not (args[i].approx (args[i+1])))
@@ -383,9 +374,7 @@ public {/*calculus}*/
 	bool is_infinite (T)(T value)
 		if (not(is(T == Interval!U, U) || isInputRange!T))
 		{/*...}*/
-			static if (hasLength!T)
-				return value[].filter!(x => x.is_finite).empty;
-			else static if (__traits(compiles, infinite!T))
+			static if (__traits(compiles, infinite!T))
 				return value.abs == infinite!T;
 			else return false;
 		}

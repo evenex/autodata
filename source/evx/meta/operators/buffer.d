@@ -3,6 +3,7 @@ module evx.operators.buffer;
 import evx.operators.transfer;
 import evx.traits.concepts;
 
+// TODO document
 struct BufferTraits (Buffer)
 	{/*...}*/
 		static {/*alias}*/
@@ -12,14 +13,13 @@ struct BufferTraits (Buffer)
 		}
 
 		mixin Traits!(
-			`can_set_length`, q{buffer.length = size_t.min;},
-			`can_resize`,  q{buffer.resize (size_t.max);},
+			`can_assign_length`, q{buffer.length = size_t.min;},
 
-			`has_dynamic_length`, q{static assert (can_set_length || can_resize);},
-			`can_clear`,   q{buffer.clear ();},
+			`can_allocate`, q{buffer.allocate (size_t.max);},
+			`can_free`,     q{buffer.free ();},
 
-			`can_reserve`,    q{buffer.reserve (size_t.max);}, // XXX unused
-			`can_append`,     q{buffer.append (Element[].init.map!identity); buffer.append (Element.init);}, // XXX unused
+			`has_variable_length`, q{static assert (can_assign_length || can_allocate);},
+			`is_nullable`, 		   q{static assert (can_assign_length || can_free);},
 		);
 	}
 
@@ -35,24 +35,12 @@ mixin template BufferOps (alias buffer)
 					alias require = BufferTraits.require!(typeof(this), trait, BufferOps);
 				}
 
-			mixin require!`has_dynamic_length`;
+			mixin require!`has_variable_length`;
+			mixin require!`is_nullable`;
 		}
 		public {/*dependencies}*/
 			mixin TransferOps!buffer;
 		}
-
-		@property length ()
-			{/*...}*/
-				return buffer.length;
-			}
-		@property length (size_t new_length)
-			{/*...}*/
-				static if (BufferTraits.can_resize)
-					buffer.resize (new_length);
-				else static if (BufferTraits.can_set_length)
-					buffer.length = new_length;
-				else static assert (0);
-			}
 
 		this (R)(R range)
 			{/*...}*/
@@ -65,49 +53,77 @@ mixin template BufferOps (alias buffer)
 
 				this = null;
 
-				static if (range_has_length)
-					this.length = range.length;
-				else foreach (item; range)
-					this.length = this.length + 1;
+				{/*reserve storage}*/
+					static if (range_has_length)
+						{/*reserve length}*/
+							static if (BufferTraits.can_allocate)
+								buffer.allocate (range.length);
+							else static if (BufferTraits.can_assign_length)
+								buffer.length = range.length;
+							else static assert (0);
+						}
+					else static if (BufferTraits.can_assign_length)
+						{/*grow and append}*/
+							foreach (item; range)
+								this.length = this.length + 1;
+						}
+					else static if (BufferTraits.can_allocate)
+						{/*count length}*/
+							buffer.allocate (range[].count);
+						}
+					else static assert (0);
+				}
 
 				this[] = range;
 			}
 		auto opAssign (typeof(null))
 			{/*...}*/
-				static if (BufferTraits.can_clear)
-					buffer.clear;
-				else static if (BufferTraits.can_resize)
-					buffer.resize (0);
-				else static if (BufferTraits.can_set_length)
+				static if (BufferTraits.can_assign_length)
 					buffer.length = 0;
+				else static if (BufferTraits.can_free)
+					buffer.free;
 				else static assert (0);
 			}
 
-		auto opOpAssign (string op : `~`, R)(R range)
-			{/*...}*/
-				auto start = this.length;
-
-				this.length = this.length + range.length;
-
-				this[start..$] = range;
+		static if (BufferTraits.can_assign_length)
+			{/*length assignment}*/
+				@property length ()
+					{/*...}*/
+						return buffer.length;
+					}
+				@property length (size_t new_length)
+					{/*...}*/
+						buffer.length = new_length;
+					}
 			}
-		auto opOpAssign (string op : `~`)(TransferTraits.Element element)
-			{/*...}*/
-				this.length = this.length + 1;
+		static if (BufferTraits.can_assign_length)
+			{/*appending}*/
+				auto opOpAssign (string op : `~`, R)(R range)
+					{/*...}*/
+						auto start = this.length;
 
-				this[$-1] = element;
-			}
-		auto opOpAssign (string op : `-`)(size_t count)
-			in {/*...}*/
-				assert (count < length);
-			}
-			body {/*...}*/
-				this.length = this.length - count;
-			}
+						this.length = this.length + range.length;
 
-		auto opUnary (string op : `--`)()
-			{/*...}*/
-				this -= 1;
+						this[start..$] = range;
+					}
+				auto opOpAssign (string op : `~`)(TransferTraits.Element element)
+					{/*...}*/
+						this.length = this.length + 1;
+
+						this[$-1] = element;
+					}
+
+				auto opOpAssign (string op : `-`)(size_t count)
+					in {/*...}*/
+						assert (count < length);
+					}
+					body {/*...}*/
+						this.length = this.length - count;
+					}
+				auto opUnary (string op : `--`)()
+					{/*...}*/
+						this -= 1;
+					}
 			}
 	}
 	unittest {/*...}*/

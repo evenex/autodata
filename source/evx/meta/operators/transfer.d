@@ -272,7 +272,9 @@ mixin template TransferOps (alias buffer)
 
 			auto range_assign (R)(typeof(buffer)* buffer, R range, size_t[2] slice)
 				in {/*...}*/
-					assert (range.length == slice[1] - slice[0]);
+					static if (evx.operators.transfer.TransferTraits!R.has_length)
+						assert (range.length == slice[1] - slice[0]);
+					else static assert (range[].count == slice[1] - slice[0]);
 				}
 				body {/*...}*/
 					static if (TransferTraits.has_pointer && evx.operators.transfer.TransferTraits!R.has_pointer)

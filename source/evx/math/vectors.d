@@ -56,12 +56,11 @@ struct Vector (size_t n, Component = double)
 			alias b = z;	alias p = z;
 			alias a = w;	alias q = w;
 		}
-		public {/*forwarding}*/
-			auto forward_to_components (string op, Args...)(Args args)
+		public {/*per-component map}*/
+			auto map (alias op)()
 				{/*...}*/
-					immutable immutable_args = args;
 					mixin(q{
-						return vector!n (this[].map!(t => t.} ~op~ q{ (immutable_args)));
+						return vector!n (evx.math.functional.map!op (this[]));
 					});
 				}
 		}
@@ -85,15 +84,9 @@ struct Vector (size_t n, Component = double)
 		}
 		public {/*dispatch}*/
 			template opDispatch (string op)
+				if (is_vector_swizzle!op)
 				{/*...}*/
-					auto opDispatch (Args...)(Args args)
-						if (not(is_vector_function!(op, Args) || is_vector_swizzle!op))
-						{/*...}*/
-							return forward_to_components!op (args);
-						}
-
-					auto opDispatch ()()
-						if (is_vector_swizzle!op)
+					auto opDispatch ()
 						{/*...}*/
 							return swizzle!op;
 						}
@@ -630,26 +623,6 @@ struct Vector (size_t n, Component = double)
 		u -= u[].map!(x => x/2);
 		assert (u == [1,2,3]);
 	}
-	unittest {/*per-component forwarding}*/
-			auto v = vector (-1f, -2, -3);
-			assert (v.abs == [1,2,3]);
-
-			v *= π/2;
-			assert (v.cos.approx ([0, -1, 0]));
-			assert (v.sin.approx ([-1, 0, 1]));
-
-			v = [1,4,9];
-			assert (v.sqrt == [1,2,3]);
-
-			assert (v.isFinite == vector!3 (true));
-
-			assert (v.pow (2) == [1, 16, 81]);
-
-			v /= 2;
-			assert (v == [0.5, 2.0, 4.5]);
-			assert (v.floor == [0,2,4]);
-			assert (v.ceil  == [1,2,5]);
-		}
 	unittest {/*vector functions}*/
 		auto u = vector (1, 2.);
 

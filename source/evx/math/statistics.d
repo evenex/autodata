@@ -1,17 +1,14 @@
 module evx.math.statistics;
 
 private {/*imports}*/
-	private {/*std}*/
-		import std.range;
-		import std.traits;
-		import std.math;
-	}
-	private {/*evx}*/
-		import evx.math.logic;
-		import evx.math.arithmetic;
-		import evx.math.functional;
-		import evx.math.vectors;
-	}
+	import std.range;
+	import std.traits;
+
+	import evx.math.logic;
+	import evx.math.arithmetic;
+	import evx.math.functional;
+	import evx.math.vectors;
+	import evx.math.overloads;
 
 	mixin(FunctionalToolkit!());
 }
@@ -60,6 +57,6 @@ unittest {/*...}*/
 	auto y = x.map!(i => i.meters);
 
 	assert (y.mean == 7.meters);
-	assert (y.std_dev.approx (2.983.meters));
-	assert (y.std_dev (y.mean).approx (2.983.meters));
+	assert (y.std_dev.approx (2.98329.meters));
+	assert (y.std_dev (y.mean).approx (2.98329.meters));
 }

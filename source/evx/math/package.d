@@ -1,7 +1,6 @@
 module evx.math;
 
 public: 
-	import std.math;
 	import std.algorithm: min, max;
 	import evx.math.logic;
 	import evx.math.functional;
@@ -16,6 +15,7 @@ public:
 	import evx.math.arithmetic;
 	import evx.math.ordinal;
 	import evx.math.algebra;
+	import evx.math.overloads;
 
 template MathToolkit ()
 	{/*...}*/

@@ -72,18 +72,18 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 
 					gl.GetBufferSubData (GL_COPY_READ_BUFFER, gl_slice (i,j).expand, target);
 				}
-			auto resize (size_t length)
+			auto allocate (size_t length)
 				{/*...}*/
 					if (handle == 0)
 						gl.GenBuffers (1, &handle);
 
 					bind;
 
-					gl.BufferData (target, length * T.sizeof, null, usage);
+					gl.BufferData (target, length * T.sizeof, null, usage); // BUG this deletes all data...
 
 					_length = length.to!GLsizei;
 				}
-			auto clear ()
+			auto free ()
 				{/*...}*/
 					gl.DeleteBuffers (1, &handle);
 

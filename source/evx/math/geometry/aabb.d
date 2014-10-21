@@ -8,6 +8,7 @@ private {/*imports}*/
 
 	import evx.math.geometry.traits;
 	import evx.math.geometry.vectors;
+	import evx.math.overloads;
 
 	import evx.operators.transfer;
 
@@ -185,7 +186,7 @@ struct Box (T)
 					Vec low_left = result[0];
 					Vec hi_right = result[1];
 
-					Vec dims = (low_left - hi_right).abs;
+					Vec dims = (low_left - hi_right).map!abs;
 					verts[] = [low_left, low_left + Vec(dims.x, zero!T), hi_right, low_left + Vec(zero!T, dims.y)];
 				}
 		}

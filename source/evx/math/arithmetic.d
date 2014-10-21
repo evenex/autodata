@@ -141,13 +141,6 @@ pure lcm (T)(T a, T b)
 		assert (lcm (9, 0) == 0);
 	}
 
-/* generic squaring predicate 
-*/
-pure squared (T)(T x)
-	{/*...}*/
-		return x^^2;
-	}
-
 /* test whether a number is odd or even at compile-time 
 */
 template is_even (size_t n)

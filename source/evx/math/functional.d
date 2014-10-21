@@ -7,14 +7,14 @@ private {/*imports}*/
 	import std.typecons;
 	import std.traits;
 
-	import evx.math.logic;
-	import evx.math.algebra;
-	import evx.math.analysis;
-
 	import evx.meta;
 	import evx.traits;
 	import evx.range;
 	import evx.misc.utils;
+
+	import evx.math.logic;
+	import evx.math.algebra;
+	import evx.math.analysis;
 }
 
 /* aliasable template lambda function 

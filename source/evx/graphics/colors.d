@@ -1,8 +1,6 @@
 module evx.graphics.colors;
 
 private {/*imports}*/
-	import std.math;
-
 	import evx.misc.utils;
 	import evx.math;
 }
