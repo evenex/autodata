@@ -79,7 +79,7 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 
 					bind;
 
-					gl.BufferData (target, length * T.sizeof, null, usage); // BUG this deletes all data...
+					gl.BufferData (target, length * T.sizeof, null, usage);
 
 					_length = length.to!GLsizei;
 				}

@@ -17,13 +17,13 @@ template not ()
 template not (alias predicate)
 	{/*...}*/
 		bool not (Args...)(Args args)
-			if (is(typeof(predicate (args)? 0:0)))
+			if (is(typeof(predicate (args) == true)))
 			{/*...}*/
 				return !(predicate (args));
 			}
 
-		bool not ()()
-			if (is(typeof(predicate? true:false)))
+		bool not (Args...)()
+			if (is(typeof(predicate == true)))
 			{/*...}*/
 				return !predicate;
 			}

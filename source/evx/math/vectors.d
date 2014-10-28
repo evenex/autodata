@@ -31,6 +31,11 @@ private {/*imports}*/
 	mixin(ArithmeticToolkit!());
 }
 
+template is_vector_like (T)
+	{/*...}*/
+		enum is_vector_like = is_vector_tuple!T || is_vector_array!T;
+	}
+
 struct Vector (size_t n, Component = double)
 	if (n > 1 && supports_arithmetic!Component)
 	{/*...}*/
@@ -55,14 +60,6 @@ struct Vector (size_t n, Component = double)
 			alias g = y;	alias t = y;	alias v = y;
 			alias b = z;	alias p = z;
 			alias a = w;	alias q = w;
-		}
-		public {/*per-component map}*/
-			auto map (alias op)()
-				{/*...}*/
-					mixin(q{
-						return vector!n (evx.math.functional.map!op (this[]));
-					});
-				}
 		}
 		public {/*swizzling}*/
 			auto swizzle (string components)()
@@ -751,6 +748,11 @@ template vector ()
 			{/*...}*/
 				return vector_from_variadic (components);
 			}
+	}
+
+auto each (alias func, V, Args...)(V v, Args args)
+	{/*...}*/
+		return vector!(V.length) (v[].map!func);
 	}
 
 pure {/*unary functions}*/

@@ -52,7 +52,7 @@ class MeshRenderer
 
 					with (order)
 					shader.position (mesh.vertices)
-						.color (color.vector.to!Cvec)
+						.color (color.vector.each!(to!float))
 						.translation (translate)
 						.rotation (rotate)
 						.scale (scale);
@@ -181,7 +181,7 @@ class GraphRenderer
 								{/*...}*/
 									shader.translation (order.translate + v);
 
-									gl.DrawArrays (GL_TRIANGLE_FAN, 0, node.length.to!int);
+									gl.DrawArrays (GL_TRIANGLE_FAN, 0, node.length.to!int); // BUG what to do about setting slices as draw arguments??? what happens when i want set slices of gl arrays as shader parameters?
 								}
 						}
 					void draw_edges ()
@@ -284,7 +284,7 @@ class GraphRenderer
 import evx.graphics.display;
 import evx.math;
 mixin(MathToolkit!());
-void main ()
+static if (0) void main ()
 	{/*...}*/
 		scope display = new Display;
 		scope shader = new BasicShader;

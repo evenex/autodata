@@ -1,8 +1,8 @@
 {
-	"name": "engine_v10",
-	"description": "TCR engine prototype 9",
-	"copyright": "Copyright © 2014, evenex_code",
-	"authors": ["evenex_code"],
+	"name": "engine_vX",
+	"description": "TCR engine prototype 10",
+	"copyright": "Copyright © 2014, evenex",
+	"authors": ["evenex"],
 	"dependencies": {
 		"derelict-glfw3": "~master",
 		"derelict-gl3"  : "~master",
@@ -16,8 +16,8 @@
 	"targetType": "executable",
 	"buildRequirements": ["disallowDeprecations"],
 	"buildOptions": ["debugInfo", "alwaysStackFrame"],
-	"_buildOptions": ["releaseMode", "noBoundsCheck"],
 	"_buildOptions": ["releaseMode", "inline", "noBoundsCheck"],
-	"_buildOptions": ["releaseMode", "optimize", "inline", "noBoundsCheck"],
+	"_ICE_buildOptions": ["releaseMode", "optimize", "inline", "noBoundsCheck"],
+	"_dflags": ["-v"],
 	"postBuildCommands": ["echo '<>>'"]
 }

@@ -30,7 +30,7 @@ mixin template BufferOps (alias buffer)
 		static {/*analysis}*/
 			alias BufferTraits = evx.operators.buffer.BufferTraits!(typeof(buffer));
 
-			mixin template require (string trait) // TODO will this conflict
+			mixin template require (string trait)
 				{/*...}*/
 					alias require = BufferTraits.require!(typeof(this), trait, BufferOps);
 				}
@@ -137,7 +137,7 @@ mixin template BufferOps (alias buffer)
 			{/*...}*/
 				struct Buffer
 					{/*...}*/
-						import std.c.stdlib;
+						import core.stdc.stdlib;
 
 						int* ptr;
 						size_t length;

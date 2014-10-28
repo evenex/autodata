@@ -175,7 +175,7 @@ auto rotate (T, U = ElementType!(ElementType!T), V = ElementType!T)(T geometry, 
 		import std.algorithm;
 
 		foreach (v; [vec(0,1), vec(0,2), vec(3,9)].rotate (12))
-			assert (not!any (v.map!isNaN[]));
+			assert (not!any (v.each!isNaN[]));
 	}
 
 /* scale a polygon without moving its centroid 

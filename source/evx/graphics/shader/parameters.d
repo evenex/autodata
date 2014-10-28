@@ -246,7 +246,7 @@ package {/*linkers}*/
 		{/*...}*/
 			gl.EnableVertexAttribArray (index);
 
-			buffer.bind; // BUG we can't do this with subbuffers... how to specify subbuffers of verts, elements and attributes for linkage?
+			buffer.bind; // BUG we can't do this with subbuffers... how to specify subbuffers of verts, elements and attributes for linkage? 
 
 			static if (is_vector!(ElementType!R))
 				{/*...}*/

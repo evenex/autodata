@@ -19,9 +19,7 @@ auto factorial (T)(T n)
 				else return n*fac (n-1);
 			}
 
-		static if (__ctfe)
-			return fac (n);
-		else assert (0);
+		return fac (n);
 	}
 auto binomial (T1, T2)(T1 n, T2 k)
 	if (allSatisfy!(isIntegral, T1, T2))

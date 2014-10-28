@@ -15,8 +15,8 @@ private {/*imports}*/
 		import std.conv;
 	}
 	private {/*evx}*/
-		import evx.meta;
-		import evx.math;
+		import evx.math.analysis;
+		import evx.traits;
 	}
 
 	alias Interval = evx.math.analysis.Interval;

@@ -7,7 +7,6 @@ private {/*imports}*/
 	import std.range;
 	import std.conv;
 
-	import evx.math.functional;
 	import evx.math.logic;
 	import evx.math.algebra;
 	import evx.math.arithmetic;
@@ -15,8 +14,6 @@ private {/*imports}*/
 	import evx.math.ordinal;
 	import evx.math.overloads;
 	import evx.meta;
-
-	mixin(FunctionalToolkit!());
 }
 
 /* alias disambiguation
@@ -35,41 +32,110 @@ template infinite (T)
 	{/*...}*/
 		alias infinite = identity_element!(real.infinity).of_type!T;
 	}
-
 alias infinity = infinite!real;
 
-public {/*rounding}*/
-	/* generic replacement for std.math.floor 
-	*/
-	auto floor (T)(T value)
-		{/*...}*/
-			return value - (value % T(1));
-		}
+/* test whether a type has a floating point representation
+*/
+template is_continuous (T)
+	{/*...}*/
+		enum is_continuous = allSatisfy!(isFloatingPoint, RepresentationTypeTuple!T);
+	}
 
-	/* generic replacement for std.math.ceil 
-	*/
-	auto ceil (T)(T value)
-		{/*...}*/
-			static if (hasLength!T)
-				return T(value[].map!(x => x.ceil));
-			else {/*...}*/
-				auto floor = value.floor;
+/* test whether a range can represent a floating point function 
+*/
+template is_continuous_range (T)
+	{/*...}*/
+		static if (hasMember!(T, `opIndex`))
+			enum has_continuous_domain = anySatisfy!(is_continuous, IndexTypes!T);
+		else enum has_continuous_domain = true;
 
-				if (value == floor)
-					return value;
-				else return floor + T(1);
+		static if (hasMember!(T, `measure`))
+			enum is_measurable = __traits(compiles, {auto μ = T.init.measure; static assert (is_continuous!(typeof(μ)));});
+		else enum is_measurable = false;
+
+		enum is_continuous_range = isInputRange!T && has_continuous_domain && is_measurable;
+	}
+version (unittest) {/*functional compatibility}*/
+	import evx.math.functional;
+	mixin(FunctionalToolkit!());
+
+	unittest {/*...}*/
+		struct T
+			{/*...}*/
+				float measure;
+
+				auto opIndex (float i)
+					{return i;}
+
+				auto opSlice (float i, float j)
+					{return this;}
+
+				auto front ()
+					{/*...}*/
+						return measure;
+					}
+
+				void popFront ()
+					{/*...}*/
+						
+					}
+
+				enum empty = true;
 			}
-		}
 
-	/* pure replacement for std.math.round 
-	*/
-	auto round (T)(T value)
-		{/*...}*/
-			if (value % T(1.0) < T(0.5))
-				return value.floor;
-			else return value.ceil;
-		}
+		static assert (is_continuous_range!T);
+
+		auto x = T(1);
+		auto y = T(1);
+		auto z = zip(x,y);
+		auto w = z.map!(t => t);
+	}
 }
+
+/* test whether a value is infinite 
+*/
+bool is_infinite (T)(T value)
+	if (not(is(T == Interval!U, U) || isInputRange!T))
+	{/*...}*/
+		static if (__traits(compiles, infinite!T))
+			return value.abs == infinite!T;
+		else return false;
+	}
+bool is_finite (T)(T value)
+	{/*...}*/
+		return not (is_infinite (value));
+	}
+	unittest {/*...}*/
+		assert (infinite!real.is_infinite);
+		assert (infinite!double.is_infinite);
+		assert (infinite!float.is_infinite);
+
+		assert ((-infinite!real).is_infinite);
+		assert ((-infinite!double).is_infinite);
+		assert ((-infinite!float).is_infinite);
+
+		assert (not (zero!real.is_infinite));
+		assert (not (zero!double.is_infinite));
+		assert (not (zero!float.is_infinite));
+
+		import evx.math.units;
+		assert (infinite!Meters.is_infinite);
+		assert (infinite!Seconds.is_infinite);
+		assert (infinite!Kilograms.is_infinite);
+		assert (infinite!Amperes.is_infinite);
+
+		assert ((-infinite!Meters).is_infinite);
+		assert ((-infinite!Seconds).is_infinite);
+		assert ((-infinite!Kilograms).is_infinite);
+		assert ((-infinite!Amperes).is_infinite);
+
+		assert (not (zero!Meters.is_infinite));
+		assert (not (zero!Seconds.is_infinite));
+		assert (not (zero!Kilograms.is_infinite));
+		assert (not (zero!Amperes.is_infinite));
+	}
+
+
 public {/*comparison}*/
 	enum standard_relative_tolerance = 1e-5;
 
@@ -86,7 +152,12 @@ public {/*comparison}*/
 			return true;
 		}
 	auto approx (T,U)(T a, U b, real relative_tolerance = standard_relative_tolerance)
-		if (not (anySatisfy!(isInputRange, T, U)))
+		if (allSatisfy!(is_vector_like, T, U))
+		{/*...}*/
+			return approx (a[], b[]);
+		}
+	auto approx (T,U)(T a, U b, real relative_tolerance = standard_relative_tolerance)
+		if (not (anySatisfy!(isInputRange, T, U)) && not (anySatisfy!(is_vector_like, T, U))) // TODO try allSat (not!is)
 		{/*...}*/
 			alias V = CommonType!(T,U);
 
@@ -313,159 +384,6 @@ public {/*intervals}*/
 			assert (x.is_finite);
 			assert (y.is_infinite);
 			assert (z.is_infinite);
-		}
-}
-public {/*calculus}*/
-	/* test whether a type has a floating point representation
-	*/
-	template is_continuous (T)
-		{/*...}*/
-			enum is_continuous = allSatisfy!(isFloatingPoint, RepresentationTypeTuple!T);
-		}
-
-	/* test whether a range can represent a floating point function 
-	*/
-	template is_continuous_range (T)
-		{/*...}*/
-			static if (hasMember!(T, `opIndex`))
-				enum has_continuous_domain = anySatisfy!(is_continuous, IndexTypes!T);
-			else enum has_continuous_domain = true;
-
-			static if (hasMember!(T, `measure`))
-				enum is_measurable = __traits(compiles, {auto μ = T.init.measure; static assert (is_continuous!(typeof(μ)));});
-			else enum is_measurable = false;
-
-			enum is_continuous_range = isInputRange!T && has_continuous_domain && is_measurable;
-		}
-	unittest {/*functional compatibility}*/
-		struct T
-			{/*...}*/
-				float measure;
-
-				auto opIndex (float i)
-					{return i;}
-
-				auto opSlice (float i, float j)
-					{return this;}
-
-				auto front ()
-					{/*...}*/
-						return measure;
-					}
-
-				void popFront ()
-					{/*...}*/
-						
-					}
-
-				enum empty = true;
-			}
-
-		static assert (is_continuous_range!T);
-
-		auto x = T(1);
-		auto y = T(1);
-		auto z = zip(x,y);
-		auto w = z.map!(t => t);
-	}
-
-	/* test whether a value is infinite 
-	*/
-	bool is_infinite (T)(T value)
-		if (not(is(T == Interval!U, U) || isInputRange!T))
-		{/*...}*/
-			static if (__traits(compiles, infinite!T))
-				return value.abs == infinite!T;
-			else return false;
-		}
-	bool is_finite (T)(T value)
-		{/*...}*/
-			return not (is_infinite (value));
-		}
-		unittest {/*...}*/
-			assert (infinite!real.is_infinite);
-			assert (infinite!double.is_infinite);
-			assert (infinite!float.is_infinite);
-
-			assert ((-infinite!real).is_infinite);
-			assert ((-infinite!double).is_infinite);
-			assert ((-infinite!float).is_infinite);
-
-			assert (not (zero!real.is_infinite));
-			assert (not (zero!double.is_infinite));
-			assert (not (zero!float.is_infinite));
-
-			import evx.math.units;
-			assert (infinite!Meters.is_infinite);
-			assert (infinite!Seconds.is_infinite);
-			assert (infinite!Kilograms.is_infinite);
-			assert (infinite!Amperes.is_infinite);
-
-			assert ((-infinite!Meters).is_infinite);
-			assert ((-infinite!Seconds).is_infinite);
-			assert ((-infinite!Kilograms).is_infinite);
-			assert ((-infinite!Amperes).is_infinite);
-
-			assert (not (zero!Meters.is_infinite));
-			assert (not (zero!Seconds.is_infinite));
-			assert (not (zero!Kilograms.is_infinite));
-			assert (not (zero!Amperes.is_infinite));
-		}
-
-	/* compute the derivative of a function at some point 
-	*/
-	real derivative (alias f)(real x, real Δx = 1e-6)
-		if (isCallable!f)
-		{/*...}*/
-			return (f(x)-f(x-Δx))/Δx;
-		}
-
-	/* compute the integral of a function over some boundary 
-	*/
-	auto integrate (alias func, T)(Interval!T boundary, T differential = identity_element!(1e-6).of_type!T)
-		{/*...}*/
-			static if (isCallable!func)
-				alias f = func;
-			else alias f = func!real;
-
-			immutable domain = boundary;
-			immutable Δx = differential;
-
-			if (domain.is_finite)
-				{/*...}*/
-					size_t n_partitions ()
-						{/*...}*/
-							return (domain.measure / Δx).round.to!size_t + 1;
-						}
-
-					return Σ (ℕ[0..n_partitions]
-						.map!(i => domain.min + i*Δx)
-						.map!(x => f(x)*Δx)
-					);
-				}
-			else assert (0, `integration over infinite domain unimplemented`);
-		}
-		unittest {/*...}*/
-			assert (integrate!(x => x)(interval (0.0, 1.0)).approx (1./2));
-			assert (integrate!(x => x)(interval (-1.0, 1.0)).approx (0));
-
-			assert (integrate!(x => x^^2)(interval (0.0, 1.0)).approx (1./3));
-			assert (integrate!(x => x^^2)(interval (-1.0, 1.0)).approx (2./3));
-		}
-
-	/* flag a functor as being integrable with respect to some differential measure 
-	*/
-	deprecated mixin template Integrability (alias Δμ)
-		{/*...}*/
-			enum is_integrable;
-			alias differential_measure = Δμ;
-		}
-
-	/* test if a functor is integrable according to the definition of Integrability 
-	*/
-	deprecated template is_integrable (T)
-		{/*...}*/
-			enum is_integrable = is(T.is_integrable == enum) && is(typeof(T.differential_measure));
 		}
 }
 public {/*normalization}*/

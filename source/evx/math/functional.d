@@ -7,9 +7,10 @@ private {/*imports}*/
 	import std.typecons;
 	import std.traits;
 
-	import evx.meta;
+	import evx.type;
 	import evx.traits;
-	import evx.range;
+
+	import evx.range.traits;
 	import evx.misc.utils;
 
 	import evx.math.logic;

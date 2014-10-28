@@ -9,7 +9,7 @@ mixin template DynamicLibrary ()
 		static assert (is(typeof(this)), `mixin requires host struct`);
 
 		import evx.traits;
-		import evx.logic;
+		import evx.math.logic;
 		import std.traits: allSatisfy, isSomeString;
 
 		static private {/*code generation}*/
@@ -22,7 +22,7 @@ mixin template DynamicLibrary ()
 
 					string code = q{
 						import std.c.linux.linux;
-						import evx.utils: to_c;
+						import evx.misc.utils: to_c;
 
 						static if (Args.length > 0)
 							void*[Args.length] libs;

@@ -1,4 +1,8 @@
-module evx.range;
+module evx.range.traversal;
+
+// REVIEW new range package?
+
+public import evx.range.traits;
 
 private {/*imports}*/
 	import std.typetuple;
@@ -13,22 +17,6 @@ private {/*imports}*/
 }
 
 alias contains = std.algorithm.canFind;
-
-public {/*traits}*/
-	/* test if a type is sliceable 
-	*/
-	template is_sliceable (R, T = size_t)
-		{/*...}*/
-			enum is_sliceable = __traits(compiles, {auto x = R.init[T.init..T.init];});
-		}
-
-	/* test if a type is indexable 
-	*/
-	template is_indexable (R, T = size_t)
-		{/*...}*/
-			enum is_indexable = __traits(compiles, R.init[T.init]);
-		}
-}
 
 /* construct a ForwardRange out of a range of ranges such that the inner ranges appear concatenated 
 */

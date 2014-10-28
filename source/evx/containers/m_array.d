@@ -9,7 +9,7 @@ private {/*imports}*/
 
 struct MallocBuffer (T)
 	{/*...}*/
-		import std.c.stdlib;
+		import core.stdc.stdlib;
 
 		private size_t _length;
 		T* ptr;

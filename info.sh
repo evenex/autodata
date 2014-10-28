@@ -1,7 +1,7 @@
 HEADER="--evx toolkit--"
 echo "$HEADER"
 echo ""
-./info
+./info/info
 
 DASHES=$(seq 2 $(echo "$HEADER" | wc -c))
 

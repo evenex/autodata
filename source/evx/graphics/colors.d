@@ -24,9 +24,42 @@ public enum {/*Color palette}*/
 	brown	= orange*black,
 }
 
+public {/*hex}*/ // REVIEW
+	auto to_hex (Color color) // REVIEW
+		{/*...}*/
+			import std.conv; 
+
+			static get_hex (uint x)
+				{/*...}*/
+					char[16] me;
+
+					import core.stdc.stdio;
+
+					sprintf (me.ptr, "%.2x", x);
+
+					import std.algorithm;
+					return me[].findSplitBefore ("\0")[0].to!string;
+				}
+
+			string ret;
+
+			foreach (h; (color.vector * 255).each!(to!uint)[].map!get_hex)
+				ret ~= h;
+
+			return ret;
+		}
+}
+
 struct Color
 	{/*...}*/
 		mixin NormalizedInvariance;
+
+		auto opIndex (size_t i)
+			{/*...}*/
+				return (cast(double*)&this)[i];
+			}
+
+		enum length = 4;
 
 		pure nothrow:
 		@(Normalized.positive) {/*components}*/

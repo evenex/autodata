@@ -6,13 +6,13 @@ private {/*imports}*/
 	import std.conv;
 	import std.typetuple;
 
+	import evx.math.logic;
 	import evx.math.units;
+	import evx.math.vectors;
 	import evx.math.arithmetic;
 }
 
 public import std.math: cos, sin, SQRT2;
-
-pure const nothrow:
 
 mixin math_op!q{abs};
 mixin math_op!q{sgn};
@@ -106,6 +106,13 @@ private {/*implementation}*/
 			mixin(q{
 				auto } ~op~ q{ (T...)(T args)
 					}`{`q{
+						static if (is_vector_like!(T[0]))
+							return vector_} ~op~ q{ (vector (args[0]), args[1..$]);
+						else return scalar_} ~op~ q{ (args);
+					}`}`q{
+
+				auto scalar_} ~op~ q{ (T...)(T args)
+					}`{`q{
 						static if (isBuiltinType!(T[0]))
 							auto value = args[0];
 						else auto value = args[0].to!double;
@@ -113,6 +120,11 @@ private {/*implementation}*/
 						static if (T.length == 1)
 							return T[0] (std.math.} ~op~ q{ (value));
 						else return std.math.} ~op~ q{ (value, args[1..$]);
+					}`}`q{
+
+				auto vector_} ~op~ q{ (T...)(T args)
+					}`{`q{
+						return args[0].each!scalar_} ~op~ q{ (args[1..$]);
 					}`}`q{
 			});
 		}

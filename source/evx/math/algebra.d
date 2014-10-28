@@ -3,6 +3,7 @@ module evx.math.algebra;
 private {/*imports}*/
 	private {/*std}*/
 		import std.traits;
+		import std.typetuple;
 		import std.range;
 		import std.algorithm;
 		import std.conv;
