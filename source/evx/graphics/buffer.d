@@ -130,7 +130,7 @@ auto gpu_array (R)(R range)
 	}
 	unittest {/*...}*/
 		import evx.graphics.display;
-		import evx.math.ordinal;
+		import evx.math.sequence;
 		import evx.containers.m_array;
 
 		scope display = new Display;

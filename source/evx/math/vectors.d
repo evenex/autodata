@@ -18,18 +18,17 @@ private {/*imports}*/
 		import evx.misc.tuple; 
 		import evx.misc.string; 
 
-		import evx.range;
+		import evx.range.traits;
 
 		import evx.math.logic; 
 		import evx.math.constants; 
-		import evx.math.analysis; 
 		import evx.math.algebra; 
-		import evx.math.arithmetic; 
+		import evx.math.arithmetic.traits;
 		import evx.math.functional; 
 	}
 
 	mixin(FunctionalToolkit!());
-	mixin(ArithmeticToolkit!());
+	alias sum = evx.math.arithmetic.sum;
 }
 
 template is_vector_like (T)
@@ -90,16 +89,6 @@ struct Vector (size_t n, Component = double)
 						}
 				}
 		}
-		public {/*infinity}*/
-			bool is_infinite ()
-				{/*...}*/
-					return not (this.is_finite);
-				}
-			bool is_finite ()
-				{/*...}*/
-					return this[].filter!(x => x.is_infinite).empty;
-				}
-		}
 		public {/*math operators}*/
 			auto opEquals (V)(V that)
 				if (is_vector_tuple!V || is_vector_array!V || isInputRange!V)
@@ -110,17 +99,6 @@ struct Vector (size_t n, Component = double)
 						return this[].equal (that[]);
 					else static if (isInputRange!V)
 						return this[].equal (that);
-					else static assert (0);
-				}
-			auto approx (V)(V that, real relative_tolerance = standard_relative_tolerance)
-				if (is_vector_tuple!V || is_vector_array!V || isInputRange!V)
-				{/*...}*/
-					static if (is_vector_tuple!V)
-						return this[].approx (that.vector[], relative_tolerance);
-					else static if (is_vector_array!V)
-						return this[].approx (that[], relative_tolerance);
-					else static if (isInputRange!V)
-						return this[].approx (that, relative_tolerance);
 					else static assert (0);
 				}
 
@@ -622,6 +600,11 @@ struct Vector (size_t n, Component = double)
 		assert (u == [1,2,3]);
 	}
 	unittest {/*vector functions}*/
+		import evx.math.analysis;
+		import evx.math.geometry;
+		import evx.math.arithmetic;
+		alias sum = evx.math.arithmetic.sum; // REVIEW
+
 		auto u = vector (1, 2.);
 
 		assert (norm (u).approx (sqrt (5.)));
@@ -658,6 +641,7 @@ struct Vector (size_t n, Component = double)
 		static assert (unity!(typeof(v)) == [1,1,1]);
 	}
 	unittest {/*dimensioned geometry}*/
+		import evx.math.analysis;
 		import evx.math.units;
 		import evx.math.geometry;
 
@@ -703,6 +687,7 @@ struct Vector (size_t n, Component = double)
 		enum y = `[0.001 kg, 0.002 kg, 0.003 kg, 0.005 kg]`;
 		assert (Vector!(4, Kilograms)(y) == [1.grams, 2.grams, 3.grams, 5.grams]);
 	}
+	static if (0) // TEMP
 	unittest {/*finiteness check}*/
 		assert (vector (infinity, infinity).is_infinite);
 		assert (vector (infinity, 1.0, 2.0).is_infinite);
@@ -755,65 +740,6 @@ auto each (alias func, V, Args...)(V v, Args args)
 	{/*...}*/
 		return vector!(V.length) (v[].map!func);
 	}
-
-pure {/*unary functions}*/
-	template norm (size_t p = 2)
-		{/*...}*/
-			auto norm (V)(V v)
-				if (is_sliceable!V)
-				{/*...}*/
-					alias T = ElementType!V;
-
-					return T (v[].map!(t => (t/T(1))^^p).sum ^^ (1.0/p));
-				}
-		}
-	auto unit (V)(V v) 
-		if (is_vector_tuple!V || is_vector_array!V)
-		{/*...}*/
-			alias T = ElementType!V;
-
-			immutable norm = v.norm;
-
-			if (norm == T(0))
-				return vector!(V.length) (T(0)/T(1));
-			else return vector!(V.length) (v[].map!(t => t/norm));
-		}
-}
-pure {/*binary functions}*/
-	auto dot (U, V)(U u, V v) 
-		if (is_sliceable!V)
-		{/*...}*/
-			return u[].zip (v[])
-				.map!((a,b) => a*b)
-				.sum;
-		}
-
-	auto det (U, V)(U u, V v) 
-		if (is (V == Vector!(2, T), T) && is(U == Vector!(2, S), S))
-		{/*...}*/
-			return u[0]*v[1] - u[1]*v[0];
-		}
-
-	auto cross (U, V)(U u, V v) 
-		if (is (V == Vector!(3, T), T))
-		{/*...}*/
-			return vector (
-				u[1]*v[2] - u[2]*v[1],
-				u[2]*v[0] - u[0]*v[2],
-				u[0]*v[1] - u[1]*v[0],
-			);
-		}
-
-	auto proj (U, V)(U u, V v) 
-		{/*...}*/
-			return u.dot (v.unit) * v.unit;
-		}
-
-	auto rej (U, V)(U u, V v) 
-		{/*...}*/
-			return u - u.proj (v);
-		}
-}
 
 public {/*explicit conversion}*/
 	auto vector_from_tuple (V)(V v)

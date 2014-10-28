@@ -139,7 +139,7 @@ void main ()
 		{/*assign colors}*/
 			auto package_list = modules.byKey.filter!(mod => modules[mod].is_package).array;
 
-			import evx.math.ordinal: ℕ;
+			import evx.math.sequence: ℕ;
 			string[] colors = ℕ[0..package_list.length]
 				.map!(i => i * 360.0/package_list.length)
 				.map!(hue => `#` ~Color.from_hsv (hue, 1.0, 0.9).alpha (0.4).to_hex)
@@ -173,7 +173,12 @@ void main ()
 					dot_file ~= "\t" `m` ~mod.node_id~ ` [label="` ~name~ `"];` "\n";
 					dot_file ~= "\t" `m` ~mod.node_id~ ` [fillcolor="` ~mod.package_color~ `"];` "\n";
 					dot_file ~= "\t" `m` ~mod.node_id~ ` [style=filled];` "\n";
-					dot_file ~= "\t" `m` ~mod.node_id~ ` [shape=box];` "\n";
+
+					string shape;
+					if (mod.is_package)
+						shape = `[shape=ellipse]`;
+					else shape = `[shape=box]`;
+					dot_file ~= "\t" `m` ~mod.node_id ~ shape~ ` ;` "\n";
 
 					foreach (dep; mod.imports)
 						if (dep.is_cyclic)
@@ -182,10 +187,11 @@ void main ()
 				}
 
 			cycles.sort!((a,b) => a.length < b.length);
-			foreach (i; 0..cycles.front.length)
-				{/*...}*/
-					dot_file ~= draw_edge (cycles.front[(i+1)%cycles.front.length], cycles.front[i], `[color="#ff0000", penwidth=6]`);
-				}
+			if (cycles.not!empty)
+				foreach (i; 0..cycles.front.length)
+					{/*...}*/
+						dot_file ~= draw_edge (cycles.front[(i+1)%cycles.front.length], cycles.front[i], `[color="#ff0000", penwidth=6]`);
+					}
 
 			dot_file ~= `}`;
 

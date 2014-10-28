@@ -1,7 +1,5 @@
 module evx.range.traversal;
 
-// REVIEW new range package?
-
 public import evx.range.traits;
 
 private {/*imports}*/
@@ -10,7 +8,8 @@ private {/*imports}*/
 	import std.conv;
 
 	import evx.traits;
-	import evx.math;
+	import evx.math.arithmetic;
+	import evx.math.functional;
 
 	mixin(FunctionalToolkit!());
 	mixin(ArithmeticToolkit!());

@@ -15,13 +15,10 @@ private {/*imports}*/
 		import std.conv;
 	}
 	private {/*evx}*/
-		import evx.math.analysis.intervals;
 		import evx.traits;
 		import evx.misc.tuple;
 		import evx.misc.string;
 	}
-
-	alias Interval = evx.math.analysis.intervals.Interval;
 }
 
 public {/*binary equality}*/
@@ -143,10 +140,6 @@ public {/*debug}*/
 			catch (Exception) assert (0, `tid_string failed`);
 			else return `???`;
 		}
-}
-public {/*indices}*/
-	alias Index = size_t;
-	alias Indices = Interval!Index; // REVIEW perhaps interval and indices and index all belong in ordinal?
 }
 public {/*UDA tags}*/
 	/* for non-const sections or members in a series of consts 

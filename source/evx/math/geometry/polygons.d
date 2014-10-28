@@ -12,13 +12,13 @@ private {/*imports}*/
 
 	import evx.math.logic;
 	import evx.math.algebra;
-	import evx.math.ordinal;
+	import evx.math.sequence;
 	import evx.math.arithmetic;
 	import evx.math.functional;
 	import evx.math.constants;
 	import evx.math.statistics;
 	import evx.math.analysis;
-	import evx.math.overloads;
+	import evx.math.units.overloads;
 
 	mixin(FunctionalToolkit!());
 }

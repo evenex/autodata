@@ -1,4 +1,4 @@
-module evx.math.overloads;
+module evx.math.units.overloads;
 
 private {/*imports}*/
 	import std.traits;
@@ -7,7 +7,7 @@ private {/*imports}*/
 	import std.typetuple;
 
 	import evx.math.logic;
-	import evx.math.units;
+	import evx.math.units.core;
 	import evx.math.vectors;
 	import evx.math.arithmetic;
 }

@@ -2,11 +2,12 @@ module evx.math.analysis.intervals;
 
 import std.traits;
 import std.conv;
+import std.typecons;
 
-import evx.math.analysis.core;
+import evx.math.analysis.infinity;
+import evx.math.analysis.traits;
 import evx.math.algebra;
 import evx.math.logic;
-import evx.math.vectors;
 
 /* generic interval type 
 */
@@ -63,12 +64,12 @@ struct Interval (Index)
 			}
 		this (R)(R range)
 			{/*...}*/
-				this.bounds = range.vector!2.array;
+				this.bounds = [range[0], range[1]];
 			}
 
 		auto tuple ()
 			{/*...}*/
-				return bounds.vector.tuple;
+				return std.typecons.tuple (bounds[0], bounds[1]);
 			}
 
 		bool is_infinite ()

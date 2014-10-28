@@ -8,7 +8,7 @@ private {/*imports}*/
 	import evx.math.arithmetic;
 	import evx.math.functional;
 	import evx.math.vectors;
-	import evx.math.overloads;
+	import evx.math.units.overloads;
 
 	mixin(FunctionalToolkit!());
 }

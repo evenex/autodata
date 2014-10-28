@@ -8,7 +8,7 @@ private {/*imports}*/
 
 	import evx.math.geometry.traits;
 	import evx.math.geometry.vectors;
-	import evx.math.overloads;
+	import evx.math.units.overloads;
 
 	import evx.operators.transfer;
 

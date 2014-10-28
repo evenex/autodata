@@ -4,12 +4,14 @@ private {/*imports}*/
 	import std.traits; 
 	import std.conv; 
 
-	import evx.math.analysis;
+	import evx.math.analysis.core;
+	import evx.math.analysis.intervals;
+	import evx.math.analysis.infinity;
 	import evx.math.arithmetic;
-	import evx.math.ordinal;
+	import evx.math.sequence;
 	import evx.math.functional;
 	import evx.math.algebra;
-	import evx.math.overloads;
+	import evx.math.units.overloads;
 
 	mixin(FunctionalToolkit!());
 }

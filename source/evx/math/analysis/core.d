@@ -11,127 +11,21 @@ private {/*imports}*/
 	import evx.math.algebra;
 	import evx.math.vectors;
 	import evx.math.ordinal;
-	import evx.math.overloads;
+	import evx.math.units.overloads;
 	import evx.meta;
+
+	import evx.math.analysis.traits;
+
+	mixin(FunctionalToolkit!());
 }
 
-public {/*∞}*/
-	template infinite (T)
-		if (is_continuous!T)
-		{/*...}*/
-			alias infinite = identity_element!(real.infinity).of_type!T;
-		}
-	alias infinity = infinite!real;
-
-	/* test whether a value is infinite 
-	*/
-	bool is_infinite (T)(T value)
-		if (not(isInputRange!T))
-		{/*...}*/
-			static if (__traits(compiles, infinite!T))
-				return value.abs == infinite!T;
-			else return false;
-		}
-	bool is_finite (T)(T value)
-		{/*...}*/
-			return not (is_infinite (value));
-		}
-		unittest {/*...}*/
-			assert (infinite!real.is_infinite);
-			assert (infinite!double.is_infinite);
-			assert (infinite!float.is_infinite);
-
-			assert ((-infinite!real).is_infinite);
-			assert ((-infinite!double).is_infinite);
-			assert ((-infinite!float).is_infinite);
-
-			assert (not (zero!real.is_infinite));
-			assert (not (zero!double.is_infinite));
-			assert (not (zero!float.is_infinite));
-
-			import evx.math.units;
-			assert (infinite!Meters.is_infinite);
-			assert (infinite!Seconds.is_infinite);
-			assert (infinite!Kilograms.is_infinite);
-			assert (infinite!Amperes.is_infinite);
-
-			assert ((-infinite!Meters).is_infinite);
-			assert ((-infinite!Seconds).is_infinite);
-			assert ((-infinite!Kilograms).is_infinite);
-			assert ((-infinite!Amperes).is_infinite);
-
-			assert (not (zero!Meters.is_infinite));
-			assert (not (zero!Seconds.is_infinite));
-			assert (not (zero!Kilograms.is_infinite));
-			assert (not (zero!Amperes.is_infinite));
-		}
-}
-public {/*continuity}*/
-	/* test whether a type has a floating point representation
-	*/
-	template is_continuous (T)
-		{/*...}*/
-			enum is_continuous = allSatisfy!(isFloatingPoint, RepresentationTypeTuple!T);
-		}
-
-	/* test whether a range can represent a floating point function 
-	*/
-	template is_continuous_range (T)
-		{/*...}*/
-			static if (hasMember!(T, `opIndex`))
-				enum has_continuous_domain = anySatisfy!(is_continuous, IndexTypes!T);
-			else enum has_continuous_domain = true;
-
-			static if (hasMember!(T, `measure`))
-				enum is_measurable = __traits(compiles, {auto μ = T.init.measure; static assert (is_continuous!(typeof(μ)));});
-			else enum is_measurable = false;
-
-			enum is_continuous_range = isInputRange!T && has_continuous_domain && is_measurable;
-		}
-	version (unittest) {/*functional compatibility}*/
-		import evx.math.functional;
-		mixin(FunctionalToolkit!());
-
-		unittest {/*...}*/
-			struct T
-				{/*...}*/
-					float measure;
-
-					auto opIndex (float i)
-						{return i;}
-
-					auto opSlice (float i, float j)
-						{return this;}
-
-					auto front ()
-						{/*...}*/
-							return measure;
-						}
-
-					void popFront ()
-						{/*...}*/
-							
-						}
-
-					enum empty = true;
-				}
-
-			static assert (is_continuous_range!T);
-
-			auto x = T(1);
-			auto y = T(1);
-			auto z = zip(x,y);
-			auto w = z.map!(t => t);
-		}
-	}
-}
 public {/*comparison}*/
 	enum standard_relative_tolerance = 1e-5;
 
 	/* test if a number or range is approximately equal to another 
 	*/
 	auto approx (T,U)(T a, U b, real relative_tolerance = standard_relative_tolerance)
-		if (allSatisfy!(isInputRange, T, U))
+		if (allSatisfy!(isInputRange, T, U) && allSatisfy!(not!is_vector_like, T, U)) // REVIEW
 		{/*...}*/
 			foreach (x,y; zip (a,b))
 				if (x.approx (y, relative_tolerance))
@@ -141,7 +35,7 @@ public {/*comparison}*/
 			return true;
 		}
 	auto approx (T,U)(T a, U b, real relative_tolerance = standard_relative_tolerance)
-		if (allSatisfy!(is_vector_like, T, U))
+		if (anySatisfy!(is_vector_like, T, U) && allSatisfy!(Or!(is_vector_like, isInputRange), T, U)) // REVIEW
 		{/*...}*/
 			return approx (a[], b[]);
 		}
@@ -170,13 +64,6 @@ public {/*comparison}*/
 				if (not (args[i].approx (args[i+1])))
 					return false;
 			return true;
-		}
-
-	/* test if t0 <= t <= t1 
-	*/
-	bool between (T, U, V) (T t, U t0, V t1) 
-		{/*...}*/
-			return t0 <= t && t <= t1;
 		}
 }
 public {/*normalization}*/

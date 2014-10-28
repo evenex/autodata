@@ -6,7 +6,6 @@ private {/*imports}*/
 		import std.traits;
 	}
 	private {/*evx}*/
-		import evx.math.functional;
 		import evx.math.algebra;
 		import evx.math.logic;
 	}
@@ -28,11 +27,6 @@ public {/*traits}*/
 			else enum is_comparable = false;
 		}
 }
-
-/* the set¹ of natural numbers 
-	1. actually a subset of cardinality 2⁶⁴
-*/
-static ℕ () {return zero!size_t.sequence!((n,i) => n + i);}
 
 /* a < b 
 */ 
@@ -78,4 +72,11 @@ auto compare (T,U)(T a, U b)
 		else if (a > b)
 			return 1;
 		else return 0;
+	}
+
+/* test if t0 <= t <= t1 
+*/
+bool between (T, U, V) (T t, U t0, V t1) 
+	{/*...}*/
+		return t0 <= t && t <= t1;
 	}
