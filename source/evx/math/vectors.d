@@ -13,9 +13,10 @@ private {/*imports}*/
 	}
 	private {/*evx}*/
 		import evx.traits; 
-		import evx.meta;
+		import evx.operators.transfer;
 
-		import evx.misc.utils; 
+		import evx.misc.tuple; 
+		import evx.misc.string; 
 
 		import evx.range;
 

@@ -1,4 +1,4 @@
-module evx.math.calculus;
+module evx.math.analysis.calculus;
 
 private {/*imports}*/
 	import std.traits; 

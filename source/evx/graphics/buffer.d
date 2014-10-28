@@ -6,7 +6,7 @@ private {/*imports}*/
 
 	import evx.operators.transfer;
 	import evx.operators.buffer;
-	import evx.misc.utils;
+	import evx.misc.tuple;
 
 	import evx.graphics.opengl;
 }

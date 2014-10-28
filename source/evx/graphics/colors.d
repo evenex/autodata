@@ -1,9 +1,12 @@
 module evx.graphics.colors;
 
 private {/*imports}*/
-	import evx.misc.utils;
+	import evx.misc.tuple;
 	import evx.math;
+
+	alias map = evx.math.functional.map; // REVIEW why does this not already happen (colors complains calculus.map is private)
 }
+
 
 public enum {/*Color palette}*/
 	/* mono */

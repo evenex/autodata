@@ -15,11 +15,13 @@ private {/*imports}*/
 		import std.conv;
 	}
 	private {/*evx}*/
-		import evx.math.analysis;
+		import evx.math.analysis.intervals;
 		import evx.traits;
+		import evx.misc.tuple;
+		import evx.misc.string;
 	}
 
-	alias Interval = evx.math.analysis.Interval;
+	alias Interval = evx.math.analysis.intervals.Interval;
 }
 
 public {/*binary equality}*/
@@ -69,17 +71,6 @@ public {/*C compatibility}*/
 				else c_args[i] = args[i];
 
 			return τ(c_args);
-		}
-}
-public {/*strings}*/
-	pure extract_number (string input)
-		{/*...}*/
-			enum accepted_chars = `-.0123456789`;
-
-			auto i = input.indexOfAny (accepted_chars);
-			auto j = input.lastIndexOfAny (accepted_chars);
-
-			return input[i..min($, j+1)];
 		}
 }
 public {/*debug}*/
@@ -152,10 +143,6 @@ public {/*debug}*/
 			catch (Exception) assert (0, `tid_string failed`);
 			else return `???`;
 		}
-}
-public {/*tuples}*/
-	alias τ = tuple;
-	template Aⁿ (T...) {alias Aⁿ = T;}
 }
 public {/*indices}*/
 	alias Index = size_t;

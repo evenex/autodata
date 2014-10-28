@@ -2,8 +2,7 @@ module evx.operators.transfer;
 
 private {/*imports}*/
 	import evx.traits.concepts;
-	import evx.math.functional;
-	import evx.math.algebra;
+	import evx.range.traits;
 }
 
 struct TransferTraits (Buffer)
@@ -23,7 +22,7 @@ struct TransferTraits (Buffer)
 			`has_length`,  q{size_t x = buffer.length;},
 
 			`can_access`, q{Element x = buffer.access (size_t.min);},
-			`can_pull`,   q{buffer.pull (Element[].init.map!identity, size_t.min, size_t.max);},
+			`can_pull`,   q{buffer.pull (NullInputRange!Element.init, size_t.min, size_t.max);},
 			`can_push`,   q{buffer.push ((Element*).init, size_t.min, size_t.max);},
 
 			`access_by_ref`, q{buffer.access (size_t.min) = Element.init;},

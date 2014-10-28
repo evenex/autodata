@@ -13,3 +13,10 @@ template is_indexable (R, T = size_t)
 	{/*...}*/
 		enum is_indexable = __traits(compiles, R.init[T.init]);
 	}
+
+struct NullInputRange (T) // REVIEW
+	{/*...}*/
+		enum front = T.init;
+		void popFront (){}
+		enum empty = true;
+	}

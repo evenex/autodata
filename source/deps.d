@@ -9,6 +9,7 @@ import std.string;
 import std.file;
 
 import evx.graphics.colors; // REVIEW
+alias map = std.algorithm.map;
 
 class Module
 	{/*...}*/
@@ -180,6 +181,7 @@ void main ()
 						else dot_file ~= draw_edge (dep, mod, `[color="#000000"]`);
 				}
 
+			cycles.sort!((a,b) => a.length < b.length);
 			foreach (i; 0..cycles.front.length)
 				{/*...}*/
 					dot_file ~= draw_edge (cycles.front[(i+1)%cycles.front.length], cycles.front[i], `[color="#ff0000", penwidth=6]`);

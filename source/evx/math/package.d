@@ -21,7 +21,6 @@ template MathToolkit ()
 	{/*...}*/
 		enum MathToolkit = q{
 			mixin(FunctionalToolkit!());
-			mixin(AnalysisToolkit!());
 			mixin(ArithmeticToolkit!());
 		};
 	}

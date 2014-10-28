@@ -16,7 +16,7 @@ private {/*imports}*/
 	import evx.math.functional;
 	import evx.math.analysis;
 
-	import evx.misc.utils;
+	import evx.misc.tuple;
 
 	mixin(FunctionalToolkit!());
 }

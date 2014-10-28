@@ -12,7 +12,8 @@ private {/*imports}*/
 		import std.array;
 	}
 	private {/*evx}*/
-		import evx.misc.utils; 
+		//import evx.misc.utils; 
+		import evx.misc.string; 
 		import evx.traits; 
 		import evx.meta;
 
@@ -23,6 +24,8 @@ private {/*imports}*/
 		import evx.math.overloads;
 	}
 }
+
+
 
 unittest {/*demo}*/
 	auto x = 10.meters;
@@ -242,7 +245,7 @@ public {/*unit}*/
 
 								static auto to_superscript (U)(U num)
 									{/*...}*/
-										uint n = abs(num).to!uint;
+										uint n = std.math.abs(num).to!uint;
 										if (n < 4)
 											{/*...}*/
 												if (n == 1)
