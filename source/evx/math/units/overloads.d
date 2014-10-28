@@ -12,7 +12,7 @@ private {/*imports}*/
 	import evx.math.arithmetic;
 }
 
-public import std.math: cos, sin, SQRT2;
+public: import std.math: cos, sin, SQRT2;
 
 mixin math_op!q{abs};
 mixin math_op!q{sgn};

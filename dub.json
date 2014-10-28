@@ -17,7 +17,7 @@
 	"buildRequirements": ["disallowDeprecations"],
 	"buildOptions": ["debugInfo", "alwaysStackFrame"],
 	"_buildOptions": ["releaseMode", "inline", "noBoundsCheck"],
-	"_ICE_buildOptions": ["releaseMode", "optimize", "inline", "noBoundsCheck"],
+	"_buildOptions": ["releaseMode", "optimize", "inline", "noBoundsCheck"],
 	"_dflags": ["-v"],
 	"postBuildCommands": ["echo '<>>'"]
 }
