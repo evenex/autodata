@@ -199,10 +199,16 @@ auto stride (R,T)(R range, T stride)
 auto rotate_elements (R)(R range, int positions = 1)
 	in {/*...}*/
 		auto n = range.length;
-		assert ((positions + n) % n > 0);
+
+		if (n > 0)
+			assert ((positions + n) % n > 0);
 	}
 	body {/*...}*/
 		auto n = range.length;
+
+		if (n == 0)
+			return typeof(range.cycle[0..0]).init;
+
 		auto i = (positions + n) % n;
 		
 		return range.cycle[i..n+i];
