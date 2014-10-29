@@ -527,10 +527,7 @@ public {/*reduce}*/
 								{/*...}*/
 									static if (__traits(compiles, zero!Accumulator))
 										return zero!Accumulator;
-									else assert (0, 
-										`cannot reduce empty ` ~R.stringof~ 
-										` where Accumulator ` ~Accumulator.stringof~ ` has no zero.`
-									);
+									else return Accumulator.init;
 								}
 
 							static if (functions.length == 1)
