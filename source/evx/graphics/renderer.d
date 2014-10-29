@@ -5,7 +5,7 @@ private {/*imports}*/
 
 	import evx.graphics.opengl;
 	import evx.graphics.buffer;
-	import evx.graphics.colors;
+	import evx.graphics.color;
 	import evx.graphics.shader.repo;
 
 	import evx.patterns.builder;

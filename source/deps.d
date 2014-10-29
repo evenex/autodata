@@ -8,7 +8,7 @@ import std.random;
 import std.algorithm;
 import std.file;
 
-import evx.graphics.colors; // REVIEW
+import evx.graphics.color; // REVIEW
 import evx.math.logic; // REVIEW
 import evx.patterns.id; // REVIEW
 import evx.patterns.builder; // REVIEW
@@ -16,6 +16,10 @@ import evx.misc.string; // REVIEW
 import evx.math.sequence;
 import evx.range.traversal;
 import evx.math.functional;
+
+// TODO flags (uses builder) struct... also status mixins, with conditions like traits
+struct Flags {mixin Builder!(typeof(null), `_`);}
+struct Status (string name, string condition, Etc...) {}
 
 mixin(FunctionalToolkit!());
 alias count = evx.range.traversal.count; // TODO make count like std.algorithm count except by default it takes TRUE and just counts up all the elements
@@ -47,10 +51,10 @@ class Module
 					.shape (this.is_package? `[shape=ellipse]`:`[shape=box]`)
 					.color ((){/*...})*/
 						if (this.is_package) 
-							return `[fillcolor="#` ~color.alpha (0.6).to_hex~ `"]`;
+							return `[fillcolor="#` ~color.alpha (0.5).to_hex~ `"]`;
 						else if (this.enclosing_package is null)
 							return ``;
-						else return `[fillcolor="#`~enclosing_package.color.alpha (0.3).to_hex~`"]`;
+						else return `[fillcolor="#`~enclosing_package.color.alpha (0.4).to_hex~`"]`;
 					}())
 					.style (`[style=filled]`)
 					;
@@ -78,31 +82,31 @@ class Module
 				database[name] = this;
 
 				foreach (import_name; source.imports)
-					if (this.imports.canFind (import_name))
+					if (this.imports.contains (import_name))
 						continue;
 					else this.imports ~= import_name;
 			}
+
+		bool opEquals (Module that) const
+			{/*...}*/
+				return this.id == that.id;
+			}
 	}
 
-Module[][] cycles;
-
-
-bool is_cyclic (Module from, Module[] seen = [])
+bool has_cyclic_dependencies (Module root)
 	{/*...}*/
-		if (seen.map!(m => m.dot.node).canFind (from.dot.node))
-			{/*...}*/
-				if (cycles.canFind!(c => seen.canFind (c)))
-					cycles.find!(c => seen.canFind (c))[0].swap (cycles.back);
-				else cycles ~= seen;
+		return root.find_minimal_cycle.not!empty;
+	}
 
-				return true;
-			}
+Module[] find_minimal_cycle (Module node, Module[] path = null)
+	{/*...}*/
+		if (path.contains (node))
+			return path;
 
-		foreach (imp; from.imported_modules)
-			if (imp.is_cyclic (seen ~ from))
-				return true;
-
-		return false;
+		else return node.imported_modules
+			.map!(mod => mod.find_minimal_cycle (path ~ node))
+			.array.filter!(not!empty) // TODO .buffer.filter... to say do this, then buffer it, then do that.. and someday, map!(...).parallel_buffer.filter!(...)
+			.reduce!((c1, c2) => c1.length < c2.length? c1: c2);
 	}
 
 
@@ -126,20 +130,20 @@ auto imports (File file)
 
 		foreach (line; file.byLine)
 			{/*...}*/
-				if (not!in_unittest_block && line.canFind (`unittest`))
+				if (not!in_unittest_block && line.contains (`unittest`))
 					{/*...}*/
 						in_unittest_block = true;
 						tabs = line.findSplitBefore (`in_unittest`)[0].to!string;
 					}
 				else if (in_unittest_block)
 					{/*...}*/
-						if (line.canFind (tabs~ `}`))
+						if (line.contains (tabs~ `}`))
 							{/*...}*/
 								tabs = ``;
 								in_unittest_block = false;
 							}
 					}
-				else if (line.canFind (`import `))
+				else if (line.contains (`import `))
 					imports ~= line
 						.findSplitAfter (`import`)[1]
 						.findSplitBefore (`;`)[0]
@@ -165,19 +169,13 @@ auto module_name (File file)
 
 bool is_package (File file)
 	{/*...}*/
-		return file.name.canFind (`package`);
+		return file.name.contains (`package`);
 	}
 bool is_package (Module mod)
 	{/*...}*/
-		return mod.path.canFind (`package`);
+		return mod.path.contains (`package`);
 	}
 
-auto rainbow (size_t length)
-	{/*...}*/
-		return ℕ[0..length]
-			.map!(i => i * 360.0/length)
-			.map!(hue => Color.from_hsv (hue, 1.0, 1.0));
-	}
 
 void connect_import_tree ()
 	{/*...}*/
@@ -186,6 +184,13 @@ void connect_import_tree ()
 				foreach (name; mod.imports)
 					if (auto imp = name in Module.database)
 						mod.imported_modules ~= *imp;
+
+				if (not (mod.is_package)) // TODO mod.not!is_package doesn't work, why?
+					mod.enclosing_package = Module.database.values
+						.filter!(mod => mod.is_package)
+						.filter!(pack => mod.name.contains (pack.name))
+						.reduce!((a,b) => a.name.length > b.name.length? a:b)
+						;
 			}
 	}
 
@@ -206,7 +211,7 @@ void main ()
 	{/*...}*/
 		build_module_tree;
 		{/*assign colors}*/
-			auto packages = Module.database.byValue.filter!(mod => mod.is_package);
+			auto packages = Module.database.values.filter!(mod => mod.is_package);
 			auto n_colors = packages.count;
 
 			foreach (pkg, color; zip (packages, rainbow (n_colors)))
@@ -219,7 +224,7 @@ void main ()
 				{/*...}*/
 					void write_node_property (string property)
 						{/*...}*/
-							dot_file ~= "\t" `m` ~node ~ property~ `;` "\n";
+							dot_file ~= "\t" `m` ~mod.dot.node ~ property~ `;` "\n";
 						}
 
 					with (mod.dot)
@@ -231,18 +236,17 @@ void main ()
 						}
 
 					foreach (dep; mod.imported_modules)
-						if (dep.is_cyclic)
+						if (dep.has_cyclic_dependencies)
 							dot_file ~= dep.connected_to (mod, `[color="#88000066"]`);
 						else dot_file ~= dep.connected_to (mod, `[color="#000000"]`);
 				}
 
-			cycles.sort!((a,b) => a.length < b.length);
-			if (cycles.not!empty)
-				foreach (i; 0..cycles.front.length)
-					{/*...}*/
-						dot_file ~= cycles.front[(i+1)%cycles.front.length].connected_to (cycles.front[i], `[color="#ff0000", penwidth=6]`);
-					}
-
+			dot_file ~= Module.database.values.map!(mod => mod.find_minimal_cycle)
+				.filter!(not!empty)
+				.array.reduce!((c1,c2) => c1.length < c2.length? c1:c2)
+				.adjacent_pairs.map!((a,b) => a.connected_to (b, `[color="#ff0000", penwidth=6]`))
+				.reduce!((a,b) => a ~ b);
+			
 			dot_file ~= `}`;
 
 			File (`temp.dot`, `w`).write (dot_file);
