@@ -3,195 +3,244 @@ import std.range;
 import std.process;
 import std.conv;
 import std.array;
-import std.algorithm;
-import std.functional;
 import std.string;
+import std.random;
+import std.algorithm;
 import std.file;
 
 import evx.graphics.colors; // REVIEW
-alias map = std.algorithm.map;
+import evx.math.logic; // REVIEW
+import evx.patterns.id; // REVIEW
+import evx.patterns.builder; // REVIEW
+import evx.misc.string; // REVIEW
+import evx.math.sequence;
+import evx.range.traversal;
+import evx.math.functional;
+
+mixin(FunctionalToolkit!());
+alias count = evx.range.traversal.count; // TODO make count like std.algorithm count except by default it takes TRUE and just counts up all the elements
 
 class Module
 	{/*...}*/
-		string name;
-		bool is_package;
-		string node_id;
-		string[] import_names;
-		Import[] imports;
-		string package_color;
+		mixin TypeUniqueId;
 
-		this (bool is_package, int id, string name)
+		Id id;
+
+		mixin Builder!(
+			string, `path`,
+			string, `name`,
+			bool, `is_package`,
+			Color, `color`,
+		);
+
+		string[] imports;
+		Module[] imported_modules;
+		Module enclosing_package;
+
+		__gshared Module[string] database;
+
+		@property dot ()
 			{/*...}*/
-				this.is_package = is_package;
-				this.node_id = id.to!string;
-				this.name = name;
+				return Dot ()
+					.node (`m`~ id.to!string.extract_number)
+					.label (`[label="` ~name~ `"]`)
+					.shape (this.is_package? `[shape=ellipse]`:`[shape=box]`)
+					.color ((){/*...})*/
+						if (this.is_package) 
+							return `[fillcolor="#` ~color.alpha (0.6).to_hex~ `"]`;
+						else if (this.enclosing_package is null)
+							return ``;
+						else return `[fillcolor="#`~enclosing_package.color.alpha (0.3).to_hex~`"]`;
+					}())
+					.style (`[style=filled]`)
+					;
+			}
+
+		struct Dot
+			{/*...}*/
+				mixin Builder!(
+					string, `node`,
+					string, `label`,
+					string, `shape`,
+					string, `color`,
+					string, `style`,
+				);
+			}
+
+		this (File source)
+			{/*...}*/
+				this.path (source.name)
+					.name (source.module_name)
+					.is_package (source.is_package);
+
+				this.id = Id.create;
+
+				database[name] = this;
+
+				foreach (import_name; source.imports)
+					if (this.imports.canFind (import_name))
+						continue;
+					else this.imports ~= import_name;
 			}
 	}
 
 Module[][] cycles;
 
 
-class Import
+bool is_cyclic (Module from, Module[] seen = [])
 	{/*...}*/
-		this (Module mod)
+		if (seen.map!(m => m.dot.node).canFind (from.dot.node))
 			{/*...}*/
-				this.mod = mod;
+				if (cycles.canFind!(c => seen.canFind (c)))
+					cycles.find!(c => seen.canFind (c))[0].swap (cycles.back);
+				else cycles ~= seen;
+
+				return true;
 			}
 
-		Module mod;
-		alias mod this;
+		foreach (imp; from.imported_modules)
+			if (imp.is_cyclic (seen ~ from))
+				return true;
 
-		bool is_cyclic (Module[] seen = [])
+		return false;
+	}
+
+
+string connected_to (Module from, Module to, string append)
+	{/*...}*/
+		return "\t" `m` ~from.dot.node~ ` -> m` ~to.dot.node~ append~ `;`"\n";
+	}
+
+auto source_filepaths ()
+	{/*...}*/
+		return dirEntries (`./source/`, SpanMode.depth)
+			.map!(entry => entry.name)
+			.filter!(name => name.endsWith (`.d`));
+	}
+
+auto imports (File file)
+	{/*...}*/
+		string tabs;
+		string[] imports;
+		bool in_unittest_block = false;
+
+		foreach (line; file.byLine)
 			{/*...}*/
-				if (seen.map!(m => m.node_id).canFind (mod.node_id))
+				if (not!in_unittest_block && line.canFind (`unittest`))
 					{/*...}*/
-						if (cycles.canFind!(c => seen.canFind (c)))
-							cycles.find!(c => seen.canFind (c))[0].swap (cycles.back);
-						else cycles ~= seen;
-						return true;
+						in_unittest_block = true;
+						tabs = line.findSplitBefore (`in_unittest`)[0].to!string;
 					}
+				else if (in_unittest_block)
+					{/*...}*/
+						if (line.canFind (tabs~ `}`))
+							{/*...}*/
+								tabs = ``;
+								in_unittest_block = false;
+							}
+					}
+				else if (line.canFind (`import `))
+					imports ~= line
+						.findSplitAfter (`import`)[1]
+						.findSplitBefore (`;`)[0]
+						.findSplitBefore (`:`)[0]
+						.strip
+						.to!string;
+			}
+		
+		return imports;
+	}
 
-				foreach (imp; mod.imports)
-					if (imp.is_cyclic (seen ~ mod))
-						return true;
+auto module_name (File file)
+	{/*...}*/
+		auto module_decl = file.byLine.front.to!string;
 
-				return false;
+		if (module_decl.not!startsWith (`module`))
+			return `???`;
+		else return module_decl
+			.findSplitAfter (`module `)[1]
+			.findSplitBefore (`;`)[0]
+			.to!string;
+	}
+
+bool is_package (File file)
+	{/*...}*/
+		return file.name.canFind (`package`);
+	}
+bool is_package (Module mod)
+	{/*...}*/
+		return mod.path.canFind (`package`);
+	}
+
+auto rainbow (size_t length)
+	{/*...}*/
+		return ℕ[0..length]
+			.map!(i => i * 360.0/length)
+			.map!(hue => Color.from_hsv (hue, 1.0, 1.0));
+	}
+
+void connect_import_tree ()
+	{/*...}*/
+		foreach (mod; Module.database)
+			{/*...}*/
+				foreach (name; mod.imports)
+					if (auto imp = name in Module.database)
+						mod.imported_modules ~= *imp;
 			}
 	}
 
-Module[string] modules;
-
-string draw_edge (Module from, Module to, string append)
+void build_module_tree ()
 	{/*...}*/
-		return "\t" `m` ~from.node_id~ ` -> m` ~to.node_id~ append~ `;`"\n";
+		auto files = source_filepaths.array;
+
+		files.randomShuffle;
+
+		foreach (path; files)
+			new Module (File (path, "r"));
+			
+		connect_import_tree;
 	}
+
 
 void main ()
 	{/*...}*/
-		{/*populate module tree}*/
-			auto files = dirEntries (`./source/`, SpanMode.depth)
-				.map!(entry => entry.name)
-				.filter!(name => name.endsWith (`.d`))
-				.array;
-
-			import std.random;
-
-			files.randomShuffle;
-
-			foreach (path; files)
-				{/*read source}*/
-					auto file = File (path, "r");
-
-					auto module_decl = file.byLine.front.to!string;
-
-					if (module_decl.not!startsWith (`module`))
-						continue;
-
-					auto module_name = module_decl
-						.findSplitAfter (`module `)[1]
-						.findSplitBefore (`;`)[0]
-						.to!string;
-
-					static int id = 0;
-					modules[module_name] = new Module (path.canFind (`package`), id++, module_name);
-
-					bool unittest_mode = false;
-					string tabs;
-					string[] imports;
-					foreach (line; file.byLine)
-						{/*...}*/
-							if (!unittest_mode && line.canFind (`unittest`))
-								{/*...}*/
-									unittest_mode = true;
-									tabs = line.findSplitBefore (`unittest`)[0].to!string;
-									continue;
-								}
-							else if (unittest_mode && !line.canFind (tabs~ `}`))
-								continue;
-							else if (unittest_mode) 
-								{/*...}*/
-									tabs = ``;
-									unittest_mode = false;
-									continue;
-								}
-
-							if (line.canFind (`import `))
-								imports ~= line
-									.findSplitAfter (`import`)[1]
-									.findSplitBefore (`;`)[0]
-									.findSplitBefore (`:`)[0]
-									.strip
-									.to!string;
-						}
-
-					foreach (name; imports)
-						if (modules[module_name].import_names.canFind (name))
-							continue;
-						else modules[module_name].import_names ~= name;
-				}
-
-			foreach (mod; modules)
-				{/*get imports}*/
-					foreach (name; mod.import_names)
-						if (auto imp = name in modules)
-							mod.imports ~= new Import (*imp);
-				}
-		}
+		build_module_tree;
 		{/*assign colors}*/
-			auto package_list = modules.byKey.filter!(mod => modules[mod].is_package).array;
+			auto packages = Module.database.byValue.filter!(mod => mod.is_package);
+			auto n_colors = packages.count;
 
-			import evx.math.sequence: ℕ;
-			string[] colors = ℕ[0..package_list.length]
-				.map!(i => i * 360.0/package_list.length)
-				.map!(hue => `#` ~Color.from_hsv (hue, 1.0, 0.9).alpha (0.4).to_hex)
-				.array;
-
-			import std.random;
-			colors.randomShuffle;
-
-			foreach (pack; package_list)
-				{/*...}*/
-					modules[pack].package_color = colors.back;
-
-					colors.length--;
-				}
-
-			foreach (name; modules.byKey)
-				{/*...}*/
-					auto results = package_list.find!(pack => name.canFind (pack));
-
-					if (results.not!empty)
-						modules[name].package_color = modules[results.front].package_color;
-				}
+			foreach (pkg, color; zip (packages, rainbow (n_colors)))
+				pkg.color = color;
 		}
 		{/*write .dot file}*/
 			string dot_file = `digraph dependencies {`"\n";
 
-			foreach (name; modules.byKey)
+			foreach (mod; Module.database)
 				{/*...}*/
-					auto mod = modules[name];
+					void write_node_property (string property)
+						{/*...}*/
+							dot_file ~= "\t" `m` ~node ~ property~ `;` "\n";
+						}
 
-					dot_file ~= "\t" `m` ~mod.node_id~ ` [label="` ~name~ `"];` "\n";
-					dot_file ~= "\t" `m` ~mod.node_id~ ` [fillcolor="` ~mod.package_color~ `"];` "\n";
-					dot_file ~= "\t" `m` ~mod.node_id~ ` [style=filled];` "\n";
+					with (mod.dot)
+						{/*...}*/
+							write_node_property (label);
+							write_node_property (color);
+							write_node_property (style);
+							write_node_property (shape);
+						}
 
-					string shape;
-					if (mod.is_package)
-						shape = `[shape=ellipse]`;
-					else shape = `[shape=box]`;
-					dot_file ~= "\t" `m` ~mod.node_id ~ shape~ ` ;` "\n";
-
-					foreach (dep; mod.imports)
+					foreach (dep; mod.imported_modules)
 						if (dep.is_cyclic)
-							dot_file ~= draw_edge (dep, mod, `[color="#88000066"]`);
-						else dot_file ~= draw_edge (dep, mod, `[color="#000000"]`);
+							dot_file ~= dep.connected_to (mod, `[color="#88000066"]`);
+						else dot_file ~= dep.connected_to (mod, `[color="#000000"]`);
 				}
 
 			cycles.sort!((a,b) => a.length < b.length);
 			if (cycles.not!empty)
 				foreach (i; 0..cycles.front.length)
 					{/*...}*/
-						dot_file ~= draw_edge (cycles.front[(i+1)%cycles.front.length], cycles.front[i], `[color="#ff0000", penwidth=6]`);
+						dot_file ~= cycles.front[(i+1)%cycles.front.length].connected_to (cycles.front[i], `[color="#ff0000", penwidth=6]`);
 					}
 
 			dot_file ~= `}`;

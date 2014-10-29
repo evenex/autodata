@@ -12,6 +12,7 @@ private {/*imports}*/
 	import evx.math.vectors;
 	import evx.math.ordinal;
 	import evx.math.units.overloads;
+	import evx.math.functional;
 	import evx.meta;
 
 	import evx.math.analysis.traits;
@@ -25,7 +26,7 @@ public {/*comparison}*/
 	/* test if a number or range is approximately equal to another 
 	*/
 	auto approx (T,U)(T a, U b, real relative_tolerance = standard_relative_tolerance)
-		if (allSatisfy!(isInputRange, T, U) && allSatisfy!(not!is_vector_like, T, U)) // REVIEW
+		if (allSatisfy!(isInputRange, T, U))
 		{/*...}*/
 			foreach (x,y; zip (a,b))
 				if (x.approx (y, relative_tolerance))
@@ -35,12 +36,12 @@ public {/*comparison}*/
 			return true;
 		}
 	auto approx (T,U)(T a, U b, real relative_tolerance = standard_relative_tolerance)
-		if (anySatisfy!(is_vector_like, T, U) && allSatisfy!(Or!(is_vector_like, isInputRange), T, U)) // REVIEW
+		if (anySatisfy!(is_vector_like, T, U) && allSatisfy!(Or!(is_vector_like, isInputRange), T, U)) // REVIEW complicated template constraints
 		{/*...}*/
 			return approx (a[], b[]);
 		}
 	auto approx (T,U)(T a, U b, real relative_tolerance = standard_relative_tolerance)
-		if (not (anySatisfy!(isInputRange, T, U)) && not (anySatisfy!(is_vector_like, T, U))) // TODO try allSat (not!is)
+		if (allSatisfy!(Not!(Or!(isInputRange, is_vector_like)), T, U))
 		{/*...}*/
 			alias V = CommonType!(T,U);
 
