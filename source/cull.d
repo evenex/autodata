@@ -49,8 +49,7 @@ void main (string[] args)
 								++imports_removed_here;
 								std.file.remove (`ok`);
 							}
-
-						remaining.front = remaining.front[2..$];
+						else remaining.front = remaining.front[2..$];
 
 						remaining = remaining[1..$];
 					}
