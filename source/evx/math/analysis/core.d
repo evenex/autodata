@@ -1,19 +1,15 @@
 module evx.math.analysis.core;
 
 private {/*imports}*/
-	import std.algorithm; 
 	import std.typetuple; 
 	import std.traits; 
 	import std.range;
 	import std.conv;
 
 	import evx.math.logic;
-	import evx.math.algebra;
 	import evx.math.vectors;
-	import evx.math.ordinal;
 	import evx.math.units.overloads;
 	import evx.math.functional;
-	import evx.meta;
 
 	import evx.math.analysis.traits;
 

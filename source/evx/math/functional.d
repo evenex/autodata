@@ -3,18 +3,13 @@ module evx.math.functional; // TODO split up
 private {/*imports}*/
 	import std.range;
 	import std.conv;
-	import std.typetuple;
-	import std.typecons;
 	import std.traits;
 
 	import evx.type;
-	import evx.traits;
 
 	import evx.range.traits;
-	import evx.misc.tuple;
 
 	import evx.math.logic;
-	import evx.math.algebra;
 	import evx.math.ordinal;
 	import evx.math.analysis.traits;
 	import evx.math.analysis.intervals;
@@ -164,7 +159,7 @@ public {/*map}*/
 				}
 		}
 		unittest {/*...}*/
-			import std.range: equal;
+//			import std.range: equal;
 
 			auto a = [1, 2, 3];
 
@@ -379,7 +374,7 @@ public {/*zip}*/
 			return Zipped!Ranges (ranges);
 		}
 		unittest {
-			import std.range: equal;
+//			import std.range: equal;
 			import evx.misc.utils: τ;
 
 			auto a = [1,2,3];
@@ -480,7 +475,7 @@ public {/*filter}*/
 				}
 		}
 		unittest {/*...}*/
-			import std.range: equal;
+//			import std.range: equal;
 
 			auto a = [1, 2, 3, 4];
 

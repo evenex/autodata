@@ -4,7 +4,6 @@ private {/*imports}*/
 	private {/*std}*/
 		import std.typetuple; 
 		import std.traits; 
-		import std.functional;
 	}
 }
 

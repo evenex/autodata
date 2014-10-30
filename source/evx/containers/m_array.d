@@ -45,4 +45,3 @@ auto m_array (R)(R range)
 	{/*...}*/
 		return MArray!(ElementType!R)(range);
 	}
-

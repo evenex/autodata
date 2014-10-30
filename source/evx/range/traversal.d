@@ -3,11 +3,8 @@ module evx.range.traversal;
 public import evx.range.traits;
 
 private {/*imports}*/
-	import std.typetuple;
 	import std.range;
-	import std.conv;
 
-	import evx.traits;
 	import evx.math.arithmetic;
 	import evx.math.functional;
 
@@ -112,8 +109,6 @@ auto contigious (R)(R ranges)
 		return Contigious!R (ranges);
 	}
 	unittest {/*contigious}*/
-		import std.range: equal;
-
 		int[2] x = [1,2];
 		int[2] y = [3,4];
 		int[2] z = [5,6];

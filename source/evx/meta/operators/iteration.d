@@ -6,7 +6,6 @@ private {/*imports}*/
 
 	import evx.math.logic;
 	import evx.traits.concepts;
-	import evx.operators.transfer;
 }
 
 struct IterationTraits (R)
@@ -23,8 +22,6 @@ enum Iteration {constant, mutable}
 */
 mixin template IterationOps (alias container, Iteration iteration = Iteration.mutable)
 	{/*...}*/
-		import std.traits;
-
 		static assert (is(typeof(this)), `mixin requires host struct`);
 
 		static if (iteration is Iteration.mutable)

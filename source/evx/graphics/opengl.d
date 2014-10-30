@@ -1,7 +1,6 @@
 module evx.graphics.opengl;
 
 private {/*imports}*/
-	import std.string;
 	import std.conv;
 
 	import evx.misc.utils;

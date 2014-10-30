@@ -9,7 +9,6 @@ private {/*imports}*/
 	import evx.graphics.shader.repo;
 
 	import evx.patterns.builder;
-	import evx.math.geometry.vectors;
 }
 
 struct Geometry
@@ -45,9 +44,6 @@ class MeshRenderer
 
 			void process (Order order)
 				{/*...}*/
-					import evx.math.functional;
-					import evx.graphics.shader.program;
-
 					order.mesh.bind;
 
 					with (order)
@@ -146,7 +142,6 @@ class MeshRenderer
 		}
 	}
 
-		import std.stdio; // TEMP
 class GraphRenderer
 	{/*...}*/
 		public:
@@ -263,8 +258,6 @@ class GraphRenderer
 
 			auto node_geometry ()
 				{/*...}*/
-					import evx.math.geometry.polygons;
-
 					return circle!36;
 				}
 		}
@@ -281,7 +274,6 @@ class GraphRenderer
 		}
 	}
 
-import evx.graphics.display;
 import evx.math;
 mixin(MathToolkit!());
 static if (0) void main ()
@@ -332,7 +324,7 @@ static if (0) void main ()
 
 				display.render;
 
-				import core.thread;
+//				import core.thread;
 				Thread.sleep (20.msecs);
 			}
 	}

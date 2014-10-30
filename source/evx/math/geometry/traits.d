@@ -2,9 +2,6 @@ module evx.math.geometry.traits;
 
 private {/*imports}*/
 	import std.range;
-
-	import evx.math.arithmetic;
-	import evx.math.vectors;
 }
 
 /* test if a type can be used by this library 

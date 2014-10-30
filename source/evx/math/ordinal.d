@@ -5,10 +5,6 @@ private {/*imports}*/
 		import std.typetuple;
 		import std.traits;
 	}
-	private {/*evx}*/
-		import evx.math.algebra;
-		import evx.math.logic;
-	}
 }
 
 pure nothrow:

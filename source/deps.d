@@ -13,7 +13,6 @@ import evx.math.logic; // REVIEW
 import evx.patterns.id; // REVIEW
 import evx.patterns.builder; // REVIEW
 import evx.misc.string; // REVIEW
-import evx.math.sequence;
 import evx.range.traversal;
 import evx.math.functional;
 
@@ -207,7 +206,7 @@ auto concatenate (R,S)(R r, S s) // REFACTOR
 
 ///////////////////
 
-version (generate_dependency_graph) void main ()
+void main ()
 	{/*...}*/
 		auto modules = dependency_graph (`./source/`);
 

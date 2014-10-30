@@ -2,7 +2,6 @@ module evx.math.analysis.intervals;
 
 import std.traits;
 import std.conv;
-import std.typecons;
 
 import evx.math.analysis.infinity;
 import evx.math.analysis.traits;
@@ -124,8 +123,6 @@ auto interval (T)(T[2] bounds)
 		return Interval!T (bounds);
 	}
 	unittest {/*...}*/
-		import std.exception: assertThrown;
-
 		auto A = interval (0, 10);
 		assert (A.length == 10);
 
@@ -201,4 +198,3 @@ bool is_contained_in (T)(T x, Interval!T I)
 	{/*...}*/
 		return x.between (I.start, I.end);
 	}
-

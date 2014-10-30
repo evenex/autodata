@@ -200,7 +200,6 @@ struct Box (T)
 		}
 	}
 	unittest {/*...}*/
-		import evx.math.analysis: all_approx_equal;
 		import evx.math.geometry.polygons;
 
 		auto box = bounding_box (circle (1));

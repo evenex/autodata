@@ -2,12 +2,10 @@ module evx.math.statistics;
 
 private {/*imports}*/
 	import std.range;
-	import std.traits;
 
 	import evx.math.logic;
 	import evx.math.arithmetic;
 	import evx.math.functional;
-	import evx.math.vectors;
 	import evx.math.units.overloads;
 
 	mixin(FunctionalToolkit!());

@@ -227,4 +227,3 @@ unittest {/*with units}*/
 	static assert (__traits(compiles, square (1.meter)));
 	static assert (__traits(compiles, circle (1.meter)));
 }
-

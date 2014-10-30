@@ -2,11 +2,8 @@ module evx.math.arithmetic.functions;
 
 private {/*imports}*/
 	private {/*std}*/
-		import std.traits;
 		import std.range;
 		import std.typetuple;
-		import std.typecons;
-		import std.conv;
 		import std.numeric;
 	}
 	private {/*evx}*/

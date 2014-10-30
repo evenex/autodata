@@ -5,17 +5,13 @@ private {/*imports}*/
 		import core.thread;
 	}
 	private {/*std}*/
-		import std.datetime;
 	}
 	private {/*evx}*/
-		import evx.misc.utils;
 		import evx.math;
 	}
 }
 
 unittest {/*demo}*/
-	import std.exception;
-
 	{/*future}*/
 		Future!int future;
 

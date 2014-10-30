@@ -2,7 +2,6 @@ module evx.math.logic;
 
 private {/*imports}*/
 	private {/*std}*/
-		import std.traits;
 		import std.typetuple;
 	}
 }

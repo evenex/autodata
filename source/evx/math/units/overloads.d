@@ -2,11 +2,11 @@ module evx.math.units.overloads;
 
 private {/*imports}*/
 	import std.traits;
-	import std.math;
+//	import std.math;
 	import std.conv;
 	import std.typetuple;
 
-	import evx.math.logic;
+//	import evx.math.logic;
 	import evx.math.units.core;
 	import evx.math.vectors;
 	import evx.math.arithmetic;

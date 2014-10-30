@@ -4,21 +4,15 @@ private {/*imports}*/
 	private {/*std}*/
 		import std.algorithm; 
 		import std.traits; 
-		import std.typecons;
-		import std.typetuple;
 		import std.range;
 		import std.math; 
 		import std.conv;
-		import std.string;
 	}
 	private {/*evx}*/
-		import evx.traits; 
 		import evx.operators.transfer;
 
 		import evx.misc.tuple; 
 		import evx.misc.string; 
-
-		import evx.range.traits;
 
 		import evx.math.logic; 
 		import evx.math.constants; 
@@ -602,7 +596,6 @@ struct Vector (size_t n, Component = double)
 	unittest {/*vector functions}*/
 		import evx.math.analysis;
 		import evx.math.geometry;
-		import evx.math.arithmetic;
 		alias sum = evx.math.arithmetic.sum; // REVIEW
 
 		auto u = vector (1, 2.);

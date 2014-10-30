@@ -2,7 +2,6 @@ module evx.codegen.declarations;
 
 private {/*imports}*/
 	import std.typetuple;
-	import std.array;
 	import std.conv;
 	import std.algorithm;
 	import std.traits;

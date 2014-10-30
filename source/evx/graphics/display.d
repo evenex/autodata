@@ -1,26 +1,11 @@
 module evx.graphics.display;
 
 private {/*imports}*/
-	import std.algorithm; // REVIEW probably i don't need half of this shit in here anymore
 	import std.conv;
-	import std.file;
-	import std.range;
-	import std.string;
-	import std.array;
-	import std.typetuple;
-	import std.traits;
-	import std.typecons;
 
 	import evx.graphics.opengl;
 
 	import evx.math;
-
-	import evx.misc.utils;
-	import evx.traits.classification;
-	import evx.codegen.declarations;
-	import evx.type.extraction;
-	import evx.patterns.builder;
-	import evx.containers.set;
 
 	mixin(MathToolkit!());
 }

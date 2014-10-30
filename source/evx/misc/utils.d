@@ -4,10 +4,8 @@ debug = profiler;
 
 private {/*imports}*/
 	private {/*std}*/
-		import std.typecons;
 		import std.typetuple;
 		import std.string;
-		import std.traits;
 		import std.range;
 		import std.datetime;
 		import std.stdio;
@@ -15,9 +13,7 @@ private {/*imports}*/
 		import std.conv;
 	}
 	private {/*evx}*/
-		import evx.traits;
 		import evx.misc.tuple;
-		import evx.misc.string;
 	}
 }
 

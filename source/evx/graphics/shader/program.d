@@ -1,26 +1,16 @@
 module evx.graphics.shader.program;
 
 private {/*imports}*/
-	import std.algorithm; // REVIEW what you actually need
 	import std.conv;
-	import std.file;
-	import std.range;
 	import std.string;
-	import std.array;
 	import std.typetuple;
-	import std.traits;
-	import std.typecons;
 
 	import evx.graphics.opengl;
 
 	import evx.math;
 
-	import evx.misc.utils;
 	import evx.traits.classification;
 	import evx.codegen.declarations;
-	import evx.type.extraction;
-	import evx.patterns.builder;
-	import evx.containers.set;
 
 	mixin(MathToolkit!());
 }
@@ -101,8 +91,8 @@ class ShaderProgram (Vert, Frag)
 		import evx.graphics.display;
 		import evx.graphics.buffer;
 		import evx.graphics.shader.repo;
-		import evx.math.geometry.vectors;
-		import evx.math.functional;
+//		import evx.math.geometry.vectors;
+//		import evx.math.functional;
 
 		mixin(FunctionalToolkit!());
 

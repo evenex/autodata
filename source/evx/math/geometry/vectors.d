@@ -4,7 +4,6 @@ private {/*imports}*/
 	import std.conv;
 	import std.math;
 	import std.range;
-	import std.traits;
 
 	import evx.math.geometry.traits;
 

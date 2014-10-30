@@ -25,8 +25,6 @@ struct BufferTraits (Buffer)
 
 mixin template BufferOps (alias buffer)
 	{/*...}*/
-		import evx.operators.transfer;
-
 		static {/*analysis}*/
 			alias BufferTraits = evx.operators.buffer.BufferTraits!(typeof(buffer));
 

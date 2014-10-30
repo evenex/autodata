@@ -143,7 +143,7 @@ auto sequence (alias func, T)(T initial)
 		return Sequence!(func, T)(initial);
 	}
 	unittest {/*...}*/
-		import std.range: equal;
+//		import std.range: equal;
 
 		assert (ℕ[0..10].equal ([0,1,2,3,4,5,6,7,8,9]));
 		assert (ℕ[4..9].equal ([4,5,6,7,8]));

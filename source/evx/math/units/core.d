@@ -9,15 +9,15 @@ private {/*imports}*/
 		import std.range; 
 		import std.algorithm;
 		import std.format;
-		import std.array;
+//		import std.array;
 	}
 	private {/*evx}*/
 		//import evx.misc.utils; 
 		import evx.misc.string; 
-		import evx.traits; 
+//		import evx.traits; 
 		import evx.meta;
 
-		import evx.operators.comparison;
+//		import evx.operators.comparison;
 
 		import evx.math.logic;
 		import evx.math.arithmetic;

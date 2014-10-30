@@ -2,7 +2,6 @@ module evx.graphics.shader.parameters;
 
 private {/*import}*/
 	import std.typetuple;
-	import std.typecons;
 	import std.range;
 	import std.conv;
 	import std.traits;
