@@ -1,4 +1,4 @@
-module evx.math.functional;
+module evx.math.functional; // TODO split up
 
 private {/*imports}*/
 	import std.range;
@@ -498,18 +498,17 @@ public {/*reduce}*/
 	template reduce (functions...)
 		if (functions.length > 0)
 		{/*...}*/
-			auto reduce (R)(R range)
-				if (isInputRange!R)
+			template Accumulator (R)
 				{/*...}*/
 					static if (functions.length == 1)
-						alias Accumulator = Unqual!(typeof(functions[0] (range.front, range.front)));
+						alias Accumulator = Unqual!(typeof(functions[0] (R.init.front, R.init.front)));
 					else {/*alias Accumulator}*/
 						string generate_accumulator ()
 							{/*...}*/
 								string code;
 
 								foreach (i, f; functions)
-									code ~= q{Unqual!(typeof(functions[} ~i.text~ q{] (range.front, range.front))), };
+									code ~= q{Unqual!(typeof(functions[} ~i.text~ q{] (R.init.front, R.init.front))), };
 
 								return q{Tuple!(} ~code[0..$-2]~ q{)};
 							}
@@ -518,17 +517,17 @@ public {/*reduce}*/
 							alias Accumulator = } ~generate_accumulator~ q{;
 						});
 					}
+				}
 
+			auto reduce (R)(R range)
+				if (isInputRange!R)
+				in {/*...}*/
+					assert (not (range.empty), `cannot reduce empty ` ~R.stringof~ ` without seed`);
+				}
+				body {/*...}*/
 					auto initialize ()
 						{/*...}*/
-							Accumulator accumulator;
-
-							if (range.empty)
-								{/*...}*/
-									static if (__traits(compiles, zero!Accumulator))
-										return zero!Accumulator;
-									else return Accumulator.init;
-								}
+							Accumulator!R accumulator;
 
 							static if (functions.length == 1)
 								accumulator = range.front;
@@ -540,8 +539,14 @@ public {/*reduce}*/
 							return accumulator;
 						}
 
+					return reduce (range, initialize);
+				}
+
+			auto reduce (R, T = Accumulator!R)(R range, T seed)
+				if (isInputRange!R)
+				{/*...}*/
 					// FUTURE static if (isRandomAccess) try to block and parallelize... or foreach (x; parallel(r))?
-					auto accumulator = initialize;
+					auto accumulator = seed;
 
 					for (; not (range.empty); range.popFront)
 						static if (functions.length == 1)
@@ -565,3 +570,10 @@ public {/*reduce}*/
 			) == τ(6, -4, 0));
 		}
 }
+
+auto select (alias condition, alias if_true, alias if_false, R)(R range) // REVIEW 
+	{/*...}*/
+		if (condition (range))
+			return if_true (range);
+		else return if_false (range);
+	}

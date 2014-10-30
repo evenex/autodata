@@ -49,13 +49,7 @@ class Module
 					.node (`m`~ id.to!string.extract_number)
 					.label (`[label="` ~name~ `"]`)
 					.shape (this.is_package? `[shape=ellipse]`:`[shape=box]`)
-					.color ((){/*...})*/
-						if (this.is_package) 
-							return `[fillcolor="#` ~color.alpha (0.5).to_hex~ `"]`;
-						else if (this.enclosing_package is null)
-							return ``;
-						else return `[fillcolor="#`~enclosing_package.color.alpha (0.4).to_hex~`"]`;
-					}())
+					.color (`[fillcolor="#` ~color.to_hex~ `"]`)
 					.style (`[style=filled]`)
 					;
 			}
@@ -85,6 +79,8 @@ class Module
 					if (this.imports.contains (import_name))
 						continue;
 					else this.imports ~= import_name;
+
+				color = grey (0.5);
 			}
 
 		bool opEquals (Module that) const
@@ -106,13 +102,15 @@ Module[] find_minimal_cycle (Module node, Module[] path = null)
 		else return node.imported_modules
 			.map!(mod => mod.find_minimal_cycle (path ~ node))
 			.array.filter!(not!empty) // TODO .buffer.filter... to say do this, then buffer it, then do that.. and someday, map!(...).parallel_buffer.filter!(...)
-			.reduce!((c1, c2) => c1.length < c2.length? c1: c2);
+			.select!(
+				cycles => cycles.empty, select => null,
+				reduce!((c1,c2) => c1.length < c2.length? c1:c2)
+			);
 	}
 
-
-string connected_to (Module from, Module to, string append)
+string connect_to (Module from, Module to, string append)
 	{/*...}*/
-		return "\t" `m` ~from.dot.node~ ` -> m` ~to.dot.node~ append~ `;`"\n";
+		return "\t" ~from.dot.node~ ` -> ` ~to.dot.node~ append~ `;`"\n";
 	}
 
 auto source_filepaths ()
@@ -122,6 +120,17 @@ auto source_filepaths ()
 			.filter!(name => name.endsWith (`.d`));
 	}
 
+auto module_name (File file)
+	{/*...}*/
+		auto module_decl = file.byLine.front.to!string;
+
+		if (module_decl.not!startsWith (`module`))
+			return file.name.retro.findSplitBefore (`/`)[0].text.retro.text;
+		else return module_decl
+			.findSplitAfter (`module `)[1]
+			.findSplitBefore (`;`)[0]
+			.to!string;
+	}
 auto imports (File file)
 	{/*...}*/
 		string tabs;
@@ -154,28 +163,15 @@ auto imports (File file)
 		
 		return imports;
 	}
-
-auto module_name (File file)
-	{/*...}*/
-		auto module_decl = file.byLine.front.to!string;
-
-		if (module_decl.not!startsWith (`module`))
-			return `???`;
-		else return module_decl
-			.findSplitAfter (`module `)[1]
-			.findSplitBefore (`;`)[0]
-			.to!string;
-	}
-
 bool is_package (File file)
 	{/*...}*/
 		return file.name.contains (`package`);
 	}
+
 bool is_package (Module mod)
 	{/*...}*/
 		return mod.path.contains (`package`);
 	}
-
 
 void connect_import_tree ()
 	{/*...}*/
@@ -185,12 +181,14 @@ void connect_import_tree ()
 					if (auto imp = name in Module.database)
 						mod.imported_modules ~= *imp;
 
-				if (not (mod.is_package)) // TODO mod.not!is_package doesn't work, why?
+				if (not (mod.is_package)) // BUG mod.not!is_package doesn't work, why?
 					mod.enclosing_package = Module.database.values
 						.filter!(mod => mod.is_package)
 						.filter!(pack => mod.name.contains (pack.name))
-						.reduce!((a,b) => a.name.length > b.name.length? a:b)
-						;
+						.select!(
+							modules => modules.empty, select => null,
+							reduce!((a,b) => a.name.length > b.name.length? a:b)
+						);
 			}
 	}
 
@@ -215,7 +213,15 @@ void main ()
 			auto n_colors = packages.count;
 
 			foreach (pkg, color; zip (packages, rainbow (n_colors)))
-				pkg.color = color;
+				{/*...}*/
+					pkg.color = color;
+
+					foreach (mod; Module.database.values
+						.filter!(mod => mod.enclosing_package is pkg)
+					)
+						mod.color = color.alpha (0.5);
+
+				}
 		}
 		{/*write .dot file}*/
 			string dot_file = `digraph dependencies {`"\n";
@@ -224,7 +230,7 @@ void main ()
 				{/*...}*/
 					void write_node_property (string property)
 						{/*...}*/
-							dot_file ~= "\t" `m` ~mod.dot.node ~ property~ `;` "\n";
+							dot_file ~= "\t" ~mod.dot.node ~ property~ `;` "\n";
 						}
 
 					with (mod.dot)
@@ -237,15 +243,18 @@ void main ()
 
 					foreach (dep; mod.imported_modules)
 						if (dep.has_cyclic_dependencies)
-							dot_file ~= dep.connected_to (mod, `[color="#88000066"]`);
-						else dot_file ~= dep.connected_to (mod, `[color="#000000"]`);
+							dot_file ~= dep.connect_to (mod, `[color="#88000066"]`);
+						else dot_file ~= dep.connect_to (mod, `[color="#000000"]`);
 				}
 
 			dot_file ~= Module.database.values.map!(mod => mod.find_minimal_cycle)
 				.filter!(not!empty)
-				.array.reduce!((c1,c2) => c1.length < c2.length? c1:c2)
-				.adjacent_pairs.map!((a,b) => a.connected_to (b, `[color="#ff0000", penwidth=6]`))
-				.reduce!((a,b) => a ~ b);
+				.array.select!(
+					cycles => cycles.empty, select => null,
+					reduce!((c1,c2) => c1.length < c2.length? c1:c2)
+				)
+				.adjacent_pairs.map!((a,b) => a.connect_to (b, `[color="#ff0000", penwidth=6]`))
+				.array.reduce!((a,b) => a ~ b)(``);
 			
 			dot_file ~= `}`;
 

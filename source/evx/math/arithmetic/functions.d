@@ -98,10 +98,13 @@ template ArithmeticToolkit ()
 
 /* compute the product of a sequence 
 */
-auto product (R)(R sequence)
+auto product (R)(R range)
 	if (isInputRange!R)
 	{/*...}*/
-		return sequence.reduce!((Π,x) => Π*x);
+		return range.select!(
+			r => r.empty, r => zero!(ElementType!R),
+			reduce!multiply
+		);
 	}
 alias Π = product;
 
@@ -110,7 +113,7 @@ alias Π = product;
 auto sum (R)(R range)
 	if (isInputRange!R)
 	{/*...}*/
-		return range.reduce!add;
+		return range.reduce!add (zero!(ElementType!R));
 	}
 alias Σ = sum;
 

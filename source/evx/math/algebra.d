@@ -58,10 +58,6 @@ template identity_element (Element...)
 
 						return array;
 					}
-				else static if (isDynamicArray!U) // REVIEW
-					{/*...}*/
-						return U.init;
-					}
 				else static assert (0, `can't compute ` ~element.text~ ` for ` ~U.stringof);
 			}
 	}
