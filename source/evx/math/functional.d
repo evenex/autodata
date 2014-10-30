@@ -525,21 +525,16 @@ public {/*reduce}*/
 					assert (not (range.empty), `cannot reduce empty ` ~R.stringof~ ` without seed`);
 				}
 				body {/*...}*/
-					auto initialize ()
-						{/*...}*/
-							Accumulator!R accumulator;
+					Accumulator!R seed;
 
-							static if (functions.length == 1)
-								accumulator = range.front;
-							else foreach (i, f; functions)
-								accumulator[i] = range.front;
+					static if (functions.length == 1)
+						seed = range.front;
+					else foreach (i, f; functions)
+						seed[i] = range.front;
 
-							range.popFront;
+					range.popFront;
 
-							return accumulator;
-						}
-
-					return reduce (range, initialize);
+					return reduce (range, seed);
 				}
 
 			auto reduce (R, T = Accumulator!R)(R range, T seed)
@@ -571,9 +566,9 @@ public {/*reduce}*/
 		}
 }
 
-auto select (alias condition, alias if_true, alias if_false, R)(R range) // REVIEW 
+auto transform (alias transformation, R)(R range) // REVIEW 
 	{/*...}*/
-		if (condition (range))
-			return if_true (range);
-		else return if_false (range);
+		return transformation (range);
 	}
+
+alias select = transform;

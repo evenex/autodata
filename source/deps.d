@@ -24,6 +24,8 @@ struct Status (string name, string condition, Etc...) {}
 mixin(FunctionalToolkit!());
 alias count = evx.range.traversal.count; // TODO make count like std.algorithm count except by default it takes TRUE and just counts up all the elements
 
+///////////////////
+
 class Module
 	{/*...}*/
 		mixin TypeUniqueId;
@@ -40,8 +42,6 @@ class Module
 		string[] imports;
 		Module[] imported_modules;
 		Module enclosing_package;
-
-		__gshared Module[string] database;
 
 		@property dot ()
 			{/*...}*/
@@ -73,8 +73,6 @@ class Module
 
 				this.id = Id.create;
 
-				database[name] = this;
-
 				foreach (import_name; source.imports)
 					if (this.imports.contains (import_name))
 						continue;
@@ -88,13 +86,15 @@ class Module
 				return this.id == that.id;
 			}
 	}
-
+bool is_package (Module mod)
+	{/*...}*/
+		return mod.path.contains (`package`);
+	}
 bool has_cyclic_dependencies (Module root)
 	{/*...}*/
 		return root.find_minimal_cycle.not!empty;
 	}
-
-Module[] find_minimal_cycle (Module node, Module[] path = null)
+Module[] find_minimal_cycle (Module node, Module[] path = [])
 	{/*...}*/
 		if (path.contains (node))
 			return path;
@@ -102,22 +102,11 @@ Module[] find_minimal_cycle (Module node, Module[] path = null)
 		else return node.imported_modules
 			.map!(mod => mod.find_minimal_cycle (path ~ node))
 			.array.filter!(not!empty) // TODO .buffer.filter... to say do this, then buffer it, then do that.. and someday, map!(...).parallel_buffer.filter!(...)
-			.select!(
-				cycles => cycles.empty, select => null,
-				reduce!((c1,c2) => c1.length < c2.length? c1:c2)
-			);
+			.select!(cycles => cycles.empty? [] : cycles.reduce!shortest);
 	}
-
 string connect_to (Module from, Module to, string append)
 	{/*...}*/
 		return "\t" ~from.dot.node~ ` -> ` ~to.dot.node~ append~ `;`"\n";
-	}
-
-auto source_filepaths ()
-	{/*...}*/
-		return dirEntries (`./source/`, SpanMode.depth)
-			.map!(entry => entry.name)
-			.filter!(name => name.endsWith (`.d`));
 	}
 
 auto module_name (File file)
@@ -168,55 +157,69 @@ bool is_package (File file)
 		return file.name.contains (`package`);
 	}
 
-bool is_package (Module mod)
+auto source_files (string root_directory)
 	{/*...}*/
-		return mod.path.contains (`package`);
+		return dirEntries (root_directory, SpanMode.depth)
+			.map!(entry => entry.name)
+			.filter!(name => name.endsWith (`.d`));
 	}
-
-void connect_import_tree ()
+auto dependency_graph (string root_directory)
 	{/*...}*/
-		foreach (mod; Module.database)
-			{/*...}*/
-				foreach (name; mod.imports)
-					if (auto imp = name in Module.database)
-						mod.imported_modules ~= *imp;
+		Module[] modules;
 
-				if (not (mod.is_package)) // BUG mod.not!is_package doesn't work, why?
-					mod.enclosing_package = Module.database.values
-						.filter!(mod => mod.is_package)
-						.filter!(pack => mod.name.contains (pack.name))
-						.select!(
-							modules => modules.empty, select => null,
-							reduce!((a,b) => a.name.length > b.name.length? a:b)
-						);
-			}
-	}
-
-void build_module_tree ()
-	{/*...}*/
-		auto files = source_filepaths.array;
-
+		auto files = source_files (root_directory).array;
 		files.randomShuffle;
 
 		foreach (path; files)
-			new Module (File (path, "r"));
+			modules ~= new Module (File (path, "r"));
 			
-		connect_import_tree;
+		foreach (mod; modules)
+			{/*connect imports}*/
+				foreach (name; mod.imports)
+					mod.imported_modules ~= modules.filter!(m => name == m.name).array;
+
+				if (not (mod.is_package)) // BUG mod.not!is_package doesn't work, why?
+					mod.enclosing_package = modules
+						.filter!(mod => mod.is_package)
+						.filter!(pack => mod.name.contains (pack.name))
+						.select!(
+							modules => modules.empty? null
+							: modules.reduce!((a,b) => a.name.length > b.name.length? a:b)
+						);
+			}
+
+		return modules;
 	}
 
+///////////////////
 
-void main ()
+auto shortest (R,S)(R r, S s) // REFACTOR
+	if (allSatisfy!(hasLength, R, S))
 	{/*...}*/
-		build_module_tree;
+		return r.length < s.length? r:s;
+	}
+
+auto concatenate (R,S)(R r, S s) // REFACTOR
+	if (allSatisfy!(isInputRange, R, S))
+	{/*...}*/
+		return r ~ s;
+	}
+
+///////////////////
+
+version (generate_dependency_graph) void main ()
+	{/*...}*/
+		auto modules = dependency_graph (`./source/`);
+
 		{/*assign colors}*/
-			auto packages = Module.database.values.filter!(mod => mod.is_package);
+			auto packages = modules.filter!(mod => mod.is_package);
 			auto n_colors = packages.count;
 
 			foreach (pkg, color; zip (packages, rainbow (n_colors)))
 				{/*...}*/
 					pkg.color = color;
 
-					foreach (mod; Module.database.values
+					foreach (mod; modules
 						.filter!(mod => mod.enclosing_package is pkg)
 					)
 						mod.color = color.alpha (0.5);
@@ -226,7 +229,7 @@ void main ()
 		{/*write .dot file}*/
 			string dot_file = `digraph dependencies {`"\n";
 
-			foreach (mod; Module.database)
+			foreach (mod; modules)
 				{/*...}*/
 					void write_node_property (string property)
 						{/*...}*/
@@ -247,14 +250,11 @@ void main ()
 						else dot_file ~= dep.connect_to (mod, `[color="#000000"]`);
 				}
 
-			dot_file ~= Module.database.values.map!(mod => mod.find_minimal_cycle)
+			dot_file ~= modules.map!(mod => mod.find_minimal_cycle)
 				.filter!(not!empty)
-				.array.select!(
-					cycles => cycles.empty, select => null,
-					reduce!((c1,c2) => c1.length < c2.length? c1:c2)
-				)
+				.array.select!(cycles => cycles.empty? [] : cycles.reduce!shortest)
 				.adjacent_pairs.map!((a,b) => a.connect_to (b, `[color="#ff0000", penwidth=6]`))
-				.array.reduce!((a,b) => a ~ b)(``);
+				.array.reduce!concatenate (``);
 			
 			dot_file ~= `}`;
 
