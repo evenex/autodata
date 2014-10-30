@@ -6,7 +6,7 @@ private {/*imports}*/
 	import evx.graphics.opengl;
 	import evx.graphics.buffer;
 	import evx.graphics.color;
-	import evx.graphics.shader.repo;
+	import evx.graphics.shader;//	import evx.graphics.shader.repo;
 
 	import evx.patterns.builder;
 }
@@ -163,7 +163,7 @@ class GraphRenderer
 
 			void process (Order order)
 				{/*...}*/
-					import evx.graphics.shader.program; // TODO all this just to get Cvec... belongs elsewhere
+					import evx.graphics.shader;//					import evx.graphics.shader.program; // TODO all this just to get Cvec... belongs elsewhere
 
 					void draw_nodes ()
 						{/*...}*/

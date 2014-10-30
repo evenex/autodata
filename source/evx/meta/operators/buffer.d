@@ -1,7 +1,7 @@
 module evx.operators.buffer;
 
 import evx.operators.transfer;
-import evx.traits.concepts;
+import evx.traits;//import evx.traits.concepts;
 
 // TODO document
 struct BufferTraits (Buffer)

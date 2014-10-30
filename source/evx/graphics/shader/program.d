@@ -9,8 +9,8 @@ private {/*imports}*/
 
 	import evx.math;
 
-	import evx.traits.classification;
-	import evx.codegen.declarations;
+	import evx.traits;//	import evx.traits.classification;
+	import evx.codegen;//	import evx.codegen.declarations;
 
 	mixin(MathToolkit!());
 }
@@ -88,9 +88,9 @@ class ShaderProgram (Vert, Frag)
 		}
 	}
 	unittest {/*...}*/
-		import evx.graphics.display;
-		import evx.graphics.buffer;
-		import evx.graphics.shader.repo;
+		import evx.graphics;//		import evx.graphics.display;
+		import evx.graphics;//		import evx.graphics.buffer;
+		import evx.graphics;//		import evx.graphics.shader.repo;
 //		import evx.math.geometry.vectors;
 //		import evx.math.functional;
 

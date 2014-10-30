@@ -18,7 +18,7 @@ private {/*imports}*/
 	import evx.math.constants;
 	import evx.math.statistics;
 	import evx.math.analysis;
-	import evx.math.units.overloads;
+	import evx.math.units;//	import evx.math.units.overloads;
 
 	mixin(FunctionalToolkit!());
 }
@@ -119,7 +119,7 @@ auto flip (string direction, T)(T geometry)
 			retro,
 			equal;
 
-		import evx.math.geometry.aabb;
+		import evx.math;//		import evx.math.geometry.aabb;
 		mixin(FunctionalToolkit!());
 
 		assert (not (square.flip!`vertical`.equal (square)));
@@ -139,7 +139,7 @@ auto flip (string direction, T)(T geometry)
 			.approx ([-î!vec, -ĵ!vec, î!vec].map!(v => v + vec(0, 2.0/3)))
 		);
 
-		import evx.math.units;
+		import evx.math;//		import evx.math.units;
 		alias Position = Vector!(2, Meters);
 		auto triangle2 = [-î!Position, ĵ!Position, î!Position];
 
@@ -164,7 +164,7 @@ auto translate (T, Vec = ElementType!T)(T geometry, Vec displacement)
 auto rotate (T, U = ElementType!(ElementType!T), V = ElementType!T)(T geometry, U θ, V pivot = V.init)
 	if (is_geometric!T)
 	{/*...}*/
-		import evx.math.geometry.vectors;
+		import evx.math;//		import evx.math.geometry.vectors;
 		mixin(FunctionalToolkit!());
 
 		auto c = pivot.binary_equal (V.init)? geometry.mean: pivot; // BUG was immutable
@@ -222,7 +222,7 @@ bool is_left_of (V, T = ElementType!V)(V v, Edge!T e)
 	}
 
 unittest {/*with units}*/
-	import evx.math.units;
+	import evx.math;//	import evx.math.units;
 
 	static assert (__traits(compiles, square (1.meter)));
 	static assert (__traits(compiles, circle (1.meter)));

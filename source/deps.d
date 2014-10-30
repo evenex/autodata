@@ -9,12 +9,12 @@ import std.algorithm;
 import std.file;
 
 import evx.graphics.color; // REVIEW
-import evx.math.logic; // REVIEW
+import evx.math;//import evx.math.logic; // REVIEW
 import evx.patterns.id; // REVIEW
 import evx.patterns.builder; // REVIEW
 import evx.misc.string; // REVIEW
-import evx.range.traversal;
-import evx.math.functional;
+import evx.range;//import evx.range.traversal;
+import evx.math;//import evx.math.functional;
 
 // TODO flags (uses builder) struct... also status mixins, with conditions like traits
 struct Flags {mixin Builder!(typeof(null), `_`);}

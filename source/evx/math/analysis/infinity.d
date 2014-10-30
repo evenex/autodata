@@ -41,7 +41,7 @@ bool is_finite (T)(T value)
 		assert (not (zero!double.is_infinite));
 		assert (not (zero!float.is_infinite));
 
-		import evx.math.units;
+		import evx.math;//		import evx.math.units;
 		assert (infinite!Meters.is_infinite);
 		assert (infinite!Seconds.is_infinite);
 		assert (infinite!Kilograms.is_infinite);

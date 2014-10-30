@@ -11,7 +11,7 @@ private {/*imports}*/
 	import evx.math.sequence;
 	import evx.math.functional;
 	import evx.math.algebra;
-	import evx.math.units.overloads;
+	import evx.math.units;//	import evx.math.units.overloads;
 
 	mixin(FunctionalToolkit!());
 }

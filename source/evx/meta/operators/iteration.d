@@ -5,7 +5,7 @@ private {/*imports}*/
 	import std.range;
 
 	import evx.math.logic;
-	import evx.traits.concepts;
+	import evx.traits;//	import evx.traits.concepts;
 }
 
 struct IterationTraits (R)

@@ -1,7 +1,7 @@
 module evx.containers.set;
 
 private {/*imports}*/
-	import evx.operators.iteration;
+	import evx.operators;//	import evx.operators.iteration;
 }
 
 struct Set (T)

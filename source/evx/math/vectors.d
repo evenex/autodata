@@ -9,7 +9,7 @@ private {/*imports}*/
 		import std.conv;
 	}
 	private {/*evx}*/
-		import evx.operators.transfer;
+		import evx.operators;//		import evx.operators.transfer;
 
 		import evx.misc.tuple; 
 		import evx.misc.string; 
@@ -17,7 +17,7 @@ private {/*imports}*/
 		import evx.math.logic; 
 		import evx.math.constants; 
 		import evx.math.algebra; 
-		import evx.math.arithmetic.traits;
+		import evx.math.arithmetic;//		import evx.math.arithmetic.traits;
 		import evx.math.functional; 
 	}
 
@@ -594,8 +594,8 @@ struct Vector (size_t n, Component = double)
 		assert (u == [1,2,3]);
 	}
 	unittest {/*vector functions}*/
-		import evx.math.analysis;
-		import evx.math.geometry;
+		import evx.math;//		import evx.math.analysis;
+		import evx.math;//		import evx.math.geometry;
 		alias sum = evx.math.arithmetic.sum; // REVIEW
 
 		auto u = vector (1, 2.);
@@ -634,9 +634,9 @@ struct Vector (size_t n, Component = double)
 		static assert (unity!(typeof(v)) == [1,1,1]);
 	}
 	unittest {/*dimensioned geometry}*/
-		import evx.math.analysis;
-		import evx.math.units;
-		import evx.math.geometry;
+		import evx.math;//		import evx.math.analysis;
+		import evx.math;//		import evx.math.units;
+		import evx.math;//		import evx.math.geometry;
 
 		alias Position = Vector!(2, Meters);
 		alias Velocity = Vector!(2, typeof(meters/second));
@@ -676,7 +676,7 @@ struct Vector (size_t n, Component = double)
 
 		assert (Vector!(3, int)(x)[] == [3,2,1]);
 
-		import evx.math.units;
+		import evx.math;//		import evx.math.units;
 		enum y = `[0.001 kg, 0.002 kg, 0.003 kg, 0.005 kg]`;
 		assert (Vector!(4, Kilograms)(y) == [1.grams, 2.grams, 3.grams, 5.grams]);
 	}

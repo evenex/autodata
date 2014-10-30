@@ -6,10 +6,10 @@ private {/*import}*/
 	import std.conv;
 	import std.traits;
 
-	import evx.math.logic;
-	import evx.math.geometry.traits;
-	import evx.codegen.declarations;
-	import evx.traits.classification;
+	import evx.math;//	import evx.math.logic;
+	import evx.math;//	import evx.math.geometry.traits;
+	import evx.codegen;//	import evx.codegen.declarations;
+	import evx.traits;//	import evx.traits.classification;
 
 	import evx.graphics.opengl;
 }

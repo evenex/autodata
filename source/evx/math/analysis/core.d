@@ -8,7 +8,7 @@ private {/*imports}*/
 
 	import evx.math.logic;
 	import evx.math.vectors;
-	import evx.math.units.overloads;
+	import evx.math.units;//	import evx.math.units.overloads;
 	import evx.math.functional;
 
 	import evx.math.analysis.traits;

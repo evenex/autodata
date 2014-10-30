@@ -1,6 +1,6 @@
 module evx.math.analysis.traits;
 
-import evx.type.extraction;
+import evx.type;//import evx.type.extraction;
 
 import std.typetuple;
 import std.traits;
@@ -29,7 +29,7 @@ public {/*continuity}*/
 			enum is_continuous_range = isInputRange!T && has_continuous_domain && is_measurable;
 		}
 	version (unittest) {/*functional compatibility}*/
-		import evx.math.functional;
+		import evx.math;//		import evx.math.functional;
 		mixin(FunctionalToolkit!());
 
 		unittest {/*...}*/

@@ -25,8 +25,8 @@ private {/*imports}*/
 }
 
 unittest {/*demo}*/
-	import evx.math.units.metric;
-	import evx.math.units.overloads;
+	import evx.math;//	import evx.math.units.metric;
+	import evx.math;//	import evx.math.units.overloads;
 
 	auto x = 10.meters;
 	auto y = 5.seconds;

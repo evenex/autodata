@@ -15,7 +15,7 @@ public:
 	import evx.math.arithmetic;
 	import evx.math.ordinal;
 //	import evx.math.algebra;
-	import evx.math.units.overloads;
+	import evx.math.units;//	import evx.math.units.overloads;
 
 template MathToolkit ()
 	{/*...}*/

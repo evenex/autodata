@@ -4,8 +4,8 @@ private {/*imports}*/
 	import std.range;
 	import std.conv;
 
-	import evx.operators.transfer;
-	import evx.operators.buffer;
+	import evx.operators;//	import evx.operators.transfer;
+	import evx.operators;//	import evx.operators.buffer;
 	import evx.misc.tuple;
 
 	import evx.graphics.opengl;
@@ -100,7 +100,7 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 
 struct VertexBuffer
 	{/*...}*/
-		import evx.math.geometry.vectors;
+		import evx.math;//		import evx.math.geometry.vectors;
 
 		GLBuffer!(fvec, GL_ARRAY_BUFFER, GL_STATIC_DRAW)
 			buffer;
@@ -129,9 +129,9 @@ auto gpu_array (R)(R range)
 		return GPUArray!(ElementType!R)(range);
 	}
 	unittest {/*...}*/
-		import evx.graphics.display;
+		import evx.graphics;//		import evx.graphics.display;
 		import evx.math.sequence;
-		import evx.containers.m_array;
+		import evx.containers;//		import evx.containers.m_array;
 
 		scope display = new Display;
 

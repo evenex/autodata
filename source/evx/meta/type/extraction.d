@@ -6,8 +6,8 @@ private {/*imports}*/
 	import std.range;
 
 	import evx.math.logic;
-	import evx.traits.classification;
-	import evx.traits.introspection;
+	import evx.traits;//	import evx.traits.classification;
+	import evx.traits;//	import evx.traits.introspection;
 }
 
 /* extract an array of identifiers for members of T which match the given UDA tag 

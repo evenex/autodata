@@ -37,7 +37,7 @@ unittest {/*...}*/
 	static assert (î!vec == vec(1,0));
 	static assert (ĵ!vec == vec(0,1));
 	
-	import evx.math.units;
+	import evx.math;//	import evx.math.units;
 	alias Position = Vector!(2, Meters);
 
 	static assert (î!Position == Position (1.meter, 0.meters));

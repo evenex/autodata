@@ -8,9 +8,9 @@ private {/*imports}*/
 
 	import evx.math.geometry.traits;
 	import evx.math.geometry.vectors;
-	import evx.math.units.overloads;
+	import evx.math.units;//	import evx.math.units.overloads;
 
-	import evx.operators.transfer;
+	import evx.operators;//	import evx.operators.transfer;
 
 	import evx.math.algebra;
 	import evx.math.functional;
@@ -200,7 +200,7 @@ struct Box (T)
 		}
 	}
 	unittest {/*...}*/
-		import evx.math.geometry.polygons;
+		import evx.math;//		import evx.math.geometry.polygons;
 
 		auto box = bounding_box (circle (1));
 
@@ -284,7 +284,7 @@ auto offset_to (T)(Box!T from, Alignment alignment, Box!T to)
 			}
 	}
 	unittest {/*...}*/
-		import evx.math.geometry.polygons;
+		import evx.math;//		import evx.math.geometry.polygons;
 
 		auto compute_offset (Alignment alignment)
 			{return circle (1).bounding_box.offset_to (alignment, circle (2).bounding_box);}
@@ -311,7 +311,7 @@ auto align_to (T)(Box!T box, Alignment alignment, Vector!(2, T) position)
 		return box.verts[].map!(v => v + offset).bounding_box;
 	}
 	unittest {/*...}*/
-		import evx.math.geometry.polygons;
+		import evx.math;//		import evx.math.geometry.polygons;
 
 		auto a = square (1).bounding_box;
 
@@ -342,7 +342,7 @@ auto into_bounding_box_of (T1, T2)(auto ref T1 inner, auto ref T2 outer)
 		return inner.map!(v => (v - in_c) * s + ex_c); // REVIEW [] operator for priming ranges
 	}
 	unittest {/*...}*/
-		import evx.math.geometry.polygons;
+		import evx.math;//		import evx.math.geometry.polygons;
 		mixin(FunctionalToolkit!());
 
 		auto a = square (1);
@@ -355,8 +355,8 @@ auto into_bounding_box_of (T1, T2)(auto ref T1 inner, auto ref T2 outer)
 	}
 
 version (X86_64) unittest {/*with units}*/
-	import evx.math.units;
-	import evx.math.geometry.polygons;
+	import evx.math;//	import evx.math.units;
+	import evx.math;//	import evx.math.geometry.polygons;
 
 	alias Pos = Vector!(2, Meters);
 

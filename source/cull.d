@@ -22,8 +22,7 @@ void uncomment_line (ref string line)
 			line = line[2..$];
 	}						
 
-//version (cull_unnecessary_imports)
-void main (string[] args)
+version (generalize_imports) void main (string[] args)
 	{/*...}*/
 		if (args.length > 1)
 			{/*...}*/
@@ -41,6 +40,8 @@ void main (string[] args)
 		foreach (mod; modules)
 			{/*...}*/
 				writeln (`generalizing module ` ~mod.name);
+				report.writeln (`generalizing module ` ~mod.name);
+				report.flush;
 
 				auto source = File (mod.path, "r").byLine.map!(to!string).array;
 
@@ -66,7 +67,7 @@ void main (string[] args)
 											goto done;
 										}
 
-								remaining.front = new_line;
+								remaining.front = new_line ~ `//` ~old_line;
 
 								File (mod.path, "w").write (source.joiner ("\n"));
 
@@ -78,9 +79,10 @@ void main (string[] args)
 
 										if (all (dependency_graph (`./source/`).map!(mod => mod.find_minimal_cycle.empty)))
 											{/*...}*/
-												auto note = old_line~ ` → ` ~remaining.front;
+												auto note = old_line~ ` → ` ~new_line;
 												report.writeln (note);
 												writeln (note);
+												report.flush;
 												break;
 											}
 										else remaining.front = old_line;

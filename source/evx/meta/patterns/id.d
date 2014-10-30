@@ -4,7 +4,7 @@ module evx.patterns.id;
 */
 mixin template TypeUniqueId (uint bit = 0)
 	{/*...}*/
-		import evx.operators.comparison;
+		import evx.operators;//		import evx.operators.comparison;
 
 		static assert (is(typeof(this)), `mixin requires host struct`);
 

@@ -1,8 +1,8 @@
 module evx.operators.transfer;
 
 private {/*imports}*/
-	import evx.traits.concepts;
-	import evx.range.traits;
+	import evx.traits;//	import evx.traits.concepts;
+	import evx.range;//	import evx.range.traits;
 }
 
 struct TransferTraits (Buffer)
