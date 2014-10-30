@@ -22,7 +22,8 @@ void uncomment_line (ref string line)
 			line = line[2..$];
 	}						
 
-version (cull_unnecessary_imports) void main (string[] args)
+//version (cull_unnecessary_imports)
+void main (string[] args)
 	{/*...}*/
 		if (args.length > 1)
 			{/*...}*/
@@ -47,17 +48,20 @@ version (cull_unnecessary_imports) void main (string[] args)
 					{/*...}*/
 						auto old_line = remaining.front;
 
-						auto new_line = old_line;
+						string new_line;
 
-						while (1)
+						while (old_line.length > new_line.length)
 							{/*...}*/
 								foreach (i; new_line.length..old_line.length)
 									if (old_line[i] == '.')
-										new_line = old_line[0..i] ~ `;`;
+										{/*...}*/
+											new_line = old_line[0..i] ~ `;`;
+											break;
+										}
 									else if (i+1 == old_line.length)
 										{/*...}*/
-											remaining_front = old_line;
-											break;
+											remaining.front = old_line;
+											goto done;
 										}
 
 								remaining.front = new_line;
@@ -70,17 +74,19 @@ version (cull_unnecessary_imports) void main (string[] args)
 									{/*...}*/
 										std.file.remove (`ok`);
 
-										if (modules.find_minimal_cycle.empty)
+										if (all (dependency_graph (`./source/`).map!(mod => mod.find_minimal_cycle.empty)))
 											writeln (`generalized import ` ~old_line~ ` to ` ~remaining.front~ ` in ` ~mod.name);
 										else remaining.front = old_line;
 									}
 								else remaining.front = old_line;
 							}
 
+						done:
+
 						remaining.popFront;
 					}
 
-				File (mod.path, "w").write (source.joiner ("\n"));
+				File (mod.path, "w").write (source.joiner ("\n"), "\n");
 			}
 
 		writeln (`finished`);

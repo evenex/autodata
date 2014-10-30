@@ -206,7 +206,7 @@ auto concatenate (R,S)(R r, S s) // REFACTOR
 
 ///////////////////
 
-void main ()
+version (generate_dependency_graph) void main ()
 	{/*...}*/
 		auto modules = dependency_graph (`./source/`);
 
