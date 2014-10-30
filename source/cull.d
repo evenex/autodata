@@ -36,6 +36,8 @@ void main (string[] args)
 
 		auto modules = dependency_graph (`./source/`);
 
+		auto report = File (`generalization_report`, `w`);
+
 		foreach (mod; modules)
 			{/*...}*/
 				writeln (`generalizing module ` ~mod.name);
@@ -76,7 +78,9 @@ void main (string[] args)
 
 										if (all (dependency_graph (`./source/`).map!(mod => mod.find_minimal_cycle.empty)))
 											{/*...}*/
-												writeln (old_line~ ` → ` ~remaining.front);
+												auto note = old_line~ ` → ` ~remaining.front;
+												report.writeln (note);
+												writeln (note);
 												break;
 											}
 										else remaining.front = old_line;
