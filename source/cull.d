@@ -75,7 +75,10 @@ void main (string[] args)
 										std.file.remove (`ok`);
 
 										if (all (dependency_graph (`./source/`).map!(mod => mod.find_minimal_cycle.empty)))
-											writeln (`generalized import ` ~old_line~ ` to ` ~remaining.front~ ` in ` ~mod.name);
+											{/*...}*/
+												writeln (old_line~ ` → ` ~remaining.front);
+												break;
+											}
 										else remaining.front = old_line;
 									}
 								else remaining.front = old_line;
