@@ -9,7 +9,6 @@ import std.algorithm;
 import std.file;
 
 import evx.graphics.color; // REVIEW
-import evx.math;//import evx.math.logic; // REVIEW
 import evx.patterns.id; // REVIEW
 import evx.patterns.builder; // REVIEW
 import evx.misc.string; // REVIEW
@@ -22,8 +21,19 @@ struct Status (string name, string condition, Etc...) {}
 
 mixin(FunctionalToolkit!());
 alias count = evx.range.traversal.count; // TODO make count like std.algorithm count except by default it takes TRUE and just counts up all the elements
+alias join = std.algorithm.joiner;
 
 ///////////////////
+
+Module[] path_to_root_package (Module mod)
+	{/*...}*/
+		Module[] path;
+
+		while ((mod = mod.enclosing_package) !is null)
+			path ~= mod;
+
+		return path;
+	}
 
 class Module
 	{/*...}*/
@@ -83,6 +93,20 @@ class Module
 		bool opEquals (Module that) const
 			{/*...}*/
 				return this.id == that.id;
+			}
+
+		override string toString ()
+			{/*...}*/
+				return name ~ "\n"
+					~ `(` ~ path ~ `)` "\n"
+					~ evx.math.functional.map!(pkg => pkg.name)(
+						this.path_to_root_package
+					).retro.join (` → `).text ~ "\n";
+		//		return name ~ "\n"
+		//			~ `(` ~ path ~ `)` "\n"
+		//			~ this.path_to_root_package
+		//				.map!(pkg => pkg.name) BUG WHY THE FUCK does this keep trying to overload into PRIVATE map alias in core.analysis??? need to get rid of all "Toolkits" somehow...
+		//				.join (` → `).text ~ "\n";
 			}
 	}
 bool is_package (Module mod)
@@ -177,14 +201,14 @@ auto dependency_graph (string root_directory)
 				foreach (name; mod.imports)
 					mod.imported_modules ~= modules.filter!(m => name == m.name).array;
 
-				if (not (mod.is_package)) // BUG mod.not!is_package doesn't work, why?
-					mod.enclosing_package = modules
-						.filter!(mod => mod.is_package)
-						.filter!(pack => mod.name.contains (pack.name))
-						.select!(
-							modules => modules.empty? null
-							: modules.reduce!((a,b) => a.name.length > b.name.length? a:b)
-						);
+				 // BUG mod.not!is_package doesn't work, why?
+				mod.enclosing_package = modules
+					.filter!(mdl => mdl.is_package && mdl !is mod)
+					.filter!(pkg => mod.name.contains (pkg.name))
+					.select!(
+						modules => modules.empty? null
+						: modules.reduce!((a,b) => a.name.length > b.name.length? a:b)
+					);
 			}
 
 		return modules;
@@ -211,19 +235,32 @@ version (generate_dependency_graph) void main ()
 		auto modules = dependency_graph (`./source/`);
 
 		{/*assign colors}*/
-			auto packages = modules.filter!(mod => mod.is_package);
-			auto n_colors = packages.count;
+			auto paths = modules.map!(mod => mod.path_to_root_package)
+				.filter!(path => path.not!empty)
+				.array; // BUG sort can't be chained to array because LENGTH IS NOT CALLABLE USING A CONST OBJECT you sons of bitches
 
-			foreach (pkg, color; zip (packages, rainbow (n_colors)))
+			paths.sort!((a,b) => a.back.id < b.back.id);
+
+			auto root_packages = paths.map!(path => path.back).uniq;
+
+			foreach (root, color; zip (root_packages, rainbow (root_packages.count)))
 				{/*...}*/
-					pkg.color = color;
+					root.color = color (0.5);
 
-					foreach (mod; modules
-						.filter!(mod => mod.enclosing_package is pkg)
-					)
-						mod.color = color.alpha (0.5);
+					auto sub_packages = paths.filter!(path => path.length > 1 && path.back is root)
+						.map!(path => path[0..$-1])
+						.join.uniq;
 
+					foreach (pkg, shade; zip (sub_packages, (sub_packages.count + 2).shades_of (root.color)[1..$-1]))
+						pkg.color = shade;
 				}
+				
+			foreach (mod; modules
+				//.filter!(mod => mod.not!is_package) // BUG 
+				.filter!(mod => not (mod.is_package))
+				.filter!(mod => mod.enclosing_package !is null)
+			)
+				mod.color = mod.enclosing_package.color;
 		}
 		{/*write .dot file}*/
 			string dot_file = `digraph dependencies {`"\n";
@@ -265,4 +302,27 @@ version (generate_dependency_graph) void main ()
 			executeShell (`zathura dependencies.pdf`);
 			//executeShell (`rm dependencies.pdf`);
 		}
+	}
+
+version (generate_package_files) void main ()
+	{/*...}*/
+		auto source = dependency_graph (`./source/`);
+
+		foreach (pkg; source.filter!is_package)
+			{/*...}*/
+				auto package_directory = pkg.path.retro.find (`/`).retro;
+
+				File (pkg.path, "w").write (q{
+					module } ~ pkg.name ~ q{;
+					
+					public:} ~ package_directory.dirEntries (SpanMode.shallow)
+						.filter!(entry => entry.name.File (`r`).is_package.not) // BUG not
+						.map!(entry => entry.isDir? 
+							((entry.name ~ `/package.d`).exists? (entry.name ~ `/package.d`).File (`r`).module_name : `unknown`)
+							: entry.name.File (`r`).module_name
+						)
+						.map!(name => q{import } ~name~ q{;})
+						.join ("\n")
+					);
+			}
 	}
