@@ -15,6 +15,8 @@ import evx.misc.string; // REVIEW
 import evx.range;//import evx.range.traversal;
 import evx.math;//import evx.math.functional;
 
+alias enumerate = evx.range.enumerate;
+
 // TODO flags (uses builder) struct... also status mixins, with conditions like traits
 struct Flags {mixin Builder!(typeof(null), `_`);}
 struct Status (string name, string condition, Etc...) {}
@@ -214,6 +216,35 @@ auto dependency_graph (string root_directory)
 		return modules;
 	}
 
+auto topological_sort (Module[] set)
+	in {/*...}*/
+		assert (set.map!(mod => mod.find_minimal_cycle).all!empty);
+	}
+	body {/*...}*/
+		Module[] r;
+
+		auto s = set.filter!(mod => mod.imported_modules.empty).array;
+
+		while (s.not!empty)
+			{/*...}*/
+				auto n = s.front;
+				s = s[1..$];
+				r ~= n; 
+
+				foreach (m; set.filter!(m => m.imported_modules.contains (n)))
+					{/*...}*/
+						auto i = m.imported_modules.countUntil (n);
+
+						m.imported_modules = m.imported_modules.remove (i);
+
+						if (set.filter!(l => m.imported_modules.contains (l)).empty)
+							s ~= m;
+					}
+			}
+
+		return r;
+	}
+
 ///////////////////
 
 auto shortest (R,S)(R r, S s) // REFACTOR
@@ -328,4 +359,14 @@ version (generate_package_files) void main ()
 						.join ("\n").text
 				);
 			}
+	}
+
+version (generate_cleanroom_sequence) void main ()
+	{/*...}*/
+		File (`build_order`, `w`).write (
+			dependency_graph (`./source/`)
+				.topological_sort
+				.map!(mod => mod.path)
+				.join ("\n")
+		);
 	}

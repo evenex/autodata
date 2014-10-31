@@ -4,7 +4,7 @@ import std.conv;
 import std.range;
 
 import evx.traits;
-import evx.range;//import evx.range.traits;
+import evx.range.traits;
 import evx.math.logic;
 import evx.math.algebra;
 import evx.math.ordinal;

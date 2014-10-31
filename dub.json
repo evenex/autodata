@@ -10,7 +10,7 @@
 		"dchip"  		: "~master",
 		"tharsis-prof"	: "~master",
 	},
-	"versions": ["CHIP_ALLOW_PRIVATE_ACCESS", "CHIP_USE_DOUBLES", "generate_dependency_graph"],
+	"versions": ["CHIP_ALLOW_PRIVATE_ACCESS", "CHIP_USE_DOUBLES"],
 	"libs": ["fann", "portaudio", "opencv_core", "opencv_highgui", "GL", "freetype-gl", "freetype", "GLEW", "triangle"],
 	"_libs": ["GL", "freetype-gl", "freetype", "GLEW", "triangle"],
 	"targetType": "executable",

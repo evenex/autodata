@@ -6,6 +6,7 @@ private {/*imports}*/
 	import std.range;
 
 	import evx.math.arithmetic;
+	import evx.math.sequence;
 	import evx.math.functional;
 
 	mixin(FunctionalToolkit!());
@@ -220,7 +221,7 @@ auto adjacent_pairs (R)(R range)
 	this exploits the automatic tuple foreach index unpacking trick which is obscure and under controversy
 	reference: https://issues.dlang.org/show_bug.cgi?id=7361
 */
-auto enumerate (R)(R range)
+auto enumerate (R)(R range) // REVIEW std.range has this function but its undocumented??
 	if (isInputRange!R && hasLength!R)
 	{/*...}*/
 		return ℕ[0..range.length].zip (range);
