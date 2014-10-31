@@ -4,7 +4,7 @@ module evx.patterns.builder;
 */
 mixin template Builder (Args...)
 	{/*...}*/
-		import evx.math;//		import evx.math.logic;
+		import evx.math.logic;
 
 		static assert (is(typeof(this)), `mixin requires host struct`);
 
@@ -15,7 +15,7 @@ mixin template Builder (Args...)
 		private {/*import evx}*/
 			import evx.traits:
 				is_type, is_string_param;
-			import evx.meta:
+			import evx.codegen:
 				ParameterSplitter;
 		}
 

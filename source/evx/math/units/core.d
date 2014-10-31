@@ -15,7 +15,8 @@ private {/*imports}*/
 		//import evx.misc.utils; 
 		import evx.misc.string; 
 //		import evx.traits; 
-		import evx.meta;
+		import evx.operators;
+		import evx.traits;
 
 //		import evx.operators.comparison;
 

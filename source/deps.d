@@ -312,17 +312,20 @@ version (generate_package_files) void main ()
 			{/*...}*/
 				auto package_directory = pkg.path.retro.find (`/`).retro;
 
-				File (pkg.path, "w").write (q{
-					module } ~ pkg.name ~ q{;
+				File (pkg.path, "w").write (
+					q{module } ~ pkg.name ~ q{;}"\n"
 					
-					public:} ~ package_directory.dirEntries (SpanMode.shallow)
+					q{public:}"\n"
+
+					~ package_directory.dirEntries (SpanMode.shallow)
 						.filter!(entry => entry.name.File (`r`).is_package.not) // BUG not
 						.map!(entry => entry.isDir? 
 							((entry.name ~ `/package.d`).exists? (entry.name ~ `/package.d`).File (`r`).module_name : `unknown`)
 							: entry.name.File (`r`).module_name
 						)
+						.filter!(name => name != `package.d`)
 						.map!(name => q{import } ~name~ q{;})
-						.join ("\n")
-					);
+						.join ("\n").text
+				);
 			}
 	}

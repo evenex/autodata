@@ -34,7 +34,7 @@ mixin template PolicyAssignment (DefaultPolicies, AssignedPolicies...)
 				import std.typetuple: 
 					staticMap, staticIndexOf;
 
-				import evx.meta: 
+				import evx.type: 
 					type_of;
 
 				alias AssignedTypes = staticMap!(type_of, AssignedPolicies);

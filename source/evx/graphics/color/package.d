@@ -1,4 +1,4 @@
 module evx.graphics.color;
-
-public import evx.graphics.color.sequences;
-public import evx.graphics.color.core;
+public:
+import evx.graphics.color.sequences;
+import evx.graphics.color.core;

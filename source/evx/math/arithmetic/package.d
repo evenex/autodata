@@ -1,4 +1,4 @@
 module evx.math.arithmetic;
-
-public import evx.math.arithmetic.traits;
-public import evx.math.arithmetic.functions;
+public:
+import evx.math.arithmetic.functions;
+import evx.math.arithmetic.traits;

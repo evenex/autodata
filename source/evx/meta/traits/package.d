@@ -1,5 +1,5 @@
 module evx.traits;
-
-public import evx.traits.classification;
-public import evx.traits.introspection;
-public import evx.traits.concepts;
+public:
+import evx.traits.introspection;
+import evx.traits.classification;
+import evx.traits.concepts;

@@ -1,7 +1,8 @@
 module evx.graphics;
-
-public import evx.graphics.display;
-public import evx.graphics.buffer;
-public import evx.graphics.renderer;
-public import evx.graphics.shader;
-public import evx.graphics.opengl;
+public:
+import evx.graphics.opengl;
+import evx.graphics.buffer;
+import evx.graphics.display;
+import evx.graphics.shader;
+import evx.graphics.renderer;
+import evx.graphics.color;
