@@ -1,28 +1,27 @@
 module evx.math.ordinal;
 
 private {/*imports}*/
-	private {/*std}*/
-		import std.typetuple;
-		import std.traits;
-	}
+	import std.typetuple;
+	import std.traits;
 }
+
+alias min = std.algorithm.min;
+alias max = std.algorithm.max;
 
 pure nothrow:
 
-public {/*traits}*/
-	/* test if a type is comparable using the < operator 
-	*/
-	template is_comparable (T...)
-		if (T.length == 1)
-		{/*...}*/
-			static if (is (T[0]))
-				{/*...}*/
-					const T[0] a, b;
-					enum is_comparable = is(typeof(a < b) == bool);
-				}
-			else enum is_comparable = false;
-		}
-}
+/* test if a type is comparable using the < operator 
+*/
+template is_comparable (T...)
+	if (T.length == 1)
+	{/*...}*/
+		static if (is (T[0]))
+			{/*...}*/
+				const T[0] a, b;
+				enum is_comparable = is(typeof(a < b) == bool);
+			}
+		else enum is_comparable = false;
+	}
 
 /* a < b 
 */ 
@@ -42,7 +41,7 @@ bool all_equal (Args...)(Args args)
 		return true;
 	}
 
-/* ¬(a < b || b < a) ⇒ a == b 
+/* ¬(a < b || b < a) ¿ a == b 
 */
 bool antisymmetrically_equivalent (alias compare, T, U)(const T a, const U b)
 	if (__traits(compiles, compare (a, b)))

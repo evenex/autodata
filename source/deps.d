@@ -1,27 +1,31 @@
-import std.stdio;
-import std.range;
-import std.process;
-import std.conv;
-import std.array;
-import std.string;
-import std.random;
-import std.algorithm;
-import std.file;
+private {/*imports}*/
+	import std.stdio;
+	import std.range;
+	import std.process;
+	import std.conv;
+	import std.array;
+	import std.string;
+	import std.random;
+	import std.algorithm;
+	import std.file;
 
-import evx.graphics.color; // REVIEW
-import evx.patterns.id; // REVIEW
-import evx.patterns.builder; // REVIEW
-import evx.misc.string; // REVIEW
-import evx.range;//import evx.range.traversal;
-import evx.math;//import evx.math.functional;
+	import evx.graphics;
+	import evx.patterns;
+	import evx.misc.string;
+	import evx.range;
+	import evx.math;
 
-alias enumerate = evx.range.enumerate;
+	alias enumerate = evx.range.enumerate;
+	alias map = evx.math.functional.map;
+	alias zip = evx.math.functional.zip;
+	alias reduce = evx.math.functional.reduce;
+	alias filter = evx.math.functional.filter;
+}
 
 // TODO flags (uses builder) struct... also status mixins, with conditions like traits
 struct Flags {mixin Builder!(typeof(null), `_`);}
 struct Status (string name, string condition, Etc...) {}
 
-mixin(FunctionalToolkit!());
 alias count = evx.range.traversal.count; // TODO make count like std.algorithm count except by default it takes TRUE and just counts up all the elements
 alias join = std.algorithm.joiner;
 
@@ -60,7 +64,7 @@ class Module
 					.node (`m`~ id.to!string.extract_number)
 					.label (`[label="` ~name~ `"]`)
 					.shape (this.is_package? `[shape=ellipse]`:`[shape=box]`)
-					.color (`[fillcolor="#` ~color.to_hex~ `"]`)
+					.color (`[fillcolor="` ~color.to!string~ `"]`)
 					.style (`[style=filled]`)
 					;
 			}
@@ -282,7 +286,10 @@ version (generate_dependency_graph) void main ()
 						.map!(path => path[0..$-1])
 						.join.uniq;
 
-					foreach (pkg, shade; zip (sub_packages, (sub_packages.count + 2).shades_of (root.color)[1..$-1]))
+					if (sub_packages.empty)
+						continue;
+
+					foreach (pkg, shade; zip (sub_packages, (sub_packages.count + 1).shades_of (root.color)[0..$-1]))
 						pkg.color = shade;
 				}
 				

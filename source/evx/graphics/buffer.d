@@ -1,14 +1,16 @@
 module evx.graphics.buffer;
 
 private {/*imports}*/
-	import std.range;
 	import std.conv;
+	import std.array;
 
-	import evx.operators;//	import evx.operators.transfer;
-	import evx.operators;//	import evx.operators.buffer;
+	import evx.operators;
 	import evx.misc.tuple;
 
 	import evx.graphics.opengl;
+
+	import evx.math;
+	import evx.range;
 }
 
 struct GLBuffer (T, GLenum target, GLenum usage)
@@ -31,7 +33,7 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 				gl.BindBuffer (target, handle);
 			}
 
-		public {/*operators}*/
+		public {/*buffer ops}*/
 			auto access (size_t i)
 				{/*...}*/
 					T value;
@@ -100,8 +102,6 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 
 struct VertexBuffer
 	{/*...}*/
-		import evx.math;//		import evx.math.geometry.vectors;
-
 		GLBuffer!(fvec, GL_ARRAY_BUFFER, GL_STATIC_DRAW)
 			buffer;
 
@@ -130,7 +130,7 @@ auto gpu_array (R)(R range)
 	}
 	unittest {/*...}*/
 		import evx.graphics;//		import evx.graphics.display;
-		import evx.math.sequence;
+		import evx.math;//		import evx.math.sequence;
 		import evx.containers;//		import evx.containers.m_array;
 
 		scope display = new Display;

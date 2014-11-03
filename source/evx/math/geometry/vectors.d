@@ -3,20 +3,17 @@ module evx.math.geometry.vectors;
 private {/*imports}*/
 	import std.conv;
 	import std.math;
-	import std.range;
 
 	import evx.math.geometry.traits;
 
 	import evx.math.algebra;
-	import evx.math.analysis;
 	import evx.math.constants;
-	import evx.math.functional; // REVIEW
-	import evx.math.arithmetic; // REVIEW
+	import evx.math.functional;
+	import evx.math.arithmetic;
+	import evx.math.floatingpoint;
+	import evx.math.vectors;
+	import evx.range;
 }
-public import evx.math.vectors;
-
-// REVIEW
-mixin(FunctionalToolkit!());
 
 /* standard basis 
 */
@@ -37,11 +34,15 @@ unittest {/*...}*/
 	static assert (î!vec == vec(1,0));
 	static assert (ĵ!vec == vec(0,1));
 	
-	import evx.math;//	import evx.math.units;
-	alias Position = Vector!(2, Meters);
+	static if (__traits(compiles, {import evx.math.units;}))
+		{/*...}*/
+			import evx.math.units;
 
-	static assert (î!Position == Position (1.meter, 0.meters));
-	static assert (ĵ!Position == Position (0.meters, 1.meter));
+			alias Position = Vector!(2, Meters);
+
+			static assert (î!Position == Position (1.meter, 0.meters));
+			static assert (ĵ!Position == Position (0.meters, 1.meter));
+		}
 }
 
 /* common vector types 
@@ -51,69 +52,79 @@ alias fvec = Vector!(2, float);
 alias ivec = Vector!(2, int);
 alias uvec = Vector!(2, size_t);
 alias rvec = Vector!(2, real);
-alias lvec = Vector!(2, long);
 
-// TODO refactor vector unary binary functions
-pure {/*unary functions}*/
-	auto norm (size_t p = 2, V)(V v)
-		if (is_vector_like!V || isInputRange!V)
-		{/*...}*/
-			alias T = ElementType!V;
+/* vector norm 
+*/
+auto norm (size_t p = 2, V)(V v)
+	if (is_vector_like!V || is_input_range!V)
+	{/*...}*/
+		alias T = ElementType!V;
 
-			return T (v[].map!(t => (t/T(1))^^p).sum ^^ (1.0/p));
-		}
-	auto unit (V)(V v) 
-		if (is_vector_like!V)
-		{/*...}*/
-			alias T = ElementType!V;
+		return T (v[].map!(t => (t/T(1))^^p).sum ^^ (1.0/p));
+	}
 
-			immutable norm = v.norm;
+/* normalization 
+*/
+auto unit (V)(V v) 
+	if (is_vector_like!V)
+	{/*...}*/
+		alias T = ElementType!V;
 
-			if (norm == T(0))
-				return vector!(V.length) (T(0)/T(1));
-			else return vector!(V.length) (v[].map!(t => t/norm));
-		}
-}
-pure {/*binary functions}*/
-	auto dot (U, V)(U u, V v) 
-		if (is_vector_like!V)
-		{/*...}*/
-			return (u*v)[].sum;
-		}
-	auto dot (U, V)(U u, V v) 
-		if (isInputRange!V)
-		{/*...}*/
-			return u[].zip (v[])
-				.map!((a,b) => a*b)
-				.sum;
-		}
+		immutable norm = v.norm;
 
-	auto det (U, V)(U u, V v) 
-		if (is (V == Vector!(2, T), T) && is(U == Vector!(2, S), S))
-		{/*...}*/
-			return u[0]*v[1] - u[1]*v[0];
-		}
+		if (norm == T(0))
+			return vector!(V.length) (T(0)/T(1));
+		else return vector!(V.length) (v[].map!(t => t/norm));
+	}
 
-	auto cross (U, V)(U u, V v) 
-		if (is (V == Vector!(3, T), T))
-		{/*...}*/
-			return vector (
-				u[1]*v[2] - u[2]*v[1],
-				u[2]*v[0] - u[0]*v[2],
-				u[0]*v[1] - u[1]*v[0],
-			);
-		}
+/* dot product 
+*/
+auto dot (U, V)(U u, V v) 
+	if (is_vector_like!V)
+	{/*...}*/
+		return (u*v)[].sum;
+	}
+auto dot (U, V)(U u, V v) 
+	if (is_input_range!V)
+	{/*...}*/
+		return u[].zip (v[])
+			.map!((a,b) => a*b)
+			.sum;
+	}
 
-	auto proj (U, V)(U u, V v) 
-		{/*...}*/
-			return u.dot (v.unit) * v.unit;
-		}
+/* det product 
+*/
+auto det (U, V)(U u, V v) 
+	if (is (V == Vector!(2, T), T) && is(U == Vector!(2, S), S))
+	{/*...}*/
+		return u[0]*v[1] - u[1]*v[0];
+	}
 
-	auto rej (U, V)(U u, V v) 
-		{/*...}*/
-			return u - u.proj (v);
-		}
-}
+/* cross product 
+*/
+auto cross (U, V)(U u, V v) 
+	if (is (V == Vector!(3, T), T))
+	{/*...}*/
+		return vector (
+			u[1]*v[2] - u[2]*v[1],
+			u[2]*v[0] - u[0]*v[2],
+			u[0]*v[1] - u[1]*v[0],
+		);
+	}
+
+/* vector projection 
+*/
+auto proj (U, V)(U u, V v) 
+	{/*...}*/
+		return u.dot (v.unit) * v.unit;
+	}
+
+/* vector rejection 
+*/
+auto rej (U, V)(U u, V v) 
+	{/*...}*/
+		return u - u.proj (v);
+	}
 
 /* rotate a vector 
 */

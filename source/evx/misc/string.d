@@ -1,7 +1,9 @@
 module evx.misc.string;
 
-import std.string;
-import std.algorithm;
+private {/*imports}*/
+	import std.string;
+	import std.algorithm;
+}
 
 pure extract_number (string input)
 	{/*...}*/

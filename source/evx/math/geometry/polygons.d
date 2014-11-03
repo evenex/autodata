@@ -2,7 +2,7 @@ module evx.math.geometry.polygons;
 
 private {/*imports}*/
 	import std.conv;
-	import std.range;
+	import std.math;
 	
 	import evx.range;
 	import evx.misc.utils;
@@ -11,16 +11,15 @@ private {/*imports}*/
 	import evx.math.geometry.traits;
 
 	import evx.math.logic;
+	import evx.math.ordinal;
+	import evx.math.floatingpoint;
 	import evx.math.algebra;
 	import evx.math.sequence;
 	import evx.math.arithmetic;
 	import evx.math.functional;
 	import evx.math.constants;
+	import evx.math.vectors;
 	import evx.math.statistics;
-	import evx.math.analysis;
-	import evx.math.units;//	import evx.math.units.overloads;
-
-	mixin(FunctionalToolkit!());
 }
 
 /* shape generators 
@@ -51,7 +50,7 @@ template circle (uint samples = 24)
 auto radius (T)(T geometry)
 	if (is_geometric!T)
 	{/*...}*/
-		 auto c = geometry.mean; // BUG was immutable
+		 auto c = geometry.mean;
 
 		 return geometry[].map!(v => (v-c).norm).reduce!max;
 	}
@@ -71,8 +70,6 @@ auto area (R)(R polygon)
 		).abs;
 	}
 	unittest {/*...}*/
-		import evx.math.units;
-
 		assert (square (1).area.approx (1));
 		assert (square (2).area.approx (4));
 		assert (circle!1000 (1).area.approx (π));
@@ -90,12 +87,17 @@ auto area (R)(R polygon)
 		auto known_area = 8.3593;
 		assert (irregular.area.approx (known_area));
 
-		assert (square (2.meters).area.approx (4.squared!meters));
-		assert (circle!1000 (1.meter).area.approx (π.squared!meters));
-		assert (
-			irregular.map!(v => vector (v.x.meters, v.y.meters))
-			.area.approx (known_area.squared!meters)
-		);
+		static if (__traits(compiles, {import evx.math.units;}))
+			{/*...}*/
+				import evx.math.units;
+
+				assert (square (2.meters).area.approx (4.squared!meters));
+				assert (circle!1000 (1.meter).area.approx (π.squared!meters));
+				assert (
+					irregular.map!(v => vector (v.x.meters, v.y.meters))
+					.area.approx (known_area.squared!meters)
+				);
+			}
 	}
 
 /* reflect a polygon over a "direction" axis passing through its centroid 
@@ -107,10 +109,10 @@ auto flip (string direction, T)(T geometry)
 		alias one = unity!(ElementType!Vector);
 
 		static if (direction == `vertical`)
-			auto w = Vector (one, -one) / one; // BUG was immutable
-		else auto w = Vector (-one, one) / one; // BUG was immutable
+			auto w = Vector (one, -one) / one;
+		else auto w = Vector (-one, one) / one;
 
-		auto c = geometry.mean; // BUG was immutable... TO SOLVE THIS WE NEED TO BRING BACK CONST OVERLOADS WITHOUT REPEATING MYSELF SOMEHOW.. maybe a ConstOverloads mixin that takes token names and then goes "auto ref ~token~ (Args...)(Args args) const {return (cast()this).~token~ (args);}"
+		auto c = geometry.mean;
 
 		return geometry[].map!(v => (v - c) * w + c);
 	}
@@ -119,18 +121,20 @@ auto flip (string direction, T)(T geometry)
 			retro,
 			equal;
 
-		import evx.math;//		import evx.math.geometry.aabb;
-		mixin(FunctionalToolkit!());
+		static if (__traits(compiles, {import evx.math.geometry.aabb;}))
+			{/*...}*/
+				import evx.math;//				import evx.math.geometry.aabb;
 
-		assert (not (square.flip!`vertical`.equal (square)));
-		assert (square.flip!`vertical`.bounding_box[]
-			.equal (square.bounding_box[])
-		);
+				assert (not (square.flip!`vertical`.equal (square)));
+				assert (square.flip!`vertical`.bounding_box[]
+					.equal (square.bounding_box[])
+				);
 
-		assert (not (square.flip!`horizontal`.equal (square)));
-		assert (square.flip!`horizontal`.bounding_box[]
-			.equal (square.bounding_box[])
-		);
+				assert (not (square.flip!`horizontal`.equal (square)));
+				assert (square.flip!`horizontal`.bounding_box[]
+					.equal (square.bounding_box[])
+				);
+			}
 
 		auto triangle = [-î!vec, ĵ!vec, î!vec];
 		assert (triangle.flip!`horizontal`.equal (triangle.retro));
@@ -139,14 +143,17 @@ auto flip (string direction, T)(T geometry)
 			.approx ([-î!vec, -ĵ!vec, î!vec].map!(v => v + vec(0, 2.0/3)))
 		);
 
-		import evx.math;//		import evx.math.units;
-		alias Position = Vector!(2, Meters);
-		auto triangle2 = [-î!Position, ĵ!Position, î!Position];
+		static if (__traits(compiles, {import evx.math.units;}))
+			{/*...}*/
+				import evx.math.units;
+				alias Position = Vector!(2, Meters);
+				auto triangle2 = [-î!Position, ĵ!Position, î!Position];
 
-		assert (triangle2.flip!`horizontal`.equal (triangle2.retro));
-		assert (triangle2.flip!`vertical`
-			.approx ([-î!Position, -ĵ!Position, î!Position].map!(v => v + vector (0.meters, 2.0.meters/3)))
-		);
+				assert (triangle2.flip!`horizontal`.equal (triangle2.retro));
+				assert (triangle2.flip!`vertical`
+					.approx ([-î!Position, -ĵ!Position, î!Position].map!(v => v + vector (0.meters, 2.0.meters/3)))
+				);
+			}
 	}
 
 /* translate a polygon by a vector 
@@ -154,7 +161,7 @@ auto flip (string direction, T)(T geometry)
 auto translate (T, Vec = ElementType!T)(T geometry, Vec displacement)
 	if (is_geometric!T)
 	{/*...}*/
-		auto Δv = displacement; // BUG was immutable
+		auto Δv = displacement;
 
 		return geometry.map!(v => v + Δv);
 	}
@@ -165,9 +172,8 @@ auto rotate (T, U = ElementType!(ElementType!T), V = ElementType!T)(T geometry, 
 	if (is_geometric!T)
 	{/*...}*/
 		import evx.math;//		import evx.math.geometry.vectors;
-		mixin(FunctionalToolkit!());
 
-		auto c = pivot.binary_equal (V.init)? geometry.mean: pivot; // BUG was immutable
+		auto c = pivot.binary_equal (V.init)? geometry.mean: pivot;
 
 		return geometry.map!(v => (v-c).rotate (θ) + c);
 	}
@@ -183,8 +189,8 @@ auto rotate (T, U = ElementType!(ElementType!T), V = ElementType!T)(T geometry, 
 auto scale (T1, T2)(T1 geometry, T2 scale)
 	if (is_geometric!T1 && __traits(compiles, geometry.front * scale))
 	{/*...}*/
-		auto c = geometry.mean; // BUG was immutable
-		auto s = scale; // BUG was immutable
+		auto c = geometry.mean;
+		auto s = scale;
 
 		return geometry.map!(v => s*(v-c) + c);
 	}
@@ -221,9 +227,10 @@ bool is_left_of (V, T = ElementType!V)(V v, Edge!T e)
 		return is_left_turn (e[0], e[1], v);
 	}
 
-unittest {/*with units}*/
-	import evx.math;//	import evx.math.units;
+static if (__traits(compiles, {import evx.math.units;}))
+	unittest {/*with units}*/
+		import evx.math.units;
 
-	static assert (__traits(compiles, square (1.meter)));
-	static assert (__traits(compiles, circle (1.meter)));
-}
+		static assert (__traits(compiles, square (1.meter)));
+		static assert (__traits(compiles, circle (1.meter)));
+	}

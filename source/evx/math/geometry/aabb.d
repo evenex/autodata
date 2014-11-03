@@ -1,24 +1,23 @@
 module evx.math.geometry.aabb;
 
 private {/*imports}*/
-	import std.algorithm;
 	import std.conv;
-	import std.range;
 	import std.traits;
+	import std.typetuple;
 
 	import evx.math.geometry.traits;
 	import evx.math.geometry.vectors;
-	import evx.math.units;//	import evx.math.units.overloads;
 
-	import evx.operators;//	import evx.operators.transfer;
+	import evx.operators;
+	import evx.range;
 
 	import evx.math.algebra;
 	import evx.math.functional;
-	import evx.math.analysis;
+	import evx.math.vectors;
+	import evx.math.ordinal;
+	import evx.math.overloads;
 
 	import evx.misc.tuple;
-
-	mixin(FunctionalToolkit!());
 }
 
 /* an axis-aligned bounding box 
@@ -29,7 +28,7 @@ struct Box (T)
 		@property {/*}*/
 			public {/*corners}*/
 				Vec opDispatch (string op)()
-					if (op.canFind (`left`, `center`, `right`))
+					if (op.contains (`left`, `center`, `right`))
 					{/*...}*/
 						immutable upper = τ(`upper`, `top`, `hi`);
 						immutable lower = τ(`lower`, `bottom`, `lo`);
@@ -40,27 +39,27 @@ struct Box (T)
 						immutable hi 		= [2,3];
 						immutable low	 	= [0,1];
 
-						static if (op.canFind (`left`))
+						static if (op.contains (`left`))
 							immutable horizontal = left;
-						else static if (op.canFind (`right`))
+						else static if (op.contains (`right`))
 							immutable horizontal = right;
-						else static if (op.canFind (`center`))
+						else static if (op.contains (`center`))
 							immutable horizontal = center;
 						else pragma (msg, `Error: Box.`~op~` failed to compile`);
 
 
-						static if (op.canFind (upper.expand))
+						static if (op.contains (upper.expand))
 							immutable vertical = hi;
-						else static if (op.canFind (lower.expand))
+						else static if (op.contains (lower.expand))
 							immutable vertical = low;
-						else static if (op.canFind (`center`))
+						else static if (op.contains (`center`))
 							immutable vertical = center;
 						else pragma (msg, `Error: Box.`~op~` failed to compile`);
 
 						auto length = 0;
 						auto requested_point = zero!Vec;
 
-						foreach (i; setIntersection (horizontal, vertical))
+						foreach (i; std.algorithm.setIntersection (horizontal, vertical))
 							{/*...}*/
 								++length;
 								requested_point += verts[i];
@@ -201,6 +200,7 @@ struct Box (T)
 	}
 	unittest {/*...}*/
 		import evx.math;//		import evx.math.geometry.polygons;
+		import evx.math;//		import evx.math.floatingpoint;
 
 		auto box = bounding_box (circle (1));
 
@@ -306,12 +306,13 @@ auto offset_to (T)(Box!T from, Alignment alignment, Box!T to)
 */
 auto align_to (T)(Box!T box, Alignment alignment, Vector!(2, T) position)
 	{/*...}*/
-		auto offset = box.offset_to (alignment, bounding_box (position.repeat (2))); // BUG this was immutable... but we can't have immutable anymore... this really sucks!!!
+		auto offset = box.offset_to (alignment, bounding_box (position.repeat (2)));
 
 		return box.verts[].map!(v => v + offset).bounding_box;
 	}
 	unittest {/*...}*/
 		import evx.math;//		import evx.math.geometry.polygons;
+		import evx.math;//		import evx.math.floatingpoint;
 
 		auto a = square (1).bounding_box;
 
@@ -343,7 +344,7 @@ auto into_bounding_box_of (T1, T2)(auto ref T1 inner, auto ref T2 outer)
 	}
 	unittest {/*...}*/
 		import evx.math;//		import evx.math.geometry.polygons;
-		mixin(FunctionalToolkit!());
+		import evx.math;//		import evx.math.floatingpoint;
 
 		auto a = square (1);
 		auto b = square (0.5).map!(v => v * vec(2.0, 1.0));
@@ -354,26 +355,27 @@ auto into_bounding_box_of (T1, T2)(auto ref T1 inner, auto ref T2 outer)
 		assert (c.bounding_box.height.approx (0.5));
 	}
 
-version (X86_64) unittest {/*with units}*/
-	import evx.math;//	import evx.math.units;
-	import evx.math;//	import evx.math.geometry.polygons;
+static if (__traits(compiles, {import evx.math.units;}))
+	version (X86_64) unittest {/*with units}*/
+		import evx.math;
+		import evx.math.units;
 
-	alias Pos = Vector!(2, Meters);
+		alias Pos = Vector!(2, Meters);
 
-	auto box = [Pos(0.meters, 1.meter), Pos(1.meter, 0.meters)].bounding_box;
+		auto box = [Pos(0.meters, 1.meter), Pos(1.meter, 0.meters)].bounding_box;
 
-	assert (box.top_left == Pos(0.meters, 1.meter));
-	assert (box.bottom_right == Pos(1.meter, 0.meters));
+		assert (box.top_left == Pos(0.meters, 1.meter));
+		assert (box.bottom_right == Pos(1.meter, 0.meters));
 
-	assert (box.center == Pos(0.5.meters, 0.5.meters));
+		assert (box.center == Pos(0.5.meters, 0.5.meters));
 
-	auto compute_offset (Alignment alignment)
-		{return circle (1.meter).bounding_box.offset_to (alignment, circle (2.meters).bounding_box);}
-	
-	with (Alignment)
-		{/*...}*/
-			assert (compute_offset (center) 		==	zero!Pos);
-			assert (compute_offset (top_right) 		== 	unity!Pos);
-			assert (compute_offset (bottom_left) 	==  -unity!Pos);
-		}
-}
+		auto compute_offset (Alignment alignment)
+			{return circle (1.meter).bounding_box.offset_to (alignment, circle (2.meters).bounding_box);}
+		
+		with (Alignment)
+			{/*...}*/
+				assert (compute_offset (center) 		==	zero!Pos);
+				assert (compute_offset (top_right) 		== 	unity!Pos);
+				assert (compute_offset (bottom_left) 	==  -unity!Pos);
+			}
+	}

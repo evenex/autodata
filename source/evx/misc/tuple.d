@@ -1,7 +1,8 @@
-module evx.misc.tuple; // REVIEW
+module evx.misc.tuple;
 
-import std.typecons;
+private {/*...}*/
+	import std.typecons;
+}
 
-
-alias τ = tuple;
-template Aⁿ (T...) {alias Aⁿ = T;}
+alias τ = std.typecons.tuple;
+template Τ (T...) {alias Τ = T;}

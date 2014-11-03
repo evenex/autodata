@@ -6,48 +6,45 @@ private {/*import}*/
 	import std.conv;
 	import std.traits;
 
-	import evx.math;//	import evx.math.logic;
-	import evx.math;//	import evx.math.geometry.traits;
-	import evx.codegen;//	import evx.codegen.declarations;
-	import evx.traits;//	import evx.traits.classification;
+	import evx.math;
+	import evx.codegen;
+	import evx.traits;
 
 	import evx.graphics.opengl;
 }
 
-public {/*shader params}*/
-	struct Input (Args...)
-		{/*...}*/
-			enum is_input_params;
+struct Input (Args...)
+	{/*...}*/
+		enum is_input_params;
 
-			alias List = Args;
+		alias List = Args;
 
-			mixin ParameterSplitter!(
-				`Types`, is_type,
-				`Names`, is_string_param,
-				Filter!(not!is_initializer, Args)
-			);
-		}
-	struct Output (Args...)
-		{/*...}*/
-			enum is_output_params;
+		mixin ParameterSplitter!(
+			`Types`, is_type,
+			`Names`, is_string_param,
+			Filter!(not!is_initializer, Args)
+		);
+	}
+struct Output (Args...)
+	{/*...}*/
+		enum is_output_params;
 
-			alias List = Args;
+		alias List = Args;
 
-			mixin ParameterSplitter!(
-				`Types`, is_type,
-				`Names`, is_string_param,
-				Args
-			);
-		}
+		mixin ParameterSplitter!(
+			`Types`, is_type,
+			`Names`, is_string_param,
+			Args
+		);
+	}
 
-	struct Init (T...)
-		{/*...}*/
-			enum is_initializer;
-			enum value = T;
-		}
+struct Init (T...)
+	{/*...}*/
+		enum is_initializer;
+		enum value = T;
+	}
 
-	enum Uniform;
-}
+enum Uniform;
 
 package {/*traits}*/
 	template is_initializer (T...)

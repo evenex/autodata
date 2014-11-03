@@ -1,122 +1,31 @@
 module evx.range.traversal;
 
-public import evx.range.traits;
-
 private {/*imports}*/
 	import std.range;
+	import std.algorithm;
 
-	import evx.math.arithmetic;
 	import evx.math.sequence;
-	import evx.math.functional;
-
-	mixin(FunctionalToolkit!());
-	mixin(ArithmeticToolkit!());
 }
 
+/* check if a range contains a value 
+*/
 alias contains = std.algorithm.canFind;
+
+/* construct a range from a repeated value 
+*/
+alias repeat = std.range.repeat;
 
 /* construct a ForwardRange out of a range of ranges such that the inner ranges appear concatenated 
 */
-struct Contigious (R)
-	if (allSatisfy!(is_indexable, R, ElementType!R))
-	{/*...}*/
-		public:
-		@property {/*range}*/
-			const length ()
-				{/*...}*/
-					import std.traits;
-					auto s = cast(Unqual!R)ranges; // HACK to shed constness so that sum can operate
-					return s.map!(r => r.length).sum;
-				}
-
-			auto ref front ()
-				{/*...}*/
-					return ranges[j][i];
-				}
-			void popFront ()
-				{/*...}*/
-					if (++i == ranges[j].length)
-						{/*...}*/
-							++j;
-							i = 0;
-						}
-				}
-			auto empty ()
-				{/*...}*/
-					return j >= ranges.length;
-				}
-
-			auto save ()
-				{/*...}*/
-					return this;
-				}
-			alias opSlice = save;
-		}
-		public {/*ctor}*/
-			this (R ranges)
-				{/*...}*/
-					this.ranges = ranges;
-				}
-		}
-		private:
-		private {/*data}*/
-			size_t i, j;
-			R ranges;
-		}
-	}
-struct Contigious (R)
-	if (allSatisfy!(isForwardRange, R, ElementType!R) && not (is_indexable!(ElementType!R)))
-	{/*...}*/
-		public:
-		@property {/*range}*/
-			auto length ()
-				{/*...}*/
-					return ranges.map!(r => r.length).sum;
-				}
-			auto ref front ()
-				{/*...}*/
-					return ranges.front.front;
-				}
-			void popFront ()
-				{/*...}*/
-					ranges.front.popFront;
-
-					if (ranges.front.empty)
-						ranges.popFront;
-				}
-			auto empty ()
-				{/*...}*/
-					return ranges.empty;
-				}
-			auto save ()
-				{/*...}*/
-					return this;
-				}
-		}
-		public {/*ctor}*/
-			this (R ranges)
-				{/*...}*/
-					this.ranges = ranges;
-				}
-		}
-		private:
-		private {/*data}*/
-			R ranges;
-		}
-
-	}
-auto contigious (R)(R ranges)
-	{/*...}*/
-		return Contigious!R (ranges);
-	}
-	unittest {/*contigious}*/
+alias join = std.algorithm.joiner;
+	unittest {/*join}*/
 		int[2] x = [1,2];
 		int[2] y = [3,4];
 		int[2] z = [5,6];
 
-		int[2][] A = [x,y,z];
+		int[][] A = [x[], y[], z[]];
 
-		assert (A.contigious.equal ([1,2,3,4,5,6]));
+		assert (A.join.equal ([1,2,3,4,5,6]));
 	}
 
 /* const-correct replacement for std.range.stride 
@@ -214,25 +123,17 @@ auto rotate_elements (R)(R range, int positions = 1)
 */
 auto adjacent_pairs (R)(R range)
 	{/*...}*/
-		return range.zip (range.rotate_elements);
+		return evx.math.functional.zip (range, range.rotate_elements);
 	}
 
 /* generate a foreach index for a custom range 
 	this exploits the automatic tuple foreach index unpacking trick which is obscure and under controversy
 	reference: https://issues.dlang.org/show_bug.cgi?id=7361
 */
-auto enumerate (R)(R range) // REVIEW std.range has this function but its undocumented??
+auto enumerate (R)(R range)
 	if (isInputRange!R && hasLength!R)
 	{/*...}*/
 		return ℕ[0..range.length].zip (range);
-	}
-
-/* always-false test for infinite ranges, for ranges which do not define an is_infinite property 
-*/
-bool is_infinite (R)(R)
-	if (isInputRange!R)
-	{/*...}*/
-		return false;
 	}
 
 /* explicitly count the number of elements in an InputRange 

@@ -1,4 +1,5 @@
 module evx.range;
 public:
 import evx.range.traversal;
-import evx.range.traits;
+import evx.range.slicing;
+import evx.range.classification;

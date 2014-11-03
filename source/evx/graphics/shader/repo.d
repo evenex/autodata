@@ -3,7 +3,7 @@ module evx.graphics.shader.repo;
 private {/*imports}*/
 	import evx.graphics.shader.program;
 
-	import evx.math;//	import evx.math.geometry.vectors;
+	import evx.math;//	import evx;//	import evx.math;//	import evx.math.geometry.vectors;
 }
 
 public {/*basic shader}*/

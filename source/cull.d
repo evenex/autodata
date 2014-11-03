@@ -1,16 +1,18 @@
-import std.file;
-import std.conv;
-import std.stdio;
-import std.process;
-import std.algorithm;
-import std.array;
-import std.string;
+private {/*imports}*/
+	import std.file;
+	import std.conv;
+	import std.stdio;
+	import std.process;
+	import std.algorithm;
+	import std.array;
+	import std.string;
 
-import evx.math;
+	import evx.math;
 
-mixin(FunctionalToolkit!());
+	alias map = evx.math.functional.map;
 
-import deps;
+	import deps;
+}
 
 void comment_line (ref string line)
 	{/*...}*/
@@ -22,7 +24,12 @@ void uncomment_line (ref string line)
 			line = line[2..$];
 	}						
 
-version (generalize_imports) void main (string[] args)
+version (generalize_imports)
+	enum import_ops_version;
+else version (cull_imports)
+	enum import_ops_version;
+
+static if (is(import_ops_version)) void main (string[] args)
 	{/*...}*/
 		if (args.length > 1)
 			{/*...}*/
@@ -35,13 +42,19 @@ version (generalize_imports) void main (string[] args)
 
 		auto modules = dependency_graph (`./source/`);
 
-		auto report = File (`generalization_report`, `w`);
+		version (generalize_imports)
+			auto report = File (`generalization_report`, `w`);
+		else version (cull_imports)
+			auto report = File (`cull_report`, `w`);
 
 		foreach (mod; modules)
 			{/*...}*/
-				writeln (`generalizing module ` ~mod.name);
-				report.writeln (`generalizing module ` ~mod.name);
-				report.flush;
+				version (generalize_imports)
+					{/*...}*/
+						writeln (`generalizing module ` ~mod.name);
+						report.writeln (`generalizing module ` ~mod.name);
+						report.flush;
+					}
 
 				auto source = File (mod.path, "r").byLine.map!(to!string).array;
 
@@ -53,21 +66,27 @@ version (generalize_imports) void main (string[] args)
 
 						string new_line;
 
-						while (old_line.length > new_line.length)
+						enum {terminate_loop = -1, goto_next_line = 1, continue_looping = 0}
+						int processing_pass ()
 							{/*...}*/
-								foreach (i; new_line.length..old_line.length)
-									if (old_line[i] == '.')
-										{/*...}*/
-											new_line = old_line[0..i] ~ `;`;
-											break;
-										}
-									else if (i+1 == old_line.length)
-										{/*...}*/
-											remaining.front = old_line;
-											goto done;
-										}
+								version (generalize_imports)
+									{/*...}*/
+										foreach (i; new_line.length..old_line.length)
+											if (old_line[i] == '.')
+												{/*...}*/
+													new_line = old_line[0..i] ~ `;`;
+													break;
+												}
+											else if (i+1 == old_line.length)
+												{/*...}*/
+													remaining.front = old_line;
+													return terminate_loop;
+												}
 
-								remaining.front = new_line ~ `//` ~old_line;
+										remaining.front = new_line ~ `//` ~old_line;
+									}
+								else version (cull_imports)
+									comment_line (remaining.front);
 
 								File (mod.path, "w").write (source.joiner ("\n"));
 
@@ -77,20 +96,40 @@ version (generalize_imports) void main (string[] args)
 									{/*...}*/
 										std.file.remove (`ok`);
 
-										if (all (dependency_graph (`./source/`).map!(mod => mod.find_minimal_cycle.empty)))
+										version (generalize_imports)
 											{/*...}*/
-												auto note = old_line~ ` → ` ~new_line;
-												report.writeln (note);
-												writeln (note);
-												report.flush;
-												break;
+												if (all (dependency_graph (`./source/`).map!(mod => mod.find_minimal_cycle.empty)))
+													{/*...}*/
+														auto note = old_line~ ` → ` ~new_line;
+														report.writeln (note);
+														writeln (note);
+														report.flush;
+														return goto_next_line;
+													}
+												else remaining.front = old_line;
+												
 											}
-										else remaining.front = old_line;
+										else version (cull_imports)
+											report.writeln (`culled `, old_line, ` from `, mod.name);
 									}
-								else remaining.front = old_line;
+								else {/*...}*/
+									version (generalize_imports) 
+										remaining.front = old_line;
+									else version (cull_imports)
+										uncomment_line (remaining.front);
+								}
+
+								return continue_looping;
 							}
 
-						done:
+						version (generalize_imports)
+							{/*...}*/
+								while (old_line.length > new_line.length)
+									if (processing_pass != continue_looping)
+										break;
+							}
+						else version (cull_imports)
+							processing_pass;
 
 						remaining.popFront;
 					}

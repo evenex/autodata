@@ -1,252 +1,231 @@
-module evx.graphics.color.core;// REFACTOR
+module evx.graphics.color.core;
 
 private {/*imports}*/
-	import evx.misc.tuple;
-	import evx.math;
+	import core.stdc.stdio;
 
-	alias map = evx.math.functional.map; // REVIEW why does this not already happen (colors complains calculus.map is private)
-}
+	import std.math;
+	import std.conv; 
 
-
-public enum {/*Color palette}*/
-	/* mono */
-	black 	= Color (0.0),
-	white 	= Color (1.0),
-	/* primary */
-	red 	= Color (1.0, 0.0, 0.0),
-	green 	= Color (0.0, 1.0, 0.0),
-	blue 	= Color (0.0, 0.0, 1.0),
-	/* secondary */
-	yellow 	= red + green,
-	cyan 	= green + blue,
-	magenta = blue + red,
-	/* others */
-	grey	= black*white,
-	orange 	= red*yellow,
-	purple 	= blue*magenta,
-	brown	= orange*black,
-}
-
-public {/*hex}*/ // REVIEW
-	auto to_hex (Color color) // REVIEW
-		{/*...}*/
-			import std.conv; 
-
-			static get_hex (uint x)
-				{/*...}*/
-					char[16] me;
-
-					import core.stdc.stdio;
-
-					sprintf (me.ptr, "%.2x", x);
-
-					import std.algorithm;
-					return me[].findSplitBefore ("\0")[0].to!string;
-				}
-
-			string ret;
-
-			foreach (h; (color.vector * 255).each!(to!uint)[].map!get_hex)
-				ret ~= h;
-
-			return ret;
-		}
+	import evx.math.vectors;
+	import evx.math.intervals;
+	import evx.math.ordinal;
+	import evx.range;//	import evx.range.slicing;
 }
 
 struct Color
 	{/*...}*/
-		mixin NormalizedInvariance;
+		Vector!(4, double) base = vector (0.0, 0.0, 0.0, 1.0);
+		alias base this;
 
-		auto opIndex (size_t i)
-			{/*...}*/
-				return (cast(double*)&this)[i];
-			}
-
-		enum length = 4;
-
-		pure nothrow:
-		auto hue ()
-			{/*...}*/
-				auto m = max (r,g,b);
-				auto μ = min (r,g,b);
-				auto c = m - μ;
-
-				if (c == 0)
-					return double.init;
-				else if (m == r)
-					return 60.0 * ((g-b)/c % 6);
-				else if (m == g)
-					return 60.0 * ((b-r)/c + 2);
-				else if (m == b)
-					return 60.0 * ((r-g)/c + 4);
-
-				assert (0, `couldn't compute hue`);
-			}
-
-		auto value ()
-			{/*...}*/
-				return max (r, g, b);
-			}
-
-		alias v = value;
-
-		auto saturation ()
-			{/*...}*/
-				if (value == 0)
-					return 0;
-
-				else return (max (r,g,b) - min (r,g,b))/v;
-			}
-
-		@(Normalized.positive) {/*components}*/
-			double 	r = 1.0, 
-					g = 0.0,
-					b = 1.0, 
-					a = 1.0;
-		}
-		@property {/*channels}*/
-			Color red (double r)
+		public:
+		public {/*rgb}*/
+			auto red ()
 				{/*...}*/
-					return Color (r,g,b,a);
+					return this.r;
 				}
-			Color green (double g)
+			auto green ()
 				{/*...}*/
-					return Color (r,g,b,a);
+					return this.g;
 				}
-			Color blue (double b)
+			auto blue ()
 				{/*...}*/
-					return Color (r,g,b,a);
-				}
-			Color alpha (double a)
-				{/*...}*/
-					return Color (r,g,b,a);
+					return this.b;
 				}
 
-			double red ()
+			auto ref red (double r)
 				{/*...}*/
-					return r;
+					this.r = r;
+					this.normalize;
+					return this;
 				}
-			double green ()
+			auto ref green (double g)
 				{/*...}*/
-					return g;
+					this.g = g;
+					this.normalize;
+					return this;
 				}
-			double blue ()
+			auto ref blue (double b)
 				{/*...}*/
-					return b;
-				}
-			double alpha ()
-				{/*...}*/
-					return a;
+					this.b = b;
+					this.normalize;
+					return this;
 				}
 		}
-		public {/*ops}*/
-			Color opCall (double alpha)
+		public {/*hsv}*/
+			auto hue ()
+				out (h) {/*...}*/
+					assert (h.between (0, 360), `hue for ` ~base.to!string~ ` is ` ~h.to!string);
+				}
+				body {/*...}*/
+					auto m = max (r,g,b);
+					auto μ = min (r,g,b);
+					auto c = m - μ;
+
+					if (c == 0)
+						return double.init;
+					else if (m == r)
+						return 60.0 * (((g-b)/c + 6) % 6);
+					else if (m == g)
+						return 60.0 * ((b-r)/c + 2);
+					else if (m == b)
+						return 60.0 * ((r-g)/c + 4);
+
+					assert (0, `couldn't compute hue`);
+				}
+			auto saturation ()
+				out (s) {/*...}*/
+					assert (s.between (0, 1));
+				}
+				body {/*...}*/
+					if (value == 0)
+						return 0;
+
+					else return (max (r,g,b) - min (r,g,b))/v;
+				}
+			auto value ()
+				out (v) {/*...}*/
+					assert (v.between (0, 1));
+				}
+				body {/*...}*/
+					return max (r, g, b);
+				}
+
+			auto ref hue (double h)
+				{/*...}*/
+					return hsv (h,s,v);
+				}
+			auto ref saturation (double s)
+				{/*...}*/
+					return hsv (h,s,v);
+				}
+			auto ref value (double v)
+				{/*...}*/
+					return hsv (h,s,v);
+				}
+
+			auto hsv ()
+				{/*...}*/
+					return vector (h,s,v);
+				}
+			auto ref hsv (double h, double s, double v)
+				in {/*...}*/
+					assert (h.between (0, 360), `hue was ` ~h.text);
+					assert (s.between (0, 1), `sat was ` ~s.text);
+					assert (v.between (0, 1), `val was ` ~v.text);
+				}
+				body {/*...}*/
+					auto c = v * s;
+					auto x = c * (1 - abs ((h/60.0) % 2.0 - 1));
+					auto m = v - c;
+
+					if (h.between (0, 60))
+						r = c, g = x, b = 0;
+					else if (h.between (60, 120))
+						r = x, g = c, b = 0;
+					else if (h.between (120, 180))
+						r = 0, g = c, b = x;
+					else if (h.between (180, 240))
+						r = 0, g = x, b = c;
+					else if (h.between (240, 300))
+						r = x, g = 0, b = c;
+					else if (h.between (300, 360))
+						r = c, g = 0, b = x;
+
+					this[0..3] += m;
+
+					return this;
+				}
+
+			alias h = hue;
+			alias s = saturation;
+			alias v = value;
+		}
+		public {/*alpha}*/
+			auto alpha ()
+				{/*...}*/
+					return this.a;
+				}
+			auto ref alpha (double a)
+				{/*...}*/
+					this.a = a;
+					this.normalize;
+					return this;
+				}
+
+			auto opCall (double alpha)
 				{/*...}*/
 					return this.alpha (alpha);
 				}
-			Color opBinary (string op) (Color color)
+		}
+		public {/*ctor}*/
+			this (Args...)(Args args)
 				{/*...}*/
-					Color ret = this;
-					static if (op == `+` || op == `-`) with (color)
-						foreach (c; Aⁿ!(`r`,`g`,`b`))
-							mixin (q{
-								ret.} ~c~ q{} ~op~q{= a * } ~c~ q{;
-							});
-					else static if (op == `*`)
-						foreach (c; Aⁿ!(`r`,`g`,`b`)) with (color)
-							mixin (q{
-								ret.} ~c~ q{ += a* } ~c~ q{; 
-								ret.} ~c~ q{ /= a + 1;
-							});
-					return ret.clamp;
+					static if (Args.length == 1)
+						{/*...}*/
+							this.base = typeof(base)(args);
+							this.base.a = 1.0;
+						}
+					else static if (Args.length == 3)
+						this.base = typeof(base)(args, 1.0);
+					else this.base = typeof(base)(args);
 				}
-			Color opOpAssign (string op) (Color color)
+		}
+		public {/*ops}*/
+			Color opBinaryRight (string op)(Color color)
+				{/*...}*/
+					auto alpha = color.alpha;
+
+					static if (op == `+`)
+						color.base += this.a * this.base;
+					static if (op == `-`)
+						color.base[0..3] -= this.a * this.base[0..3];
+					else static if (op == `*`)
+						{/*...}*/
+							color.base += this.a * this.base;
+							color.base /= this.a + 1;
+							color.alpha = alpha;
+						}
+
+					color.normalize;
+
+					return color;
+				}
+			auto ref opOpAssign (string op)(Color color)
 				{/*...}*/
 					mixin (q{
 						this = this } ~op~ q{ color;
 					});
-					clamp ();
+					
+					normalize;
+
 					return this;
 				}
 		}
-		public {/*ctors}*/
-			this (double brightness, double a = 1.0)
+		public {/*text}*/
+			auto toString ()
 				{/*...}*/
-					auto L = brightness;
+					static get_hex (uint x)
+						{/*...}*/
+							char[16] hex;
 
-					r = (g = (b = L));
+							sprintf (hex.ptr, "%.2X", x);
 
-					this.a = a;
-					this.clamp;
-				}
-			this (double r, double g, double b, double a = 1.0)
-				{/*...}*/
-					this.r = r;
-					this.g = g;
-					this.b = b;
-					this.a = a;
-					this.clamp;
-				}
-			this (Color color)
-				{/*...}*/
-					this.r = color.r;
-					this.g = color.g;
-					this.b = color.b;
-					this.a = color.a;
-				}
-			static auto from_hsv (double h, double s = 1.0, double v = 1.0)
-				{/*...}*/
-					h = h.clamp (0, 360);
-					s = s.clamp (0, 1);
-					v = v.clamp (0, 1);
+							return hex[].before ("\0").to!string;
+						}
 
-					auto M = 255*v;
-					auto m = M*(1.0-s);
-					
-					auto z = (M-m)*(1.0 - abs((h/60.0)%2.0-1.0));
+					string ret = `#`;
 
-					double r, g, b;
-					if (h.between (-infinity, 60))
-						r = M, g = z+m, b = m;
-					else if (h.between (60, 120))
-						r = z+m, g = M, b = m;
-					else if (h.between (120, 180))
-						r = m, g = M, b = z+m;
-					else if (h.between (180, 240))
-						r = m, g = z+m, b = M;
-					else if (h.between (240, 300))
-						r = z+m, g = m, b = M;
-					else r = M, g = m, b = z+m;
+					foreach (h; (this * 255).each!(to!uint).each!get_hex[])
+						ret ~= h;
 
-					r /= 255.0;
-					g /= 255.0;
-					b /= 255.0;
-
-					return Color (r,g,b);
+					return ret;
 				}
 		}
 		private:
 		private {/*ops}*/
-			Color clamp ()
+			void normalize ()
 				{/*...}*/
-					foreach (c; Aⁿ!(`r`,`g`,`b`,`a`))
-						mixin (q{
-							} ~c~ q{ = .clamp (} ~c~ q{, 0.0, 1.0);
-						});
-
-					return this;
+					base = base.each!clamp (interval (0, 1));
 				}
 		}
-	};
-	unittest {/*...}*/
-		assert (red + blue == magenta);
-		assert (red + green == yellow);
-		assert (cyan - blue == green);
-		assert (cyan - blue - green == black);
-		assert (red + yellow + blue == white);
-		assert (white - (red + blue) == green);
-
-		auto orange = Color (1.0, 0.5, 0.0);
-		assert (red + yellow == yellow);
-		assert (red * yellow == orange);
 	}

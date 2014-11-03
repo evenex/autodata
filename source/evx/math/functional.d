@@ -1,4 +1,4 @@
-module evx.math.functional; // TODO split up
+module evx.math.functional;
 
 private {/*imports}*/
 	import std.range;
@@ -7,40 +7,24 @@ private {/*imports}*/
 
 	import evx.type;
 
-	import evx.range.traits;
-
 	import evx.math.logic;
-	import evx.math.ordinal;
-	import evx.math.analysis.traits;
-	import evx.math.analysis.intervals;
+	import evx.math.continuity;
+	import evx.math.intervals;
 }
 
 /* aliasable template lambda function 
 */
 template λ (alias F) {alias λ = F;}
 
-/* alias disambiguation for functional primitives 
-*/
-template FunctionalToolkit ()
-	{/*...}*/
-		enum FunctionalToolkit = q{
-			alias map = evx.math.functional.map;
-			alias zip = evx.math.functional.zip;
-			alias filter = evx.math.functional.filter;
-			alias reduce = evx.math.functional.reduce;
-	 		alias sequence = evx.math.sequence.sequence; // REVIEW
-		};
-	}
-
 public {/*map}*/
 	/* replacement for std.algorithm.MapResult 
 	*/
 	struct Mapped (R, alias func)
 		{/*...}*/
-			alias Index = IndexTypes!R[0];
+			alias Index = IndexType!R;
 			enum is_n_ary_function = is(typeof(func (range.front.expand)));
 
-			static if (is_indexable!(R, Index))
+			static if (is(IndexType!R))
 				{/*...}*/
 					auto ref opIndex (Index i)
 						in {/*...}*/
@@ -57,23 +41,21 @@ public {/*map}*/
 						}
 				}
 
-			auto opSlice ()
+			auto opSlice ()()
 				{/*...}*/
 					return this;
 				}
 
-			static if (is_sliceable!(R, Index))
-				{/*...}*/
-					auto opSlice (Index i, Index j)
-						in {/*...}*/
-							static if (is_continuous!Index)
-								assert (j.between (i, measure));
-							else static if (hasLength!R)
-								assert (j.between (i, length));
-						}
-						body {/*...}*/
-							return Mapped (range[i..j]);
-						}
+			auto opSlice ()(Index i, Index j)
+				if (is(typeof(range[Index.init..Index.init])))
+				in {/*...}*/
+					static if (is_continuous!Index)
+						assert (i < j && j <= measure);
+					else static if (hasLength!R)
+						assert (i < j && j <= length, `attempted to slice [` ~i.text~ `, ` ~j.text~ `] with length ` ~length.text);
+				}
+				body {/*...}*/
+					return Mapped (range[i..j]);
 				}
 
 			@property:
@@ -124,7 +106,7 @@ public {/*map}*/
 				{/*...}*/
 					@property length () const
 						{/*...}*/
-							return this.range.length; // REVIEW need 'this' in 2.066.. only for const methods?
+							return range.length;
 						}
 
 					static if (is(DollarType!R == size_t))
@@ -159,8 +141,6 @@ public {/*map}*/
 				}
 		}
 		unittest {/*...}*/
-//			import std.range: equal;
-
 			auto a = [1, 2, 3];
 
 			auto b = a.map!(x => x + 1);
@@ -189,14 +169,14 @@ public {/*zip}*/
 							return zip_with!`[args[0]]`(i);
 						}
 
-					static assert (is_indexable!(Zipped, CommonIndex));
+					static assert (is(IndexType!Zipped == CommonIndex));
 
-					auto opSlice ()
+					auto opSlice ()()
 						{/*...}*/
 							return this;
 						}
 					auto opSlice ()(CommonIndex i, CommonIndex j)
-						if (allSatisfy!(is_sliceable, Ranges))
+						if (allSatisfy!(can_slice, Ranges))
 						{/*...}*/
 							Zipped copy = this;
 
@@ -295,12 +275,12 @@ public {/*zip}*/
 					static assert (is_continuous_range!Zipped);
 				}
 
-			alias CommonIndex = CommonType!(staticMap!(IndexTypes, Ranges));
+			alias CommonIndex = CommonType!(staticMap!(IndexType, Ranges));
 			alias CommonDollar = CommonType!(staticMap!(DollarType, Ranges));
 
 			private:
 			private {/*defs}*/
-				alias ZipTuple = Tuple!(staticMap!(Unqual, staticMap!(ElementType, Ranges)));  // REVIEW const problems
+				alias ZipTuple = Tuple!(staticMap!(Unqual, staticMap!(ElementType, Ranges)));
 
 				static if (is(CommonIndex == void))
 					alias Indices = Interval!size_t;
@@ -328,9 +308,9 @@ public {/*zip}*/
 						alias isOutputRange = .isOutputRange!(R, ElementType!R);
 					}
 
-				template is_sliceable (R)
+				template can_slice (R)
 					{/*...}*/
-						alias is_sliceable = .is_sliceable!(R, CommonIndex);
+						enum can_slice = is(R.init[CommonIndex.init..CommonIndex.init]);
 					}
 			}
 			private {/*ctor}*/
@@ -345,7 +325,7 @@ public {/*zip}*/
 										~typeof(range).stringof~ ` ` ~range.measure.text~ 
 										` vs `
 										~typeof(ranges[0]).stringof~ ` ` ~measure.text
-									); // REVIEW approx?
+									);
 							}
 						static if (allSatisfy!(hasLength, Ranges))
 							{/*...}*/
@@ -374,8 +354,7 @@ public {/*zip}*/
 			return Zipped!Ranges (ranges);
 		}
 		unittest {
-//			import std.range: equal;
-			import evx.misc.utils: τ;
+			alias τ = std.typecons.tuple;
 
 			auto a = [1,2,3];
 			auto b = [`a`, `b`, `c`];
@@ -475,8 +454,6 @@ public {/*filter}*/
 				}
 		}
 		unittest {/*...}*/
-//			import std.range: equal;
-
 			auto a = [1, 2, 3, 4];
 
 			auto b = a.filter!(x => x % 2);
@@ -548,7 +525,7 @@ public {/*reduce}*/
 				}
 		}
 		unittest {/*...}*/
-			import evx.misc.utils: τ;
+			alias τ = std.typecons.tuple;
 
 			auto a = [1, 2, 3];
 
@@ -560,10 +537,16 @@ public {/*reduce}*/
 			) == τ(6, -4, 0));
 		}
 }
-
-auto transform (alias transformation, R)(R range) // REVIEW 
-	{/*...}*/
-		return transformation (range);
-	}
-
-alias select = transform;
+public {/*transform}*/
+	/* operate on an entire range in-place in a UFCS stream
+	*/
+	auto transform (alias transformation, R)(R range)
+		{/*...}*/
+			return transformation (range);
+		}
+}
+public {/*select}*/
+	/* perform ternary selection on a range in a UFCS stream 
+	*/
+	alias select = transform;
+}

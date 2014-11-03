@@ -9,10 +9,8 @@ private {/*imports}*/
 
 	import evx.math;
 
-	import evx.traits;//	import evx.traits.classification;
-	import evx.codegen;//	import evx.codegen.declarations;
-
-	mixin(MathToolkit!());
+	import evx.traits;//	import evx;//	import evx.traits;//	import evx.traits.classification;
+	import evx.codegen;//	import evx;//	import evx.codegen;//	import evx.codegen.declarations;
 }
 
 public import evx.graphics.shader.parameters;
@@ -91,10 +89,6 @@ class ShaderProgram (Vert, Frag)
 		import evx.graphics;//		import evx.graphics.display;
 		import evx.graphics;//		import evx.graphics.buffer;
 		import evx.graphics;//		import evx.graphics.shader.repo;
-//		import evx.math.geometry.vectors;
-//		import evx.math.functional;
-
-		mixin(FunctionalToolkit!());
 
 		scope display = new Display;
 		scope shader = new BasicShader;

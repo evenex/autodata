@@ -1,13 +1,14 @@
 module evx.math.sequence;
 
-import std.conv;
-import std.range;
+private {/*imports}*/
+	import std.conv;
 
-import evx.traits;
-import evx.range.traits;
-import evx.math.logic;
-import evx.math.algebra;
-import evx.math.ordinal;
+	import evx.traits;
+	import evx.type;
+	import evx.range.classification;
+	import evx.math.logic;
+	import evx.math.algebra;
+}
 
 /* a sequence defined by a generating function of the form f(T, size_t) 
 */
@@ -24,7 +25,7 @@ struct Sequence (alias func, T)
 					return func (initial, i + start).to!T;
 				}
 
-			static assert (is_indexable!Sequence);
+			static assert (is(IndexType!Sequence));
 		}
 		public {/*[i..j]}*/
 			auto opSlice ()
@@ -36,7 +37,7 @@ struct Sequence (alias func, T)
 					assert (i != infinity);
 
 					if (j != infinity)
-						assert (j.between (i, length));
+						assert (i < j && j <= length);
 				}
 				body {/*...}*/
 					if (j == infinity)
@@ -64,7 +65,7 @@ struct Sequence (alias func, T)
 					return this.length == 0;
 				}
 
-			static assert (isInputRange!Sequence);
+			static assert (is_input_range!Sequence);
 		}
 		@property {/*ForwardRange}*/
 			auto save ()
@@ -72,7 +73,7 @@ struct Sequence (alias func, T)
 					return this;
 				}
 
-			static assert (isForwardRange!Sequence);
+			static assert (is_forward_range!Sequence);
 		}
 		@property {/*BidirectionalRange}*/
 			auto popBack ()
@@ -92,7 +93,7 @@ struct Sequence (alias func, T)
 					return this[$-1];
 				}
 
-			static assert (isBidirectionalRange!Sequence);
+			static assert (is_bidirectional_range!Sequence);
 		}
 		const @property {/*length}*/
 			auto length ()
@@ -143,7 +144,7 @@ auto sequence (alias func, T)(T initial)
 		return Sequence!(func, T)(initial);
 	}
 	unittest {/*...}*/
-//		import std.range: equal;
+		import std.range;
 
 		assert (ℕ[0..10].equal ([0,1,2,3,4,5,6,7,8,9]));
 		assert (ℕ[4..9].equal ([4,5,6,7,8]));

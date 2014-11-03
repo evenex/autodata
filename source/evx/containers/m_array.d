@@ -18,26 +18,27 @@ struct MallocBuffer (T)
 			{/*...}*/
 				return _length;
 			}
-		auto length (size_t new_length)
+		auto allocate (size_t new_length)
 			{/*...}*/
-				clear;
+				free;
 
 				ptr = cast(T*) malloc (new_length * T.sizeof);
 
 				_length = new_length;
 			}
 
-		auto clear ()
+		auto free ()
 			{/*...}*/
 				if (ptr)
-					free (ptr);
+					core.stdc.stdlib.free (ptr);
 			}
 	}
 
 struct MArray (T)
 	{/*...}*/
 		MallocBuffer!T buffer;
-
+		alias buffer this;
+		
 		mixin BufferOps!buffer;
 	}
 auto m_array (R)(R range)

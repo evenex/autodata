@@ -34,6 +34,5 @@ template not (alias predicate)
 			}
 	}
 
-alias And = templateAnd;
-alias Or  = templateOr;
-alias Not = templateNot;
+alias and = templateAnd;
+alias or  = templateOr;
