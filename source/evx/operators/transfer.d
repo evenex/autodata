@@ -63,7 +63,7 @@ mixin template TransferOps (alias buffer)
 
 			mixin template require (string trait)
 				{/*...}*/
-					alias requirement = TransferTraits.require!(typeof(this), trait, TransferOps);
+					alias requirement = TransferTraits.require!(typeof(buffer), trait, TransferOps);
 				}
 
 			mixin require!`access_primitive`;
@@ -279,7 +279,7 @@ mixin template TransferOps (alias buffer)
 				in {/*...}*/
 					static if (evx.operators.transfer.TransferTraits!R.has_length)
 						assert (range.length == slice[1] - slice[0]);
-					else static assert (range[].count == slice[1] - slice[0]);
+					else assert (range.count == slice[1] - slice[0]);
 				}
 				body {/*...}*/
 					static if (TransferTraits.has_pointer && evx.operators.transfer.TransferTraits!R.has_pointer)

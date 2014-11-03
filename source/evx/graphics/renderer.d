@@ -746,6 +746,7 @@ version (all) {/*...}*/
 		}
 
 	import evx.containers; // REFACTOR
+	import evx.adaptors; // REFACTOR
 
 	struct Typeset
 		{/*...}*/
@@ -753,9 +754,9 @@ version (all) {/*...}*/
 			Display display;
 			BoundingBox card_box;
 
-			vec[] cards; // TODO appendable wrapper over stuff
-			size_t[] newline_positions;
-			Glyph[] glyphs;
+			Appendable!(MArray!vec) cards; // TODO appendable wrapper over stuff
+			Appendable!(MArray!size_t) newline_positions;
+			Appendable!(MArray!Glyph) glyphs;
 
 			size_t size;
 			Color color;
@@ -770,7 +771,7 @@ version (all) {/*...}*/
 
 			this (TextRenderer.Order order)
 				{/*...}*/
-					this.cards.length = 4 * order.text.length;
+					this.cards.capacity = 4 * order.text.length;
 
 					this.font = order.font;
 					this.size = order.size;
@@ -866,7 +867,7 @@ version (all) {/*...}*/
 			auto finalize ()
 				{/*...}*/
 					newline_positions ~= glyphs.length;
-					foreach (i, line_start; newline_positions[0..$-1])
+					foreach (i, line_start; enumerate (newline_positions[0..$-1]))
 						{/*justify lines}*/
 							auto line_stop = newline_positions[i+1];
 
@@ -877,7 +878,9 @@ version (all) {/*...}*/
 
 							auto justification = line_box.offset_to (alignment, card_box).x;
 
-							cards[4*line_start..4*line_stop] += vec(justification, 0);
+							auto line = cards[4*line_start..4*line_stop];
+
+							line[] = line.map!(v => v + vec(justification, 0));
 						}
 
 					auto p = pen;

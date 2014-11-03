@@ -31,6 +31,8 @@ struct MallocBuffer (T)
 			{/*...}*/
 				if (ptr)
 					core.stdc.stdlib.free (ptr);
+
+				_length = 0;
 			}
 	}
 

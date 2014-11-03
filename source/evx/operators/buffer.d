@@ -96,35 +96,6 @@ mixin template BufferOps (alias buffer)
 						buffer.length = new_length;
 					}
 			}
-		static if (BufferTraits.can_assign_length)
-			{/*appending}*/
-				auto opOpAssign (string op : `~`, R)(R range)
-					{/*...}*/
-						auto start = this.length;
-
-						this.length = this.length + range.length;
-
-						this[start..$] = range;
-					}
-				auto opOpAssign (string op : `~`)(TransferTraits.Element element)
-					{/*...}*/
-						this.length = this.length + 1;
-
-						this[$-1] = element;
-					}
-
-				auto opOpAssign (string op : `-`)(size_t count)
-					in {/*...}*/
-						assert (count < length);
-					}
-					body {/*...}*/
-						this.length = this.length - count;
-					}
-				auto opUnary (string op : `--`)()
-					{/*...}*/
-						this -= 1;
-					}
-			}
 	}
 	unittest {/*...}*/
 		struct Test
@@ -188,11 +159,11 @@ mixin template BufferOps (alias buffer)
 				assert (t[$-1] == 3);
 
 				t = [6,7,8,9];
-				--t;
+				t.length = 3;
 
 				assert (t[] == [6,7,8]);
 
-				t -= 2;
+				t.length = 1;
 
 				assert (t[] == [6]);
 
