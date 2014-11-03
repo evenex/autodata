@@ -114,6 +114,14 @@ struct IndexBuffer
 
 		mixin BufferOps!buffer;
 	}
+struct UniformBuffer (T)
+	{/*...}*/
+		GLBuffer!(T, GL_UNIFORM_BUFFER, GL_STATIC_DRAW)
+			buffer;
+
+		mixin BufferOps!buffer;
+	}
+alias ColorBuffer = UniformBuffer!(Vector!(4, float));
 
 struct GPUArray (T)
 	{/*...}*/

@@ -213,7 +213,7 @@ class GraphRenderer
 						{/*...}*/
 							node.bind;
 							shader.position (node)
-								.color (order.node_color.vector.to!Cvec)
+								.color (order.node_color.vector)
 								.scale (order.scale * order.node_radius.to!float);
 
 							foreach (v; order.graph.vertices[])
@@ -229,7 +229,7 @@ class GraphRenderer
 
 							with (order)
 							shader.position (graph.vertices)
-								.color (order.edge_color.vector.to!Cvec)
+								.color (order.edge_color.vector)
 								.translation (translate)
 								.rotation (rotate)
 								.scale (scale);
@@ -280,7 +280,13 @@ class TextRenderer
 				@property {/*font settings}*/
 					mixin Builder!(
 						Color, `color`,
-						size_t, `size`
+						size_t, `size`,
+						double, `wrap_width`,
+					);
+					mixin Builder!( // REFACTOR
+						double, `rotate`,
+						vec, 	`translate`,
+						double, `scale`,
 					);
 				}
 				@property {/*alignment}*/
@@ -298,37 +304,43 @@ class TextRenderer
 							this.alignment = alignment;
 							return this;
 						}
-					mixin Builder!(
-						double, `wrap_width`,
-					);
 				}
-				@property {/*transformation}*/
-					mixin Builder!(
-						double, `rotate`,
-						vec, 	`translate`,
-						double, `scale`,
-					);
-				}
-				@property {/*fulfillment}*/
-					auto opCall ()
+				public {/*fulfillment}*/
+					void enqueued ()
 						{/*...}*/
-							assert (0);
+							renderer.enqueue (this);
+						}
+
+					void immediately ()
+						{/*...}*/
+							renderer.process (this);
 						}
 				}
 				private:
 				private {/*data}*/
 					Font font;
-					dstring text;
+					Text text;
 					vec[2] bounds;
 					Alignment alignment;
 				}
+				TextRenderer renderer;
 				private {/*ctor}*/
-					this (dstring text)
+					this (TextRenderer renderer, Text text)
 						{/*...}*/
+							this.renderer = renderer;
 							this.text = text;
 						}
 				}
 			}
+
+			void process (R)(R r)
+				{/*...}*/
+					
+				}
+			void enqueue (R)(R r)
+				{/*...}*/
+					
+				}
 	}
 
 version (all) {/*...}*/
@@ -337,7 +349,6 @@ version (all) {/*...}*/
 	import evx.misc.utils;
 
 	alias map = evx.math.functional.map;
-	void main (){}
 
 	alias texture_font_t = void;
 	alias texture_atlas_t = void;
@@ -692,19 +703,12 @@ version (all) {/*...}*/
 					@disable this();
 				}
 		}
-		unittest {/*...}*/
-			import evx.graphics;
-
-			scope gfx = new Display;
-			auto f = Font (12);
-		}
 
 	alias TextureId = GLint;
 
 	struct Glyph
 		{/*...}*/
 			dchar symbol;
-			TextureId texture;
 			vec[2] roi;
 			Color color = black;
 
@@ -734,7 +738,6 @@ version (all) {/*...}*/
 			Glyph g;
 			with (g) {/*...}*/
 				symbol = code;
-				texture = font.atlas.id;
 				roi = [vec(s0, t0), vec(s1, t1)];
 				offset = ivec(offset_x, offset_y);
 				dims = ivec(width, height);
@@ -747,16 +750,27 @@ version (all) {/*...}*/
 
 	import evx.containers; // REFACTOR
 	import evx.adaptors; // REFACTOR
-
-	struct Typeset
-		{/*...}*/
 	import evx.graphics.display; // REFACTOR
+
+	class Text
+		{/*...}*/
+			struct Face
+				{/*...}*/
+					vec[] card;
+					Glyph* glyph;
+				}
+
 			Display display;
 			BoundingBox card_box;
 
-			Appendable!(MArray!vec) cards; // TODO appendable wrapper over stuff
-			Appendable!(MArray!size_t) newline_positions;
+			Appendable!(MArray!vec) cards;
 			Appendable!(MArray!Glyph) glyphs;
+
+			Appendable!VertexBuffer card_buffer;
+			Appendable!ColorBuffer color_buffer;
+			Appendable!VertexBuffer tex_coords_buffer;
+
+			Appendable!(MArray!size_t) newline_positions;
 
 			size_t size;
 			Color color;
@@ -894,7 +908,21 @@ version (all) {/*...}*/
 
 					return cards;
 				}
+
+			auto length ()
+				{/*...}*/
+					return glyphs.length;
+				}
 		}
+
+	unittest {/*...}*/
+		import evx.graphics;
+
+		scope gfx = new Display;
+		auto f = Font (12);
+
+
+	}
 }
 
 unittest {/*...}*/

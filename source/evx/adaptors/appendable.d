@@ -122,7 +122,5 @@ struct Appendable (R)
 
 		A = null;
 
-		import std.stdio;
-		writeln (A[]);
 		assert (A[].empty);
 	}

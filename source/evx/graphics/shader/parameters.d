@@ -82,7 +82,7 @@ package {/*type processing}*/
 		}
 	template glsl_typename (T)
 		{/*...}*/
-			static if (is_vector!T)
+			static if (is_vector_array!T)
 				{/*...}*/
 					enum stringof = ElementType!T.stringof[0].text ~`vec`~ T.length.text;
 
@@ -301,7 +301,7 @@ package {/*linkers}*/
 
 void set_uniform (T)(GLuint handle, T value) // REFACTOR
 	{/*...}*/
-		static if (is_vector!T)
+		static if (is_vector_array!T)
 			{/*...}*/
 				enum length = T.length.text;
 				alias U = ElementType!T;

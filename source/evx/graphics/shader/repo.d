@@ -2,8 +2,9 @@ module evx.graphics.shader.repo;
 
 private {/*imports}*/
 	import evx.graphics.shader.program;
+	import evx.graphics.color;
 
-	import evx.math;//	import evx;//	import evx.math;//	import evx.math.geometry.vectors;
+	import evx.math;
 }
 
 public {/*basic shader}*/
@@ -11,7 +12,7 @@ public {/*basic shader}*/
 		VertexShader!(
 			Input!(
 				fvec[], `position`,		Init!(0,0),
-				Cvec,   `color`,		Init!(1,0,1,1),
+				Color,  `color`,		Init!(1,0,1,1),
 				fvec,   `translation`,	Init!(0,0),
 				float,  `rotation`,		Init!(0),
 				float,  `scale`,		Init!(1),
@@ -26,10 +27,10 @@ public {/*basic shader}*/
 		),
 		FragmentShader!(
 			Input!(
-				Cvec,	`color`,
+				Color,	`color`,
 			),
 			Output!(
-				Cvec[], `frag_color`,
+				Color[], `frag_color`,
 			), q{
 				frag_color = color;
 			}

@@ -303,6 +303,8 @@ version (generate_dependency_graph) void main ()
 		{/*write .dot file}*/
 			string dot_file = `digraph dependencies {`"\n";
 
+			dot_file ~= `bgcolor = "#ffffff"`;
+
 			foreach (mod; modules)
 				{/*...}*/
 					void write_node_property (string property)
@@ -320,8 +322,8 @@ version (generate_dependency_graph) void main ()
 
 					foreach (dep; mod.imported_modules)
 						if (dep.has_cyclic_dependencies)
-							dot_file ~= dep.connect_to (mod, `[color="#88000066"]`);
-						else dot_file ~= dep.connect_to (mod, `[color="#000000"]`);
+							dot_file ~= dep.connect_to (mod, `[color="#ff0000"]`);
+						else dot_file ~= dep.connect_to (mod, `[color="` ~dep.color.value (0.5).text~ `", penwidth=4, arrowsize=2]`);
 				}
 
 			dot_file ~= modules.map!(mod => mod.find_minimal_cycle)

@@ -14,7 +14,7 @@ private {/*imports}*/
 
 struct Color
 	{/*...}*/
-		Vector!(4, double) base = vector (0.0, 0.0, 0.0, 1.0);
+		Vector!(4, float) base = vector (0.0f, 0.0f, 0.0f, 1.0f);
 		alias base this;
 
 		public:
@@ -32,19 +32,19 @@ struct Color
 					return this.b;
 				}
 
-			auto ref red (double r)
+			auto ref red (float r)
 				{/*...}*/
 					this.r = r;
 					this.normalize;
 					return this;
 				}
-			auto ref green (double g)
+			auto ref green (float g)
 				{/*...}*/
 					this.g = g;
 					this.normalize;
 					return this;
 				}
-			auto ref blue (double b)
+			auto ref blue (float b)
 				{/*...}*/
 					this.b = b;
 					this.normalize;
@@ -62,7 +62,7 @@ struct Color
 					auto c = m - μ;
 
 					if (c == 0)
-						return double.init;
+						return 0.0;
 					else if (m == r)
 						return 60.0 * (((g-b)/c + 6) % 6);
 					else if (m == g)
@@ -90,15 +90,15 @@ struct Color
 					return max (r, g, b);
 				}
 
-			auto ref hue (double h)
+			auto ref hue (float h)
 				{/*...}*/
 					return hsv (h,s,v);
 				}
-			auto ref saturation (double s)
+			auto ref saturation (float s)
 				{/*...}*/
 					return hsv (h,s,v);
 				}
-			auto ref value (double v)
+			auto ref value (float v)
 				{/*...}*/
 					return hsv (h,s,v);
 				}
@@ -107,7 +107,7 @@ struct Color
 				{/*...}*/
 					return vector (h,s,v);
 				}
-			auto ref hsv (double h, double s, double v)
+			auto ref hsv (float h, float s, float v)
 				in {/*...}*/
 					assert (h.between (0, 360), `hue was ` ~h.text);
 					assert (s.between (0, 1), `sat was ` ~s.text);
@@ -145,14 +145,14 @@ struct Color
 				{/*...}*/
 					return this.a;
 				}
-			auto ref alpha (double a)
+			auto ref alpha (float a)
 				{/*...}*/
 					this.a = a;
 					this.normalize;
 					return this;
 				}
 
-			auto opCall (double alpha)
+			auto opCall (float alpha)
 				{/*...}*/
 					return this.alpha (alpha);
 				}

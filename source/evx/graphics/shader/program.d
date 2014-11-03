@@ -17,8 +17,6 @@ public import evx.graphics.shader.parameters;
 
 enum glsl_version = 420;
 
-alias Cvec = Vector!(4, float);
-
 class ShaderProgram (Vert, Frag)
 	{/*...}*/
 		static {/*verification}*/
@@ -98,7 +96,7 @@ class ShaderProgram (Vert, Frag)
 		display.attach (shader);
 
 		shader.position (verts)
-			.color (Cvec (1.0, 0.0, 0.0, 0.5));
+			.color (Color (1.0, 0.0, 0.0, 0.5));
 
 		gl.DrawArrays (GL_TRIANGLE_FAN, 0, verts.length.to!int);
 
