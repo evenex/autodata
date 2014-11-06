@@ -34,9 +34,9 @@ template has_attribute (T, string member, Attribute...)
 
 				foreach (attribute; __traits (getAttributes, __traits(getMember, T, member)))
 					{/*...}*/
-						static if (allSatisfy!(is_type, attribute, query))
+						static if (All!(is_type, attribute, query))
 							return is (query == attribute);
-						else static if (not (anySatisfy!(is_type, attribute, query)))
+						else static if (not (Any!(is_type, attribute, query)))
 							return query == attribute;
 						else continue;
 					}

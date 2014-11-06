@@ -236,7 +236,7 @@ struct Vector (size_t n, Component = double)
 						{/*...}*/
 							enum swizzle_from = code!set.not!empty;
 						}
-					static assert (anySatisfy!(swizzle_from, Sets), `no property ` ~swizzle~ ` for ` ~typeof(this).stringof);
+					static assert (Any!(swizzle_from, Sets), `no property ` ~swizzle~ ` for ` ~typeof(this).stringof);
 
 					assert (0);
 				}
@@ -375,7 +375,7 @@ template is_vector_struct (T)
 			}
 
 		enum is_vector_struct = Components.length > 1
-			&& allSatisfy!(implicitly_convertible, Components)
+			&& All!(implicitly_convertible, Components)
 			&& not(isInputRange!U || isStaticArray!U)
 			&& __traits(compiles, T.init.tupleof);
 	}

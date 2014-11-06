@@ -15,7 +15,15 @@ alias contains = std.algorithm.canFind;
 */
 alias repeat = std.range.repeat;
 
-/* construct a ForwardRange out of a range of ranges such that the inner ranges appear concatenated 
+/* chain a tuple of ranges into a single range 
+*/
+alias chain = std.range.chain;
+
+/* iterate a range in reverse 
+*/
+alias retro = std.range.retro;
+
+/* join a range of ranges into a single range 
 */
 alias join = std.algorithm.joiner;
 	unittest {/*join}*/

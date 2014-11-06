@@ -4,12 +4,13 @@ private {/*imports}*/
 	import std.typetuple;
 
 	import evx.traits;
+	import evx.math.logic;
 }
 
 /* apply a suffix operation to a series of identifiers 
 */
 string apply_to_each (string op, Names...)()
-	if (allSatisfy!(is_string_param, Names))
+	if (All!(is_string_param, Names))
 	{/*...}*/
 		string code;
 

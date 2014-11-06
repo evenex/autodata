@@ -22,7 +22,7 @@ template ε_std (T = real)
 /* test if a number or range is approximately equal to another 
 */
 auto approx (T,U)(T a, U b)
-	if (allSatisfy!(is_input_range, T, U))
+	if (All!(is_input_range, T, U))
 	{/*...}*/
 		foreach (x,y; zip (a,b))
 			if (x.approx (y))
@@ -32,7 +32,7 @@ auto approx (T,U)(T a, U b)
 		return true;
 	}
 auto approx (T,U, V = CommonType!(T,U))(T a, U b, V tolerance = ε_std!V)
-	if (allSatisfy!(not!(or!(is_input_range, is_vector_like)), T, U))
+	if (All!(not!(or!(is_input_range, is_vector_like)), T, U))
 	{/*...}*/
 		alias V = CommonType!(T,U);
 
@@ -47,7 +47,7 @@ auto approx (T,U, V = CommonType!(T,U))(T a, U b, V tolerance = ε_std!V)
 		return abs (a-b) < ε;			
 	}
 auto approx (T,U)(T a, U b)
-	if (allSatisfy!(is_vector_like, T, U))
+	if (All!(is_vector_like, T, U))
 	{/*...}*/
 		return approx (a[], b[]); 
 	}

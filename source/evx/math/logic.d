@@ -1,9 +1,7 @@
 module evx.math.logic;
 
 private {/*imports}*/
-	private {/*std}*/
-		import std.typetuple;
-	}
+	import std.typetuple;
 }
 
 template not ()
@@ -36,3 +34,6 @@ template not (alias predicate)
 
 alias and = templateAnd;
 alias or  = templateOr;
+
+alias All = allSatisfy;
+alias Any = anySatisfy;

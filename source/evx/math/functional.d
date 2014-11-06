@@ -176,7 +176,7 @@ public {/*zip}*/
 							return this;
 						}
 					auto opSlice ()(CommonIndex i, CommonIndex j)
-						if (allSatisfy!(can_slice, Ranges))
+						if (All!(can_slice, Ranges))
 						{/*...}*/
 							Zipped copy = this;
 
@@ -187,7 +187,7 @@ public {/*zip}*/
 						}
 				}
 
-			static if (allSatisfy!(isInputRange, Ranges))
+			static if (All!(isInputRange, Ranges))
 				@property {/*...}*/
 					auto ref front ()
 						{/*...}*/
@@ -209,7 +209,7 @@ public {/*zip}*/
 
 					static assert (isInputRange!Zipped);
 				}
-			static if (allSatisfy!(isForwardRange, Ranges))
+			static if (All!(isForwardRange, Ranges))
 				@property {/*...}*/
 					auto save ()
 						{/*...}*/
@@ -218,7 +218,7 @@ public {/*zip}*/
 
 					static assert (isForwardRange!Zipped);
 				}
-			static if (allSatisfy!(isBidirectionalRange, Ranges))
+			static if (All!(isBidirectionalRange, Ranges))
 				@property {/*...}*/
 					auto ref back ()
 						{/*...}*/
@@ -232,7 +232,7 @@ public {/*zip}*/
 
 					static assert (isBidirectionalRange!Zipped);
 				}
-			static if (allSatisfy!(isOutputRange, Ranges))
+			static if (All!(isOutputRange, Ranges))
 				@property {/*...}*/
 					void put ()(auto ref ZipTuple element)
 						{/*...}*/
@@ -242,7 +242,7 @@ public {/*zip}*/
 
 					static assert (.isOutputRange!(Zipped, ZipTuple));
 				}
-			static if (allSatisfy!(hasLength, Ranges))
+			static if (All!(hasLength, Ranges))
 				@property {/*...}*/
 					auto length () const
 						out (result) {/*...}*/
@@ -258,7 +258,7 @@ public {/*zip}*/
 
 					static assert (hasLength!Zipped);
 				}
-			static if (allSatisfy!(is_continuous_range, Ranges))
+			static if (All!(is_continuous_range, Ranges))
 				@property {/*...}*/
 					auto measure () const
 						out (result) {/*...}*/
@@ -327,7 +327,7 @@ public {/*zip}*/
 										~typeof(ranges[0]).stringof~ ` ` ~measure.text
 									);
 							}
-						static if (allSatisfy!(hasLength, Ranges))
+						static if (All!(hasLength, Ranges))
 							{/*...}*/
 								auto length = ranges[0].length;
 
@@ -538,15 +538,18 @@ public {/*reduce}*/
 		}
 }
 public {/*transform}*/
-	/* operate on an entire range in-place in a UFCS stream
+	/* modify a range in-place 
 	*/
-	auto transform (alias transformation, R)(R range)
+	auto transform (alias op, R)(R range)
 		{/*...}*/
-			return transformation (range);
+			range[] = op (range);
 		}
 }
 public {/*select}*/
-	/* perform ternary selection on a range in a UFCS stream 
+	/* perform a self-referencing operation on a range 
 	*/
-	alias select = transform;
+	auto select (alias op, R)(R range)
+		{/*...}*/
+			return op (range);
+		}
 }

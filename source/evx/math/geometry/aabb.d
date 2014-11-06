@@ -3,7 +3,6 @@ module evx.math.geometry.aabb;
 private {/*imports}*/
 	import std.conv;
 	import std.traits;
-	import std.typetuple;
 
 	import evx.math.geometry.traits;
 	import evx.math.geometry.vectors;
@@ -16,6 +15,7 @@ private {/*imports}*/
 	import evx.math.vectors;
 	import evx.math.ordinal;
 	import evx.math.overloads;
+	import evx.math.logic;
 
 	import evx.misc.tuple;
 }
@@ -259,7 +259,7 @@ enum Alignment
 
 /* compute the offset from a point in one bounding box to the corresponding point in another 
 */
-auto offset_to (T)(Box!T from, Alignment alignment, Box!T to)
+auto offset_to (T,U)(Box!T from, Alignment alignment, Box!U to)
 	{/*...}*/
 		const string enumerate_alignment_cases ()
 			{/*...}*/
@@ -331,8 +331,8 @@ auto align_to (T)(Box!T box, Alignment alignment, Vector!(2, T) position)
 
 /* scale and translate the inner polygon to fit inside the outer polygon's bounding box 
 */
-auto into_bounding_box_of (T1, T2)(auto ref T1 inner, auto ref T2 outer)
-	if (allSatisfy!(is_geometric, T1, T2))
+auto into_bounding_box_of (R,S)(auto ref R inner, auto ref S outer)
+	if (All!(is_geometric, R,S))
 	{/*...}*/
 		auto interior = inner.bounding_box, // BUG was immutable
 			 exterior = outer.bounding_box;

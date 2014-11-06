@@ -252,13 +252,13 @@ auto topological_sort (Module[] set)
 ///////////////////
 
 auto shortest (R,S)(R r, S s) // REFACTOR
-	if (allSatisfy!(hasLength, R, S))
+	if (All!(hasLength, R, S))
 	{/*...}*/
 		return r.length < s.length? r:s;
 	}
 
 auto concatenate (R,S)(R r, S s) // REFACTOR
-	if (allSatisfy!(isInputRange, R, S))
+	if (All!(isInputRange, R, S))
 	{/*...}*/
 		return r ~ s;
 	}

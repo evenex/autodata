@@ -3,6 +3,7 @@ module evx.traits.concepts;
 private {/*imports}*/
 	import std.typetuple;
 	import evx.traits.classification;
+	import evx.math.logic;
 }
 
 /* bind a set of trait names to their definitions and mixin to produce a queryable Traits struct 
@@ -18,7 +19,7 @@ private {/*imports}*/
 	trait requirements can be enforced by instantiating the "require" member template
 */
 mixin template Traits (Defs...)
-	if (allSatisfy!(is_string_param, Defs))
+	if (All!(is_string_param, Defs))
 	{/*...}*/
 		import std.typetuple;
 		import evx.math.logic;
@@ -53,6 +54,9 @@ mixin template Traits (Defs...)
 					});
 				}
 		}
+		public {/*data}*/
+			mixin(code);
+		}
 		private:
 		private {/*parsing}*/
 			template is_trait_name (string trait)
@@ -80,7 +84,5 @@ mixin template Traits (Defs...)
 
 					return code;
 				}
-
-			mixin(code);
 		}
 	}

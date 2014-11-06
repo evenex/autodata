@@ -50,7 +50,7 @@ package {/*traits}*/
 	template is_initializer (T...)
 		if (T.length == 1)
 		{/*...}*/
-			enum is_initializer = allSatisfy!(has_trait!`is_initializer`, T);
+			enum is_initializer = All!(has_trait!`is_initializer`, T);
 		}
 
 	template is_per_element_variable (T)
@@ -161,7 +161,7 @@ package {/*code generation}*/
 	template declare_attribute_variables (GLenum shader_type, ShaderVariables)
 		{/*...}*/
 			enum ParamType {input = true, output = false}
-			enum parameter_type = ParamType (allSatisfy!(has_trait!`is_input_params`, ShaderVariables));
+			enum parameter_type = ParamType (All!(has_trait!`is_input_params`, ShaderVariables));
 
 			static code ()
 				{/*...}*/

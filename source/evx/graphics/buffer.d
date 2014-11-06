@@ -25,6 +25,64 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 				return _length;
 			}
 
+		auto access (size_t i)
+			{/*...}*/
+				T value;
+
+				push (&value, i, i+1);
+
+				return value;
+			}
+		auto pull (R)(R range, size_t i, size_t j)
+			{/*...}*/
+				static if (is(R.Source.gl_buffer))
+					{/*copy in vram}*/
+						alias U = ElementType!R;
+						auto read_index = range.offset * U.sizeof;
+
+						gl.BindBuffer (GL_COPY_READ_BUFFER, range.main_buffer.handle);
+						gl.BindBuffer (GL_COPY_WRITE_BUFFER, handle);
+
+						gl.CopyBufferSubData (GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, read_index, gl_slice (i,j).expand);
+					}
+				else {/*copy over pci}*/
+					static if (is(typeof(range.ptr) == T*))
+						auto ptr = range.ptr;
+					else {/*...}*/
+						scope array = range.map!(to!T).array;
+
+						auto ptr = array.ptr;
+					}
+
+					bind;
+
+					gl.BufferSubData (target, gl_slice (i,j).expand, ptr);
+				}
+			}
+		auto push (T* target, size_t i, size_t j)
+			{/*...}*/
+				gl.BindBuffer (GL_COPY_READ_BUFFER, handle);
+
+				gl.GetBufferSubData (GL_COPY_READ_BUFFER, gl_slice (i,j).expand, target);
+			}
+		auto allocate (size_t length)
+			{/*...}*/
+				if (handle == 0)
+					gl.GenBuffers (1, &handle);
+
+				bind;
+
+				gl.BufferData (target, length * T.sizeof, null, usage);
+
+				_length = length.to!GLsizei;
+			}
+		auto free ()
+			{/*...}*/
+				gl.DeleteBuffers (1, &handle);
+
+				handle = 0;
+			}
+
 		auto bind ()
 			in {/*...}*/
 				assert (handle > 0, GLBuffer.stringof~ ` uninitialized`);
@@ -32,66 +90,6 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 			body {/*...}*/
 				gl.BindBuffer (target, handle);
 			}
-
-		public {/*buffer ops}*/
-			auto access (size_t i)
-				{/*...}*/
-					T value;
-
-					push (&value, i, i+1);
-
-					return value;
-				}
-			auto pull (R)(R range, size_t i, size_t j)
-				{/*...}*/
-					static if (is(R.Source.gl_buffer))
-						{/*copy in vram}*/
-							alias U = ElementType!R;
-							auto read_index = range.offset * U.sizeof;
-
-							gl.BindBuffer (GL_COPY_READ_BUFFER, range.main_buffer.handle);
-							gl.BindBuffer (GL_COPY_WRITE_BUFFER, handle);
-
-							gl.CopyBufferSubData (GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, read_index, gl_slice (i,j).expand);
-						}
-					else {/*copy over pci}*/
-						static if (is(typeof(range.ptr) == T*))
-							auto ptr = range.ptr;
-						else {/*...}*/
-							auto array = .array (range.map!(to!T));
-
-							auto ptr = array.ptr;
-						}
-
-						bind;
-
-						gl.BufferSubData (target, gl_slice (i,j).expand, ptr);
-					}
-				}
-			auto push (T* target, size_t i, size_t j)
-				{/*...}*/
-					gl.BindBuffer (GL_COPY_READ_BUFFER, handle);
-
-					gl.GetBufferSubData (GL_COPY_READ_BUFFER, gl_slice (i,j).expand, target);
-				}
-			auto allocate (size_t length)
-				{/*...}*/
-					if (handle == 0)
-						gl.GenBuffers (1, &handle);
-
-					bind;
-
-					gl.BufferData (target, length * T.sizeof, null, usage);
-
-					_length = length.to!GLsizei;
-				}
-			auto free ()
-				{/*...}*/
-					gl.DeleteBuffers (1, &handle);
-
-					handle = 0;
-				}
-		}
 
 		private:
 		auto gl_slice (size_t i, size_t j)

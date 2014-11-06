@@ -8,6 +8,7 @@ private {/*imports}*/
 	import std.range;
 
 	import evx.traits;
+	import evx.math.logic;
 }
 
 /* declare variables according to format (see unittest) 
@@ -30,7 +31,7 @@ string autodeclare (Params...)()
 						import std.ascii: isPunctuation;
 						const bool is_punctuation = c[0][0].isPunctuation;
 					}
-				static if (anySatisfy!(is_punctuation, fixes[0].array))
+				static if (Any!(is_punctuation, fixes[0].array))
 					{/*suffix}*/
 						const string prefix = ``;
 						const string suffix = fixes[0];

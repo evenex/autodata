@@ -10,19 +10,19 @@ mixin template DynamicLibrary ()
 
 		import evx.traits;
 		import evx.math.logic;
-		import std.traits: allSatisfy, isSomeString;
+		import std.traits;
 
 		static private {/*code generation}*/
 			string generate_library_loader ()
 				{/*...}*/
 					string signature = q{
 						void load_library (Args...)(Args file_names)
-							if (allSatisfy!(isSomeString, Args))
+							if (All!(isSomeString, Args))
 					};
 
 					string code = q{
 						import std.c.linux.linux;
-						import evx.misc.utils: to_c;
+						import evx.misc.utils;
 
 						static if (Args.length > 0)
 							void*[Args.length] libs;

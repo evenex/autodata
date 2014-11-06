@@ -2,15 +2,15 @@ module evx.math.continuity;
 
 import evx.type;
 import evx.range.classification;
+import evx.math.logic;
 
-import std.typetuple;
 import std.traits;
 
 /* test whether a type has a floating point representation
 */
 template is_continuous (T)
 	{/*...}*/
-		enum is_continuous = allSatisfy!(isFloatingPoint, RepresentationTypeTuple!T);
+		enum is_continuous = All!(isFloatingPoint, RepresentationTypeTuple!T);
 	}
 
 /* test whether a range can represent a floating point function 

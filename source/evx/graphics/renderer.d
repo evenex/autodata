@@ -2,6 +2,7 @@ module evx.graphics.renderer;
 
 private {/*imports}*/
 	import std.conv;
+	import std.array;
 
 	import evx.graphics.opengl;
 	import evx.graphics.buffer;
@@ -345,7 +346,6 @@ class TextRenderer
 
 version (all) {/*...}*/
 	import evx.patterns;
-	import std.range;
 	import evx.misc.utils;
 
 	alias map = evx.math.functional.map;
@@ -353,13 +353,49 @@ version (all) {/*...}*/
 	alias texture_font_t = void;
 	alias texture_atlas_t = void;
 
+	alias TextureId = GLint;
+
+	auto glyph (Font font, dchar code)
+		in {/*...}*/
+			assert (font.is_loaded);
+		}
+		body {/*...}*/
+			auto glyph = Font.texture_font_get_glyph (font, code);
+
+			float s0 = glyph.s0;
+			float t0 = glyph.t0;
+			float s1 = glyph.s1;
+			float t1 = glyph.t1;
+
+			int width  = glyph.width.to!int;
+			int height = glyph.height.to!int;
+
+			int offset_x = glyph.offset_x;
+			int offset_y = glyph.offset_y;
+
+			Glyph g;
+			with (g) {/*...}*/
+				symbol = code;
+				roi = [vec(s0, t0), vec(s1, t1)];
+				offset = ivec(offset_x, offset_y);
+				dims = ivec(width, height);
+				advance = glyph.advance_x;
+			}
+
+			return g;
+		}
+
+	import evx.containers; // REFACTOR
+	import evx.adaptors; // REFACTOR
+	import evx.graphics.display; // REFACTOR
+
 	struct Font
 		{/*...}*/
 			enum path = "./font/DejaVuSansMono.ttf";
 
 			private:
 				texture_font_t* base;
-				texture_atlas_t* atlas; // TODO resource mgmt
+				texture_atlas_t* atlas;
 				size_t size;
 
 				alias base this;
@@ -396,6 +432,13 @@ version (all) {/*...}*/
 					mixin(error_suppression);
 
 					load_texture_atlas ();
+				}
+
+			mixin Original!reset;
+
+			auto texture ()
+				{/*...}*/
+					return atlas.id;
 				}
 
 			void reset ()
@@ -704,215 +747,339 @@ version (all) {/*...}*/
 				}
 		}
 
-	alias TextureId = GLint;
+	struct Face
+		{/*...}*/
+			Glyph glyph;
+			Color color;
+			vec[] card;
+
+			bool opEquals (Glyph glyph)
+				{/*...}*/
+					return this.glyph == glyph;
+				}
+			bool opEquals (dchar symbol)
+				{/*...}*/
+					return this.glyph == symbol;
+				}
+			bool opEquals (Face face)
+				{/*...}*/
+					return *cast(byte[Face.sizeof]*)(&this) == *cast(byte[Face.sizeof]*)(&face);
+				}
+		}
 
 	struct Glyph
 		{/*...}*/
 			dchar symbol;
 			vec[2] roi;
-			Color color = black;
 
 			@("pixel") ivec offset;
 			@("pixel") ivec dims;
 			@("pixel") float advance;
+
+			bool opEquals (dchar symbol)
+				{/*...}*/
+					return this.symbol == symbol;
+				}
+			bool opEquals (Glyph glyph)
+				{/*...}*/
+					return *cast(byte[Glyph.sizeof]*)(&this) == *cast(byte[Glyph.sizeof]*)(&glyph);
+				}
 		}
 
-	auto glyph (Font font, dchar code)
-		in {/*...}*/
-			assert (font.is_loaded);
-		}
-		body {/*...}*/
-			auto glyph = Font.texture_font_get_glyph (font, code);
-
-			float s0 = glyph.s0;
-			float t0 = glyph.t0;
-			float s1 = glyph.s1;
-			float t1 = glyph.t1;
-
-			int width  = glyph.width.to!int;
-			int height = glyph.height.to!int;
-
-			int offset_x = glyph.offset_x;
-			int offset_y = glyph.offset_y;
-
-			Glyph g;
-			with (g) {/*...}*/
-				symbol = code;
-				roi = [vec(s0, t0), vec(s1, t1)];
-				offset = ivec(offset_x, offset_y);
-				dims = ivec(width, height);
-				advance = glyph.advance_x;
-				color = black;
-			}
-
-			return g;
+	import evx.operators;
+	mixin template Wrapped (T)
+		{/*...}*/
+			T wrapped;
+			alias wrapped this;
 		}
 
-	import evx.containers; // REFACTOR
-	import evx.adaptors; // REFACTOR
-	import evx.graphics.display; // REFACTOR
-
+	import evx.codegen;
+	import evx.range;
 	class Text
 		{/*...}*/
-			struct Face
+			struct Implementation
 				{/*...}*/
-					vec[] card;
-					Glyph* glyph;
-				}
+					Display display;
+					Box!float card_box;
 
-			Display display;
-			BoundingBox card_box;
+					Appendable!(Remote!(MArray!fvec, VertexBuffer)) cards;
+					Remote!(MArray!fvec, VertexBuffer) tex_coords;
+					Remote!(MArray!Color, ColorBuffer) colors;
 
-			Appendable!(MArray!vec) cards;
-			Appendable!(MArray!Glyph) glyphs;
+					size_t[] newline_positions;
 
-			Appendable!VertexBuffer card_buffer;
-			Appendable!ColorBuffer color_buffer;
-			Appendable!VertexBuffer tex_coords_buffer;
+					Font font;
+					Color color;
+					dstring data;
 
-			Appendable!(MArray!size_t) newline_positions;
+					mixin Builder!(
+						BoundingBox, `draw_box`,
+						Alignment, `alignment`,
+						double, `wrap_width`,
+					);
+					mixin Builder!(
+						vec, `translation`,
+						double, `rotation`,
+						double, `scale`,
+					);
 
-			size_t size;
-			Color color;
-			vec pen;
-			Font font;
-			double wrap_width;
-			double rotation;
-			BoundingBox draw_box;
-			Alignment alignment;
-			double scale;
-			vec translation;
+					fvec pen;
 
-			this (TextRenderer.Order order)
-				{/*...}*/
-					this.cards.capacity = 4 * order.text.length;
+					void bind ()
+						{/*...}*/
+							alias Buffers = TypeTuple!(q{cards}, q{tex_coords}, q{colors});
 
-					this.font = order.font;
-					this.size = order.size;
-					this.color = order.color;
+							mixin(apply_to_each!(`.post`, Buffers));
+							mixin(apply_to_each!(`.bind`, Buffers));
+						}
+					void refresh ()
+						{/*...}*/
+							double wrap_width = this.wrap_width;
 
-					this.pen = vec(0, -font.ascender);
+							if (wrap_width.isNaN)
+								wrap_width = draw_box.width;
+							else wrap_width = (wrap_width * î!vec.rotate (rotation)).to_pixel_space (display).norm;
 
-					auto bounds = order.bounds;
-					this.draw_box = bounds[].to_pixel_space (display).bounding_box;
+							alias text = data;
 
-					this.rotation = order.rotate;
-					this.wrap_width = order.wrap_width;
-					this.alignment = order.alignment;
-					this.scale = order.scale;
-					this.translation = order.translate;
+							cards.capacity = 4 * text.length;
 
-					if (wrap_width < 0) 
-						wrap_width = draw_box.width;
-					else wrap_width = (wrap_width * î!vec.rotate (rotation)).to_pixel_space (display).norm;
+							if (text.length == 0)
+								return;
 
-					newline_positions ~= 0;
-					this.card_box = [0.vec, pen].bounding_box; 
-				}
+							auto start = data.length;
 
-			auto append (String)(String input_text)
-				if (isSomeString!String)
-				{/*...}*/
-					//HACK
-					auto text = input_text.to!dstring;
+							auto glyphs = text.map!(c => font.glyph (c));
 
-					if (text.length == 0)
-						return glyphs[0..0];
+							foreach (i, glyph; glyphs[].enumerate[start..$])
+								{/*set card coordinates in pixel-space}*/
+									auto offset = glyph.offset;
+									auto dims   = glyph.dims;
 
-					auto font = scribe.font[size];
-					auto start = glyphs.length;
+									cards ~= [
+										pen,
+										pen + fvec(dims.x, 0),
+										pen + dims,
+										pen + fvec(0, dims.y)
+									];
+									import std.ascii; // REFACTOR
 
-					glyphs ~= text.map!(c => scribe.glyph (c, size, color));
+									if (pen.x + dims.x > wrap_width)
+										{/*word wrap}*/
+											auto trim_length = glyphs[0..i+1].retro.up_to!(g => g.symbol.isWhite).length;
 
-					foreach (i, glyph; glyphs[].enumerate[start..$])
-						{/*set card coordinates in pixel-space}*/
-							auto offset = glyph.offset;
-							auto dims   = glyph.dims;
+											if (trim_length < 0)
+												trim_length = i+1;
 
-							cards ~= [
-								pen,
-								pen + vec(dims.x, 0),
-								pen + dims,
-								pen + vec(0, dims.y)
-							];
+											auto cutoff = i+1 - length;
+												
+											auto word = ℕ[0..trim_length]
+												.map!(j => j + cutoff)
+												.map!(j => cards[4*j..4*(j+1)]);
 
-							if (pen.x + dims.x > wrap_width)
-								{/*word wrap}*/
-									auto length = glyphs[0..i+1].retro.countUntil!(g => g.symbol.isWhite);
-									if (length < 0)
-										length = i+1;
-									auto cutoff = i+1 - length;
-										
-									auto word = ℕ[0..length]
-										.map!(j => j + cutoff)
-										.map!(j => cards[4*j..4*(j+1)]);
+											auto Δx = (word.empty? 
+												pen.x + glyph.advance : word[0][0].x
+											) - glyph.offset.x;
 
-									auto Δx = (word.empty? 
-										pen.x + glyph.advance : word[0][0].x
-									) - glyph.offset.x;
-									auto carriage_return = (vec v) => v - vec(Δx, font.height);
+											auto carriage_return (fvec v) {return v - fvec(Δx, font.height);} 
 
-									foreach (ref letter; word)
-										letter.map!carriage_return.copy (letter);
+											foreach (ref letter; word)
+												letter.transform!(map!carriage_return);
 
-									pen = carriage_return (pen);
+											pen = carriage_return (pen);
 
-									newline_positions ~= i - word.length + 1;
-								}
-							else if (glyph.symbol == '\n')
-								{/*line break}*/
-									newline_positions ~= i;
-									pen = vec(0, pen.y - font.height);
+											newline_positions ~= i - word.length + 1;
+										}
+									else if (glyph.symbol == '\n')
+										{/*line break}*/
+											newline_positions ~= i;
+											pen = fvec(0, pen.y - font.height);
+										}
+
+									cards[$-4..$] = cards[$-4..$].map!(v => v - fvec(-offset.x, dims.y - offset.y));
+
+									pen.x += glyph.advance;
+
+									card_box.width = max (card_box.width, pen.x);
 								}
 
-							cards[$-4..$] = cards[$-4..$].map!(v => v - vec(-offset.x, dims.y - offset.y));
+							card_box.height = max (pen.y.abs, font.height);
+							card_box = card_box.align_to (Alignment.top_left, 0.fvec);
 
-							pen.x += glyph.advance;
+							newline_positions ~= data.length;
 
-							with (card_box) width = max (width, pen.x);
+							foreach (i, line_start; enumerate (newline_positions[0..$-1]))
+								{/*justify lines}*/
+									auto line_stop = newline_positions[i+1];
+
+									if (line_stop == line_start)
+										continue;
+
+									auto line_box = cards[4*line_start..4*line_stop].bounding_box;
+
+									auto justification = line_box.offset_to (alignment, card_box).x;
+
+									auto line = cards[4*line_start..4*line_stop];
+
+									line[] = line.map!(v => v + fvec(justification, 0));
+								}
+
+							auto p = pen;
+							auto transform (fvec v) {return (scale * (v-p/2).rotate (rotation) + p/2).each!(to!float);}
+
+							card_box = card_box[].map!transform.bounding_box;
+
+							cards[] = cards[].map!transform
+								.map!(v => v + card_box.offset_to (alignment, draw_box))
+								.map!(v => v.to_normalized_space (display) + translation)
+								.map!(v => v.each!(to!float));
 						}
 
-					card_box.height = max (pen.y.abs, font.height);
-					card_box = card_box.align_to (Alignment.top_left, 0.vec);
+					this (Font font)
+						{/*...}*/
+							this.font = font;
+							this.pen = fvec(0, -font.ascender);
+							this.card_box = [0.fvec, pen].bounding_box; 
 
-					return glyphs[start..$];
-				}
-
-			auto finalize ()
-				{/*...}*/
-					newline_positions ~= glyphs.length;
-					foreach (i, line_start; enumerate (newline_positions[0..$-1]))
-						{/*justify lines}*/
-							auto line_stop = newline_positions[i+1];
-
-							if (line_stop == line_start)
-								continue;
-
-							auto line_box = cards[4*line_start..4*line_stop].bounding_box;
-
-							auto justification = line_box.offset_to (alignment, card_box).x;
-
-							auto line = cards[4*line_start..4*line_stop];
-
-							line[] = line.map!(v => v + vec(justification, 0));
+							newline_positions ~= 0;
 						}
 
-					auto p = pen;
-					auto transform (vec v) { return scale*((v-p/2).rotate (rotation) + p/2);}
-
-					card_box = card_box[].map!transform.bounding_box;
-
-					cards[] = cards[].map!transform
-						.map!(v => v + card_box.offset_to (alignment, draw_box))
-						.map!(v => v.to_normalized_space (display) + translation);
-
-					return cards;
+					auto length ()
+						{/*...}*/
+							return data.length;
+						}
 				}
 
-			auto length ()
+			mixin Wrapped!Implementation;
+
+			mixin View!(wrapped,
+				InvalidateOn!(`wrap_width`, `draw_box`, `alignment`),
+				RefreshOn!(`bind`)
+			);
+		}
+
+	import std.typetuple;
+
+	import evx.traits;
+
+	struct InvalidateOn (T...)
+		if (All!(is_string_param, T))
+		{/*...}*/
+			enum list = T;
+		}
+	struct RefreshOn (T...)
+		if (All!(is_string_param, T))
+		{/*...}*/
+			enum list = T;
+		}
+
+	mixin template View (alias view_target, Invalidators, Refreshers)
+		if (is (Invalidators: InvalidateOn!T, T...) && is (Refreshers: RefreshOn!U, U...))
+		{/*...}*/
+			static assert (is(typeof(view_target.refresh)));
+
+			static code ()
 				{/*...}*/
-					return glyphs.length;
+					string code = q{bool is_invalidated;};
+
+					foreach (invalidator; Invalidators.list)
+						code ~= q{
+							auto } ~invalidator~ q{ (Args...)(Args args)
+								}`{`q{
+									this.is_invalidated = true;
+
+									return view_target.} ~invalidator~ q{ (args);
+								}`}`q{
+						};
+
+					foreach (refresher; Refreshers.list)
+						code ~= q{
+							auto } ~refresher~ q{ (Args...)(Args args)
+								}`{`q{
+									if (this.is_invalidated)
+										view_target.refresh;
+
+									this.is_invalidated = false;
+
+									return view_target.} ~refresher~ q{ (args);
+								}`}`q{
+						};
+
+					return code;
 				}
+
+			mixin(code);
+		}
+
+	mixin template Original (alias destructor)
+		{/*...}*/
+			bool is_copy;
+
+			this (this)
+				{/*...}*/
+					this.is_copy = true;
+				}
+
+			~this ()
+				{/*...}*/
+					if (this.is_copy)
+						{}
+					else destructor;
+				}
+		}
+
+	/* for data that is expensive to modify but must be modified frequently */
+	struct Remote (LocalBuffer, RemoteBuffer)
+		{/*...}*/
+			static assert (is(LocalBuffer.BufferTraits) && is(RemoteBuffer.BufferTraits));
+
+			struct Buffers
+				{/*...}*/
+					LocalBuffer local_buffer;
+					RemoteBuffer remote_buffer;
+					bool dirty;
+
+					static assert (is(ElementType!LocalBuffer : ElementType!RemoteBuffer));
+
+					alias remote_buffer this;
+
+					void pull (R)(R range, size_t i, size_t j)
+						{/*...}*/
+							local_buffer[i..j] = range;
+
+							dirty = true;
+						}
+					auto access (size_t i)
+						{/*...}*/
+							return local_buffer[i];
+						}
+					auto length () const
+						{/*...}*/
+							return local_buffer.length;
+						}
+
+					void allocate (size_t n)
+						{/*...}*/
+							local_buffer.allocate (n);
+							remote_buffer.allocate (n);
+						}
+					void free ()
+						{/*...}*/
+							local_buffer.free;
+							remote_buffer.free;
+						}
+
+					void post ()
+						{/*...}*/
+							if (dirty)
+								remote_buffer[] = local_buffer[];
+
+							dirty = false;
+						}
+				}
+
+			Buffers data;
+			mixin BufferOps!data;
 		}
 
 	unittest {/*...}*/
@@ -920,8 +1087,6 @@ version (all) {/*...}*/
 
 		scope gfx = new Display;
 		auto f = Font (12);
-
-
 	}
 }
 

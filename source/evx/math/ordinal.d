@@ -1,8 +1,9 @@
 module evx.math.ordinal;
 
 private {/*imports}*/
-	import std.typetuple;
 	import std.traits;
+
+	import evx.math.logic;
 }
 
 alias min = std.algorithm.min;
@@ -58,7 +59,7 @@ bool antisymmetrically_equivalent (T,U)(const T a, const U b)
 */
 auto compare (T,U)(T a, U b)
 	{/*...}*/
-		static if (anySatisfy!(isFloatingPoint, T, U))
+		static if (Any!(isFloatingPoint, T, U))
 			if (a != a || b != b)
 				return real.nan;
 

@@ -15,14 +15,8 @@ struct Appendable (R)
 					R base;
 					private size_t _length;
 
-					auto pull (S)(S range, size_t i, size_t j)
-						{/*...}*/
-							return base[i..j] = range;
-						}
-					auto ref access (size_t i)
-						{/*...}*/
-							return base[i];
-						}
+					mixin BufferOps!base;
+
 					auto length () const
 						{/*...}*/
 							return _length;
@@ -33,14 +27,14 @@ struct Appendable (R)
 							return base.length;
 						}
 					auto capacity ()(size_t n)
-						if (BufferTraits!R.has_variable_length)
+						if (BufferTraits.has_variable_length)
 						{/*...}*/
-							static if (BufferTraits!R.can_assign_length)
+							static if (BufferTraits.can_assign_length)
 								{/*...}*/
 									if (capacity < n)
 										base.length = n;
 								}
-							else static if (BufferTraits!R.can_allocate)
+							else static if (BufferTraits.can_allocate)
 								{/*...}*/
 									if (length > 0)
 										assert (0, `cannot reserve memory for ` ~R.stringof~ ` when it contains data`);

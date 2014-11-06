@@ -147,7 +147,7 @@ template takes_pointer (alias func)
 	{/*...}*/
 		const bool takes_pointer ()
 			{/*...}*/
-				return allSatisfy!(isPointer, ParameterTypeTuple!func);
+				return All!(isPointer, ParameterTypeTuple!func);
 			}
 	}
 

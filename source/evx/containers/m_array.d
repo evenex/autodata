@@ -30,16 +30,32 @@ struct MallocBuffer (T)
 		auto free ()
 			{/*...}*/
 				if (ptr)
-					core.stdc.stdlib.free (ptr);
+					{/*...}*/
+						core.stdc.stdlib.free (ptr);
+
+						ptr = null;
+					}
 
 				_length = 0;
 			}
+
+		~this ()
+			{/*...}*/
+				if (this.is_copy)
+					{}
+				else free;
+			}
+		this (this)
+			{/*...}*/
+				this.is_copy = true;
+			}
+
+		bool is_copy;
 	}
 
 struct MArray (T)
 	{/*...}*/
 		MallocBuffer!T buffer;
-		alias buffer this;
 		
 		mixin BufferOps!buffer;
 	}

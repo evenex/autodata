@@ -42,60 +42,83 @@ mixin template BufferOps (alias buffer)
 			mixin TransferOps!buffer;
 		}
 
-		this (R)(R range)
-			{/*...}*/
-				this = range;
-			}
-
-		auto opAssign (R)(R range)
-			{/*...}*/
-				enum range_has_length = .TransferTraits!R.has_length;
-
-				this = null;
-
-				{/*reserve storage}*/
-					static if (range_has_length)
-						{/*reserve length}*/
-							static if (BufferTraits.can_allocate)
-								buffer.allocate (range.length);
-							else static if (BufferTraits.can_assign_length)
-								buffer.length = range.length;
-							else static assert (0);
+		public:
+		public {/*primitives}*/
+			static if (BufferTraits.can_assign_length)
+				{/*length assignment}*/
+					@property length ()
+						{/*...}*/
+							return buffer.length;
 						}
-					else static if (BufferTraits.can_assign_length)
-						{/*grow and append}*/
-							foreach (item; range)
-								this.length = this.length + 1;
+					@property length (size_t new_length)
+						{/*...}*/
+							buffer.length = new_length;
 						}
-					else static if (BufferTraits.can_allocate)
-						{/*count length}*/
-							buffer.allocate (range[].count);
-						}
-					else static assert (0);
 				}
 
-				this[] = range;
-			}
-		auto opAssign (typeof(null))
-			{/*...}*/
-				static if (BufferTraits.can_assign_length)
-					buffer.length = 0;
-				else static if (BufferTraits.can_free)
-					buffer.free;
-				else static assert (0);
-			}
+			static if (BufferTraits.can_allocate)
+				void allocate (size_t n)
+					{/*...}*/
+						buffer.allocate (n);
+					}
 
-		static if (BufferTraits.can_assign_length)
-			{/*length assignment}*/
-				@property length ()
+			static if (BufferTraits.can_free)
+				void free ()
 					{/*...}*/
-						return buffer.length;
+						buffer.free;
 					}
-				@property length (size_t new_length)
-					{/*...}*/
-						buffer.length = new_length;
+		}
+		public {/*assignment}*/
+			this (R)(R range)
+				{/*...}*/
+					this = range;
+				}
+
+			auto opAssign (R)(R range)
+				{/*...}*/
+					enum range_has_length = .TransferTraits!R.has_length;
+
+					this = null;
+
+					{/*reserve storage}*/
+						static if (range_has_length)
+							{/*reserve length}*/
+								static if (BufferTraits.can_allocate)
+									buffer.allocate (range.length);
+								else static if (BufferTraits.can_assign_length)
+									buffer.length = range.length;
+								else static assert (0);
+							}
+						else static if (BufferTraits.can_assign_length)
+							{/*grow and append}*/
+								foreach (item; range)
+									this.length = this.length + 1;
+							}
+						else static if (BufferTraits.can_allocate)
+							{/*count length}*/
+								buffer.allocate (range[].count);
+							}
+						else static assert (0);
 					}
-			}
+
+					this[] = range;
+				}
+			auto opAssign (typeof(null))
+				{/*...}*/
+					static if (BufferTraits.can_assign_length)
+						buffer.length = 0;
+					else static if (BufferTraits.can_free)
+						buffer.free;
+					else static assert (0);
+				}
+		}
+
+		static {/*verification}*/
+			static assert (.BufferTraits!(typeof(this)).info == BufferTraits.info, 
+				typeof(this).stringof ~ ` ` ~ .BufferTraits!(typeof(this)).info 
+				~ typeof(buffer).stringof ~ ` ` ~ BufferTraits.info
+			);
+		}
 	}
 	unittest {/*...}*/
 		struct Test

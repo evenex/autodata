@@ -82,11 +82,29 @@ mixin template TransferOps (alias buffer)
 					return this[0];
 				}
 		}
-		public {/*pointer}*/
+		public {/*primitives}*/
 			static if (TransferTraits.has_pointer)
 				auto ptr ()
 					{/*...}*/
 						return buffer.ptr;
+					}
+
+			static if (TransferTraits.can_access)
+				auto ref access (size_t i)
+					{/*...}*/
+						return buffer.access (i);
+					}
+
+			static if (TransferTraits.can_pull)
+				void pull (R)(R range, size_t i, size_t j)
+					{/*...}*/
+						buffer.pull (range, i, j);
+					}
+
+			static if (TransferTraits.can_push)
+				void push (TransferTraits.Element* ptr, size_t i, size_t j)
+					{/*...}*/
+						buffer.push (ptr, i, j);
 					}
 		}
 		public {/*length}*/
@@ -338,6 +356,13 @@ mixin template TransferOps (alias buffer)
 						}
 					else static assert (0);
 				}
+		}
+
+		static {/*verification}*/
+			static assert (.TransferTraits!(typeof(this)).info == TransferTraits.info, 
+				typeof(this).stringof ~ ` ` ~ .TransferTraits!(typeof(this)).info 
+				~ typeof(buffer).stringof ~ ` ` ~ TransferTraits.info
+			);
 		}
 	}
 	unittest {/*...}*/

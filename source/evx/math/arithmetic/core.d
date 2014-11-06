@@ -41,22 +41,22 @@ template is_multiple_of (size_t m)
 	}
 
 pure add (T,U)(T a, U b) 
-	if (not (anySatisfy!(is_tuple, T, U)))
+	if (not (Any!(is_tuple, T, U)))
 	{/*...}*/
 		return a + b;
 	}
 pure subtract (T,U)(T a, U b) 
-	if (not (anySatisfy!(is_tuple, T, U)))
+	if (not (Any!(is_tuple, T, U)))
 	{/*...}*/
 		return a - b;
 	}
 pure multiply (T,U)(T a, U b) 
-	if (not (anySatisfy!(is_tuple, T, U)))
+	if (not (Any!(is_tuple, T, U)))
 	{/*...}*/
 		return a * b;
 	}
 pure divide (T,U)(T a, U b) 
-	if (not (anySatisfy!(is_tuple, T, U)))
+	if (not (Any!(is_tuple, T, U)))
 	{/*...}*/
 		return a / b;
 	}
