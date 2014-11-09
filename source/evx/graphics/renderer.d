@@ -271,12 +271,17 @@ class TextRenderer
 						this.renderer = renderer;
 						this.text = text;
 					}
-
-				VertexBuffer cards;
-				VertexBuffer tex_coords;
-				ColorBuffer colors;
 			}
 
+		auto draw (Text text) // REFACTOR
+			{/*...}*/
+				return Order (this, text);
+			}
+
+		void process ()
+			{/*...}*/
+				//shader.activate;
+			}
 		void process (Order order)
 			{/*...}*/
 				
@@ -285,7 +290,35 @@ class TextRenderer
 			{/*...}*/
 				
 			}
+
+		TextShader shader;
 	}
+
+alias TextShader = ShaderProgram!(
+	VertexShader!(
+		Input!(
+			fvec[], `position`,		Init!(0,0),
+			fvec[], `texture_coords`,
+			Color[], `glyph_color`, Init!(1,0,1,1),
+			Texture, `tex`,
+		), 
+		Output!(
+			Color[], `color`,
+			fvec[], `tex_coords`,
+		), q{
+		}
+	),
+	FragmentShader!(
+		Input!(
+			Color[], `color`,
+			fvec[], `tex_coords`,
+			Texture, `tex`,
+		), q{
+		}
+	)
+);
+
+pragma(msg, TextShader.code);
 
 unittest {/*...}*/
 	import evx.graphics;//	import evx.graphics.display;

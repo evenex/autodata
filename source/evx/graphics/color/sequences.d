@@ -16,5 +16,5 @@ auto rainbow (size_t length)
 auto shades_of (size_t n_shades, Color color)
 	{/*...}*/
 		return ℕ[0..n_shades]
-			.map!(i => Color ().hsv (color.h, color.s, (1.0 + i)/n_shades).alpha (color.a));
+			.map!(i => Color ().hsl (color.h, color.s, (1.0 + i)/n_shades).alpha (color.a));
 	}

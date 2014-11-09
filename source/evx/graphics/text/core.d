@@ -326,8 +326,7 @@ class Text
 				}
 			}
 	}
-	void main () {/*...}*/
-
+	unittest {/*...}*/
 		scope gfx = new Display; // BUG need this before using gpu stuff at all... how to enforce?
 
 		scope f = Font (12); // class

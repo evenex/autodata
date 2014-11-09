@@ -20,6 +20,7 @@ private {/*imports}*/
 	alias zip = evx.math.functional.zip;
 	alias reduce = evx.math.functional.reduce;
 	alias filter = evx.math.functional.filter;
+	alias sum = evx.math.arithmetic.sum;
 }
 
 // TODO flags (uses builder) struct... also status mixins, with conditions like traits
@@ -289,7 +290,10 @@ version (generate_dependency_graph) void main ()
 					if (sub_packages.empty)
 						continue;
 
-					foreach (pkg, shade; zip (sub_packages, (sub_packages.count + 1).shades_of (root.color)[0..$-1]))
+					auto shades = (sub_packages.count + 3).shades_of (root.color)[0..$-2];
+					auto nearest = shades.reduce!((a,b) => (a.hsv - root.color.hsv).squared[].sum < (b.hsv - root.color.hsv).squared[].sum? a:b);
+
+					foreach (pkg, shade; zip (sub_packages, shades.filter!(c => c != nearest)))
 						pkg.color = shade;
 				}
 				

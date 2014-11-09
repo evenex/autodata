@@ -20,13 +20,21 @@ enum glsl_version = 420;
 class ShaderProgram (Vert, Frag)
 	{/*...}*/
 		static {/*verification}*/
-			static assert (is(Filter!(is_per_element_variable, Vert.Outputs) == Filter!(is_per_element_variable, Frag.Inputs)),
-				`per-vertex vertex shader outputs do not match interpolated fragment shader inputs`"\n"
-				~Vert.Outputs.stringof~ ` != ` ~Frag.Inputs.stringof
-			);
+			static if (Vert.Outputs.length == 1 && Frag.Inputs.length == 1)
+				{/*...}*/
+					alias InterpolateOut = Let!(Vert.Output.Types, Vert.Output.Names).OnlyWithTypes!is_per_element_variable;
+					alias InterpolateIn = Let!(Frag.Input.Types, Frag.Input.Names).OnlyWithTypes!is_per_element_variable;
+
+					static assert (is(InterpolateOut == InterpolateIn),
+						`per-vertex vertex shader outputs do not match interpolated fragment shader inputs`"\n"
+						~InterpolateOut.be_declared~ ` != ` ~InterpolateIn.be_declared
+					);
+				}
 		}
 
-		mixin(AttributeLinker!(Vert.Inputs).code);
+		static if (Vert.Inputs.length > 0)
+			mixin(AttributeLinker!(Vert.Inputs).code);
+
 		mixin(UniformLinker!(Vert.Inputs, Frag.Inputs).code);
 
 		public {/*codegen}*/
@@ -130,9 +138,11 @@ private {/*implementation}*/
 
 				static if (Inputs.length)
 					alias Input = Inputs[0];
+				else alias Input = TypeTuple!();
 
 				static if (Outputs.length)
 					alias Output = Outputs[0];
+				else alias Output = TypeTuple!();
 
 				enum code = Code[0];
 			}

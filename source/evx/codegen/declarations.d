@@ -123,38 +123,39 @@ struct Let (Decls...)
 			alias be_listed = TypeTuple!(} ~listings~ q{);
 		});
 
-		template FilterBy (string key, alias pass)
-			{/*...}*/
-				static code ()
-					{/*...}*/
-						mixin(q{
-							alias Keys = } ~key~ q{s;
-						});
+		public {/*filtration}*/
+			template FilterBy (string key, alias pass)
+				{/*...}*/
+					static code ()
+						{/*...}*/
+							mixin(q{
+								alias Keys = } ~key~ q{s;
+							});
 
-						string code;
+							string code;
 
-						foreach (i, Key; Keys)
-							static if (pass!Key)
-								code ~= listing!i;
+							foreach (i, Key; Keys)
+								static if (pass!Key)
+									code ~= listing!i;
 
-						return code[0..$ - min(2,$)];
-					}
+							return code[0..$ - min(2,$)];
+						}
 
-				mixin(q{
-					alias FilterBy = Let!(} ~code~ q{);
-				});
-			}
+					mixin(q{
+						alias FilterBy = Let!(} ~code~ q{);
+					});
+				}
 
-		template OnlyWithTypes (alias criterion)
-			{/*...}*/
-				alias OnlyWithTypes = FilterBy!(`Type`, criterion);
-			}
-		template OnlyWithNames (alias criterion)
-			{/*...}*/
-				alias OnlyWithNames = FilterBy!(`Name`, criterion);
-			}
-
-		private {/*code gen}*/
+			template OnlyWithTypes (alias criterion)
+				{/*...}*/
+					alias OnlyWithTypes = FilterBy!(`Type`, criterion);
+				}
+			template OnlyWithNames (alias criterion)
+				{/*...}*/
+					alias OnlyWithNames = FilterBy!(`Name`, criterion);
+				}
+		}
+		public {/*code gen}*/
 			struct DeclarationList
 				{/*...}*/
 					mixin ParameterSplitter!(

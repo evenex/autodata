@@ -85,3 +85,5 @@ struct gl
 					}
 			}
 	}
+
+struct Texture {GLuint id; alias id this;}

@@ -1,4 +1,4 @@
-module evx.graphics.shader.parameters;
+module evx.graphics.shader.parameters; // TODO static analysis -> unused variables, V.Output F.Input mismatch, etc
 
 private {/*import}*/
 	import std.typetuple;
@@ -92,6 +92,8 @@ package {/*type processing}*/
 				}
 			else static if (isScalarType!T)
 				enum glsl_typename = T.stringof;
+			else static if (is(T == Texture))
+				enum glsl_typename = `sampler2D`;
 			else static assert (0, `cannot pass ` ~T.stringof~ ` directly to shader`);
 		}
 	template glsl_declaration (T, Args...)
@@ -113,11 +115,19 @@ package {/*extraction}*/
 			else alias get_initializer = TypeTuple!();
 		}
 
+	template Uniforms ()
+		{/*...}*/
+			alias Uniforms = TypeTuple!();
+		}
 	template Uniforms (ShaderVariables)
 		{/*...}*/
 			alias Uniforms = Let!(ShaderVariables.Types, ShaderVariables.Names).OnlyWithTypes!is_uniform_variable.be_listed;
 		}
 
+	template Attributes ()
+		{/*...}*/
+			alias Attributes = TypeTuple!();
+		}
 	template Attributes (ShaderVariables)
 		{/*...}*/
 			alias Attributes = Let!(ShaderVariables.Types, ShaderVariables.Names).OnlyWithTypes!is_per_element_variable.be_listed;

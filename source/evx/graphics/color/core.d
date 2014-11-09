@@ -106,7 +106,6 @@ struct Color
 				}
 			auto ref hsv (float h, float s, float v)
 				in {/*...}*/
-					assert (h.between (0, 360), `hue was ` ~h.text);
 					assert (s.between (0, 1), `sat was ` ~s.text);
 					assert (v.between (0, 1), `val was ` ~v.text);
 				}
@@ -115,20 +114,7 @@ struct Color
 					auto x = c * (1 - abs ((h/60.0) % 2.0 - 1));
 					auto m = v - c;
 
-					if (h.between (0, 60))
-						r = c, g = x, b = 0;
-					else if (h.between (60, 120))
-						r = x, g = c, b = 0;
-					else if (h.between (120, 180))
-						r = 0, g = c, b = x;
-					else if (h.between (180, 240))
-						r = 0, g = x, b = c;
-					else if (h.between (240, 300))
-						r = x, g = 0, b = c;
-					else if (h.between (300, 360))
-						r = c, g = 0, b = x;
-
-					this[0..3] += m;
+					convert_from_cylindrical (h, c, x, m);
 
 					return this;
 				}
@@ -136,6 +122,33 @@ struct Color
 			alias h = hue;
 			alias s = saturation;
 			alias v = value;
+		}
+		public {/*hsl}*/
+			auto lightness ()
+				{/*...}*/
+					return (max (r,g,b) + min (r,g,b)) / 2;
+				}
+			auto ref lightness (float l)
+				{/*...}*/
+					return hsl (h,s,l);
+				}
+
+			auto hsl ()
+				{/*...}*/
+					return vector (h,s,l);
+				}
+			auto ref hsl (float h, float s, float l)
+				{/*...}*/
+					auto c = (1 - (2*l - 1).abs) * s;
+					auto x = c * (1 - abs ((h/60.0) % 2.0 - 1));
+					auto m = l - c/2;
+
+					convert_from_cylindrical (h, c, x, m);
+
+					return this;
+				}
+
+			alias l = lightness;
 		}
 		public {/*alpha}*/
 			auto alpha ()
@@ -225,5 +238,27 @@ struct Color
 				{/*...}*/
 					base = base.each!clamp (interval (0, 1));
 				}
+
+			void convert_from_cylindrical (float h, float c, float x, float m)
+				in {/*...}*/
+					assert (h.between (0, 360), `hue was ` ~h.text);
+				}
+				body {/*...}*/
+					if (h.between (0, 60))
+						r = c, g = x, b = 0;
+					else if (h.between (60, 120))
+						r = x, g = c, b = 0;
+					else if (h.between (120, 180))
+						r = 0, g = c, b = x;
+					else if (h.between (180, 240))
+						r = 0, g = x, b = c;
+					else if (h.between (240, 300))
+						r = x, g = 0, b = c;
+					else if (h.between (300, 360))
+						r = c, g = 0, b = x;
+
+					this[0..3] += m;
+				}
+
 		}
 	}
