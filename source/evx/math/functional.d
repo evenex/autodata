@@ -553,3 +553,11 @@ public {/*select}*/
 			return op (range);
 		}
 }
+public {/*get}*/
+	auto get (string field, R)(R range)
+		{/*...}*/
+			mixin(q{
+				return range.map!(x => x.} ~field~ q{);
+			});
+		}
+}

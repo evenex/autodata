@@ -50,3 +50,10 @@ auto ref up_from (alias condition, R)(R range)
 	{/*...}*/
 		return range.find!condition;
 	}
+
+/* take a slice of a range that matches a given mark 
+*/
+auto ref containing (R,S)(R range, S mark)
+	{/*...}*/
+		return range.up_from (mark).up_to (mark);
+	}

@@ -4,13 +4,32 @@ private {/*imports}*/
 	import evx.traits;
 }
 
+/* trivial input range for probing range capabilities 
+*/
 struct NullInputRange (T)
 	{/*...}*/
 		enum front = T.init;
 		void popFront (){}
 		enum empty = true;
+		enum length = 0;
 	}
 
+/* convenience template to turn Buffer.Sub into Sub!Buffer 
+*/
+template Sub (Buffer)
+	{/*...}*/
+		alias Sub = Buffer.Sub;
+	}
+
+/* code to be mixed in to Sub!Buffer definition 
+*/
+struct ExtendSlice (string mixin_code)
+	{/*...}*/
+		enum code = mixin_code;
+	}
+
+/* generate a report of range capabilities 
+*/
 struct TransferTraits (Buffer)
 	{/*...}*/
 		static {/*alias}*/
@@ -38,7 +57,6 @@ struct TransferTraits (Buffer)
 		);
 	}
 
-// this is the data movement interface
 /* define standardized, higher-order-compatible, auto-optimizing opSlice/opIndex operators over a member with data transfer primitives 
 	required primitives:
 		ACCESS PRIMITIVE: returns the i'th data element of the buffer, used for reading the contents of the buffer. preserves ref storage class.
@@ -55,8 +73,13 @@ struct TransferTraits (Buffer)
 	optional primitives:
 		push (Element[] target): if target has ptr, copies the entire contents of the buffer into target. used for inverted-control data transfer.
 		ptr: enables optimized data transfer when target and source both have ptr.
+
+	extension:
+		because the sub-buffer is generated within TransferOps, its definition is not directly accessible.
+		ExtendSlice!"" is provided as a means of injecting code into the sub-buffer definition.
 */
-mixin template TransferOps (alias buffer)
+mixin template TransferOps (alias buffer, Extension = ExtendSlice!``)
+	if (is(typeof(Extension.code)))
 	{/*...}*/
 		static {/*analysis}*/
 			alias TransferTraits = evx.operators.transfer.TransferTraits!(typeof(buffer));
@@ -167,7 +190,7 @@ mixin template TransferOps (alias buffer)
 		private {/*sub_buffer}*/
 			struct Sub
 				{/*...}*/
-					alias Source = typeof(buffer);
+					mixin(Extension.code);
 
 					public:
 					public {/*pointer/offset}*/

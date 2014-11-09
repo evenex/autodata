@@ -29,10 +29,12 @@ struct Appendable (R)
 					auto capacity ()(size_t n)
 						if (BufferTraits.has_variable_length)
 						{/*...}*/
+							if (capacity >= n)
+								return;
+
 							static if (BufferTraits.can_assign_length)
 								{/*...}*/
-									if (capacity < n)
-										base.length = n;
+									base.length = n;
 								}
 							else static if (BufferTraits.can_allocate)
 								{/*...}*/
@@ -76,6 +78,12 @@ struct Appendable (R)
 		auto opUnary (string op : `--`)()
 			{/*...}*/
 				this -= 1;
+			}
+
+		/* clear */
+		auto clear ()
+			{/*...}*/
+				buffer._length = 0;
 			}
 
 		static if (is(R.BufferTraits))

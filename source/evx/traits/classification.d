@@ -95,9 +95,9 @@ template has_trait (string trait)
 			}
 	}
 
-/* test if a function is unary 
+/* test the arity of a function 
 */
-template is_unary_function (U...)
+template is_n_ary_function (size_t n, U...)
 	if (U.length == 1)
 	{/*...}*/
 		static if (isSomeFunction!(U[0]))
@@ -105,28 +105,23 @@ template is_unary_function (U...)
 				alias Function = U[0];
 				alias Params = ParameterTypeTuple!Function;
 
-				static if (Params.length == 1)
-					enum is_unary_function = true;
-				else enum is_unary_function = false;
+				static if (Params.length == n)
+					enum is_n_ary_function = true;
+				else enum is_n_ary_function = false;
 			}
-		else enum is_unary_function = false;
+		else enum is_n_ary_function = false;
 	}
-
-/* test if a function is binary 
-*/
-template is_binary_function (U...)
-	if (U.length == 1)
+template is_nullary_function (U...)
 	{/*...}*/
-		static if (isSomeFunction!(U[0]))
-			{/*...}*/
-				alias Function = U[0];
-				alias Params = ParameterTypeTuple!Function;
-
-				static if (Params.length == 2)
-					enum is_binary_function = true;
-				else enum is_binary_function = false;
-			}
-		else enum is_binary_function = false;
+		enum is_nullary_function = is_n_ary_function!(0, U);
+	}
+template is_unary_function (U...)
+	{/*...}*/
+		enum is_unary_function = is_n_ary_function!(1, U);
+	}
+template is_binary_function (U...)
+	{/*...}*/
+		enum is_binary_function = is_n_ary_function!(2, U);
 	}
 
 /* test if T is a member function 

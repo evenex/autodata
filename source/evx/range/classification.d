@@ -2,8 +2,10 @@ module evx.range.classification;
 
 private {/*...}*/
 	import std.range;
+	import std.traits;
 }
 
+alias is_string = std.traits.isSomeString;
 alias is_input_range = std.range.isInputRange;
 alias is_output_range = std.range.isOutputRange;
 alias is_forward_range = std.range.isForwardRange;

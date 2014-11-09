@@ -3,13 +3,10 @@ module evx.graphics.color.core;
 private {/*imports}*/
 	import core.stdc.stdio;
 
-	import std.math;
 	import std.conv; 
 
-	import evx.math.vectors;
-	import evx.math.intervals;
-	import evx.math.ordinal;
-	import evx.range;//	import evx.range.slicing;
+	import evx.math;
+	import evx.range;
 }
 
 struct Color
@@ -215,8 +212,9 @@ struct Color
 
 					string ret = `#`;
 
-					foreach (h; (this * 255).each!(to!uint).each!get_hex[])
+					try foreach (h; (this * 255).each!(to!uint).each!get_hex[])
 						ret ~= h;
+					catch (ConvOverflowException) ret ~= `--------`;
 
 					return ret;
 				}

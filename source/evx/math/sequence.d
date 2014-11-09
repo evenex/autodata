@@ -32,12 +32,14 @@ struct Sequence (alias func, T)
 				{/*...}*/
 					return this;
 				}
-			auto opSlice (size_t i, size_t j)
+			auto opSlice (size_t i, size_t j) // TODO to opIndex
 				in {/*...}*/
 					assert (i != infinity);
 
 					if (j != infinity)
-						assert (i < j && j <= length);
+						assert (i < j && j <= length, 
+							`[` ~i.text ~ `, ` ~j.text~ `] exceeds ` ~length.text
+						);
 				}
 				body {/*...}*/
 					if (j == infinity)

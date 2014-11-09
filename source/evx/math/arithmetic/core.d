@@ -40,6 +40,20 @@ template is_multiple_of (size_t m)
 			}
 	}
 
+/* test whether a number is negative 
+*/
+template is_negative (long n)
+	{/*...}*/
+		enum is_negative = n < 0;
+	}
+template is_negative ()
+	{/*...}*/
+		auto is_negative (T)(T n)
+			{/*...}*/
+				return n < 0;
+			}
+	}
+
 pure add (T,U)(T a, U b) 
 	if (not (Any!(is_tuple, T, U)))
 	{/*...}*/
