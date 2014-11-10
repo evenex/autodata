@@ -57,8 +57,8 @@ struct Glyph
 
 		private:
 		private {/*...}*/
-			Sub!(Appendable!(LocalView!ColorBuffer)) _color;
-			Sub!(Appendable!(LocalView!VertexBuffer)) _card;
+			Sub!(Appendable!ColorBuffer) _color;
+			Sub!(Appendable!VertexBuffer) _card;
 		}
 	}
 
@@ -71,9 +71,9 @@ class Text
 
 		mixin Wrapped!Implementation;
 
-		mixin View!(wrapped,
+		mixin View!(wrapped, // REVIEW
 			InvalidateOn!(`within`, `align_to`, `translate`, `rotate`, `scale`),
-			RefreshOn!(`bind`)
+			RefreshOn!(`cards`, `colors`, `tex_coords`)
 		);
 
 		mixin TransferOps!(wrapped,
@@ -139,13 +139,11 @@ class Text
 								auto dims = uvec(glyph.width, glyph.height);
 								auto advance = glyph.advance_x;
 
-								std.stdio.writeln (`app`);
 								with (glyph) 
 								tex_coords ~= [
 									fvec(s0, t0), 
 									fvec(s1, t1)
 								].bounding_box[].flip!`vertical`;
-								std.stdio.writeln (`/app`);
 
 								cards ~= [
 									pen,
@@ -227,12 +225,9 @@ class Text
 						}
 					}
 
-				void bind ()
+				auto texture ()
 					{/*...}*/
-						alias Buffers = TypeTuple!(q{cards}, q{tex_coords}, q{colors});
-
-						mixin(apply_to_each!(`.post`, Buffers));
-						mixin(apply_to_each!(`.bind`, Buffers, q{font.texture}));
+						return font.texture;
 					}
 
 				this (ref Font font, Display display, dstring text)
@@ -308,10 +303,10 @@ class Text
 							return data.length;
 						}
 				}
-				public {/*data}*/
-					Appendable!(LocalView!VertexBuffer) cards;
-					Appendable!(LocalView!VertexBuffer) tex_coords;
-					Appendable!(LocalView!ColorBuffer) colors;
+				public {/*...}*/
+					Appendable!VertexBuffer cards;
+					Appendable!VertexBuffer tex_coords;
+					Appendable!ColorBuffer colors;
 				}
 				private:
 				private {/*data}*/

@@ -33,7 +33,7 @@ class ShaderProgram (Vert, Frag)
 		}
 
 		static if (Vert.Inputs.length > 0)
-			mixin(AttributeLinker!(Vert.Inputs, ).code);
+			mixin(AttributeLinker!(Vert.Inputs).code);
 
 		mixin(
 			UniformLinker!(

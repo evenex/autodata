@@ -1,4 +1,4 @@
-module evx.adaptors.wrapper;
+module evx.patterns.wrapper;
 
 mixin template Wrapped (T)
 	{/*...}*/

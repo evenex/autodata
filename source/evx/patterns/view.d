@@ -12,7 +12,7 @@ mixin template View (alias target, Invalidators, Refreshers)
 
 		static code ()
 			{/*...}*/
-				string code = q{bool is_invalidated;};
+				string code = q{bool is_invalidated = true;};
 
 				foreach (invalidator; Invalidators.list)
 					code ~= q{
@@ -20,7 +20,9 @@ mixin template View (alias target, Invalidators, Refreshers)
 							}`{`q{
 								this.is_invalidated = true;
 
-								return target.} ~invalidator~ q{ (args);
+								static if (Args.length)
+									return target.} ~invalidator~ q{ (args);
+								else return target.} ~invalidator~ q{;
 							}`}`q{
 					};
 
@@ -33,7 +35,9 @@ mixin template View (alias target, Invalidators, Refreshers)
 
 								this.is_invalidated = false;
 
-								return target.} ~refresher~ q{ (args);
+								static if (Args.length)
+									return target.} ~refresher~ q{ (args);
+								else return target.} ~refresher~ q{;
 							}`}`q{
 					};
 

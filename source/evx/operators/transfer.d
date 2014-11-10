@@ -81,6 +81,9 @@ struct TransferTraits (Buffer)
 mixin template TransferOps (alias buffer, Extension = ExtendSlice!``)
 	if (is(typeof(Extension.code)))
 	{/*...}*/
+		import std.conv;
+		import evx.patterns;
+
 		static {/*analysis}*/
 			alias TransferTraits = evx.operators.transfer.TransferTraits!(typeof(buffer));
 
@@ -94,9 +97,7 @@ mixin template TransferOps (alias buffer, Extension = ExtendSlice!``)
 			mixin require!`has_length`;
 		}
 
-		mixin(q{
-			alias } ~__traits(identifier, buffer)~ q{ this;
-		});
+		mixin AliasThis!buffer;
 
 		public:
 		public {/*element}*/
@@ -157,7 +158,7 @@ mixin template TransferOps (alias buffer, Extension = ExtendSlice!``)
 				}
 			size_t[2] opSlice (size_t dim: 0)(size_t i, size_t j)
 				in {/*...}*/
-					assert (i <= j && j <= length);
+					assert (i <= j && j <= length, `[` ~i.text~ `..` ~j.text~ `] exceeds ` ~length.text);
 				}
 				body {/*...}*/
 					return [i,j];

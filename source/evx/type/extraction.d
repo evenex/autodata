@@ -109,8 +109,12 @@ template IndexType (R)
 */
 template FirstParameter (alias func)
 	{/*...}*/
-		static if (ParameterTypeTuple!func.length > 0)
-			alias FirstParameter = ParameterTypeTuple!func[0];
+		alias FirstParameter = FirstParameter!(typeof(func));
+	}
+template FirstParameter (F)
+	{/*...}*/
+		static if (ParameterTypeTuple!F.length > 0)
+			alias FirstParameter = ParameterTypeTuple!F;
 		else alias FirstParameter = void;
 	}
 
