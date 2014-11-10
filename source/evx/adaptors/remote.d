@@ -24,6 +24,7 @@ struct Remote (LocalBuffer, RemoteBuffer)
 				void pull (R)(R range, size_t i, size_t j)
 					{/*...}*/
 						local[i..j] = range;
+								std.stdio.writeln (`pull `, RemoteBuffer.stringof);
 
 						dirty = true;
 					}

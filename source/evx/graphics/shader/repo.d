@@ -12,22 +12,13 @@ public {/*basic shader}*/
 		VertexShader!(
 			Input!(
 				fvec[], `position`,		Init!(0,0),
-				Color,  `color`,		Init!(1,0,1,1),
-				fvec,   `translation`,	Init!(0,0),
-				float,  `rotation`,		Init!(0),
-				float,  `scale`,		Init!(1),
 			), q{
-				float c = cos(rotation);
-				float s = sin(rotation);
-
-				vec2 rotated = vec2 (c*position.x - s*position.y, s*position.x + c*position.y);
-
-				gl_Position = vec4 (scale*rotated + translation, 0, 1);
+				gl_Position.xy = position;
 			}
 		),
 		FragmentShader!(
 			Input!(
-				Color,	`color`,
+				Color,  `color`,		Init!(1,0,1,1),
 			),
 			Output!(
 				Color[], `frag_color`,

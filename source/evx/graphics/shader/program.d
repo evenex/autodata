@@ -8,9 +8,9 @@ private {/*imports}*/
 	import evx.graphics.opengl;
 
 	import evx.math;
-
-	import evx.traits;//	import evx;//	import evx.traits;//	import evx.traits.classification;
-	import evx.codegen;//	import evx;//	import evx.codegen;//	import evx.codegen.declarations;
+	import evx.range;
+	import evx.traits;
+	import evx.codegen;
 }
 
 public import evx.graphics.shader.parameters;
@@ -33,9 +33,14 @@ class ShaderProgram (Vert, Frag)
 		}
 
 		static if (Vert.Inputs.length > 0)
-			mixin(AttributeLinker!(Vert.Inputs).code);
+			mixin(AttributeLinker!(Vert.Inputs, ).code);
 
-		mixin(UniformLinker!(Vert.Inputs, Frag.Inputs).code);
+		mixin(
+			UniformLinker!(
+				Vert.Inputs, Frag.Inputs,
+				Input!Perspective, Input!AspectRatio,
+			).code
+		);
 
 		public {/*codegen}*/
 			static code ()
@@ -92,9 +97,7 @@ class ShaderProgram (Vert, Frag)
 		}
 	}
 	unittest {/*...}*/
-		import evx.graphics;//		import evx.graphics.display;
-		import evx.graphics;//		import evx.graphics.buffer;
-		import evx.graphics;//		import evx.graphics.shader.repo;
+		import evx.graphics;
 
 		scope display = new Display;
 		scope shader = new BasicShader;
@@ -168,31 +171,34 @@ private {/*implementation}*/
 					{/*...}*/
 						string shader_code = q{
 							#version } ~glsl_version.text~ q{
-
-							uniform vec2 aspect_ratio = vec2 (1,1);
 						};
 
 						static if (Inputs.length)
-							{/*...}*/
+							{/*declare input variables}*/
 								shader_code ~= declare_uniform_variables!Input;
 								shader_code ~= declare_attribute_variables!(shader_type, Input);
+
+								static if (shader_type is GL_VERTEX_SHADER)
+									shader_code ~= declare_uniform_variables!(.Input!(Perspective, AspectRatio));
 							}
 
 						static if (Outputs.length)
-							{/*...}*/
+							{/*declare output variables}*/
 								shader_code ~= declare_uniform_variables!Output;
 								shader_code ~= declare_attribute_variables!(shader_type, Output);
 							}
 
 						static if (shader_type is GL_VERTEX_SHADER)
-							enum correction = q{gl_Position *= vec4 (aspect_ratio, 1, 1);};
-						else enum correction = ``;
+							{/*apply standard transforms}*/
+								enum transform = perspective ~ aspect_ratio;
+							}
+						else enum transform = ``;
 
 						shader_code ~= q{
 							void main (void) 
 							}`{`q{
 								} ~code~ q{
-								} ~correction~ q{
+								} ~transform~ q{
 							}`}`q{
 						};
 
@@ -200,4 +206,26 @@ private {/*implementation}*/
 					}
 			}
 		}
+
+	alias Perspective = TypeTuple!(
+		fvec,   `translation`,	Init!(0,0),
+		float,  `rotation`,		Init!(0),
+		float,  `scale`,		Init!(1),
+	);
+	enum perspective = q{
+		float cos_rotation = cos (rotation);
+		float sin_rotation = sin (rotation);
+
+		gl_Position.xy = scale * vec2 (
+			cos_rotation * gl_Position.x - sin_rotation * gl_Position.y, 
+			sin_rotation * gl_Position.x + cos_rotation * gl_Position.y
+		) + translation;
+	};
+
+	alias AspectRatio = TypeTuple!(
+		fvec, `aspect_ratio`, Init!(1,1),
+	);
+	enum aspect_ratio = q{
+		gl_Position *= vec4 (aspect_ratio, 1, 1);
+	};
 }

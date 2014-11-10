@@ -13,6 +13,8 @@ private {/*imports}*/
 	import evx.range;
 }
 
+/* base buffer type, BufferOps ready 
+*/
 struct GLBuffer (T, GLenum target, GLenum usage)
 	{/*...}*/
 		enum gl_buffer;
@@ -98,6 +100,8 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 			}
 	}
 
+/* standard openGL buffer types 
+*/
 struct VertexBuffer
 	{/*...}*/
 		GLBuffer!(fvec, GL_ARRAY_BUFFER, GL_STATIC_DRAW)
@@ -119,8 +123,16 @@ struct UniformBuffer (T)
 
 		mixin BufferOps!buffer;
 	}
-alias ColorBuffer = UniformBuffer!(Vector!(4, float));
+struct ColorBuffer
+	{/*...}*/
+		GLBuffer!(Vector!(4, float), GL_ARRAY_BUFFER, GL_STATIC_DRAW)
+			buffer;
 
+		mixin BufferOps!buffer;
+	}
+
+/* generic VRAM buffer 
+*/
 struct GPUArray (T)
 	{/*...}*/
 		GLBuffer!(T, GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW)

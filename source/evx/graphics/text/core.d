@@ -29,7 +29,7 @@ struct Glyph
 			}
 		void color (Color color)
 			{/*...}*/
-				_color[0] = color;
+				_color[0..4] = color;
 			}
 
 		auto card ()
@@ -46,7 +46,7 @@ struct Glyph
 
 		this (typeof(symbol) symbol, typeof(_color) color, typeof(_card) card)
 			in {/*...}*/
-				assert (color.length == 1);
+				assert (color.length == 4);
 				assert (card.length == 4);
 			}
 			body {/*...}*/
@@ -57,8 +57,8 @@ struct Glyph
 
 		private:
 		private {/*...}*/
-			Sub!(Appendable!(Remote!(MArray!Color, ColorBuffer))) _color;
-			Sub!(Appendable!(Remote!(MArray!fvec, VertexBuffer))) _card;
+			Sub!(Appendable!(LocalView!ColorBuffer)) _color;
+			Sub!(Appendable!(LocalView!VertexBuffer)) _card;
 		}
 	}
 
@@ -84,8 +84,6 @@ class Text
 
 						foreach (glyph; me)
 							glyph.color = color;
-						foreach (glyph; me) // TEMP
-							assert (glyph.color == color);
 					}`}`q{
 
 				auto bounding_box ()
@@ -141,11 +139,13 @@ class Text
 								auto dims = uvec(glyph.width, glyph.height);
 								auto advance = glyph.advance_x;
 
+								std.stdio.writeln (`app`);
 								with (glyph) 
 								tex_coords ~= [
 									fvec(s0, t0), 
 									fvec(s1, t1)
 								].bounding_box[].flip!`vertical`;
+								std.stdio.writeln (`/app`);
 
 								cards ~= [
 									pen,
@@ -232,7 +232,7 @@ class Text
 						alias Buffers = TypeTuple!(q{cards}, q{tex_coords}, q{colors});
 
 						mixin(apply_to_each!(`.post`, Buffers));
-						mixin(apply_to_each!(`.bind`, Buffers));
+						mixin(apply_to_each!(`.bind`, Buffers, q{font.texture}));
 					}
 
 				this (ref Font font, Display display, dstring text)
@@ -244,10 +244,10 @@ class Text
 
 						{/*reserve memory}*/
 							colors.clear;
-							colors.capacity = text.length;
+							colors.capacity = 4*text.length;
 						}
 
-						colors ~= black.repeat (text.length);
+						colors ~= black.repeat (4*text.length);
 
 						refresh;
 					}
@@ -281,7 +281,7 @@ class Text
 				public {/*transfer}*/
 					auto access (size_t i)
 						{/*...}*/
-							return Glyph (data[i], colors[i..i+1], cards[4*i..4*(i+1)]);
+							return Glyph (data[i], colors[4*i..4*(i+1)], cards[4*i..4*(i+1)]);
 						}
 					auto pull (R)(R range, size_t i, size_t j)
 						{/*...}*/
@@ -293,7 +293,7 @@ class Text
 								}
 							else {/*...}*/
 								foreach (k, glyph; enumerate (range))
-									colors[k] = glyph.color;
+									colors[4*k..4*(k+1)] = glyph.color;
 
 								auto old_data = data;
 
@@ -308,15 +308,16 @@ class Text
 							return data.length;
 						}
 				}
-
+				public {/*data}*/
+					Appendable!(LocalView!VertexBuffer) cards;
+					Appendable!(LocalView!VertexBuffer) tex_coords;
+					Appendable!(LocalView!ColorBuffer) colors;
+				}
 				private:
 				private {/*data}*/
 					Font font;
 
 					dstring data;
-					Appendable!(Remote!(MArray!fvec, VertexBuffer)) cards;
-					Appendable!(Remote!(MArray!fvec, VertexBuffer)) tex_coords;
-					Appendable!(Remote!(MArray!Color, ColorBuffer)) colors;
 					Appendable!(MArray!size_t) newline_positions;
 
 					Display display; // REVIEW need this
@@ -340,7 +341,7 @@ class Text
 		x[0..3] = `oi,`;
 		assert (x[1] == 'i');
 
-		assert (x.colors[] == [black, black, black, black, red, red, red]);
+		assert (x.colors[].stride (4).m_array[] == [black, black, black, black, red, red, red]);
 
 		assert (x[] == `oi, sup`);
 	}

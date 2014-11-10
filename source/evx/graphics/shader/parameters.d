@@ -2,13 +2,14 @@ module evx.graphics.shader.parameters; // TODO static analysis -> unused variabl
 
 private {/*import}*/
 	import std.typetuple;
-	import std.range;
+	import std.typecons;
 	import std.conv;
 	import std.traits;
 
 	import evx.math;
 	import evx.codegen;
 	import evx.traits;
+	import evx.range;
 
 	import evx.graphics.opengl;
 }
@@ -238,7 +239,12 @@ package {/*linkers}*/
 						code ~= q{
 							auto } ~Names[i]~ q{ (R)(R buffer)
 								}`{`q{
+									static assert (glsl_typename!(ElementType!R) == }`"` ~glsl_typename!(ElementType!T)~ `"`q{,
+										}`"incompatible attribute type for ` ~Names[i]~ `: " ~ElementType!R.stringof` q{
+									);
+
 									buffer.link_attribute (} ~i.text~ q{);
+
 									return this;
 								}`}`q{
 						};
@@ -327,5 +333,4 @@ void set_uniform (T)(GLuint handle, T value) // REFACTOR
 		mixin(q{
 			} ~call~ q{ (handle, value.tuple.expand);
 		});
-
 	}

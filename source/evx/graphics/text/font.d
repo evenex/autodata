@@ -4,23 +4,15 @@ private {/*import}*/
 	import evx.patterns;
 	import evx.math;
 	import evx.range;
+
 	import evx.misc.utils;
+	import evx.graphics.opengl; // texture
 }
 
 public:
 
 struct Font
 	{/*...}*/
-		package:
-
-		enum path = "./font/DejaVuSansMono.ttf";
-
-		texture_font_t* base;
-		texture_atlas_t* atlas;
-		size_t size;
-
-		alias base this;
-
 		this (size_t size)
 			out {/*...}*/
 				assert (this.is_loaded);
@@ -57,9 +49,19 @@ struct Font
 
 		mixin Original!reset;
 
+		package:
+
+		enum path = "./font/DejaVuSansMono.ttf";
+
+		texture_font_t* base;
+		texture_atlas_t* atlas;
+		size_t size;
+
+		alias base this;
+
 		auto texture ()
 			{/*...}*/
-				return atlas.id;
+				return Texture (atlas.id);
 			}
 
 		void reset ()

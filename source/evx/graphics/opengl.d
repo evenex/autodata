@@ -86,4 +86,16 @@ struct gl
 			}
 	}
 
-struct Texture {GLuint id; alias id this;}
+struct Texture
+	{/*...}*/
+		 GLuint id;
+		 alias id this;
+
+		 void bind ()
+			 in {/*...}*/
+			 	assert (id != 0);
+			 }
+			 body {/*...}*/
+			 	gl.BindTexture (GL_TEXTURE_2D, id);
+			 }
+	}

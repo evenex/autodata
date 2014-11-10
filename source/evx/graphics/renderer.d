@@ -72,7 +72,10 @@ class MeshRenderer
 		public:
 		public {/*rendering}*/
 			auto draw (Geometry mesh)
-				{/*...}*/
+				in {/*...}*/
+					assert (shader);
+				}
+				body {/*...}*/
 					return Order (this, mesh);
 				}
 
@@ -134,11 +137,6 @@ class MeshRenderer
 			void enqueue (Order order)
 				{/*...}*/
 					orders ~= order;
-				}
-
-			void attach (BasicShader shader)
-				{/*...}*/
-					this.shader = shader;
 				}
 		}
 	}
@@ -248,11 +246,6 @@ class GraphRenderer
 				{/*...}*/
 					orders ~= order;
 				}
-
-			void attach (BasicShader shader)
-				{/*...}*/
-					this.shader = shader;
-				}
 		}
 	}
 
@@ -299,13 +292,15 @@ alias TextShader = ShaderProgram!(
 		Input!(
 			fvec[], `position`,		Init!(0,0),
 			fvec[], `texture_coords`,
-			Color[], `glyph_color`, Init!(1,0,1,1),
-			Texture, `tex`,
+			Color[], `glyph_color`, Init!(1,1,0,1),
 		), 
 		Output!(
 			Color[], `color`,
 			fvec[], `tex_coords`,
 		), q{
+			gl_Position.xy = position;
+			color = glyph_color;
+			tex_coords = texture_coords;
 		}
 	),
 	FragmentShader!(
@@ -313,12 +308,96 @@ alias TextShader = ShaderProgram!(
 			Color[], `color`,
 			fvec[], `tex_coords`,
 			Texture, `tex`,
+		), 
+		Output!(
+			Color[], `frag_color`,
 		), q{
+			frag_color = vec4 (color.rgb, color.a * texture (tex, tex_coords).r);
 		}
 	)
 );
 
 pragma(msg, TextShader.code);
+
+void maain ()
+	{/*...}*/
+		import evx.graphics.display;
+		scope gfx = new Display;
+
+		auto f = Font (200);
+		scope t = new Text (f, gfx, `hello`);
+
+		scope s = new TextShader;
+
+		auto triangle = [fvec (1), fvec(0), fvec(1,0)];
+
+		gfx.attach (s);
+
+								std.stdio.writeln (0);
+		t.bind;
+								std.stdio.writeln (1);
+		auto c = t.cards[].mean;
+								std.stdio.writeln (2);
+		t.cards[] = t.cards[].map!(v => v - c);
+								std.stdio.writeln (3);
+		t[0..$/3].color = red;
+								std.stdio.writeln (4);
+		t[$/3..2*$/3].color = white;
+								std.stdio.writeln (5);
+		t[2*$/3..$].color = blue;
+								std.stdio.writeln (6);
+		//t.bind;
+								std.stdio.writeln (7);
+
+								std.stdio.writeln (8);
+								std.stdio.writeln (9);
+								std.stdio.writeln (10);
+		t.tex_coords.dirty = true;
+								std.stdio.writeln (11);
+
+		s.position (t.cards)
+			.glyph_color (t.colors)
+			.texture_coords (t.tex_coords)
+			.rotation (float(π/4))
+			.translation (0.25.vec)
+			.scale (float (0.5));
+								std.stdio.writeln (12);
+
+		foreach (i; 0..t.length.to!int)
+			gl.DrawArrays (GL_TRIANGLE_FAN, 4*i, 4); 
+		
+		gfx.render;
+
+		import core.thread;
+		Thread.sleep (3000.msecs);
+	}
+
+auto connect_services (T...)(T services)
+	{/*...}*/
+		return Services!T (services);
+	}
+import std.typetuple;
+struct Services (T...)
+	{/*...}*/
+		T services;
+
+		auto to_clients (U...)(U clients)
+			{/*...}*/
+				foreach (ref client; clients)
+					{/*...}*/
+						alias Client = typeof(client);
+						
+						foreach (member; __traits(allMembers, Client))
+							static if (__traits(compiles, typeof(__traits(getMember, Client, member))))
+								{/*...}*/
+									enum i = staticIndexOf!(typeof(__traits(getMember, Client, member)), T);
+
+									static if (i >= 0)
+										__traits(getMember, client, member) = services[i];
+								}
+					}
+			}
+	}
 
 unittest {/*...}*/
 	import evx.graphics;//	import evx.graphics.display;
@@ -333,8 +412,7 @@ unittest {/*...}*/
 	scope graph = new GraphRenderer;
 
 	display.attach (shader);
-	mesh.attach (shader);
-	graph.attach (shader);
+	connect_services (shader).to_clients (graph, mesh);
 
 	auto geometry = Geometry (
 		VertexBuffer (circle),

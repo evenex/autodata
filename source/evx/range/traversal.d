@@ -4,6 +4,7 @@ private {/*imports}*/
 	import std.range;
 	import std.algorithm;
 	import std.array;
+	import std.conv;
 
 	import evx.range.classification;
 	import evx.math.sequence;

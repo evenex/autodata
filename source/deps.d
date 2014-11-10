@@ -106,14 +106,9 @@ class Module
 			{/*...}*/
 				return name ~ "\n"
 					~ `(` ~ path ~ `)` "\n"
-					~ evx.math.functional.map!(pkg => pkg.name)(
-						this.path_to_root_package
-					).retro.join (` → `).text ~ "\n";
-		//		return name ~ "\n"
-		//			~ `(` ~ path ~ `)` "\n"
-		//			~ this.path_to_root_package
-		//				.map!(pkg => pkg.name) BUG WHY THE FUCK does this keep trying to overload into PRIVATE map alias in core.analysis??? need to get rid of all "Toolkits" somehow...
-		//				.join (` → `).text ~ "\n";
+					~ this.path_to_root_package
+						.map!(pkg => pkg.name)
+						.join (` → `).text ~ "\n";
 			}
 	}
 bool is_package (Module mod)
