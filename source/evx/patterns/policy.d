@@ -22,8 +22,10 @@ struct DefaultPolicies (NamesAndDefaults...)
 		alias PolicyTypes = staticMap!(type_of, PolicyDefaults);
 	}
 
-/* declare a set of policies using a list of assignments, using defaults wherever a policy is not assigned 
-	this template allows the setting and overriding of default policies, based on policy type, without regard to template parameter order
+/* declare a list of policies from the union of assigned policy values and default policies,
+	where the assigned values override the defaults
+
+	this template allows the specification of default policies, based on policy enum type, without regard to template parameter order
 */
 mixin template PolicyAssignment (DefaultPolicies, AssignedPolicies...)
 	{/*...}*/

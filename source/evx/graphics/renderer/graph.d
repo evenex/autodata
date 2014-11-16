@@ -24,11 +24,6 @@ class GraphRenderer
 				this.node = this.node_geometry;
 			}
 
-		auto set_shader (BasicShader shader)
-			{/*...}*/
-				this.shader = shader;
-			}
-
 		struct Implementation
 			{/*...}*/
 				BasicShader shader;
@@ -41,29 +36,25 @@ class GraphRenderer
 							Color,  `edge_color`,
 							Color,  `color`,
 							double, `node_radius`,
+							Geometry, `geometry`,
 						);
 
+						void defaults ()
+							{/*...}*/
+								node_color = yellow;
+								edge_color = blue;
+								node_radius = 0.02;
+							}
+
 						mixin RenderOrder!GraphRenderer;
-
-						public:
-						public {/*ctor}*/
-							this (GraphRenderer renderer, Geometry graph)
-								{/*...}*/
-									this.renderer = renderer;
-									this.graph = graph;
-
-									node_color = yellow;
-									edge_color = blue;
-									node_radius = 0.02;
-								}
-						}
-						private:
-						private {/*data}*/
-							Geometry graph;
-						}
 					}
 
-				void process (Order order)
+				auto ref draw (Geometry geometry)
+					{/*...}*/
+						return Order ().geometry (geometry);
+					}
+
+				void render (Order order)
 					{/*...}*/
 						void draw_nodes ()
 							{/*...}*/
@@ -72,7 +63,7 @@ class GraphRenderer
 									.color (order.node_color.vector)
 									.scale (order.scale * order.node_radius.to!float);
 
-								foreach (v; order.graph.vertices[])
+								foreach (v; order.geometry.vertices[])
 									{/*...}*/
 										shader.translation (order.translation + v);
 
@@ -81,17 +72,14 @@ class GraphRenderer
 							}
 						void draw_edges ()
 							{/*...}*/
-								order.graph.bind;
+								order.geometry.bind;
 
 								with (order)
-								shader.position (graph.vertices)
-									.color (order.edge_color.vector)
-									.translation (translation)
-									.rotation (rotation)
-									.scale (order.scale); // BUG why do i need to specify order here?
+								shader.position (geometry.vertices)
+									.color (order.edge_color.vector);
 
 								with (order)
-								gl.DrawElements (GL_LINES, graph.indices.length.to!int, GL_UNSIGNED_SHORT, null);
+								gl.DrawElements (GL_LINES, geometry.indices.length.to!int, GL_UNSIGNED_SHORT, null);
 							}
 
 						draw_edges;

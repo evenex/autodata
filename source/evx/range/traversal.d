@@ -91,7 +91,7 @@ struct Join (R)
 	}
 auto join (R, S = ElementType!R)(R ranges, S separator = S.init)
 	{/*...}*/
-		return Join!R (ranges, separator);
+		return Join!R (ranges, separator.to!(ElementType!R));
 	}
 	unittest {/*join}*/
 		int[2] x = [1,2];

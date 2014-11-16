@@ -14,6 +14,14 @@ template is_type (T...)
 		enum is_type = is (T[0]);
 	}
 
+/* test if a template argument is a class  
+*/
+template is_class (T...) 
+	if (T.length == 1)
+	{/*...}*/
+		enum is_class = is(T[0] == class);
+	}
+
 /* test if a template argument is an aliased symbol 
 */
 template is_alias (T...) 

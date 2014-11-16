@@ -2,6 +2,7 @@ module evx.operators.buffer;
 
 private {/*imports}*/
 	import evx.operators.transfer;
+
 	import evx.traits;
 }
 
@@ -39,6 +40,8 @@ mixin template BufferOps (alias buffer)
 			mixin require!`is_nullable`;
 		}
 		public {/*dependencies}*/
+			import evx.misc.binary;
+
 			mixin TransferOps!buffer;
 		}
 
@@ -74,6 +77,10 @@ mixin template BufferOps (alias buffer)
 					this = range;
 				}
 
+			auto opAssign (typeof(this) that)
+				{/*...}*/
+					binary_copy (that, this);
+				}
 			auto opAssign (R)(R range)
 				{/*...}*/
 					enum range_has_length = .TransferTraits!R.has_length;

@@ -95,11 +95,16 @@ class Display
 				return [+Δ,-Δ].bounding_box;
 			}
 
-		void attach (S)(S shader)
+		auto aspect_ratio ()
+			{/*...}*/
+				return 1/normalized_dimensions;
+			}
+
+		void attach (S)(S shader) // TODO move this functionality to renderer
 			{/*...}*/
 				shader.activate;
 
-				evx.graphics.shader.parameters.set_uniform (gl.GetUniformLocation (shader.program, `aspect_ratio`), 1/normalized_dimensions);// REVIEW
+				shader.aspect_ratio (aspect_ratio);
 			}
 
 		void render ()

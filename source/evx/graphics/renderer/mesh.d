@@ -5,6 +5,7 @@ private {/*import}*/
 
 	import evx.graphics.renderer.core;
 
+	import evx.graphics.buffer;
 	import evx.graphics.color;
 	import evx.graphics.shader;
 	import evx.graphics.opengl;
@@ -19,57 +20,65 @@ class MeshRenderer
 		mixin Wrapped!Implementation;
 		mixin RenderOps!wrapped;
 
-		void set_shader (BasicShader shader)
-			{/*...}*/
-				this.shader = shader;
-			}
-
 		struct Implementation
 			{/*...}*/
 				struct Order
 					{/*...}*/
 						mixin Builder!(
 							Color,   `color`,
-							Mode,    `mode`,
 						);
 
-						public:
-						mixin RenderOrder!MeshRenderer;
-						public {/*ctor}*/
-							this (MeshRenderer renderer, Geometry mesh)
-								{/*...}*/
-									this.renderer = renderer;
-									this.mesh = mesh;
+						Geometry geometry;
+						Mode mode;
 
-									color = magenta (0.5);
-								}
-						}
-						private:
-						private {/*data}*/
-							Geometry mesh;
-						}
+						auto ref wireframe (Geometry geometry)
+							{/*...}*/
+								this.geometry = geometry;
+
+								this.mode = Mode.wireframe;
+
+								return this;
+							}
+						auto ref solid (Geometry geometry)
+							{/*...}*/
+								this.geometry = geometry;
+
+								this.mode = Mode.solid;
+
+								return this;
+							}
+						auto ref overlay (Geometry geometry)
+							{/*...}*/
+								this.geometry = geometry;
+
+								this.mode = Mode.overlay;
+
+								return this;
+							}
+
+						void defaults ()
+							{/*...}*/
+								color = magenta;
+							}
+
+						mixin RenderOrder!MeshRenderer;
 					}
 
-				void process (Order order)
+				void render (Order order)
 					{/*...}*/
-						order.mesh.bind; // REFACTOR
-
 						with (order)
-						shader.position (mesh.vertices) // REFACTOR
-							.color (color) // REFACTOR
-							.translation (translation) // REFACTOR
-							.rotation (rotation) // REFACTOR
-							.scale (order.scale);  // BUG why do i need to specify order here?
+						shader.position (geometry.vertices)
+							.color (color);
 
 						void draw_solid ()
 							{/*...}*/
 								with (order)
-								gl.DrawElements (GL_TRIANGLES, mesh.indices.length.to!int, GL_UNSIGNED_SHORT, null);
+								gl.DrawElements (GL_TRIANGLES, geometry.indices.length.to!int, GL_UNSIGNED_SHORT, null);
 							}
 						void draw_wireframe ()
 							{/*...}*/
 								with (order)
-								foreach (i; 0..mesh.indices.length/3)
+								foreach (i; 0..geometry.indices.length/3)
 									gl.DrawElements (GL_LINE_LOOP, 3, GL_UNSIGNED_SHORT, cast(void*)(3*i*ushort.sizeof));
 							}
 

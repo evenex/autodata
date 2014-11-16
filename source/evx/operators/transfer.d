@@ -82,7 +82,7 @@ mixin template TransferOps (alias buffer, Extension = ExtendSlice!``)
 	if (is(typeof(Extension.code)))
 	{/*...}*/
 		import std.conv;
-		import evx.patterns;
+		import evx.patterns.aliasthis;
 
 		static {/*analysis}*/
 			alias TransferTraits = evx.operators.transfer.TransferTraits!(typeof(buffer));

@@ -328,7 +328,7 @@ version (generate_dependency_graph) void main ()
 			dot_file ~= modules.map!(mod => mod.find_minimal_cycle)
 				.filter!(not!empty)
 				.array.select!(cycles => cycles.empty? [] : cycles.reduce!shortest)
-				.adjacent_pairs.map!((a,b) => a.connect_to (b, `[color="#ff0000", penwidth=6]`))
+				.adjacent_pairs.map!((a,b) => a.connect_to (b, `[color="#ff0000", penwidth=10]`))
 				.array.reduce!concatenate (``);
 			
 			dot_file ~= `}`;

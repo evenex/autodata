@@ -1,4 +1,4 @@
-module evx.graphics.shader.parameters; // TODO static analysis -> unused variables, V.Output F.Input mismatch, etc
+module evx.graphics.shader.parameters;
 
 private {/*import}*/
 	import std.typetuple;
@@ -14,28 +14,28 @@ private {/*import}*/
 	import evx.graphics.opengl;
 }
 
-struct Input (Args...)
+struct Input (Decl...)
 	{/*...}*/
 		enum is_input_params;
 
-		alias List = Args;
+		alias List = Decl;
 
 		mixin ParameterSplitter!(
 			`Types`, is_type,
 			`Names`, is_string_param,
-			Filter!(not!is_initializer, Args)
+			Filter!(not!is_initializer, Decl)
 		);
 	}
-struct Output (Args...)
+struct Output (Decl...)
 	{/*...}*/
 		enum is_output_params;
 
-		alias List = Args;
+		alias List = Decl;
 
 		mixin ParameterSplitter!(
 			`Types`, is_type,
 			`Names`, is_string_param,
-			Args
+			Decl
 		);
 	}
 
@@ -252,28 +252,27 @@ package {/*linkers}*/
 					return code;
 				}
 		}
+		auto link_attribute (R)(R buffer, uint index)
+			if (is(R.gl_buffer) || is(R.Source.gl_buffer))
+			{/*...}*/
+				gl.EnableVertexAttribArray (index);
 
-	auto link_attribute (R)(R buffer, uint index)
-		if (is(R.gl_buffer) || is(R.Source.gl_buffer))
-		{/*...}*/
-			gl.EnableVertexAttribArray (index);
+				buffer.bind; // BUG we can't do this with subbuffers... how to specify subbuffers of verts, elements and attributes for linkage? 
 
-			buffer.bind; // BUG we can't do this with subbuffers... how to specify subbuffers of verts, elements and attributes for linkage? 
-
-			static if (is_vector!(ElementType!R))
-				{/*...}*/
-					enum int n = ElementType!R.length;
-					alias T = ElementType!(ElementType!R);
+				static if (is_vector!(ElementType!R))
+					{/*...}*/
+						enum int n = ElementType!R.length;
+						alias T = ElementType!(ElementType!R);
+					}
+				else {/*...}*/
+					enum int n = 1;
+					alias T = ElementType!R;
 				}
-			else {/*...}*/
-				enum int n = 1;
-				alias T = ElementType!R;
+
+				enum not_normalized = GL_FALSE;
+
+				gl.VertexAttribPointer (index, n, gl_type_enum!T, not_normalized, 0, null);
 			}
-
-			enum not_normalized = GL_FALSE;
-
-			gl.VertexAttribPointer (index, n, gl_type_enum!T, not_normalized, 0, null);
-		}
 
 	struct UniformLinker (ShaderVariables...)
 		{/*...}*/
@@ -292,9 +291,19 @@ package {/*linkers}*/
 						code ~= q{
 							private GLint uniform_} ~Names[i]~ q{;
 
-							public auto } ~Names[i]~ q{ (T)(T value) // TODO verify the value type
-								}`{`q{
+							public auto ref } ~Names[i]~ q{ (U)(U value) // TODO verify the value type
+								in }`{`q{
+									GLint program;
+
+									gl.GetIntegerv (GL_CURRENT_PROGRAM, &program);
+
+									assert (program is this.program,
+										`shader not activated!`
+									);
+								}`}`q{
+								body }`{`q{
 									set_uniform (uniform_} ~Names[i]~ q{, value);
+
 									return this;
 								}`}`q{
 						};
@@ -313,24 +322,23 @@ package {/*linkers}*/
 					return code;
 				}
 		}
-}
-
-void set_uniform (T)(GLuint handle, T value) // REFACTOR
-	{/*...}*/
-		static if (is_vector_array!T)
+		void set_uniform (T)(GLuint handle, T value)
 			{/*...}*/
-				enum length = T.length.text;
-				alias U = ElementType!T;
+				static if (is_vector_array!T)
+					{/*...}*/
+						enum length = T.length.text;
+						alias U = ElementType!T;
+					}
+				else {/*...}*/
+					enum length = `1`;
+					alias U = T;
+				}
+
+				enum type = glsl_typename!U[0].text;
+				enum call = "gl.Uniform" ~length~type;
+
+				mixin(q{
+					} ~call~ q{ (handle, value.tuple.expand);
+				});
 			}
-		else {/*...}*/
-			enum length = `1`;
-			alias U = T;
-		}
-
-		enum type = glsl_typename!U[0].text;
-		enum call = "gl.Uniform" ~length~type;
-
-		mixin(q{
-			} ~call~ q{ (handle, value.tuple.expand);
-		});
-	}
+}

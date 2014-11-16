@@ -5,7 +5,7 @@ private {/*imports}*/
 	import std.math;
 	
 	import evx.range;
-	import evx.misc.utils;
+	import evx.misc.binary;
 
 	import evx.math.geometry.vectors;
 	import evx.math.geometry.traits;

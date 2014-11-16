@@ -5,6 +5,7 @@ private {/*imports}*/
 
 	import evx.type;
 	import evx.traits;
+	import evx.math.logic;
 }
 
 auto connect_services (T...)(T services)
@@ -13,8 +14,11 @@ auto connect_services (T...)(T services)
 	}
 
 struct Services (T...)
+	if (All!(is_class, T))
 	{/*...}*/
 		T services;
+
+		static assert (is(T == NoDuplicates!T));
 
 		auto to_clients (U...)(U clients)
 			{/*...}*/
@@ -28,11 +32,19 @@ struct Services (T...)
 									alias Member = typeof(__traits(getMember, Client, member));
 
 									static if (is_unary_function!Member)
-										enum i = staticIndexOf!(FirstParameter!Member, T);
-									else enum i = staticIndexOf!(Member, T);
+										foreach (overload; __traits(getOverloads, Client, member))
+											{/*...}*/
+												enum i = staticIndexOf!(FirstParameter!overload, T);
 
-									static if (i >= 0)
-										__traits(getMember, client, member) = services[i];
+												static if (i >= 0)
+													__traits(getMember, client, member)(services[i]);
+											}
+									else {/*...}*/
+										enum i = staticIndexOf!(Member, T);
+
+										static if (i >= 0)
+											__traits(getMember, client, member) = services[i];
+									}
 								}
 					}
 			}

@@ -3,32 +3,17 @@ module evx.graphics.renderer.core;
 private {/*imports}*/
 	import std.conv;
 	import std.array;
+	import std.typetuple;
 
 	import evx.graphics.opengl;
 	import evx.graphics.buffer;
 	import evx.graphics.color;
 	import evx.graphics.shader;
 
-	import evx.patterns;
+	import evx.traits;
 	import evx.math;
-	import evx.misc.services;
 }
 
-struct Geometry // REFACTOR
-	{/*...}*/
-		VertexBuffer vertices;
-		IndexBuffer indices;
-
-		void bind ()
-			{/*...}*/
-				vertices.buffer.bind;
-				indices.buffer.bind;
-			}
-	}
-
-
-import evx.traits;
-import evx.patterns;
 mixin template RenderOrder (Renderer)
 	{/*...}*/
 		import evx.math;
@@ -36,46 +21,125 @@ mixin template RenderOrder (Renderer)
 		enum render_order;
 
 		Renderer renderer;
-		
-		void enqueued ()
+
+		this (Renderer renderer)
 			{/*...}*/
-				renderer.enqueue (this);
+				this.renderer = renderer;
+
+				static if (__traits(compiles, defaults ()))
+					defaults;
 			}
+		
 		void immediately ()
 			{/*...}*/
+				renderer.orders.length = renderer.orders.length - 1; // BUG assumes that this order is the back order
+
 				renderer.process (this);
+			}
+		void enqueued () {}
+		
+		auto ref to (Output)(Output output)
+			in {/*...}*/
+				assert (gl.IsRenderBuffer (output.renderbuffer_id));
+			}
+			body {/*...}*/
+				gl.BindRenderBuffer (GL_RENDERBUFFER, output.renderbuffer_id);
 			}
 
 		mixin AffineTransform;
 	}
 
-struct RenderTraits (T)
+template GraphicsServices (Renderer)
 	{/*...}*/
-		private __gshared T renderer;
+		string code ()
+			{/*...}*/
+				string[] shaders;
+				string[] renderers;
 
-		static if (is(T.Order))
-			alias OrderType = T.Order;
+				foreach (member; __traits (allMembers, Renderer))
+					static if (__traits(getProtection, __traits(getMember, Renderer, member)) == `public`)
+						{/*...}*/
+							enum type = q{typeof(Renderer.} ~member~ q{)};
+
+							mixin(q{
+								static if (__traits(compiles, mixin(type)))
+									alias T = } ~type~ q{;
+								else alias T = void;
+							});
+
+							static if (is(T: ShaderProgram!(V,F), V,F))
+								shaders ~= `"` ~member~ `"`;
+							else static if (is(T.RenderTraits))
+								renderers ~= `"` ~member~ `"`;
+						}
+
+				return q{
+					alias Shaders = TypeTuple!(} ~shaders.join (`, `)~ q{);
+					alias Renderers = TypeTuple!(} ~renderers.join (`, `)~ q{);
+					alias All = TypeTuple!(Shaders, Renderers);
+				};
+			}
+			
+		mixin(code);
+	}
+
+struct RenderTraits (Renderer)
+	{/*...}*/
+		private __gshared Renderer renderer;
+
+		static if (is(Renderer.Order))
+			alias OrderType = Renderer.Order;
 		else alias OrderType = void;
 
+		//alias ShaderList = ShaderType, 'identifier'
 		mixin Traits!(
-			`has_order`, q{static assert (is(T.Order.render_order));},
-			`has_shader`, q{static assert (is(typeof(renderer.shader): ShaderProgram!(V,F), V,F));},
-			`can_process`, q{renderer.process (T.Order.init);}
+			`has_order`, q{static assert (is(Renderer.Order.render_order));},
+			`can_render`, q{renderer.render (Renderer.Order.init);},
+			`has_shader`, q{static assert (GraphicsServices!Renderer.Shaders.length == 1);},
+			`has_renderers`, q{static assert (GraphicsServices!Renderer.Renderers.length > 0);},
 		);
 	}
 
 mixin template RenderOps (alias renderer)
 	{/*...}*/
-		alias RenderTraits = .RenderTraits!(typeof(renderer));
-		alias Order = RenderTraits.OrderType;
+		static {/*analysis}*/
+			alias RenderTraits = .RenderTraits!(typeof(renderer));
+			alias GraphicsServices = .GraphicsServices!(typeof(renderer));
+			alias Order = RenderTraits.OrderType;
+
+			mixin template require (string trait)
+				{/*...}*/
+					alias require = RenderTraits.require!(typeof(this), trait, RenderOps);
+				}
+
+			mixin require!`has_order`;
+			mixin require!`can_render`;
+
+			static assert (GraphicsServices.Shaders.length < 2, `only one shader per renderer currently supported`);
+			// TODO assert that all draw calls return an order
+		}
+		static {/*dependencies}*/
+			import evx.misc.services;
+		}
 
 		mixin AliasThis!renderer;
 
 		Order[] orders;
 
-		auto draw (Args...)(Args object)
+		auto ref draw (Args...)(Args args)
+			if (Args.length > 0)
 			{/*...}*/
-				return Order (this, object);
+				orders ~= renderer.draw (args);
+
+				orders[$-1].renderer = this;
+
+				return orders[$-1];
+			}
+		auto ref draw () // TODO if this returned a pointer instead then do-not-store and index-in-order-queue problems are solved... except that the builder pattern still returns by ref...
+			{/*...}*/
+				orders ~= Order (this);
+
+				return orders[$-1];
 			}
 		void process ()
 			{/*...}*/
@@ -88,11 +152,36 @@ mixin template RenderOps (alias renderer)
 				orders = null;
 			}
 		void process (Order order)
-			{/*...}*/
-				renderer.process (order);
+			in {/*...}*/
+				static if (RenderTraits.has_shader)
+					assert (this.shader !is null, `shader not connected`);
 			}
-		void enqueue (Order order)
+			body {/*...}*/
+				// TODO assert shader activated?
+				static if (RenderTraits.has_shader)
+					{/*...}*/
+						shader.activate;// TEMP
+						shader.transform (order);
+					}
+				
+				renderer.render (order);
+			}
+
+		mixin(attachments);
+
+		private static attachments ()
 			{/*...}*/
-				orders ~= order;
+				string code;
+
+				foreach (service; GraphicsServices.All)
+					code ~= q{
+						void attach (typeof(this.} ~service~ q{) s)
+							}`{`q{
+								this.} ~service~ q{ = s;
+							}`}`q{
+					};
+
+
+				return code;
 			}
 	}

@@ -13,7 +13,7 @@ private {/*imports}*/
 	import evx.range;
 }
 
-/* base buffer type, BufferOps ready 
+/* base buffer type, BufferOps capable 
 */
 struct GLBuffer (T, GLenum target, GLenum usage)
 	{/*...}*/
@@ -100,37 +100,6 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 			}
 	}
 
-/* standard openGL buffer types 
-*/
-struct VertexBuffer
-	{/*...}*/
-		GLBuffer!(fvec, GL_ARRAY_BUFFER, GL_STATIC_DRAW)
-			buffer;
-
-		mixin BufferOps!buffer;
-	}
-struct IndexBuffer
-	{/*...}*/
-		GLBuffer!(ushort, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW)
-			buffer;
-
-		mixin BufferOps!buffer;
-	}
-struct UniformBuffer (T)
-	{/*...}*/
-		GLBuffer!(T, GL_UNIFORM_BUFFER, GL_STATIC_DRAW)
-			buffer;
-
-		mixin BufferOps!buffer;
-	}
-struct ColorBuffer
-	{/*...}*/
-		GLBuffer!(Vector!(4, float), GL_ARRAY_BUFFER, GL_STATIC_DRAW)
-			buffer;
-
-		mixin BufferOps!buffer;
-	}
-
 /* generic VRAM buffer 
 */
 struct GPUArray (T)
@@ -170,4 +139,49 @@ auto gpu_array (R)(R range)
 
 		vram2[99] = 42;
 		assert (vram2[] != vram[0..$/2]);
+	}
+
+/* standard openGL buffer types 
+*/
+struct VertexBuffer
+	{/*...}*/
+		GLBuffer!(fvec, GL_ARRAY_BUFFER, GL_STATIC_DRAW)
+			buffer;
+
+		mixin BufferOps!buffer;
+	}
+struct IndexBuffer
+	{/*...}*/
+		GLBuffer!(ushort, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW)
+			buffer;
+
+		mixin BufferOps!buffer;
+	}
+struct UniformBuffer (T)
+	{/*...}*/
+		GLBuffer!(T, GL_UNIFORM_BUFFER, GL_STATIC_DRAW)
+			buffer;
+
+		mixin BufferOps!buffer;
+	}
+struct ColorBuffer
+	{/*...}*/
+		GLBuffer!(Vector!(4, float), GL_ARRAY_BUFFER, GL_STATIC_DRAW)
+			buffer;
+
+		mixin BufferOps!buffer;
+	}
+
+/* composite buffer types 
+*/
+struct Geometry
+	{/*...}*/
+		VertexBuffer vertices;
+		IndexBuffer indices;
+
+		void bind ()
+			{/*...}*/
+				vertices.buffer.bind;
+				indices.buffer.bind;
+			}
 	}

@@ -1,4 +1,39 @@
 module evx.graphics.shader.program;
+public import evx.graphics.shader.parameters;
+
+/* shader programs 
+	consist of 2 shaders: vertex and fragment 
+
+	shaders consist of 3 parts: the input, output and the body.
+		the body is a string containing the shader's main function code, in GLSL
+		the input and output are Input and Output templates, respectively.
+			the templates contain declaration lists 
+				(i.e. interleaved types and identifier strings)
+			in these declaration lists, 
+				non-array types denote uniform variables,
+				while array types denote per-work-item data
+					(i.e:
+						for vertex input, this is per-vertex data in an attribute buffer
+						for vertex output, this writes interpolated data
+						for fragment input, this reads interpolated data
+						for fragment output, this is per-fragment data in a render target
+					)
+			in addition, default initializers may be specified in the declaration lists,
+				using the Init!(...) template,
+					where the ... parameters are numeric constructor components
+
+	shader programs must be activated before use
+		after activating a shader, all subsequent glDraw* calls will use that shader
+
+	parameters can be set using a builder pattern
+		it is an error to set parameters before activating the shader
+
+	all shader programs use the following set of common parameters:
+		translation
+		rotation
+		scale
+		aspect_ratio
+*/
 
 private {/*imports}*/
 	import std.conv;
@@ -12,8 +47,6 @@ private {/*imports}*/
 	import evx.traits;
 	import evx.codegen;
 }
-
-public import evx.graphics.shader.parameters;
 
 enum glsl_version = 420;
 
@@ -32,39 +65,39 @@ class ShaderProgram (Vert, Frag)
 				}
 		}
 
-		static if (Vert.Inputs.length > 0)
-			mixin(AttributeLinker!(Vert.Inputs).code);
+		void activate ()
+			{/*...}*/
+				gl.UseProgram (program);
 
-		mixin(
-			UniformLinker!(
-				Vert.Inputs, Frag.Inputs,
-				Input!Perspective, Input!AspectRatio,
-			).code
-		);
+				link_uniforms (program);
+			}
 
-		public {/*codegen}*/
-			static code ()
+		public:
+		public {/*parameters}*/
+			auto ref aspect_ratio (vec ratio)
 				{/*...}*/
-					return Vert.shader_code ~ Frag.shader_code;
+					set_uniform (gl.GetUniformLocation (program, `aspect_ratio`), ratio);
+
+					return this;
 				}
 
-			static uniform_variables ()
+			auto ref transform (T)(T affine)
 				{/*...}*/
-					return declare!(Uniforms!(Vert.Input), Uniforms!(Frag.Input));
+					return this.translation (affine.translation)
+						.rotation (affine.rotation)
+						.scale (affine.scale);
 				}
-			static uniform_handles ()
-				{/*...}*/
-					alias Names = Filter!(is_string_param, Uniforms!(Vert.Input), Uniforms!(Frag.Input));
 
-					template to_GLint (T...)
-						{/*...}*/
-							alias to_GLint = GLint;
-						}
+			static if (Vert.Inputs.length > 0)
+				mixin(AttributeLinker!(Vert.Inputs).code);
 
-					return declare!(Names, staticMap!(to_GLint, Names));
-				}
+			mixin(
+				UniformLinker!(
+					Vert.Inputs, Frag.Inputs,
+					Perspective, AspectRatio,
+				).code
+			);
 		}
-
 		public {/*ctor}*/
 			this ()
 				{/*...}*/
@@ -85,14 +118,31 @@ class ShaderProgram (Vert, Frag)
 					gl.DetachShader (program, frag_shader);
 				}
 		}
-		public {/*program}*/ // TODO package
+		package:
+		package {/*data}*/
 			GLuint program;
-
-			void activate ()
+		}
+		private:
+		private {/*codegen}*/
+			static code ()
 				{/*...}*/
-					gl.UseProgram (program);
+					return Vert.shader_code ~ Frag.shader_code;
+				}
 
-					link_uniforms (program);
+			static uniform_variables ()
+				{/*...}*/
+					return declare!(Uniforms!(Vert.Input), Uniforms!(Frag.Input));
+				}
+			static uniform_handles ()
+				{/*...}*/
+					alias Names = Filter!(is_string_param, Uniforms!(Vert.Input), Uniforms!(Frag.Input));
+
+					template to_GLint (T...)
+						{/*...}*/
+							alias to_GLint = GLint;
+						}
+
+					return declare!(Names, staticMap!(to_GLint, Names));
 				}
 		}
 	}
@@ -129,6 +179,9 @@ template FragmentShader (Parameters...)
 private {/*implementation}*/
 	class Shader (GLenum shader_type, Parameters...)
 		{/*...}*/
+			GLuint shader_object;
+			alias shader_object this;
+
 			private {/*definitions}*/
 				alias Inputs = Filter!(has_trait!`is_input_params`, Parameters);
 				alias Outputs = Filter!(has_trait!`is_output_params`, Parameters);
@@ -162,12 +215,8 @@ private {/*implementation}*/
 						gl.verify!`Shader` (shader_object);
 					}
 			}
-			public {/*data}*/ // TODO package
-				GLuint shader_object;
-				alias shader_object this;
-			}
-			static {/*code gen}*/
-				string shader_code ()
+			private {/*code gen}*/
+				static shader_code ()
 					{/*...}*/
 						string shader_code = q{
 							#version } ~glsl_version.text~ q{
@@ -179,7 +228,10 @@ private {/*implementation}*/
 								shader_code ~= declare_attribute_variables!(shader_type, Input);
 
 								static if (shader_type is GL_VERTEX_SHADER)
-									shader_code ~= declare_uniform_variables!(.Input!(Perspective, AspectRatio));
+									{/*declare common inputs}*/
+										shader_code ~= declare_uniform_variables!Perspective;
+										shader_code ~= declare_uniform_variables!AspectRatio;
+									}
 							}
 
 						static if (Outputs.length)
@@ -189,7 +241,7 @@ private {/*implementation}*/
 							}
 
 						static if (shader_type is GL_VERTEX_SHADER)
-							{/*apply standard transforms}*/
+							{/*apply common transform}*/
 								enum transform = perspective ~ aspect_ratio;
 							}
 						else enum transform = ``;
@@ -206,8 +258,9 @@ private {/*implementation}*/
 					}
 			}
 		}
-
-	alias Perspective = TypeTuple!(
+}
+private {/*common shader code}*/
+	alias Perspective = Input!(
 		fvec,   `translation`,	Init!(0,0),
 		float,  `rotation`,		Init!(0),
 		float,  `scale`,		Init!(1),
@@ -222,10 +275,10 @@ private {/*implementation}*/
 		) + translation;
 	};
 
-	alias AspectRatio = TypeTuple!(
+	alias AspectRatio = Input!(
 		fvec, `aspect_ratio`, Init!(1,1),
 	);
 	enum aspect_ratio = q{
-		gl_Position *= vec4 (aspect_ratio, 1, 1);
+		gl_Position.xy *= aspect_ratio;
 	};
 }

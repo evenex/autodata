@@ -1,10 +1,20 @@
 module evx.patterns.builder;
 
+// REFACTOR
+import evx.patterns.policy;
+
+enum ChainBy {reference, pointer}
+
 /* generate getters and chainable setters for a set of member declarations 
+	if parameterless function pointers or delegates are given,
+		this is treated as a dynamic property;
+		meaning, the getters for them will invoke the function or delegate
+			and pass along its return value
+			instead of returning the function or delegate itself
 */
 mixin template Builder (Args...)
 	{/*...}*/
-		import evx.math;//		import evx;//		import evx;//		import evx.math;//		import evx;//		import evx.math;//		import evx.math.logic;
+		import evx.math;
 
 		static assert (is(typeof(this)), `mixin requires host struct`);
 
@@ -22,6 +32,12 @@ mixin template Builder (Args...)
 		mixin ParameterSplitter!(
 			q{Types}, is_type, 
 			q{Names}, is_string_param, 
+			Args
+		);
+		mixin PolicyAssignment!(
+			DefaultPolicies!(
+				`chain_by`, ChainBy.reference,
+			),
 			Args
 		);
 

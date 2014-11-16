@@ -4,6 +4,7 @@ debug = profiler;
 
 private {/*imports}*/
 	import std.typetuple;
+	import std.algorithm;
 	import std.string;
 	import std.range;
 	import std.datetime;
@@ -14,16 +15,6 @@ private {/*imports}*/
 	import evx.misc.tuple;
 }
 
-public {/*binary equality}*/
-	bool binary_equal (T,U)(T a, U b)
-		{/*...}*/
-			alias Binary = ubyte[T.sizeof];
-
-			if (T.sizeof != U.sizeof)
-				return false;
-			else return (*(cast(Binary*)&a))[].equal ((*(cast(Binary*)&b))[]);
-		}
-}
 public {/*concurrency}*/
 	auto received_before (Ops...)(Seconds limit, Ops ops)
 		{/*...}*/
