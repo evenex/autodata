@@ -7,8 +7,11 @@ private {/*imports}*/
 	import std.conv;
 
 	import evx.range.classification;
+	import evx.range.primitives;
+
 	import evx.math.sequence;
 	import evx.math.logic;
+	import evx.math.overloads;
 }
 
 /* buffer a range to an array 
@@ -23,6 +26,10 @@ alias contains = std.algorithm.canFind;
 */
 alias any = std.algorithm.any;
 
+/* check if all elements in a range meet a given criteria 
+*/
+alias all = std.algorithm.all;
+
 /* construct a range from a repeated value 
 */
 alias repeat = std.range.repeat;
@@ -30,6 +37,82 @@ alias repeat = std.range.repeat;
 /* chain a tuple of ranges into a single range 
 */
 alias chain = std.range.chain;
+
+/* iterate a range in reverse 
+*/
+alias retro = std.range.retro;
+
+/* split a range length-wise into subranges in which adjacent elements satisfy some relation 
+*/
+struct Group (R, alias relation)
+	{/*...}*/
+		R range;
+
+		struct Sub
+			{/*...}*/
+				R range;
+				ElementType!R prev;
+				bool terminated;
+
+				this (R range)
+					{/*...}*/
+						this.range = range;
+
+						if (not (range.empty))
+							prev = range.front;
+					}
+
+				auto front ()
+					{/*...}*/
+						return range.front;
+					}
+				auto popFront ()
+					{/*...}*/
+						prev = front;
+
+						range.popFront;
+
+						if (this.empty || not (relation (prev, front)))
+							this.terminated = true;
+					}
+				bool empty ()
+					{/*...}*/
+						return this.terminated || range.empty;
+					}							
+			}
+
+		this (R range)
+			{/*...}*/
+				this.range = range;
+			}
+
+		auto ref front ()
+			{/*...}*/
+				return Sub (range);
+			}
+		void popFront ()
+			{/*...}*/
+				range = range[front.count..$];
+			}
+		bool empty ()
+			{/*...}*/
+				return range.empty;
+			}
+	}
+auto group (alias relation = (a,b) => a == b, R)(R range)
+	{/*...}*/
+		return Group!(R, relation)(range);
+	}
+	unittest {/*...}*/
+		import std.range: equal;
+		import evx.math.overloads;
+
+		foreach (pair; zip (
+			[0,1,3,4,5,7,8].group!((a,b) => (a-b).abs < 2),
+			[[0,1], [3,4,5], [7,8]]
+		))
+			assert (pair[0].equal (pair[1]));
+	}
 
 /* join a range of ranges into a single range 
 */
@@ -104,10 +187,6 @@ auto join (R, S = ElementType!R)(R ranges, S separator = S.init)
 		assert (A.join ([0]).equal ([1, 2, 0, 3, 4, 0, 5, 6]));
 	}
 
-/* iterate a range in reverse 
-*/
-alias retro = std.range.retro;
-
 /* traverse a range with elements rotated left by some number of positions 
 */
 auto rotate_elements (R)(R range, int positions = 1)
@@ -115,7 +194,7 @@ auto rotate_elements (R)(R range, int positions = 1)
 		auto n = range.length;
 
 		if (n > 0)
-			assert ((positions + n) % n > 0);
+			assert (positions.sgn * (positions + n) % n > 0);
 	}
 	body {/*...}*/
 		auto n = range.length;
@@ -123,7 +202,7 @@ auto rotate_elements (R)(R range, int positions = 1)
 		if (n == 0)
 			return typeof(range.cycle[0..0]).init;
 
-		auto i = (positions + n) % n;
+		auto i = positions.sgn * (positions + n) % n;
 		
 		return range.cycle[i..n+i];
 	}
@@ -228,7 +307,6 @@ auto stride (R,T)(R range, T stride)
 	{/*...}*/
 		return Stride!R (range, stride.to!size_t);
 	}
-
 
 /* verify that the length of a range is its true length 
 */

@@ -23,7 +23,7 @@ class TextRenderer
 			{/*...}*/
 				struct Order
 					{/*...}*/
-						mixin Builder!(
+						mixin Builder!(ChainBy.address,
 							Text, `text`,
 						);
 

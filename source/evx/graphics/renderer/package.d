@@ -36,13 +36,11 @@ unittest {/*...}*/
 
 			mesh.draw.solid (geometry)
 				.color (random_shade (cyan (0.1)))
-				.rotate (-i*π/n_verts)
-				.enqueued;
+				.rotate (-i*π/n_verts);
 
 			mesh.draw.solid (geometry)
 				.color (random_shade ((blue*grey)(0.1)))
-				.rotate (i*π/n_verts)
-				.enqueued;
+				.rotate (i*π/n_verts);
 
 			mesh.process;
 

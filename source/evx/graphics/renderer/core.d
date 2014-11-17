@@ -32,21 +32,17 @@ mixin template RenderOrder (Renderer)
 		
 		void immediately ()
 			{/*...}*/
-				renderer.orders.length = renderer.orders.length - 1; // BUG assumes that this order is the back order
-
 				renderer.process (this);
-			}
-		void enqueued () {}
-		
-		auto ref to (Output)(Output output)
-			in {/*...}*/
-				assert (gl.IsRenderBuffer (output.renderbuffer_id));
-			}
-			body {/*...}*/
-				gl.BindRenderBuffer (GL_RENDERBUFFER, output.renderbuffer_id);
-			}
 
+				auto index = (&this - renderer.orders.ptr).to!size_t / this.sizeof;
+
+				renderer.orders[index..$-1] = renderer.orders[index+1..$];
+				renderer.orders.length = renderer.orders.length - 1;
+			}
+		
 		mixin AffineTransform;
+
+		GLuint render_target;
 	}
 
 template GraphicsServices (Renderer)
@@ -116,7 +112,6 @@ mixin template RenderOps (alias renderer)
 			mixin require!`can_render`;
 
 			static assert (GraphicsServices.Shaders.length < 2, `only one shader per renderer currently supported`);
-			// TODO assert that all draw calls return an order
 		}
 		static {/*dependencies}*/
 			import evx.misc.services;
@@ -126,35 +121,49 @@ mixin template RenderOps (alias renderer)
 
 		Order[] orders;
 
-		auto ref draw (Args...)(Args args)
-			if (Args.length > 0)
+		Order* draw ()
 			{/*...}*/
+				orders ~= Order (this);
+
+				return &orders[$-1];
+			}
+		Order* draw (Args...)(Args args)
+			in {/*...}*/
+				static assert (is (typeof(renderer.draw (args)) == Order),
+					typeof(this).stringof~ `: `
+					~typeof(renderer).stringof~ `.draw (` ~Args.stringof~ `) must return Order, not ` 
+					~typeof(renderer.draw (args)).stringof
+				);
+			}
+			body {/*...}*/
 				orders ~= renderer.draw (args);
 
 				orders[$-1].renderer = this;
 
-				return orders[$-1];
+				return &orders[$-1];
 			}
-		auto ref draw () // TODO if this returned a pointer instead then do-not-store and index-in-order-queue problems are solved... except that the builder pattern still returns by ref...
-			{/*...}*/
-				orders ~= Order (this);
 
-				return orders[$-1];
-			}
 		void process ()
 			{/*...}*/
 				static if (RenderTraits.has_shader)
 					shader.activate;
 
-				foreach (order; orders[])
+				foreach (ref order; orders[])
 					process (order);
 
 				orders = null;
 			}
-		void process (Order order)
+		void process (ref Order order)
 			in {/*...}*/
 				static if (RenderTraits.has_shader)
 					assert (this.shader !is null, `shader not connected`);
+
+				assert (&order >= orders.ptr && &order < orders.ptr + orders.length,
+					`Order at ` ~(&order).to!string~ ` is outside of order queue (`
+					~orders.ptr.to!string~ `, ` ~(orders.ptr + orders.length).to!string~ `)`
+					` it is an error to store render orders as values, they must be accessed`
+					` through references or pointers`
+				);
 			}
 			body {/*...}*/
 				// TODO assert shader activated?

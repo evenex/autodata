@@ -31,7 +31,7 @@ class GraphRenderer
 
 				struct Order
 					{/*...}*/
-						mixin Builder!(
+						mixin Builder!(ChainBy.address,
 							Color,  `node_color`,
 							Color,  `edge_color`,
 							Color,  `color`,
@@ -51,7 +51,11 @@ class GraphRenderer
 
 				auto ref draw (Geometry geometry)
 					{/*...}*/
-						return Order ().geometry (geometry);
+						Order order;
+
+						order.geometry = geometry;
+
+						return order;
 					}
 
 				void render (Order order)

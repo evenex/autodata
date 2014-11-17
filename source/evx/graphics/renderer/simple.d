@@ -68,7 +68,7 @@ class SimpleRenderer
 import evx.misc.services;
 void main ()
 	{/*...}*/
-		static if (0)
+		static if (1)
 			{/*...}*/
 				import evx.graphics.display;
 				scope gfx = new Display;
@@ -82,10 +82,14 @@ void main ()
 				scope sh1 = new TextShader;
 				scope txt = new TextRenderer;
 
+				scope sh0 = new BasicShader;
+				scope dbg = new SimpleRenderer;
+
+				connect_services (sh0, sh1, txt).to_clients (txt, dbg);
+
 				auto triangle = [fvec (1), fvec(0), fvec(1,0)];
 
 				gfx.attach (sh1);
-				txt.attach (sh1);
 
 				t[].color = red;
 
@@ -93,6 +97,14 @@ void main ()
 					.rotate (π/4)
 					.translate (vec(0,1))
 					.scale (0.2)
+					.immediately;
+
+				auto verts = VertexBuffer (gfx.normalized_bounds[].map!(v => v / 2));
+				gfx.attach (sh0); // BUG i don't want to have to manually attach
+				dbg.draw
+			//		.text (t)
+					.vertices (verts)
+					.color (blue)
 					.immediately;
 				
 				gfx.render;

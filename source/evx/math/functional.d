@@ -1,15 +1,18 @@
 module evx.math.functional;
 
 private {/*imports}*/
-	import std.range;
 	import std.conv;
 	import std.traits;
+	import std.typecons;
+	import std.typetuple;
 
 	import evx.type;
+	import evx.range;
 
 	import evx.math.logic;
 	import evx.math.continuity;
 	import evx.math.intervals;
+	import evx.math.ordinal;
 }
 
 /* aliasable template lambda function 
@@ -17,8 +20,9 @@ private {/*imports}*/
 template λ (alias F) {alias λ = F;}
 
 public {/*map}*/
-	/* replacement for std.algorithm.MapResult 
+	/* apply a given function to the elements in a range 
 	*/
+
 	struct Mapped (R, alias func)
 		{/*...}*/
 			alias Index = IndexType!R;
@@ -30,7 +34,7 @@ public {/*map}*/
 						in {/*...}*/
 							static if (is_continuous!Index)
 								assert (i < range.measure, `index out of bounds`);
-							else static if (hasLength!R)
+							else static if (has_length!R)
 								assert (i < range.length, `index out of bounds`);
 							else static assert (0);
 						}
@@ -47,11 +51,10 @@ public {/*map}*/
 				}
 
 			auto opSlice ()(Index i, Index j)
-				if (is(typeof(range[Index.init..Index.init])))
 				in {/*...}*/
 					static if (is_continuous!Index)
 						assert (i < j && j <= measure);
-					else static if (hasLength!R)
+					else static if (has_length!R)
 						assert (i < j && j <= length, `attempted to slice [` ~i.text~ `, ` ~j.text~ `] with length ` ~length.text);
 				}
 				body {/*...}*/
@@ -59,7 +62,7 @@ public {/*map}*/
 				}
 
 			@property:
-			static if (isInputRange!R)
+			static if (is_input_range!R)
 				{/*...}*/
 					auto ref front ()
 						{/*...}*/
@@ -76,18 +79,18 @@ public {/*map}*/
 							return range.empty;
 						}
 
-					static assert (isInputRange!Mapped);
+					static assert (is_input_range!Mapped);
 				}
-			static if (isForwardRange!R)
+			static if (is_forward_range!R)
 				{/*...}*/
 					auto save ()
 						{/*...}*/
 							return this;
 						}
 
-					static assert (isForwardRange!Mapped);
+					static assert (is_forward_range!Mapped);
 				}
-			static if (isBidirectionalRange!R)
+			static if (is_bidirectional_range!R)
 				{/*...}*/
 					auto ref back ()
 						{/*...}*/
@@ -100,9 +103,9 @@ public {/*map}*/
 							range.popBack;
 						}
 
-					static assert (isBidirectionalRange!Mapped);
+					static assert (is_bidirectional_range!Mapped);
 				}
-			static if (hasLength!R)
+			static if (has_length!R)
 				{/*...}*/
 					@property length () const
 						{/*...}*/
@@ -112,7 +115,7 @@ public {/*map}*/
 					static if (is(DollarType!R == size_t))
 						alias opDollar = length;
 
-					static assert (hasLength!Mapped);
+					static assert (has_length!Mapped);
 				}
 			static if (is_continuous_range!R)
 				{/*...}*/
@@ -131,8 +134,6 @@ public {/*map}*/
 			R range;
 		}
 
-	/* replacement for std.algorithm.map 
-	*/
 	template map (alias func)
 		{/*...}*/
 			auto map (R)(R range)
@@ -141,6 +142,8 @@ public {/*map}*/
 				}
 		}
 		unittest {/*...}*/
+			import std.range: equal;
+
 			auto a = [1, 2, 3];
 
 			auto b = a.map!(x => x + 1);
@@ -151,9 +154,84 @@ public {/*map}*/
 			assert (c.equal ([4, 6, 8]));
 		}
 }
-public {/*zip}*/
-	/* replacement for std.range.Zip 
+public {/*reduce}*/
+	/* accumulate a value over a range using a binary function 
 	*/
+	template reduce (functions...)
+		if (functions.length > 0)
+		{/*...}*/
+			template Accumulator (R)
+				{/*...}*/
+					static if (functions.length == 1)
+						alias Accumulator = Unqual!(typeof(functions[0] (R.init.front, R.init.front)));
+					else {/*alias Accumulator}*/
+						string generate_accumulator ()
+							{/*...}*/
+								string code;
+
+								foreach (i, f; functions)
+									code ~= q{Unqual!(typeof(functions[} ~i.text~ q{] (R.init.front, R.init.front))), };
+
+								return q{Tuple!(} ~code[0..$-2]~ q{)};
+							}
+
+						mixin(q{
+							alias Accumulator = } ~generate_accumulator~ q{;
+						});
+					}
+				}
+
+			auto reduce (R)(R range)
+				if (is_input_range!R)
+				in {/*...}*/
+					assert (not (range.empty), `cannot reduce empty ` ~R.stringof~ ` without seed`);
+				}
+				body {/*...}*/
+					Accumulator!R seed;
+
+					static if (functions.length == 1)
+						seed = range.front;
+					else foreach (i, f; functions)
+						seed[i] = range.front;
+
+					range.popFront;
+
+					return reduce (range, seed);
+				}
+
+			auto reduce (R, T = Accumulator!R)(R range, T seed)
+				if (is_input_range!R)
+				{/*...}*/
+					// FUTURE static if (isRandomAccess) try to block and parallelize... or foreach (x; parallel(r))?
+					auto accumulator = seed;
+
+					for (; not (range.empty); range.popFront)
+						static if (functions.length == 1)
+							accumulator = functions[0] (accumulator, range.front);
+						else foreach (i, f; functions)
+							accumulator[i] = functions[i] (accumulator[i], range.front);
+
+					return accumulator;
+				}
+		}
+		unittest {/*...}*/
+			alias τ = std.typecons.tuple;
+
+			auto a = [1, 2, 3];
+
+			assert (a.reduce!((a,b) => a + b) == 6);
+			assert (a.reduce!(
+				(a,b) => a * b,
+				(a,b) => a - b,
+				(a,b) => a / b,
+			) == τ(6, -4, 0));
+		}
+}
+public {/*zip}*/
+	/* join several ranges together transverse-wise, 
+		into a range of tuples of the elements of the original ranges 
+	*/
+
 	struct Zipped (Ranges...)
 		{/*...}*/
 			static if (not(is(CommonIndex == void)))
@@ -162,7 +240,7 @@ public {/*zip}*/
 						in {/*...}*/
 							static if (is_continuous!CommonIndex)
 								assert (i < measure);
-							else static if (hasLength!Zipped)
+							else static if (has_length!Zipped)
 								assert (i < length);
 						}
 						body {/*...}*/
@@ -176,7 +254,6 @@ public {/*zip}*/
 							return this;
 						}
 					auto opSlice ()(CommonIndex i, CommonIndex j)
-						if (All!(can_slice, Ranges))
 						{/*...}*/
 							Zipped copy = this;
 
@@ -187,7 +264,7 @@ public {/*zip}*/
 						}
 				}
 
-			static if (All!(isInputRange, Ranges))
+			static if (All!(is_input_range, Ranges))
 				@property {/*...}*/
 					auto ref front ()
 						{/*...}*/
@@ -207,18 +284,18 @@ public {/*zip}*/
 							return false;
 						}
 
-					static assert (isInputRange!Zipped);
+					static assert (is_input_range!Zipped);
 				}
-			static if (All!(isForwardRange, Ranges))
+			static if (All!(is_forward_range, Ranges))
 				@property {/*...}*/
 					auto save ()
 						{/*...}*/
 							return this;
 						}
 
-					static assert (isForwardRange!Zipped);
+					static assert (is_forward_range!Zipped);
 				}
-			static if (All!(isBidirectionalRange, Ranges))
+			static if (All!(is_bidirectional_range, Ranges))
 				@property {/*...}*/
 					auto ref back ()
 						{/*...}*/
@@ -230,9 +307,9 @@ public {/*zip}*/
 								range.popBack;
 						}
 
-					static assert (isBidirectionalRange!Zipped);
+					static assert (is_bidirectional_range!Zipped);
 				}
-			static if (All!(isOutputRange, Ranges))
+			static if (All!(is_output_range, Ranges))
 				@property {/*...}*/
 					void put ()(auto ref ZipTuple element)
 						{/*...}*/
@@ -240,9 +317,9 @@ public {/*zip}*/
 								range.put (element[i]);
 						}
 
-					static assert (.isOutputRange!(Zipped, ZipTuple));
+					static assert (.is_output_range!(Zipped, ZipTuple));
 				}
-			static if (All!(hasLength, Ranges))
+			static if (All!(has_length, Ranges))
 				@property {/*...}*/
 					auto length () const
 						out (result) {/*...}*/
@@ -256,7 +333,7 @@ public {/*zip}*/
 					static if (is(CommonDollar == size_t))
 						alias opDollar = length;
 
-					static assert (hasLength!Zipped);
+					static assert (has_length!Zipped);
 				}
 			static if (All!(is_continuous_range, Ranges))
 				@property {/*...}*/
@@ -303,9 +380,9 @@ public {/*zip}*/
 						});
 					}
 
-				template isOutputRange (R)
+				template is_output_range (R)
 					{/*...}*/
-						alias isOutputRange = .isOutputRange!(R, ElementType!R);
+						alias is_output_range = .is_output_range!(R, ElementType!R);
 					}
 
 				template can_slice (R)
@@ -327,7 +404,7 @@ public {/*zip}*/
 										~typeof(ranges[0]).stringof~ ` ` ~measure.text
 									);
 							}
-						static if (All!(hasLength, Ranges))
+						static if (All!(has_length, Ranges))
 							{/*...}*/
 								auto length = ranges[0].length;
 
@@ -347,13 +424,12 @@ public {/*zip}*/
 			}
 		}
 
-	/* replacement for std.range.zip 
-	*/
 	auto zip (Ranges...)(Ranges ranges)
 		{/*...}*/
 			return Zipped!Ranges (ranges);
 		}
 		unittest {
+			import std.range: equal;
 			alias τ = std.typecons.tuple;
 
 			auto a = [1,2,3];
@@ -364,7 +440,54 @@ public {/*zip}*/
 			assert (c.equal ([τ(1, `a`), τ(2, `b`), τ(3, `c`)]));
 		}
 }
+public {/*extract}*/
+	/* from a range of elements, extract a range of element members 
+	*/
+	auto extract (string field, R)(R range)
+		{/*...}*/
+			mixin(q{
+				return range.map!(x => x.} ~field~ q{);
+			});
+		}
+}
+public {/*disperse}*/
+	/* split a range of tuples, transverse-wise, 
+		into a tuple of ranges 
+	*/
+	auto disperse (R)(R range)
+		{/*...}*/
+			static if (isTuple!(ElementType!R))
+				{/*...}*/
+					static extraction_code ()
+						{/*...}*/
+							string[] code;
+
+							foreach (i, _; ElementType!R.Types)
+								code ~= q{range.extract!}`"expand[` ~i.text~ `]"`;
+
+							return code.join (`, `).to!string;
+						}
+
+					mixin(q{
+						return tuple (} ~extraction_code~ q{);
+					});
+				}
+			else return range;
+		}
+		unittest {/*...}*/
+			import std.range: equal;
+
+			auto a = [1,2,3];
+			auto b = [4,5,6];
+
+			assert (zip (a,b).disperse[0].equal (a));
+			assert (zip (a,b).disperse[1].equal (b));
+		}
+}
 public {/*filter}*/
+	/* traverse the subrange consisting only of elements which match a given criteria 
+	*/
+
 	struct Filtered (R, alias match = identity)
 		{/*...}*/
 			R range;
@@ -384,19 +507,19 @@ public {/*filter}*/
 					return range.empty;
 				}
 
-			static assert (isInputRange!Filtered);
+			static assert (is_input_range!Filtered);
 
-			static if (isForwardRange!R)
+			static if (is_forward_range!R)
 				{/*...}*/
 					@property save ()
 						{/*...}*/
 							return this;
 						}
 
-					static assert (isForwardRange!Filtered);
+					static assert (is_forward_range!Filtered);
 				}
 
-			static if (isBidirectionalRange!R)
+			static if (is_bidirectional_range!R)
 				{/*...}*/
 					auto ref back ()
 						{/*...}*/
@@ -408,7 +531,7 @@ public {/*filter}*/
 							seek_back;
 						}
 
-					static assert (isBidirectionalRange!Filtered);
+					static assert (is_bidirectional_range!Filtered);
 				}
 
 			this (R range)
@@ -417,7 +540,7 @@ public {/*filter}*/
 
 					seek_front;
 
-					static if (isBidirectionalRange!R)
+					static if (is_bidirectional_range!R)
 						seek_back;
 				}
 
@@ -431,7 +554,7 @@ public {/*filter}*/
 							range.popFront;
 					}
 
-				static if (isBidirectionalRange!R)
+				static if (is_bidirectional_range!R)
 					void seek_back ()
 						{/*...}*/
 							static if (is_n_ary_function)
@@ -443,17 +566,17 @@ public {/*filter}*/
 			}
 		}
 
-	/* replacement for std.algorithm.filter 
-	*/
 	template filter (alias match)
 		{/*...}*/
 			auto filter (R)(R range)
-				if (isInputRange!R)
+				if (is_input_range!R)
 				{/*...}*/
 					return Filtered!(R, match)(range);
 				}
 		}
 		unittest {/*...}*/
+			import std.range: equal;
+
 			auto a = [1, 2, 3, 4];
 
 			auto b = a.filter!(x => x % 2);
@@ -464,100 +587,38 @@ public {/*filter}*/
 			assert (c.equal ([3]));
 		}
 }
-public {/*reduce}*/
-	/* replacement for std.algorithm.reduce 
-	*/
-	template reduce (functions...)
-		if (functions.length > 0)
-		{/*...}*/
-			template Accumulator (R)
-				{/*...}*/
-					static if (functions.length == 1)
-						alias Accumulator = Unqual!(typeof(functions[0] (R.init.front, R.init.front)));
-					else {/*alias Accumulator}*/
-						string generate_accumulator ()
-							{/*...}*/
-								string code;
-
-								foreach (i, f; functions)
-									code ~= q{Unqual!(typeof(functions[} ~i.text~ q{] (R.init.front, R.init.front))), };
-
-								return q{Tuple!(} ~code[0..$-2]~ q{)};
-							}
-
-						mixin(q{
-							alias Accumulator = } ~generate_accumulator~ q{;
-						});
-					}
-				}
-
-			auto reduce (R)(R range)
-				if (isInputRange!R)
-				in {/*...}*/
-					assert (not (range.empty), `cannot reduce empty ` ~R.stringof~ ` without seed`);
-				}
-				body {/*...}*/
-					Accumulator!R seed;
-
-					static if (functions.length == 1)
-						seed = range.front;
-					else foreach (i, f; functions)
-						seed[i] = range.front;
-
-					range.popFront;
-
-					return reduce (range, seed);
-				}
-
-			auto reduce (R, T = Accumulator!R)(R range, T seed)
-				if (isInputRange!R)
-				{/*...}*/
-					// FUTURE static if (isRandomAccess) try to block and parallelize... or foreach (x; parallel(r))?
-					auto accumulator = seed;
-
-					for (; not (range.empty); range.popFront)
-						static if (functions.length == 1)
-							accumulator = functions[0] (accumulator, range.front);
-						else foreach (i, f; functions)
-							accumulator[i] = functions[i] (accumulator[i], range.front);
-
-					return accumulator;
-				}
-		}
-		unittest {/*...}*/
-			alias τ = std.typecons.tuple;
-
-			auto a = [1, 2, 3];
-
-			assert (a.reduce!((a,b) => a + b) == 6);
-			assert (a.reduce!(
-				(a,b) => a * b,
-				(a,b) => a - b,
-				(a,b) => a / b,
-			) == τ(6, -4, 0));
-		}
-}
-public {/*transform}*/
-	/* modify a range in-place 
-	*/
-	auto transform (alias op, R)(R range)
-		{/*...}*/
-			range[] = op (range);
-		}
-}
 public {/*select}*/
 	/* perform a self-referencing operation on a range 
+		if possible, n-ary ops applied to a range of tuples 
+			will disperse the range into tuple element ranges, 
+			and pass these to the op
 	*/
 	auto select (alias op, R)(R range)
 		{/*...}*/
-			return op (range);
+			static if (__traits(compiles, op (range.disperse.expand)))
+				return op (range.disperse.expand);
+			else return op (range);
+		}
+		unittest {/*...}*/
+			import std.range: equal;
+
+			auto a = [1, 2, 3];
+			auto b = [`a`,`b`,`c`];
+
+			// TODO overload == for hof ranges.. by doing what? RangeOps?
+
+			assert (a.select!(x => x.length + x[0]) == 4);
+			assert (zip (a,b).select!((x,y) => x.reduce!max.to!string ~ y[0..2].join.to!string) == `3ab`);
 		}
 }
-public {/*extract}*/
-	auto extract (string field, R)(R range)
+public {/*transform}*/
+	/* modify a range in-place if possible, 
+		otherwise apply a self-referencing operation 
+	*/
+	auto transform (alias op, R)(R range)
 		{/*...}*/
-			mixin(q{
-				return range.map!(x => x.} ~field~ q{);
-			});
+			static if (__traits(compiles, (){range[] = select!op (range);}))
+				range[] = select!op (range);
+			else return select!op (range);
 		}
 }

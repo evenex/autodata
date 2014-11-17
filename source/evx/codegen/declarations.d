@@ -99,7 +99,6 @@ mixin template ParameterSplitter (string first, alias first_pred, string second,
 			alias } ~first~ q{ = Filter!(first_pred, Args);
 			alias } ~second~ q{ = Filter!(second_pred, Args);
 			static assert (} ~first~ q{.length == } ~second~ q{.length, }`"` ~first~`/`~second~ ` length mismatch"`q{);
-			static assert (} ~first~ q{.length + } ~second~ q{.length == Args.length, `extraneous template parameters`);
 		});
 	}
 

@@ -9,10 +9,31 @@ private {/*imports}*/
 	import evx.range;
 }
 
+mixin template RenderTarget (int permanent_id = -1)
+	{/*...}*/
+		static if (permanent_id < 0)
+			GLuint renderbuffer_id;
+		else enum GLuint renderbuffer_id = permanent_id.to!GLuint;
+
+		void draw (T)(T order)
+			if (is(T.render_order))
+			{/*...}*/
+				order.renderer.process (order);
+			}
+		void draw (R...)(R orders)
+			if (All!(has_trait!`render_order`, staticMap!(ElementType, R)))
+			{/*...}*/
+				foreach (queue; orders)
+					foreach (subqueue; queue.group!((a,b) => a.renderer == b.renderer))
+						queue.front.renderer.process (queue);
+			}
+	}
+
 class Display
 	{/*...}*/
 		uvec display_size;
 		GLFWwindow* window;
+		enum renderbuffer_id = 0;
 
 		this (uvec display_size = uvec(800, 600))
 			{/*...}*/

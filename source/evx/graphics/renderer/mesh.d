@@ -24,36 +24,36 @@ class MeshRenderer
 			{/*...}*/
 				struct Order
 					{/*...}*/
-						mixin Builder!(
+						mixin Builder!(ChainBy.address,
 							Color,   `color`,
 						);
 
 						Geometry geometry;
 						Mode mode;
 
-						auto ref wireframe (Geometry geometry)
+						Order* wireframe (Geometry geometry)
 							{/*...}*/
 								this.geometry = geometry;
 
 								this.mode = Mode.wireframe;
 
-								return this;
+								return &this;
 							}
-						auto ref solid (Geometry geometry)
+						Order* solid (Geometry geometry)
 							{/*...}*/
 								this.geometry = geometry;
 
 								this.mode = Mode.solid;
 
-								return this;
+								return &this;
 							}
-						auto ref overlay (Geometry geometry)
+						Order* overlay (Geometry geometry)
 							{/*...}*/
 								this.geometry = geometry;
 
 								this.mode = Mode.overlay;
 
-								return this;
+								return &this;
 							}
 
 						void defaults ()

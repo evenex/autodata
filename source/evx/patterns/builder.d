@@ -3,7 +3,7 @@ module evx.patterns.builder;
 // REFACTOR
 import evx.patterns.policy;
 
-enum ChainBy {reference, pointer}
+enum ChainBy {reference, address}
 
 /* generate getters and chainable setters for a set of member declarations 
 	if parameterless function pointers or delegates are given,
@@ -34,17 +34,19 @@ mixin template Builder (Args...)
 			q{Names}, is_string_param, 
 			Args
 		);
-		mixin PolicyAssignment!(
-			DefaultPolicies!(
-				`chain_by`, ChainBy.reference,
-			),
-			Args
-		);
+		mixin PolicyAssignment!(DefaultPolicies!(`chain_by`, ChainBy.reference), Args);
 
 		mixin(builder_property_declaration);
 		mixin(builder_data_declaration);
 
 		static {/*code generation}*/
+			string return_this ()
+				{/*...}*/
+					static if (chain_by is ChainBy.reference)
+						return q{return this;};
+					else static if (chain_by is ChainBy.address)
+						return q{return &this;};
+				}
 			string builder_property_declaration ()
 				{/*...}*/
 					static string builder_getter_setter (string name)()
@@ -58,7 +60,7 @@ mixin template Builder (Args...)
 								@property auto ref } ~name~ q{ (} ~Type.stringof~ q{ value)
 									}`{`q{
 										_}~ name ~q{ = value;
-										return this;
+										} ~return_this~ q{
 									}`}`q{
 							};
 
@@ -67,7 +69,7 @@ mixin template Builder (Args...)
 									auto ref } ~name~ q{ (Args...)(Args args)
 										}`{`q{
 											_}~ name ~q{ = } ~Type.stringof~ q{ (args);
-											return this;
+											} ~return_this~ q{
 										}`}`q{
 								};
 
