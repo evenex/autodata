@@ -535,6 +535,12 @@ template SpaceOps (alias source, SubspaceExtensions...)
 			);
 		}
 
+		static if (__traits(hasMember, Source, `equality`)) // REFACTOR
+			bool equality (Args...)(Args args)
+				{/*...}*/
+					return source.equality (args);
+				}
+
 		public:
 		public {/*primitives}*/
 			static if (is (access_by_function))
@@ -719,10 +725,10 @@ template SpaceOps (alias source, SubspaceExtensions...)
 				}
 		}
 		public {/*subspaces}*/
-			Coordinate!dim origin (size_t dim)()
+			Coordinate!dim origin (size_t dim)(Coordinate!dim measure)
 				if (has_origin!dim)
 				{/*...}*/
-					return source.origin!dim (measure!dim);
+					return source.origin!dim (measure);
 				}
 
 			Interval!dim opSlice (size_t dim, T, U)(T i, U j)
@@ -817,7 +823,7 @@ template SpaceOps (alias source, SubspaceExtensions...)
 					public {/*selection}*/
 						auto origin (size_t dim)()
 							{/*...}*/
-								static if (is (has_origin!i))
+								static if (has_origin!(Free[dim]))
 									return space.origin!(Free[dim])(measure!dim);
 
 								else return zero!(UnArray!(typeof(global_bounds)[dim]));
@@ -828,12 +834,9 @@ template SpaceOps (alias source, SubspaceExtensions...)
 							in {/*...}*/
 								foreach (i,_; selection)
 									{/*...}*/
-										auto bounds = boundary!i;
-										bounds[] -= origin!i;
-
-										assert (space.map_selections (selection[i]).expand.within (bounds),
+										assert (space.map_selections (selection[i]).expand.within (boundary!i),
 											usage_error~
-											`selection ` ~selection[i].text~ ` exceeded boundary ` ~bounds.text
+											`selection ` ~selection[i].text~ ` exceeded boundary ` ~boundary!i.text
 											~ ` on dimension ` ~i.text
 										);
 									}
@@ -884,7 +887,9 @@ template SpaceOps (alias source, SubspaceExtensions...)
 							{/*...}*/
 								enum can_flatten = is (typeof (this.flatten)) && is (typeof (subspace.flatten));
 
-								static if (is (equality_defined))
+								static if (__traits(hasMember, Source, `equality`))
+									pragma(msg, typeof (space.equality (subspace, global_bounds)));
+								static if (is (typeof (source.equality (subspace, global_bounds)) == bool))
 									{/*...}*/
 										return space.equality (subspace, global_bounds);
 									}
@@ -1913,6 +1918,108 @@ void boundary_operator_demo ()
 		*/
 		assert (OffsetArray ()[~$..~$ + ($-~$)] == OffsetArray ()[]);
 	}
+void equality_overload_demo ()() // TODO
+	{/*...}*/
+		struct SquaredSpace
+			{/*...}*/
+				struct Base
+					{/*...}*/
+						double access (double x, double y)
+							{/*...}*/
+								return x^^2 + y^^2;
+							}
+
+						double measure (size_t i)()
+							if (i < 2)
+							{/*...}*/
+								return 1.0;
+							}
+
+						bool equality (R, T...)(R space, T boundaries)
+							{/*...}*/
+								import std.math;
+
+								foreach (i, boundary; boundaries)
+									if (space.measure!i.not!approxEqual (measure!i))
+										return false;
+								// get a common measure type
+							}
+					}
+
+				Base base;
+
+				mixin SpaceOps!base;
+			}
+		struct SineSpace
+			{/*...}*/
+				struct Base
+					{/*...}*/
+						double access (double x, double y)
+							{/*...}*/
+								return sin (x + y);
+							}
+
+						double measure (size_t i)()
+							if (i < 2)
+							{/*...}*/
+								return 1.0;
+							}
+					}
+
+				Base base;
+
+				mixin SpaceOps!base;
+			}
+
+		std.stdio.writeln (SquaredSpace()[] == SineSpace()[]);
+	}
+void origin_offset_demo ()
+	{/*...}*/
+		/*
+			sometimes it is desirable to have slices offset their local boundaries.
+
+			here is an example of using boundaries to create a space which is centered at 0,
+			and using origin offsets to ensure that its subspaces are all centered at 0 also
+		*/
+		struct UnitSpace
+			{/*...}*/
+				struct Base
+					{/*...}*/
+						double[2] boundary (size_t i)()
+							if (i < 2)
+							{/*...}*/
+								return [-1,1];
+							}
+
+						auto access (double x, double y)
+							{/*...}*/
+								return τ(x,y);
+							}
+
+						double origin (size_t i)(double width)
+							if (i < 2)
+							{/*...}*/
+								return width/2;
+							}
+					}
+
+				Base base;
+
+				mixin SpaceOps!base;
+			}
+
+		/*
+			first, we slice the half the range, centered at (0.0, 0.0)
+		*/
+		auto space = UnitSpace();
+		auto slice = space[0.0, ~$/2..$/2];
+
+		/*
+			now the slice is also centered at 0.0 
+		*/
+		assert (slice[-0.5..0.5][$/2] == slice[~$..$][$/2]);
+		assert (slice[-0.5..0.5][0.0] == space[0.0, 0.0]);
+	}
 
 void main ()
 	{/*...}*/
@@ -1923,4 +2030,6 @@ void main ()
 		axis_label_demo;
 		floating_point_space_demo;
 		boundary_operator_demo;
+		//equality_overload_demo; // TODO
+		origin_offset_demo;
 	}
