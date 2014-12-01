@@ -20,26 +20,15 @@ import evx.misc.tuple;
 	GET THIS SHIT OUT OF HERE
 */
 alias Identity = evx.type.Identity; // TEMP
-alias is_integral = isIntegral; //REFACTOR 
-alias is_floating_point = isFloatingPoint; //REFACTOR 
-enum stringof (T) = T.stringof; //REFACTOR 
-enum is_template (T...) = __traits(isTemplate, T[0]);
 
-template Repeat (size_t n, T...)
-	{/*...}*/
-		static if (n == 0)
-			alias Repeat = TypeTuple!();
 
-		else alias Repeat = TypeTuple!(T, Repeat!(n-1, T));
-	}
-
-auto max (T,U)(T a, U b)
+auto max (T,U)(T a, U b)// REFACTOR to ordinal
 	{/*...}*/
 		return CommonType!(T,U)(
 			a > b? a : b
 		);
 	}
-auto min (T,U)(T a, U b)
+auto min (T,U)(T a, U b)// REFACTOR to ordinal
 	{/*...}*/
 		return CommonType!(T,U)(
 			a < b? a : b
@@ -47,48 +36,8 @@ auto min (T,U)(T a, U b)
 	}
 
 /*
-	INTERVAL STUFF
-*/
-auto ref left (T)(auto ref T[2] interval)
-	{/*...}*/
-		return interval[0];
-	}
-auto ref right (T)(auto ref T[2] interval)
-	{/*...}*/
-		return interval[1];
-	}
-bool within (T)(T element, T[2] bounds) // REFACTOR
-	in {/*...}*/
-		assert (bounds[0] < bounds[1]);
-	}
-	body {/*...}*/
-		return bounds[0] <= element 
-			&& element < bounds[1];
-	}
-bool within (T)(T[2] interval, T[2] bounds) // REFACTOR
-	in {/*...}*/
-		assert (bounds[0] < bounds[1]);
-		assert (interval[0] < interval[1]);
-	}
-	body {/*...}*/
-		return bounds[0] <= interval[0] 
-			&& interval[1] <= bounds[1];
-	}
-auto difference (T)(T[2] slice) // REFACTOR
-	{/*...}*/
-		return slice[1] - slice[0];
-	}
-
-/*
 	TYPE PROCESSING
 */
-template UnArray (T) // REFACTOR
-	{/*...}*/
-		static if (is (T == U[n], U, size_t n))
-			alias UnArray = U;
-
-		else alias UnArray = T;
-	}
 
 /*
 	TRAITS
@@ -181,12 +130,12 @@ template BoundaryOps (Space)
 			{/*...}*/
 				Space* space;
 
-				Coordinate!dim measure ()
+				auto ref Coordinate!dim measure ()
 					{/*...}*/
 						return space.measure!dim;
 					}
 
-				Coordinate!dim boundary ()
+				auto ref Coordinate!dim boundary ()
 					{/*...}*/
 						return space.boundary!dim[side];
 					}
@@ -826,7 +775,10 @@ template SpaceOps (alias source, SubspaceExtensions...)
 								static if (has_origin!(Free[dim]))
 									return space.origin!(Free[dim])(measure!dim);
 
-								else return zero!(UnArray!(typeof(global_bounds)[dim]));
+								else static if (is (typeof(global_bounds)[dim] == T[2], T))
+									return zero!T;
+
+								else return zero!(typeof(global_bounds)[dim]);
 							}
 
 						auto opIndex (T...)(T selection)
@@ -1181,8 +1133,6 @@ void intro_demo ()
 		/*
 			but a few new operators are added. for example, a type-generic range comparison
 		*/
-		auto fsd = x[0..$/2].flatten;
-
 		assert (x[0..$/2] != only (1,2,3,4));
 		assert (x[0..$/2] == only (8,7,6,5));
 
@@ -1308,239 +1258,8 @@ void intro_demo ()
 			by specifying a combination of coordinates and intervals
 		*/
 		assert (z[0..$, 0] == [16, 15, 14, 13]);
-		assert (z[2, 0..$/2] == [14, 10]);
+		assert (z[2, 0..$] == [14, 10,  6,  2]);
 		assert (z[0, 0..$][2] == 8);
-	}
-void binary_cube_demo ()
-	{/*...}*/
-		static struct BinaryCube
-			{/*...}*/
-				struct Base
-					{/*...}*/
-						size_t measure (size_t dim)()
-							if (dim < 3)
-							{/*...}*/
-								return 2;
-							}
-
-						size_t access (size_t i, size_t j, size_t k)
-							{/*...}*/
-								return i ^ j ^ k;
-							}
-					}
-
-				Base base;
-
-				mixin SpaceOps!base;
-			}
-
-		{/*dimensions, measures and boundaries}*/
-			/*
-				for initial spaces (i.e. spaces which do not already have SpaceOps), dimensionality is defined
-				as the maximum n for which there is defined either boundary!i or measure!i (but not both) for all i ϵ [0..n) 
-				or as 1 if only measure or boundary (but not both) are defined
-			*/
-			/*
-				measure must return a single scalar value of any type, while boundary must return a static array of length 2
-			*/
-			static assert (dimensionality!BinaryCube == 3);
-
-			/*
-				for non-initial spaces, both measures and boundaries are automatically defined to be consistent with one another
-			*/
-			/*
-				boundary is defined as either the boundary given by the base space, or as an interval starting at the zero element of the measure type, and spanning the measure
-			*/
-			assert (BinaryCube().boundary!0 == [0,2]);
-			assert (BinaryCube().boundary!1 == [0,2]);
-			assert (BinaryCube().boundary!2 == [0,2]);
-
-			/*
-				measure is defined as either the measure given by the base space, or as the difference between the right and left boundary points
-			*/
-			assert (BinaryCube().measure!0 == 2);
-			assert (BinaryCube().measure!1 == 2);
-			assert (BinaryCube().measure!2 == 2);
-
-			/*
-				for 2-or-higher-dimensional spaces, volume is defined as the product of all measures, if such a product exists
-			*/
-			assert (BinaryCube().volume == 8);
-		}
-		{/*points and indices}*/
-			/*
-				points in a multidimensional space can be accessed using multidimensional index operators
-			*/
-			assert (BinaryCube()[0,0,0] == 0);
-			assert (BinaryCube()[1,0,0] == 1);
-			assert (BinaryCube()[0,1,0] == 1);
-			assert (BinaryCube()[0,0,1] == 1);
-		}
-		{/*subspaces, slices, and range semantics}*/
-			/*
-				slices can be taken along each dimension with the familiar D semantics
-			*/
-			auto sliced = BinaryCube()[0..$, 0..$, 0..$];
-			static assert (dimensionality!(typeof(sliced)) == 3);
-
-			/*
-				slicing a space returns a subspace, which defines its own measures and boundaries
-			*/
-			assert (sliced.measure!0 == 2);
-			assert (sliced.measure!1 == 2);
-			assert (sliced.measure!2 == 2);
-
-			assert (sliced.volume == 8);
-
-			assert (sliced.boundary!0 == [0,2]);
-			assert (sliced.boundary!1 == [0,2]);
-			assert (sliced.boundary!2 == [0,2]);
-
-			/*
-				in a subspace, a dimension can be sliced or indexed is called free, otherwise it is bound
-				when slicing a space or subspace, any dimension that is indexed becomes bound, while dimensions that are sliced remain free
-				binding all dimensions determines a single point in the space
-			*/
-			auto plane = BinaryCube()[0..$, 0..$, 0];
-			static assert (dimensionality!(typeof(plane)) == 2);
-
-			/*
-				futher slicing or indexing operations do not refer to bound dimensions.
-			*/
-			assert (plane[0,0] == BinaryCube()[0,0,0]);
-			assert (plane[0,1] == BinaryCube()[0,1,0]);
-			assert (plane[1,0] == BinaryCube()[1,0,0]);
-			assert (plane[1,1] == BinaryCube()[1,1,0]);
-
-			/*
-				bound dimensions have measure 0 and do not factor into the definition of volume.
-			*/
-			assert (plane.measure!0 == 2);
-			assert (plane.measure!1 == 2);
-			assert (plane.volume == 4);
-
-			assert (plane.boundary!0 == [0,2]);
-			assert (plane.boundary!1 == [0,2]);
-
-			/*
-				a subspace which has only one free dimension becomes effectively 1-dimensional.
-			*/
-			auto edge = BinaryCube()[0, 1, 0..$];
-			static assert (dimensionality!(typeof(edge)) == 1);
-
-			/*
-				a non-indexed measure is defined for it, whereas volume is not defined.
-			*/
-			assert (edge.measure!0 == 2);
-			assert (edge.measure == 2);
-
-			assert (edge[0] == BinaryCube()[0,1,0]);
-			assert (edge[1] == BinaryCube()[0,1,1]);
-
-			{/*length and iteration}*/
-				/*
-					length is defined for any dimension which can be parameterized by size_t.
-				*/
-				//assert (BinaryCube()[].length!0 == 2); REVIEW
-				//assert (BinaryCube()[].length!1 == 2); REVIEW
-				//assert (BinaryCube()[].length!2 == 2); REVIEW
-
-				//assert (plane.length!0 == 2); REVIEW
-				//assert (plane.length!1 == 2); REVIEW
-
-				//assert (edge.length!0 == 2); REVIEW
-
-				/*
-					if all free dimensions of a subspace can be parameterized by size_t, the subspace becomes iterable.
-				*/
-				//foreach (point; BinaryCube()[]) REVIEW
-					//assert (point == 0 || point == 1); REVIEW
-				//foreach (point; plane) REVIEW
-					//assert (point == 0 || point == 1); REVIEW
-				//foreach (point; edge) REVIEW
-					//assert (point == 0 || point == 1); REVIEW
-
-				/*
-					in this case, the subspace's length (with the standard D range semantics) is defined as the product of the lengths of all dimensions.
-				*/
-				//assert (BinaryCube()[].length == 8); REVIEW
-				//assert (plane.length == 4); REVIEW
-				//assert (edge.length == 2); REVIEW
-
-				/*
-					since BinaryCube is measured by size_t, length is equivalent to volume.
-				*/
-				assert (BinaryCube()[].volume == 8);
-				assert (plane.volume == 4);
-			}
-		}
-		{/*boundary operators}*/
-			/*
-				the $ operator, normally the length operator of a D range, is the boundary operator of a space or subspace
-				$ denotes the right boundary point and ~$ denotes the left boundary point
-				since the left boundary is, by default, zero, the semantics of $ for most 1D spaces and subspaces are consistent with that of D ranges
-			*/
-			assert (BinaryCube()[~$,~$,~$] == BinaryCube()[0,0,0]);
-			assert (BinaryCube()[$-1,$-1,$-1] == BinaryCube()[1,1,1]);
-
-			/*
-				~$ provides a generic way to access the left boundary of a space or subspace
-			*/
-			assert (BinaryCube()[~$..$, ~$..$, ~$..$] == BinaryCube()[]);
-			assert (BinaryCube()[~$..$, ~$..$, ~$] == BinaryCube()[0..$, 0..$, 0]);
-			assert (BinaryCube()[~$, ~$, ~$..$] == BinaryCube()[0, 0, 0..$]);
-
-			/*
-				getting a measure from the boundary operator is accomplished with $.measure or, more tersely, ($-~$)
-			*/
-			assert (BinaryCube()[0,0, ($-~$) == $.measure? 1:0] == 1);
-		}
-		////
-		{/*performance}*/
-			/*
-				SpaceOps do not increase the size of a struct so long as it is static
-			*/
-			static assert (BinaryCube.sizeof == 1);
-		}
-	}
-void rounding_cube_demo ()
-	{/*...}*/
-		static struct RoundingCube
-			{/*...}*/
-				struct Base
-					{/*...}*/
-						size_t measure (size_t dim)()
-							if (dim < 3)
-							{/*...}*/
-								return 2;
-							}
-
-						size_t[3] access (size_t i, size_t j, size_t k)
-							{/*...}*/
-								return [i,j,k];
-							}
-
-						size_t coordinate_map (size_t d)(double x)
-							{/*...}*/
-								return x.round.to!size_t;
-							}
-						double coordinate_map (size_t d, T: double)(size_t i)
-							{/*...}*/
-								return i;
-							}
-					}
-
-				Base base;
-
-				mixin SpaceOps!base;
-			}
-
-		assert (RoundingCube()[0,0,0] == [0,0,0]);
-		assert (RoundingCube()[0.4, 0.2, 0.9] == [0,0,1]);
-		assert (RoundingCube()[0.6, 0.2, 0.9] == [1,0,1]);
-
-		assert (RoundingCube()[$ - 1.6, 0.2, 0.9] == [0,0,1]);
-		assert (RoundingCube()[$ - 1.5, 0.2, 0.9] == [1,0,1]);
 	}
 void iteration_demo ()
 	{/*...}*/
@@ -1586,7 +1305,7 @@ void iteration_demo ()
 		static assert (is_bidirectional_range!(typeof(Matrix()[0, 0..$])));
 
 		/*
-			the flatten transform can be used to turn a space into a bidirectional range with length
+			the flatten transform can be used to turn a discrete space into a bidirectional range with length
 		*/
 		assert (Matrix()[].flatten.length == Matrix().volume);
 		static assert (is_bidirectional_range!(typeof(Matrix()[].flatten)));
@@ -1615,10 +1334,10 @@ void iteration_demo ()
 		/*
 			note that transposition also changes iteration order,
 			and since iteration of a flattened space increments the leftmost index fastest,
-			the most efficient iteration (with respect to memory caching) results from
+			the most efficient iteration of a ptr-based Space results from
 			a [column, row] indexing scheme.
 
-			to handle this, either tranpose matrices again before iterating over them,
+			to handle this, either untranpose matrices before iterating over them,
 			or transpose the underlying data store to column-major order
 
 			note that these performance concerns only apply to matrices backed by data stores;
@@ -1687,6 +1406,8 @@ void axis_label_demo ()
 		*/
 		assert (Matrix().measure!`rows` == 4);
 		assert (Matrix().measure!`columns` == 4);
+		assert (Matrix().boundary!`rows` == [0,4]);
+		assert (Matrix().boundary!`columns` == [0,4]);
 
 		assert (Matrix()[].along!`rows` == [
 			[16, 15, 14, 13],
@@ -1770,6 +1491,9 @@ void floating_point_space_demo ()
 
 						alias plane this;
 
+						/*
+							both the map and its inverse must be present to enable coordinate mapping
+						*/
 						double coordinate_map (size_t dim)(size_t i)
 							if (dim < 2)
 							{/*...}*/
@@ -2009,27 +1733,221 @@ void origin_offset_demo ()
 			}
 
 		/*
-			first, we slice the half the range, centered at (0.0, 0.0)
+			first, we slice the half the range
 		*/
 		auto space = UnitSpace();
-		auto slice = space[0.0, ~$/2..$/2];
+		auto slice = space[0.0, 0.0..$];
 
 		/*
-			now the slice is also centered at 0.0 
+			now the slice is locally centered at 0.0 
 		*/
-		assert (slice[-0.5..0.5][$/2] == slice[~$..$][$/2]);
-		assert (slice[-0.5..0.5][0.0] == space[0.0, 0.0]);
+		assert (slice[0.0] == space[0.0, $/2]);
+		assert (slice[-0.5] == space[0.0, 0.0]);
+	}
+void binary_cube_demo ()
+	{/*...}*/
+		static struct BinaryCube
+			{/*...}*/
+				struct Base
+					{/*...}*/
+						size_t measure (size_t dim)()
+							if (dim < 3)
+							{/*...}*/
+								return 2;
+							}
+
+						size_t access (size_t i, size_t j, size_t k)
+							{/*...}*/
+								return i ^ j ^ k;
+							}
+					}
+
+				Base base;
+
+				mixin SpaceOps!base;
+			}
+
+		{/*dimensions, measures and boundaries}*/
+			/*
+				for initial spaces (i.e. spaces which do not already have SpaceOps), dimensionality is defined
+				as the maximum n for which there is defined either boundary!i or measure!i (but not both) for all i ϵ [0..n) 
+				or as 1 if only measure or boundary (but not both) are defined
+			*/
+			/*
+				measure must return a single scalar value of any type, while boundary must return a static array of length 2
+			*/
+			static assert (dimensionality!BinaryCube == 3);
+
+			/*
+				for non-initial spaces, both measures and boundaries are automatically defined to be consistent with one another
+			*/
+			/*
+				boundary is defined as either the boundary given by the base space, or as an interval starting at the zero element of the measure type, and spanning the measure
+			*/
+			assert (BinaryCube().boundary!0 == [0,2]);
+			assert (BinaryCube().boundary!1 == [0,2]);
+			assert (BinaryCube().boundary!2 == [0,2]);
+
+			/*
+				measure is defined as either the measure given by the base space, or as the difference between the right and left boundary points
+			*/
+			assert (BinaryCube().measure!0 == 2);
+			assert (BinaryCube().measure!1 == 2);
+			assert (BinaryCube().measure!2 == 2);
+
+			/*
+				for 2-or-higher-dimensional spaces, volume is defined as the product of all measures, if such a product exists
+			*/
+			assert (BinaryCube().volume == 8);
+		}
+		{/*points and indices}*/
+			/*
+				points in a multidimensional space can be accessed using multidimensional index operators
+			*/
+			assert (BinaryCube()[0,0,0] == 0);
+			assert (BinaryCube()[1,0,0] == 1);
+			assert (BinaryCube()[0,1,0] == 1);
+			assert (BinaryCube()[0,0,1] == 1);
+		}
+		{/*subspaces, slices, and range semantics}*/
+			/*
+				slices can be taken along each dimension with the familiar D semantics
+			*/
+			auto sliced = BinaryCube()[0..$, 0..$, 0..$];
+			static assert (dimensionality!(typeof(sliced)) == 3);
+
+			/*
+				slicing a space returns a subspace, which defines its own measures and boundaries
+			*/
+			assert (sliced.measure!0 == 2);
+			assert (sliced.measure!1 == 2);
+			assert (sliced.measure!2 == 2);
+
+			assert (sliced.volume == 8);
+
+			assert (sliced.boundary!0 == [0,2]);
+			assert (sliced.boundary!1 == [0,2]);
+			assert (sliced.boundary!2 == [0,2]);
+
+			/*
+				in a subspace, a dimension can be sliced or indexed is called free, otherwise it is bound
+				when slicing a space or subspace, any dimension that is indexed becomes bound, while dimensions that are sliced remain free
+				binding all dimensions determines a single point in the space
+			*/
+			auto plane = BinaryCube()[0..$, 0..$, 0];
+			static assert (dimensionality!(typeof(plane)) == 2);
+
+			/*
+				futher slicing or indexing operations do not refer to bound dimensions.
+			*/
+			assert (plane[0,0] == BinaryCube()[0,0,0]);
+			assert (plane[0,1] == BinaryCube()[0,1,0]);
+			assert (plane[1,0] == BinaryCube()[1,0,0]);
+			assert (plane[1,1] == BinaryCube()[1,1,0]);
+
+			/*
+				bound dimensions have measure 0 and do not factor into the definition of volume.
+			*/
+			assert (plane.measure!0 == 2);
+			assert (plane.measure!1 == 2);
+			assert (plane.volume == 4);
+
+			assert (plane.boundary!0 == [0,2]);
+			assert (plane.boundary!1 == [0,2]);
+
+			/*
+				a subspace which has only one free dimension becomes effectively 1-dimensional.
+			*/
+			auto edge = BinaryCube()[0, 1, 0..$];
+			static assert (dimensionality!(typeof(edge)) == 1);
+
+			/*
+				a non-indexed measure is defined for it, whereas volume is not defined.
+			*/
+			assert (edge.measure!0 == 2);
+			assert (edge.measure == 2);
+
+			assert (edge[0] == BinaryCube()[0,1,0]);
+			assert (edge[1] == BinaryCube()[0,1,1]);
+		}
+		{/*boundary operators}*/
+			/*
+				the $ operator, normally the length operator of a D range, is the boundary operator of a space or subspace
+				$ denotes the right boundary point and ~$ denotes the left boundary point
+				since the left boundary is, by default, zero, the semantics of $ for most 1D spaces and subspaces are consistent with that of D ranges
+			*/
+			assert (BinaryCube()[~$,~$,~$] == BinaryCube()[0,0,0]);
+			assert (BinaryCube()[$-1,$-1,$-1] == BinaryCube()[1,1,1]);
+
+			/*
+				~$ provides a generic way to access the left boundary of a space or subspace
+			*/
+			assert (BinaryCube()[~$..$, ~$..$, ~$..$] == BinaryCube()[]);
+			assert (BinaryCube()[~$..$, ~$..$, ~$] == BinaryCube()[0..$, 0..$, 0]);
+			assert (BinaryCube()[~$, ~$, ~$..$] == BinaryCube()[0, 0, 0..$]);
+
+			/*
+				getting a measure from the boundary operator is accomplished with $.measure or, more tersely, ($-~$)
+			*/
+			assert (BinaryCube()[0,0, ($-~$) == $.measure? 1:0] == 1);
+		}
+		////
+		{/*performance}*/
+			/*
+				SpaceOps do not increase the size of a struct so long as it is static
+			*/
+			static assert (BinaryCube.sizeof == 1);
+		}
+	}
+void rounding_cube_demo ()
+	{/*...}*/
+		static struct RoundingCube
+			{/*...}*/
+				struct Base
+					{/*...}*/
+						size_t measure (size_t dim)()
+							if (dim < 3)
+							{/*...}*/
+								return 2;
+							}
+
+						size_t[3] access (size_t i, size_t j, size_t k)
+							{/*...}*/
+								return [i,j,k];
+							}
+
+						size_t coordinate_map (size_t d)(double x)
+							{/*...}*/
+								return x.round.to!size_t;
+							}
+						double coordinate_map (size_t d, T: double)(size_t i)
+							{/*...}*/
+								return i;
+							}
+					}
+
+				Base base;
+
+				mixin SpaceOps!base;
+			}
+
+		assert (RoundingCube()[0,0,0] == [0,0,0]);
+		assert (RoundingCube()[0.4, 0.2, 0.9] == [0,0,1]);
+		assert (RoundingCube()[0.6, 0.2, 0.9] == [1,0,1]);
+
+		assert (RoundingCube()[$ - 1.6, 0.2, 0.9] == [0,0,1]);
+		assert (RoundingCube()[$ - 1.5, 0.2, 0.9] == [1,0,1]);
 	}
 
 void main ()
 	{/*...}*/
 		intro_demo;
-		binary_cube_demo;
-		rounding_cube_demo;
 		iteration_demo;
 		axis_label_demo;
 		floating_point_space_demo;
 		boundary_operator_demo;
-		//equality_overload_demo; // TODO
 		origin_offset_demo;
+
+		binary_cube_demo;
+		rounding_cube_demo;
 	}
