@@ -211,3 +211,17 @@ auto clamp (T,U)(T value, Interval!U interval)
 
 		return value;
 	}
+
+// REFACTOR
+auto ref left (T)(auto ref T[2] bounds)
+	{/*...}*/
+		return bounds[0];
+	}
+auto ref right (T)(auto ref T[2] bounds)
+	{/*...}*/
+		return bounds[1];
+	}
+auto difference (T)(T[2] bounds)
+	{/*...}*/
+		return bounds.right - bounds.left;
+	}
