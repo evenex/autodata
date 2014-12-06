@@ -11,9 +11,10 @@ import evx.range;
 import evx.type;
 import evx.misc.tuple;
 
-// Index → Slice → Transfer → Buffer
+// Index → Slice → Write → Buffer
 
 alias Identity = evx.type.Identity; // TEMP
+static alias FinalType (alias symbol) = typeof(symbol.identity);
 
 private static string attempt_overloads (string call, MixinAliases...)()
 	{/*...}*/
@@ -73,7 +74,7 @@ template StandardErrorMessages ()
 		enum error_header = fullyQualifiedName!(typeof(this)) ~ `: `;
 
 		enum type_mismatch_error = error_header
-			~ Map!(Element, Selected).stringof ~ ` does not convert to ` ~ Map!(Element, typeof(limits)).stringof;
+			~ Map!(Element, Selected).stringof ~ ` does not convert to ` ~ Map!(Element, Map!(FinalType, limits)).stringof;
 
 		auto out_of_bounds_error (T, U)(T arg, U limit) 
 			{return error_header ~ `bounds exceeded! ` ~ arg.text ~ ` not in ` ~ limit.text;}
@@ -115,6 +116,28 @@ struct Limit (T)
 	https://github.com/D-Programming-Language/dmd/pull/3998 
 	and strict index type segregation
 */
+template MultiLimitOps (size_t dim, limits...)
+	{/*...}*/
+		auto opDollar (size_t i: dim)()
+			{/*...}*/
+				alias Limits = Map!(Λ!q{(T...) = typeof(T[0].identity)}, limits);
+
+				MultiLimit!(
+					Map!(ElementType,
+						Map!(Λ!q{(T) = Select!(is (T == U[2], U), T, T[2])},
+							Limits
+						)
+					)
+				) multilimit;
+
+				foreach (i, Lim; Limits)
+					static if (is (Lim == T[2], T))
+						multilimit.limits[i] = limits[i];
+					else multilimit.limits[i] = [zero!Lim, limits[i]];
+
+				return multilimit;
+			}
+	}
 struct MultiLimit (T...)
 	{/*...}*/
 		Map!(Λ!q{(U) = U[2]}, T)
@@ -165,28 +188,6 @@ struct MultiLimit (T...)
 				return this;
 			}
 	}
-template MultiLimitOps (size_t dim, limits...)
-	{/*...}*/
-		auto opDollar (size_t i: dim)()
-			{/*...}*/
-				alias Limits = Map!(Λ!q{(T...) = typeof(T[0].identity)}, limits);
-
-				MultiLimit!(
-					Map!(ElementType,
-						Map!(Λ!q{(T) = Select!(is (T == U[2], U), T, T[2])},
-							Limits
-						)
-					)
-				) multilimit;
-
-				foreach (i, Lim; Limits)
-					static if (is (Lim == T[2], T))
-						multilimit.limits[i] = limits[i];
-					else multilimit.limits[i] = [zero!Lim, limits[i]];
-
-				return multilimit;
-			}
-	}
 
 /* generate an indexing operator from an access function and a set of index limits
 	access must be a function which returns an element of type E
@@ -219,15 +220,23 @@ template IndexOps (alias access, limits...)
 
 				foreach (i, limit; limits)
 					{/*type check}*/
-						static assert  (limits.length == ParameterTypeTuple!access.length, type_error);
+						static assert  (limits.length == ParameterTypeTuple!access.length,
+							type_error
+						);
 
 						static if (is (typeof(limit.identity) == T[n], T, size_t n))
-							static assert (n == 2, array_error);
+							static assert (n == 2, 
+								array_error
+							);
 
 						static if (is (T))
-							static assert (is (ParameterTypeTuple!access[i] == T), type_error);
+							static assert (is (ParameterTypeTuple!access[i] == T),
+								type_error
+							);
 
-						else static assert (is (ParameterTypeTuple!access[i] == typeof(limit.identity)), type_error);
+						else static assert (is (ParameterTypeTuple!access[i] == typeof(limit.identity)), 
+							type_error
+						);
 					}
 
 				foreach (i, limit; limits)
@@ -268,166 +277,7 @@ template IndexOps (alias access, limits...)
 */
 template SliceOps (alias access, LimitsAndExtensions...)
 	{/*...}*/
-		alias Source = typeof(this);
-		alias limits = Filter!(has_identity, LimitsAndExtensions); // having this out here is fucking you up, turns into an overloadset
-
-		template SubGenerator (Dimensions...)
-			{/*...}*/
-				public {/*source}*/
-					Source* source;
-				}
-				public {/*bounds}*/
-					Map!(Λ!q{(T) = Select!(is (T == U[2], U), T, T[2])}, typeof(limits)) 
-						bounds;
-				}
-				public {/*limits}*/
-					auto limit (size_t dim)()
-						{/*...}*/
-							static if (is (TypeTuple!(typeof(this.origin.identity)) == ParameterTypeTuple!access))
-								{/*...}*/
-									auto boundary = unity!(typeof(bounds[Dimensions[dim]]));
-
-									static if (is (typeof (origin[0])))
-										boundary[] *= -origin[(Dimensions[dim])];
-
-									else boundary[] *= -origin;
-								}
-							else auto boundary = zero!(typeof(bounds[Dimensions[dim]]));
-
-							boundary.right += bounds[Dimensions[dim]].difference;
-
-							return boundary;
-						}
-					auto limit ()() if (Dimensions.length == 1) {return limit!0;}
-
-					auto opDollar (size_t i)()
-						{/*...}*/
-							return Limit!(typeof(limit!i[0])) (limit!i);
-						}
-				}
-				public {/*opIndex}*/
-					typeof(this) opIndex ()
-						{/*...}*/
-							return this;
-						}
-					auto ref opIndex (Selected...)(Selected selected)
-						in {/*...}*/
-							mixin StandardErrorMessages;
-
-							version (all)
-								{/*type check}*/
-									mixin LambdaCapture;
-
-									static assert (
-										All!(Pair!().both!is_implicitly_convertible,
-											Zip!(
-												Map!(Element, Selected),
-												Map!(Element, 
-													Map!(Λ!q{(size_t i) = typeof(limits)[i]}, Dimensions)
-												),
-											)
-										), type_mismatch_error
-									);
-								}
-
-							foreach (i,_; selected)
-								{/*bounds check}*/
-									static if (is (typeof (selected[i]) == T[2], T))
-										assert (
-											limit!i.left <= selected[i].left
-											&& selected[i].right <= limit!i.right,
-											out_of_bounds_error (selected[i], limit!i)
-										);
-									else assert (
-										limit!i.left <= selected[i]
-										&& selected[i] < limit!i.right,
-										out_of_bounds_error (selected[i], limit!i)
-									);
-								}
-						}
-						body {/*...}*/
-							static if (Any!(λ!q{(T) = is (T == U[2], U)}, Selected))
-								{/*...}*/
-									typeof(bounds) bounds;
-
-									foreach (i,_; bounds)
-										{/*...}*/
-											bounds[i] = unity!(typeof(bounds[i]));
-											bounds[i][] *= this.bounds[i].left;
-										}
-									
-									foreach (i, j; Dimensions)
-										static if (is (typeof(selected[i]) == T[2], T))
-											bounds[j][] += selected[i][] - limit!i.left;
-										else bounds[j][] += selected[i] - limit!i.left;
-
-									return Sub!(
-										Map!(Pair!().first!Identity,
-											Filter!(Pair!().second!Identity,
-												Zip!(Dimensions,
-													Map!(λ!q{(T) = is (T == U[2], U)}, 
-														Selected
-													)
-												)
-											)
-										)
-									)(source, bounds);
-								}
-							else {/*...}*/
-								Map!(ElementType, typeof(bounds))
-									point;
-
-								foreach (i,_; typeof(bounds))
-									point[i] = bounds[i].left;
-
-								foreach (i,j; Dimensions)
-									point[j] += selected[i] - limit!i.left;
-
-								return source.opIndex (point);
-							}
-						}
-				}
-				public {/*opSlice}*/
-					alias Parameter (size_t i) = ParameterTypeTuple!access[(Dimensions[i])];
-
-					Parameter!d[2] opSlice (size_t d)(Parameter!d i, Parameter!d j)
-						{/*...}*/
-							return [i,j];
-						}
-				}
-				public {/*ctor}*/
-					this (typeof(source) source, typeof(bounds) bounds)
-						{/*...}*/
-							this.source = source;
-							this.bounds = bounds;
-						}
-					@disable this ();
-				}
-			}
-
-		struct Sub (Dimensions...)
-			{/*...}*/
-				mixin SubGenerator!Dimensions sub;
-
-				static extensions ()
-					{/*...}*/
-						string[] code;
-
-						foreach (i, extension; Filter!(not!has_identity, LimitsAndExtensions))
-							static if (is (typeof(extension!().identity) == string))
-								code ~= q{
-									mixin(} ~ __traits(identifier, extension) ~ q{!());
-								};
-							else code ~= q{
-								mixin } ~ __traits(identifier, extension) ~ q{;
-							};
-
-						return code.join.to!string;
-					}
-
-				mixin(extensions);
-			}
-
+		public:
 		public {/*opIndex}*/
 			mixin IndexOps!(access, limits) indexing;
 
@@ -437,13 +287,15 @@ template SliceOps (alias access, LimitsAndExtensions...)
 
 					static if (Selected.length > 0)
 						{/*type check}*/
-							static assert (Selected.length == limits.length, type_mismatch_error);
+							static assert (Selected.length == limits.length, 
+								type_mismatch_error
+							);
 
 							static assert (
 								All!(Pair!().both!is_implicitly_convertible,
 									Zip!(
 										Map!(Element, Selected),
-										Map!(Element, typeof(limits)),
+										Map!(Element, Map!(FinalType, limits)),
 									)
 								), type_mismatch_error
 							);
@@ -463,14 +315,35 @@ template SliceOps (alias access, LimitsAndExtensions...)
 									boundary.left <= limit.left
 									&& limit.right <= boundary.right,
 									out_of_bounds_error (limit, boundary)
+									~ ` (in)`
 								);
 							else static if (is (typeof(limit.identity) : ElementType!(typeof(boundary))))
 								assert (
 									boundary.left <= limit
 									&& limit < boundary.right,
 									out_of_bounds_error (limit, boundary)
+									~ ` (in)`
 								);
 							else static assert (0, T.stringof);
+						}
+				}
+				out (result) {/*...}*/
+					mixin StandardErrorMessages;
+
+					static if (is (typeof(result) == Sub!T, T...))
+						{/*...}*/
+							foreach (i, limit; selected)
+								static if (is (typeof(limit) == U[2], U))
+									assert (limit == result.bounds[i],
+										out_of_bounds_error (limit, result.bounds[i])
+										~ ` (out)`
+									);
+								else assert (
+									limit == result.bounds[i].left
+									&& limit == result.bounds[i].right,
+									out_of_bounds_error (limit, result.bounds[i])
+									~ ` (out)`
+								);
 						}
 				}
 				body {/*...}*/
@@ -500,9 +373,11 @@ template SliceOps (alias access, LimitsAndExtensions...)
 							else alias selection = limits;
 								
 							foreach (i, limit; selection)
-								static if (is (typeof(limit) == T[2], T))
+								static if (is (typeof(limit.identity) == T[2], T))
 									bounds[i] = limit;
-								else bounds[i] = [zero!(typeof(limit)), limit];
+								else static if (is_proper_sub)
+									bounds[i][] = limit;
+								else bounds[i] = [zero!(typeof(limit.identity)), limit];
 
 							return Subspace (&this, bounds);
 						}
@@ -517,67 +392,355 @@ template SliceOps (alias access, LimitsAndExtensions...)
 					return [i,j];
 				}
 		}
+		public {/*Sub}*/
+			template SubGenerator (Dimensions...)
+				{/*...}*/
+					public {/*source}*/
+						Source* source;
+					}
+					public {/*bounds}*/
+						Map!(Λ!q{(T) = Select!(is (T == U[2], U), T, T[2])}, Map!(FinalType, limits))
+							bounds;
+					}
+					public {/*limits}*/
+						auto limit (size_t dim)()
+							{/*...}*/
+								static if (is (TypeTuple!(typeof(this.origin.identity)) == ParameterTypeTuple!access))
+									{/*...}*/
+										auto boundary = unity!(typeof(bounds[Dimensions[dim]]));
+
+										static if (is (typeof(origin[0])))
+											boundary[] *= -origin[(Dimensions[dim])];
+
+										else boundary[] *= -origin;
+									}
+								else auto boundary = zero!(typeof(bounds[Dimensions[dim]]));
+
+								boundary.right += bounds[Dimensions[dim]].difference;
+
+								return boundary;
+							}
+						auto limit ()() if (Dimensions.length == 1) {return limit!0;}
+
+						auto opDollar (size_t i)()
+							{/*...}*/
+								return Limit!(typeof(limit!i[0]))(limit!i);
+							}
+					}
+					public {/*opIndex}*/
+						typeof(this) opIndex ()
+							{/*...}*/
+								return this;
+							}
+						auto ref opIndex (Selected...)(Selected selected)
+							in {/*...}*/
+								mixin StandardErrorMessages;
+
+								version (all)
+									{/*type check}*/
+										mixin LambdaCapture;
+
+										static assert (
+											All!(Pair!().both!is_implicitly_convertible,
+												Zip!(
+													Map!(Element, Selected),
+													Map!(Element, 
+														Map!(Λ!q{(size_t i) = typeof(limits[i].identity)}, Dimensions)
+													),
+												)
+											), type_mismatch_error
+										);
+									}
+
+								foreach (i,_; selected)
+									{/*bounds check}*/
+										static if (is (typeof(selected[i]) == T[2], T))
+											assert (
+												limit!i.left <= selected[i].left
+												&& selected[i].right <= limit!i.right,
+												out_of_bounds_error (selected[i], limit!i)
+											);
+										else assert (
+											limit!i.left <= selected[i]
+											&& selected[i] < limit!i.right,
+											out_of_bounds_error (selected[i], limit!i)
+										);
+									}
+							}
+							body {/*...}*/
+								static if (Any!(λ!q{(T) = is (T == U[2], U)}, Selected))
+									{/*...}*/
+										typeof(bounds) bounds;
+
+										foreach (i,_; bounds)
+											{/*...}*/
+												bounds[i] = unity!(typeof(bounds[i]));
+												bounds[i][] *= this.bounds[i].left;
+											}
+										
+										foreach (i, j; Dimensions)
+											static if (is (typeof(selected[i]) == T[2], T))
+												bounds[j][] += selected[i][] - limit!i.left;
+											else bounds[j][] += selected[i] - limit!i.left;
+
+										return Sub!(
+											Map!(Pair!().first!Identity,
+												Filter!(Pair!().second!Identity,
+													Zip!(Dimensions,
+														Map!(λ!q{(T) = is (T == U[2], U)}, 
+															Selected
+														)
+													)
+												)
+											)
+										)(source, bounds);
+									}
+								else {/*...}*/
+									Map!(ElementType, typeof(bounds))
+										point;
+
+									foreach (i,_; typeof(bounds))
+										point[i] = bounds[i].left;
+
+									foreach (i,j; Dimensions)
+										point[j] += selected[i] - limit!i.left;
+
+									return source.opIndex (point);
+								}
+							}
+					}
+					public {/*opSlice}*/
+						alias Parameter (size_t i) = ParameterTypeTuple!access[(Dimensions[i])];
+
+						Parameter!d[2] opSlice (size_t d)(Parameter!d i, Parameter!d j)
+							{/*...}*/
+								return [i,j];
+							}
+					}
+					public {/*ctor}*/
+						this (typeof(source) source, typeof(bounds) bounds)
+							{/*...}*/
+								this.source = source;
+								this.bounds = bounds;
+							}
+						@disable this ();
+					}
+				}
+
+			struct Sub (Dimensions...)
+				{/*...}*/
+					mixin SubGenerator!Dimensions sub;
+
+					static extensions ()
+						{/*...}*/
+							string[] code;
+
+							foreach (i, extension; Filter!(not!has_identity, LimitsAndExtensions))
+								static if (is (typeof(extension!().identity) == string))
+									code ~= q{
+										mixin(} ~ __traits(identifier, extension) ~ q{!());
+									};
+								else code ~= q{
+									mixin } ~ __traits(identifier, extension) ~ q{;
+								};
+
+							return code.join.to!string;
+						}
+
+					mixin(extensions);
+				}
+	}
+		private:
+		private {/*aliases}*/
+			alias Source = typeof(this);
+			alias limits = Filter!(has_identity, LimitsAndExtensions);
+		}
 	}
 
 /* generate index assignment, slicing and indexing operators from a pull template,
-	and the arguments for SliceOps
+	and the arguments required for SliceOps
 */
-template TransferOps (alias pull, alias access, LimitsAndExtensions...)
+template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
-		template SubTransferOps ()
+		auto opIndexAssign (S, Selected...)(S space, Selected selected)
+			in {/*...}*/
+				this[selected];
+
+				static assert (
+					is (typeof(pull (space, selected))) 
+					|| is (typeof(pull (space, this[].bounds)))
+					|| is (typeof(access (selected) = space)),
+
+					typeof(this).stringof ~ ` cannot pull ` ~ S.stringof
+					~ ` through ` ~ Selected.stringof
+				);
+			}
+			body {/*...}*/
+				static if (is (typeof(space.push (this[selected]))))
+					{/*...}*/
+						space.push (this[selected]);
+					}
+				else static if (Selected.length > 0)
+					{/*...}*/
+						static if (is (typeof(&access (selected))))
+							access (selected) = space;
+						else pull (space, selected);
+					}
+				else pull (space, this[].bounds);
+
+				return this[selected];
+			}
+
+		template SubWriteOps ()
 			{/*...}*/
-				auto opIndexAssign (S, Selected...)(S space, Selected selected)
+				auto ref opIndexAssign (S, Selected...)(S space, Selected selected)
 					in {/*...}*/
 						this[selected];
+
+						static if (not (
+							is (typeof(source.opIndexAssign (space, selected))) 
+							|| is (typeof(source.opIndexAssign (space, this[].bounds))),
+						)) pragma(msg, `warning: rejected assignment of `, S, ` to `, typeof(this), `[`, Selected ,`]`);
 					}
 					body {/*...}*/
-						Map!(Pair!().both!(Λ!q{(T, bool is_slice) = Select!(is_slice, T[2], T)}),
-							Zip!(
-								Map!(ElementType,
-									Map!(Λ!q{(T) = Select!(is (T == U[2], U), T, T[2])}, 
-										typeof(limits)
-									)
+						static if (Selected.length > 0)
+							alias Selection (size_t i) = Select!(Contains!(i, Dimensions),
+								Select!(
+									is (Selected[IndexOf!(i, Dimensions)] == T[2], T),
+									typeof(bounds[i]),
+									typeof(bounds[i].left)
 								),
-								Map!(λ!q{(T) = is (T == U[2], U)},
-									Selected
-								)
-							)
-						) selection;
+								typeof(bounds[i].left)
+							);
+						else alias Selection (size_t i) = Select!(Contains!(i, Dimensions),
+							typeof(bounds[i]),
+							typeof(bounds[i].left)
+						);
 
-						foreach (i,j; Dimensions)
+						Map!(Selection, Iota!(0, bounds.length))
+							selection;
+
+						foreach (i; Iota!(0, bounds.length))
+							static if (is (typeof(selection[i]) == T[2], T))
+								{/*...}*/
+									static if (Selected.length == 0)
+										selection[i] = bounds[i];
+
+									else selection[i][] = bounds[i].left;
+								}
+							else selection[i] = bounds[i].left;
+
+						static if (Selected.length > 0)
 							{/*...}*/
-								selection[i] = selected[i];
-
-								auto offset = bounds[j].left - limit!i.left;
-
-								static if (is (typeof(selection[i]) == T[2], T))
-									selection[i][] += offset;
-								else selection[i] += offset;
+								foreach (i,j; Dimensions)
+									static if (is (typeof(selection[j]) == T[2], T))
+										selection[j][] += selected[i][] - limit!i.left;
+									else selection[j] += selected[i] - limit!i.left;
 							}
 
 						return source.opIndexAssign (space, selection);
 					}
 			}
 
-		mixin SliceOps!(access, LimitsAndExtensions, SubTransferOps);
+		mixin SliceOps!(access, LimitsAndExtensions, SubWriteOps);
+	}
 
-		auto opIndexAssign (S, Selected...)(S space, Selected selected)
+/* generate write ops with input bounds checking
+*/
+template TransferOps (alias pull, alias access, LimitsAndExtensions...)
+	{/*...}*/
+		auto verified_limit_pull (S, Selected...)(S space, Selected selected)
 			in {/*...}*/
-				this[selected];
+				version (all)
+					{/*error messages}*/
+						enum error_header = fullyQualifiedName!(typeof(this)) ~ `: `;
+
+						enum type_mismatch_error (size_t i) = error_header
+							~ `cannot transfer ` ~ i.text ~ `-d ` ~ S.stringof ~ ` to `
+							~ Filter!(λ!q{(T) = is (T == U[2], U)}, Selected).text
+							~ ` subspace`;
+					}
+
+				static if (not (Any!(λ!q{(T) = is (T == U[2], U)}, Selected)))
+					{/*...}*/
+						// we are assigning to a single element TODO
+					}
+				else static if (is (typeof(space.limit!0)))
+					{/*...}*/
+						foreach (i; Iota!(0, 999))
+							static if (is (typeof(space.limit!i)) || is (typeof(this[selected].limit!i)))
+								static assert (is (typeof(space.limit!i.left == this[selected].limit!i.left)),
+									type_mismatch_error
+								);
+							else break;
+					}
+				else static if (is (typeof(space.length)) && not (is (typeof(this[selected].limit!1))))
+					{/*...}*/
+						assert (space.length == this[selected].limit!0.difference,
+							error_header
+							~ S.stringof ~ `.length != ` ~ typeof(this[selected]).stringof ~ `.limit `
+							`(` ~ space.length.text ~ ` != ` ~ this[selected].limit!0.difference.text ~ `)`
+						);
+					}
+				else static assert (0, type_mismatch_error);
 			}
 			body {/*...}*/
-				static if (is (typeof (space.push (this[selected]))))
-					space.push (this[selected]);
-
-				else pull (space, selected);
-
-				return this[selected];
+				return pull (space, selected);
 			}
+
+		mixin WriteOps!(verified_limit_pull, access, LimitsAndExtensions);
+	}
+
+/* generate RAII ctor/dtor and assignment operators from an allocate function,
+	and the arguments required for TransferOps
+*/
+template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtensions...)
+	{/*...}*/
+		this (S)(S space)
+			{/*...}*/
+				this = space;
+			}
+		~this ()
+			{/*...}*/
+				this = null;
+			}
+
+		ref opAssign (S)(S space)
+			in {/*...}*/
+				// verify that space dimensions exist and basically match the types of dimensions we got up in here
+				alias LimitTypes = Map!(ElementType,
+					Map!(Λ!q{(T) = Select!(is (T == U[2], U), T, T[2])},
+						Map!(Λ!q{(alias limit) = typeof(limit.identity)}, 
+							Filter!(has_identity, LimitsAndExtensions)
+						)
+					)
+				);
+				pragma(msg, LimitTypes);
+			}
+			body {/*...}*/
+				// pass the widths to allocate
+				// assert  dims updates
+
+				//this[] = space;
+
+				return this;
+			}
+		ref opAssign (typeof(null))
+			out {/*...}*/
+				// assert our dimensions are zeroed
+			}
+			body {/*...}*/
+				// allocate zero width
+
+				return this;
+			}
+
+		mixin TransferOps!(pull, access, LimitsAndExtensions);
 	}
 
 import std.exception; // TODO versio n(unittest)
 void error (T)(lazy T event) {assertThrown!Error (event);}
-void not_error (T)(lazy T event) {assertNotThrown!Error (event);}
+void no_error (T)(lazy T event) {assertNotThrown!Error (event);}
 
 void index_ops_tests ()
 	{/*...}*/
@@ -600,11 +763,6 @@ void index_ops_tests ()
 
 				int[length] data;
 
-				auto pull ()
-					{/*...}*/
-						
-					}
-
 				ref access (size_t i)
 					{/*...}*/
 						return data[i];
@@ -617,6 +775,19 @@ void index_ops_tests ()
 		assert (ref_access[0] == 0);
 		ref_access[0] = 1;
 		assert (ref_access[0] == 1);
+
+		static struct LengthFunction
+			{/*...}*/
+				auto access (size_t) {return true;}
+				size_t length () {return 100;}
+
+				mixin IndexOps!(access, length);
+			}
+		assert (LengthFunction()[40]);
+		error (LengthFunction()[101]);
+		assert (LengthFunction()[$-1]);
+		assert (LengthFunction()[~$]);
+		error (LengthFunction()[$]);
 
 		static struct NegativeIndex
 			{/*...}*/
@@ -749,11 +920,6 @@ void slice_ops_tests ()
 
 				int[length] data;
 
-				auto pull ()
-					{/*...}*/
-						
-					}
-
 				ref access (size_t i)
 					{/*...}*/
 						return data[i];
@@ -765,6 +931,21 @@ void slice_ops_tests ()
 		assert (ref_access[5] == 0);
 		ref_access[3..10][2] = 1;
 		assert (ref_access[5] == 1);
+
+		static struct LengthFunction
+			{/*...}*/
+				auto access (size_t) {return true;}
+				size_t length () {return 100;}
+
+				mixin SliceOps!(access, length);
+			}
+		assert (LengthFunction()[0]);
+		assert (LengthFunction()[][0]);
+		assert (LengthFunction()[0..10][0]);
+		assert (LengthFunction()[][0..10][0]);
+		assert (LengthFunction()[~$..$][0]);
+		assert (LengthFunction()[~$..$][~$]);
+		error (LengthFunction()[~$..2*$][0]);
 
 		static struct NegativeIndex
 			{/*...}*/
@@ -807,8 +988,8 @@ void slice_ops_tests ()
 		assert (StringIndex()[`monkey`]);
 		assert (is (typeof(StringIndex()[`fox`..`rabbit`])));
 		assert (not (is (typeof(StringIndex()[`fox`..`rabbit`][`kitten`]))));
-		assert (is (typeof (StringIndex()[~$..$])));
-		assert (not (is (typeof (StringIndex()[~$..$][~$]))));
+		assert (is (typeof(StringIndex()[~$..$])));
+		assert (not (is (typeof(StringIndex()[~$..$][~$]))));
 
 		static struct MultiIndex // TODO: proper multi-index support once multiple alias this allowed
 			{/*...}*/
@@ -840,7 +1021,7 @@ void slice_ops_tests ()
 
 		assert (MultiIndex()[-0.2..1][0.0]);
 		assert (MultiIndex()[-0.2..1][0]);
-		assert (not (is (typeof (MultiIndex()[2..4][0.0]))));
+		assert (not (is (typeof(MultiIndex()[2..4][0.0]))));
 		assert (MultiIndex()[2..4][0]);
 
 		assert (MultiIndex()[~$]);
@@ -849,9 +1030,9 @@ void slice_ops_tests ()
 		assert (MultiIndex()[~$ + 9.999]);
 		error (MultiIndex()[~$ + 10.0]);
 		assert (MultiIndex()[float(~$)]);
-		assert (is (typeof (MultiIndex()[cast(size_t)(~$)..cast(size_t)($)])));
-		assert (is (typeof (MultiIndex()[cast(float)(~$)..cast(float)($)])));
-		assert (not (is (typeof (MultiIndex()[cast(int)(~$)..cast(int)($)]))));
+		assert (is (typeof(MultiIndex()[cast(size_t)(~$)..cast(size_t)($)])));
+		assert (is (typeof(MultiIndex()[cast(float)(~$)..cast(float)($)])));
+		assert (not (is (typeof(MultiIndex()[cast(int)(~$)..cast(int)($)]))));
 
 		static struct MultiDimensional
 			{/*...}*/
@@ -982,7 +1163,7 @@ void slice_ops_tests ()
 		//assert (MultiIndexSub()[cast(size_t)(~$)..cast(size_t)$][cast(size_t)(~$)]);
 		// TODO oh man
 	}
-void transfer_ops_tests ()
+void write_ops_tests ()
 	{/*...}*/
 		static struct Basic
 			{/*...}*/
@@ -1005,7 +1186,7 @@ void transfer_ops_tests ()
 						return data[i];
 					}
 
-				mixin TransferOps!(pull, access, length);
+				mixin WriteOps!(pull, access, length);
 			}
 
 		Basic x;
@@ -1014,7 +1195,7 @@ void transfer_ops_tests ()
 		x[0] = 1;
 		assert (x[0] == 1);
 
-		error (x[0..10] = only (1,2,3));
+		no_error (x[0..2] = only (1,2,3));
 		x[0..10] = only (10,9,8,7,6,5,4,3,2,1);
 		assert (x[0] == 10);
 		assert (x[1] == 9);
@@ -1057,7 +1238,7 @@ void transfer_ops_tests ()
 							}
 					}
 
-				mixin TransferOps!(pull, access, length, PushExtension);
+				mixin WriteOps!(pull, access, length, PushExtension);
 			}
 		int[5] y = [1,1,1,1,1];
 		Push()[].push (y);
@@ -1066,7 +1247,7 @@ void transfer_ops_tests ()
 		assert (x[0] == 10);
 		assert (x[9] == 1);
 		x[0..10] = Push()[0..10];
-		assert (x[0] == 0);
+		assert (x[0] == 0); // x has no ptr
 		assert (x[9] == 0);
 
 		static struct Pull
@@ -1105,13 +1286,13 @@ void transfer_ops_tests ()
 							}
 					}
 
-				mixin TransferOps!(pull, access, length, Pointer, Length);
+				mixin WriteOps!(pull, access, length, Pointer, Length);
 			}
 		Pull z;
 		assert (z[0] == 0);
 		assert (z[9] == 0);
 		z[0..10] = Push()[0..10];
-		assert (z[0] == 2);
+		assert (z[0] == 2); // z has ptr
 		assert (z[9] == 2);
 
 		auto w = z[];
@@ -1122,13 +1303,352 @@ void transfer_ops_tests ()
 		assert (w[0] == 1);
 		assert (w[1] == 2);
 		assert (w[2] == 3);
-		not_error (w[0..3] = only (1,2,3,4)); // verifying the input is up to client implementation because too many contextual unknowns (limit? length? dimensions?)
+		no_error (w[0..3] = only (1,2,3,4));
 
-		// TODO write to some offsets, verify that this shit is going where its supposed to
+		auto q = z[100..200];
+		q[0..100] = ℕ[800..900].map!(to!int);
+		assert (q[0] == 800);
+		assert (q[99] == 899);
+		assert (z[100] == 800);
+		assert (z[199] == 899);
+		q[$/2..$] = ℕ[120..170].map!(to!int);
+		assert (q[0] == 800);
+		assert (q[50] == 120);
+		assert (q[99] == 169);
+		assert (z[100] == 800);
+		assert (z[150] == 120);
+		assert (z[199] == 169);
+		q[] = ℕ[1111..1211].map!(to!int);
+		assert (q[0] == 1111);
+		assert (q[50] == 1161);
+		assert (q[99] == 1210);
+		assert (z[100] == 1111);
+		assert (z[150] == 1161);
+		assert (z[199] == 1210);
+
+		z[] = ℕ[0..z.length].map!(to!int);
+
+		foreach (i; 0..z.length)
+			assert (z[i] == i);
+	}
+void transfer_ops_tests ()
+	{/*...}*/
+		template Basic ()
+			{/*...}*/
+				enum size_t length = 256;
+
+				int[length] data;
+
+				auto pull (int x, size_t i)
+					{/*...}*/
+						data[i] = x;
+					}
+				auto pull (R)(R range, size_t[2] limits)
+					{/*...}*/
+						foreach (i, j; enumerate (ℕ[limits.left..limits.right]))
+							data[j] = range[i];
+					}
+
+				ref access (size_t i)
+					{/*...}*/
+						return data[i];
+					}
+			}
+		static struct WriteBasic
+			{/*...}*/
+				mixin Basic;
+				mixin WriteOps!(pull, access, length);
+			}
+		static struct TransferBasic
+			{/*...}*/
+				mixin Basic;
+				mixin TransferOps!(pull, access, length);
+			}
+
+		no_error (WriteBasic()[0..3] = [1,2,3,4]);
+		error (TransferBasic()[0..3] = [1,2,3,4]);
+
+		template AlternativePull ()
+			{/*...}*/
+				mixin Basic A;
+
+				auto pull (string[], size_t[2]){}
+				auto pull (Args...)(Args args)
+					{A.pull (args);}
+			}
+		static struct AltWrite
+			{/*...}*/
+				mixin AlternativePull;
+				mixin WriteOps!(pull, access, length);
+			}
+		static struct AltTransfer
+			{/*...}*/
+				mixin AlternativePull;
+				mixin TransferOps!(pull, access, length);
+			}
+
+		assert (is (typeof(AltWrite()[0..3] = [`hello`]))); // won't do input type check - who knows if we're assigning to a space of tagged unions?
+		assert (is (typeof(AltTransfer()[0..3] = [`hello`])));
+
+		static struct Negative
+			{/*...}*/
+				string[3] data = [`one`, `two`, `three`];
+
+				int[2] limits = [-1,2];
+				auto access (int i) {return data[i + 1];}
+
+				auto pull (R)(R r, int[2] x)
+					{/*...}*/
+						foreach (i; x.left..x.right)
+							data[i + 1] = r[i - x.left];
+					}
+				auto pull (R)(R r, int x)
+					{/*...}*/
+						data[x + 1] = r;
+					}
+
+				mixin TransferOps!(pull, access, limits);
+			}
+		Negative x;
+		assert (x[-1] == `one`);
+		x[-1] = `minus one`;
+		assert (x[-1] == `minus one`);
+		assert (x[0] == `two`);
+		assert (x[1] == `three`);
+		x[0..$] = [`zero`, `one`];
+		assert (x[0] == `zero`);
+		assert (x[1] == `one`);
+		error (x[~$..$] = [`1`, `2`, `3`, `4`]);
+
+		static struct MultiDimensional
+			{/*...}*/
+				double[9] matrix = [
+					1, 2, 3,
+					4, 5, 6,
+					7, 8, 9,
+				];
+
+				auto ref access (size_t i, size_t j)
+					{/*...}*/
+						return matrix[3*i + j];
+					}
+
+				enum size_t rows = 3, columns = 3;
+
+				alias Slice = size_t[2];
+
+				void pull (R)(R r, size_t[2] y, size_t x)
+					{/*...}*/
+						foreach (i; y.left..y.right)
+							access (i,x) = r[i - y.left];
+					}
+				void pull (R)(R r, size_t y, size_t[2] x)
+					{/*...}*/
+						foreach (j; x.left..x.right)
+							access (y,j) = r[j - x.left];
+					}
+				void pull (R)(R r, size_t[2] y, size_t[2] x)
+					{/*...}*/
+						foreach (i; y.left..y.right)
+							pull (r[i - y.left, 0..$], i, x);
+					}
+
+				mixin TransferOps!(pull, access, rows, columns);
+			}
+		MultiDimensional y;
+		assert (y.matrix == [
+			1,2,3,
+			4,5,6,
+			7,8,9
+		]);
+		y[0,0] = 0; // pull (r, size_t, size_t) is unnecessary because access is ref
+		assert (y.matrix == [
+			0,2,3,
+			4,5,6,
+			7,8,9
+		]);
+		y[0..$, 0] = [6,6,6];
+		assert (y.matrix == [
+			6,2,3,
+			6,5,6,
+			6,8,9
+		]);
+		y[0, 0..$] = [9,9,9];
+		assert (y.matrix == [
+			9,9,9,
+			6,5,6,
+			6,8,9
+		]);
+
+		y.matrix = [
+			0,0,1,
+			0,0,1,
+			1,1,1
+		];
+
+		MultiDimensional z;
+		assert (z.matrix == [
+			1,2,3,
+			4,5,6,
+			7,8,9
+		]);
+		z[0..2, 0..2] = y[0..2, 0..2];
+		assert (z.matrix == [
+			0,0,3,
+			0,0,6,
+			7,8,9
+		]);
+		z[0..2, 0..2] = y[1..3, 1..3];
+		assert (z.matrix == [
+			0,1,3,
+			1,1,6,
+			7,8,9
+		]);
+		z[1..3, 1..3] = y[1..3, 1..3];
+		assert (z.matrix == [
+			0,1,3,
+			1,0,1,
+			7,1,1
+		]);
+		z[0, 0..$] = y[0..$, 2];
+		assert (z.matrix == [
+			1,1,1,
+			1,0,1,
+			7,1,1
+		]);
+
+		error (z[0..2, 0..3] = y[0..3, 0..2]);
+		error (z[0..2, 0] = y[0, 1..2]);
+		assert (not (is (typeof( (z[0..2, 0..3] = y[0..3, 1])))));
+		assert (not (is (typeof( (z[1, 0..3] = y[0..3, 0..2])))));
+
+		static struct FloatingPoint
+			{/*...}*/
+				double delegate(double)[] maps;
+
+				auto access (double x)
+					{/*...}*/
+						foreach (map; maps[].retro)
+							if (x == map (x))
+								continue;
+							else return map (x);
+
+						return x;
+					}
+
+				enum double length = 1;
+
+				auto pull (T)(T y, double x)
+					{/*...}*/
+						maps ~= (t) => t == x? y : t;
+					}
+				auto pull (R)(R range, double[2] domain)
+					{/*...}*/
+						if (domain.left == 0.0 && domain.right == 1.0)
+							maps = null;
+
+						maps ~= (t) => domain.left <= t && t < domain.right? 
+							range[t - domain.left] : t;
+					}
+
+				mixin TransferOps!(pull, access, length);
+			}
+		static struct FPSource
+			{/*...}*/
+				double factor = 1;
+				double offset = 0;
+
+				auto access (double x)
+					{/*...}*/
+						return factor * x + offset;
+					}
+
+				enum double length = 1;
+
+				mixin SliceOps!(access, length);
+			}
+		FloatingPoint a;
+
+		assert (a[0.00] == 0.00);
+		assert (a[0.25] == 0.25);
+		assert (a[0.50] == 0.50);
+		assert (a[0.75] == 0.75);
+
+		FPSource b;
+		b.factor = 2; b.offset = 1;
+		assert (b[0.50] == 2.00);
+		assert (b[0.75] == 2.50);
+
+		a[0..$/2] = b[$/2..$];
+
+		assert (a[0.75] == 0.75);
+		assert (a[0.50] == 0.50);
+		assert (a[0.25] == 2.50);
+		assert (a[0.00] == 2.00);
+
+		a[0.13] = 666;
+
+		assert (a[0.12].approx (2.24));
+		assert (a[0.13] == 666.0);
+		assert (a[0.14].approx (2.28));
+	}
+void buffer_ops_tests ()
+	{/*...}*/
+		static struct Basic
+			{/*...}*/
+				int[] data;
+				auto length () {return data.length;}
+
+				void allocate (size_t length)
+					{/*...}*/
+						data.length = length;
+					}
+
+				auto pull (int x, size_t i)
+					{/*...}*/
+						data[i] = x;
+					}
+				auto pull (R)(R range, size_t[2] limits)
+					{/*...}*/
+						foreach (i, j; enumerate (ℕ[limits.left..limits.right]))
+							data[j] = range[i];
+					}
+
+				ref access (size_t i)
+					{/*...}*/
+						return data[i];
+					}
+
+				mixin BufferOps!(allocate, pull, access, length);
+			}
+
+		auto N = ℕ[500..525].map!(to!int);
+
+		Basic x = N;
+		auto y = Basic (N);
+
+		assert (x == y);
+
+		assert (x.length == 25, `ok`);
+		assert (x[0] == 500);
+		assert (x[1] == 501);
+		assert (x[$-1] == 524);
+
+		assert (y.length == 25);
+		assert (y[0] == 500);
+		assert (y[1] == 501);
+		assert (y[$-1] == 524);
+
+		y = x[10..12];
+		assert (y.length == 2);
+		assert (y[0] == 510);
+		assert (y[$-1] == 511);
 	}
 void main ()
 	{/*...}*/
 		index_ops_tests;
 		slice_ops_tests;
+		write_ops_tests;
 		transfer_ops_tests;
+		buffer_ops_tests;
 	}
