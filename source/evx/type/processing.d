@@ -30,9 +30,6 @@ enum Contains (T...) = IndexOf!(T[0], T[1..$]) > -1;
 alias Repeat (size_t n, T...) = Cons!(T, Repeat!(n-1, T));
 alias Repeat (size_t n : 1, T...) = Cons!T;
 
-	// TODO SORT
-	// TODO INTERLEAVE
-
 template LambdaCapture ()
 	{/*...}*/
 		static template Λ (string op)
@@ -88,7 +85,26 @@ template Zip (T...)
 	}
 
 alias Interleave (T...) = Map!(Pair!().Both!Cons, Zip!T);
-static assert (Interleave!(1,2,3,4,5,6) == Cons!(1,4,2,5,3,6));
+	static assert (Interleave!(1,2,3,4,5,6) == Cons!(1,4,2,5,3,6));
+
+template Sort (alias compare, T...)
+	{/*...}*/
+		static if (T.length > 1)
+			{/*...}*/
+				alias Remaining = Cons!(T[0..$/2], T[$/2 +1..$]);
+				enum is_before (U...) = compare!(U[0], T[$/2]);
+
+				alias Sort = Cons!(
+					Sort!(compare, Filter!(is_before, Remaining)),
+					T[$/2],
+					Sort!(compare, Filter!(not!is_before, Remaining)),
+				);
+			}
+		else alias Sort = T;
+	}
+	static assert (Sort!(λ!q{(T...) = T[0] < T[1]}, 5,4,2,7,4,3,1) == Cons!(1,2,3,4,4,5,7));
+
+////REFACTOR /////////////////////////////
 
 template type_of (T...)
 	if (T.length == 1)
