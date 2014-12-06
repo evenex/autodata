@@ -4,27 +4,44 @@ private {/*imports}*/
 	import std.traits;
 
 	import evx.math.logic;
+	import evx.math.algebra;
 }
 
-/* test if a template argument is a type 
+/* test if a symbol is a type 
 */
-template is_type (T...) 
-	if (T.length == 1)
-	{/*...}*/
-		enum is_type = is (T[0]);
-	}
+enum is_type (T...) = is (T[0]);
 
-/* test if a template argument is a class  
+/* test if a symbol is a class  
 */
-template is_class (T...) 
-	if (T.length == 1)
-	{/*...}*/
-		enum is_class = is(T[0] == class);
-	}
+enum is_class (T...) = is(T[0] == class);
+
+/* test if a symbol is a template  
+*/
+enum is_template (T...) = __traits(isTemplate, T[0]);
+
+/* test if a type is a builtin integral type
+*/
+alias is_integral = isIntegral;
+
+/* test if a type is a builtin floating point type
+*/
+alias is_floating_point = isFloatingPoint;
+
+/* test if a type is implicitly convertible to another
+*/
+alias is_implicitly_convertible = isImplicitlyConvertible;
+
+/* test if a type defines an identity
+*/
+enum has_identity (T...) = is (typeof(T[0].identity));
+
+/* test if an expression can be made into an enum
+*/
+enum is_enumerable (T...) = is (typeof((){enum x = T[0];}()));
 
 /* test if a template argument is an aliased symbol 
 */
-template is_alias (T...) 
+template is_alias (T...)  // TODO deprecate
 	if (T.length == 1)
 	{/*...}*/
 		enum is_alias = __traits(compiles, typeof (T[0])) 
@@ -49,11 +66,7 @@ template is_alias (T...)
 
 /* test if a template argument is a number 
 */
-template is_numerical_param (T...) 
-	if (T.length == 1)
-	{/*...}*/
-		enum is_numerical_param = __traits(compiles, T[0] == 0);
-	}
+enum is_numerical_param (T...) = __traits(compiles, T[0] == 0);
 
 /* test if a template argument is a string 
 */
@@ -67,20 +80,13 @@ template is_string_param (T...)
 
 /* test if a type is a tuple 
 */
-template is_tuple (T...)
-	if (T.length == 1)
-	{/*...}*/
-		enum is_tuple = is(typeof(τ(T[0].init.tupleof)) == T[0]);
-	}
+enum is_tuple (T...)= is(typeof(τ(T[0].init.tupleof)) == T[0]);
 
 /* generate a predicate to test if a given type matches another 
 */
 template is_type_of (T)
 	{/*...}*/
-		template is_type_of (U)
-			{/*...}*/
-				enum is_type_of = is (T == U);
-			}
+		enum is_type_of (U) = is (T == U);
 	}
 
 /* generate a predicate to test if a type defines a given enum 
