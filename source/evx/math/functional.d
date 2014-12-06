@@ -15,10 +15,6 @@ private {/*imports}*/
 	import evx.math.ordinal;
 }
 
-/* aliasable template lambda function 
-*/
-template λ (alias F) {alias λ = F;}
-
 public {/*map}*/
 	/* apply a given function to the elements in a range 
 	*/
