@@ -4,14 +4,14 @@ private {/*imports}*/
 	import std.typetuple;
 }
 
-template not ()
+static template not ()
 	{/*...}*/
 		bool not (T)(T value)
 			{/*...}*/
 				return !value;
 			}
 	}
-template not (alias predicate)
+static template not (alias predicate)
 	{/*...}*/
 		bool not (Args...)(Args args)
 			if (is(typeof(predicate (args) == true)))
