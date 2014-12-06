@@ -13,6 +13,7 @@ import evx.misc.tuple;
 
 // Index → Slice → Write → Buffer
 
+
 alias Identity = evx.type.Identity; // TEMP
 static alias FinalType (alias symbol) = typeof(symbol.identity);
 
@@ -159,15 +160,15 @@ struct MultiLimit (T...)
 		auto opBinary (string op, U)(U that)
 			in {/*...}*/
 				static assert (
-					Any!(Pair!().both!(λ!q{(T,U) = is (U : T)}),
+					Any!(Pair!().Both!(λ!q{(T,U) = is (U : T)}),
 						Zip!(T, Repeat!(T.length, U))
 					),
 					U.stringof ~ ` does not convert to any ` ~ T.stringof
 				);
 			}
 			body {/*...}*/
-				Map!(Pair!().first!Identity,
-					Filter!(Pair!().both!(λ!q{(T,U) = is (U : T)}),
+				Map!(Pair!().First!Identity,
+					Filter!(Pair!().Both!(λ!q{(T,U) = is (U : T)}),
 						Zip!(T, Repeat!(T.length, U))
 					)
 				)[0] r = that;
@@ -292,7 +293,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 							);
 
 							static assert (
-								All!(Pair!().both!is_implicitly_convertible,
+								All!(Pair!().Both!is_implicitly_convertible,
 									Zip!(
 										Map!(Element, Selected),
 										Map!(Element, Map!(FinalType, limits)),
@@ -354,8 +355,8 @@ template SliceOps (alias access, LimitsAndExtensions...)
 						{/*...}*/
 							static if (is_proper_sub)
 								alias Subspace = Sub!(
-									Map!(Pair!().first!Identity,
-										Filter!(Pair!().second!Identity,
+									Map!(Pair!().First!Identity,
+										Filter!(Pair!().Second!Identity,
 											Zip!(Iota!(0, Selected.length),
 												Map!(λ!q{(T) = is (T == U[2], U)},
 													Selected
@@ -441,7 +442,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 										mixin LambdaCapture;
 
 										static assert (
-											All!(Pair!().both!is_implicitly_convertible,
+											All!(Pair!().Both!is_implicitly_convertible,
 												Zip!(
 													Map!(Element, Selected),
 													Map!(Element, 
@@ -484,8 +485,8 @@ template SliceOps (alias access, LimitsAndExtensions...)
 											else bounds[j][] += selected[i] - limit!i.left;
 
 										return Sub!(
-											Map!(Pair!().first!Identity,
-												Filter!(Pair!().second!Identity,
+											Map!(Pair!().First!Identity,
+												Filter!(Pair!().Second!Identity,
 													Zip!(Dimensions,
 														Map!(λ!q{(T) = is (T == U[2], U)}, 
 															Selected
