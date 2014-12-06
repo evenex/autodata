@@ -138,7 +138,7 @@ public {/*map}*/
 				}
 		}
 		unittest {/*...}*/
-			import std.range: equal;
+			import std.algorithm: equal;
 
 			auto a = [1, 2, 3];
 
@@ -425,7 +425,7 @@ public {/*zip}*/
 			return Zipped!Ranges (ranges);
 		}
 		unittest {
-			import std.range: equal;
+			import std.algorithm: equal;
 			alias τ = std.typecons.tuple;
 
 			auto a = [1,2,3];
@@ -471,7 +471,7 @@ public {/*disperse}*/
 			else return range;
 		}
 		unittest {/*...}*/
-			import std.range: equal;
+			import std.algorithm: equal;
 
 			auto a = [1,2,3];
 			auto b = [4,5,6];
@@ -571,7 +571,7 @@ public {/*filter}*/
 				}
 		}
 		unittest {/*...}*/
-			import std.range: equal;
+			import std.algorithm: equal;
 
 			auto a = [1, 2, 3, 4];
 
@@ -596,7 +596,7 @@ public {/*select}*/
 			else return op (range);
 		}
 		unittest {/*...}*/
-			import std.range: equal;
+			import std.algorithm: equal;
 
 			auto a = [1, 2, 3];
 			auto b = [`a`,`b`,`c`];

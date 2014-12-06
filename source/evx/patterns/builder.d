@@ -99,14 +99,13 @@ mixin template Builder (Args...)
 				}
 			string builder_data_declaration ()
 				{/*...}*/
-					import std.typecons:
-						staticMap,
-						alignForSize;
+					import std.typecons: alignForSize;
+					import evx.type: Map;
 
-					template prepend_underscore (string name)
-						{enum prepend_underscore = `_`~name;}
+					template underscored (string name)
+						{enum underscored = `_`~name;}
 
-					return alignForSize!Types ([staticMap!(prepend_underscore, Names)]);
+					return alignForSize!Types ([Map!(underscored, Names)]);
 				}
 		}
 	}

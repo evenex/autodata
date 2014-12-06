@@ -34,6 +34,10 @@ alias all = std.algorithm.all;
 */
 alias repeat = std.range.repeat;
 
+/* construct a range from a set of values 
+*/
+alias only = std.range.only;
+
 /* chain a tuple of ranges into a single range 
 */
 alias chain = std.range.chain;
@@ -104,7 +108,7 @@ auto group (alias relation = (a,b) => a == b, R)(R range)
 		return Group!(R, relation)(range);
 	}
 	unittest {/*...}*/
-		import std.range: equal;
+		import std.algorithm: equal;
 		import evx.math.overloads;
 
 		foreach (pair; zip (

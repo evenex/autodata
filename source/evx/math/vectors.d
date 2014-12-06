@@ -10,6 +10,7 @@ private {/*imports}*/
 	import std.math;
 
 	import evx.math.logic;
+	import evx.type.processing;
 }
 
 // CTORS
@@ -201,42 +202,36 @@ struct Vector (size_t n, Component = double)
 
 			auto ref opDispatch (string swizzle)()
 				{/*...}*/
-					enum xyzw = `xyzw`;
-					enum rgba = `rgba`;
-					enum stpq = `stpq`;
-
-					alias Sets = TypeTuple!(xyzw, rgba, stpq);
+					alias Sets = Cons!(`xyzw`, `rgba`, `stpq`);
 					
 					static code (string set)()
 						{/*...}*/
-							string code;
+							string[] code;
 
 							foreach (component; swizzle)
 								if (set.countUntil (component) >= 0)
-									code ~= q{components[} ~set.countUntil (component).text~ q{], };
+									code ~= q{components[} ~ set.countUntil (component).text ~ q{]};
 								else return ``;
 
-							code = code[0..$ - min($,2)];
+							auto indices = code.join (`, `).to!string;
 
 							static if (swizzle.length == 1)
 								return q{
-									return } ~code~ q{;
+									return } ~ indices ~ q{;
 								};
 							else return q{
-								return vector (std.typecons.tuple (} ~code~ q{).expand);
+								return vector (} ~ indices ~ q{);
 							}; 
 						}
 
-					foreach (i, Set; Sets)
-						static if (code!Set.empty)
+					foreach (i, set; Sets)
+						static if (code!set.empty)
 							continue;
-						else mixin(code!Set);
+						else mixin(code!set);
 
-					template swizzle_from (string set)
-						{/*...}*/
-							enum swizzle_from = code!set.not!empty;
-						}
-					static assert (Any!(swizzle_from, Sets), `no property ` ~swizzle~ ` for ` ~typeof(this).stringof);
+					enum swizzle_from (string set) = code!set.not!empty;
+
+					static assert (Any!(swizzle_from, Sets), `no property ` ~ swizzle ~ ` for ` ~typeof(this).stringof);
 
 					assert (0);
 				}

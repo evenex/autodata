@@ -293,7 +293,7 @@ mixin template TransferOps (alias buffer, Extension = ExtendSlice!``)
 					public {/*equality comparison}*/
 						bool opEquals (R)(R range)
 							{/*...}*/
-								import std.range: equal;
+								import std.algorithm: equal;
 
 								static if (is(R == void[]))
 									return this.empty;

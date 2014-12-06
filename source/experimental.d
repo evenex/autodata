@@ -5,17 +5,23 @@ import std.traits;
 import std.algorithm: swap;
 import std.array: replace;
 import std.conv;
-import evx.traits;
-import evx.math;
-import evx.range;
-import evx.type;
-import evx.misc.tuple;
+
+import evx.traits.classification;
+import evx.math.logic;
+import evx.math.algebra;
+import evx.math.intervals;
+
+import evx.range; // REVIEW
+import evx.type.processing; // TODO functional
 
 // Index → Slice → Write → Buffer
 
+///////////////////
 
 alias Identity = evx.type.Identity; // TEMP
 static alias FinalType (alias symbol) = typeof(symbol.identity);
+
+///////////////////
 
 private static string attempt_overloads (string call, MixinAliases...)()
 	{/*...}*/
@@ -68,6 +74,8 @@ static template_function_overload_priority (string symbol, MixinAliases...)()
 			`}`;
 	}
 
+///////////////////
+
 template StandardErrorMessages ()
 	{/*...}*/
 		alias Element (T) = ElementType!(Select!(is (T == U[2], U), T, T[2]));
@@ -80,6 +88,8 @@ template StandardErrorMessages ()
 		auto out_of_bounds_error (T, U)(T arg, U limit) 
 			{return error_header ~ `bounds exceeded! ` ~ arg.text ~ ` not in ` ~ limit.text;}
 	}
+
+///////////////////
 
 /* generate $ and ~$ right and left limit operators
 */
@@ -679,6 +689,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 					{/*...}*/
 						assert (space.length == this[selected].limit!0.difference,
 							error_header
+							~ `assignment size mismatch `
 							~ S.stringof ~ `.length != ` ~ typeof(this[selected]).stringof ~ `.limit `
 							`(` ~ space.length.text ~ ` != ` ~ this[selected].limit!0.difference.text ~ `)`
 						);
@@ -708,36 +719,94 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 
 		ref opAssign (S)(S space)
 			in {/*...}*/
-				// verify that space dimensions exist and basically match the types of dimensions we got up in here
-				alias LimitTypes = Map!(ElementType,
-					Map!(Λ!q{(T) = Select!(is (T == U[2], U), T, T[2])},
-						Map!(Λ!q{(alias limit) = typeof(limit.identity)}, 
-							Filter!(has_identity, LimitsAndExtensions)
-						)
-					)
-				);
-				pragma(msg, LimitTypes);
+				enum error_header = fullyQualifiedName!(typeof(this)) ~ `: `;
+
+				enum cannot_assign_error = error_header
+					~ `cannot assign ` ~ S.stringof ~
+					` to ` ~ typeof(this).stringof;
+
+				static if (is (typeof(space.limit!0)))
+					{/*...}*/
+						foreach (i, LimitType; ParameterTypeTuple!access)
+							static assert (is (typeof(space.limit!i.left) : LimitType),
+								cannot_assign_error ~ ` (dimension or type mismatch)`
+							);
+
+						static assert (not (is (typeof(space.limit!(ParameterTypeTuple!access.length)))),
+							cannot_assign_error ~ `(` ~ S.stringof ~ ` has too many dimensions)`
+						);
+					}
+				else static if (is (typeof(space.length)) && not (is (typeof(this[selected].limit!1))))
+					{/*...}*/
+						static assert (is (typeof(space.length.identity) : ParameterTypeTuple!access[0]),
+							cannot_assign_error ~ ` (length is incompatible)`
+						);
+					}
+				else static assert (0, cannot_assign_error);
 			}
 			body {/*...}*/
-				// pass the widths to allocate
-				// assert  dims updates
+				ParameterTypeTuple!access size;
 
-				//this[] = space;
+				static if (is (typeof(space.limit!0)))
+					foreach (i; Iota!(0, ParameterTypeTuple!access.length))
+						size[i] = space.limit!i.difference;
+
+				else size[0] = space.length;
+
+				allocate (size);
+
+				this[] = space;
 
 				return this;
 			}
 		ref opAssign (typeof(null))
 			out {/*...}*/
-				// assert our dimensions are zeroed
+				foreach (i, T; ParameterTypeTuple!access)
+					assert (this[].limit!i.difference == zero!T);
 			}
 			body {/*...}*/
-				// allocate zero width
+				ParameterTypeTuple!access zeroed;
+
+				foreach (ref size; zeroed)
+					size = zero!(typeof(size));
+
+				allocate (zeroed);
 
 				return this;
 			}
 
 		mixin TransferOps!(pull, access, LimitsAndExtensions);
 	}
+
+/* generate search operators from a search function
+*/
+template SearchOps (alias search)
+	{/*...}*/
+		auto opBinaryRight (string op: `in`)(ParameterTypeTuple!search query)
+			in {/*...}*/
+				void dereference (T)(T q){auto p = *q;}
+				void address (T)(ref T q){auto p = &q;}
+
+				enum error_header = fullyQualifiedName!(typeof(this)).stringof ~ `: `;
+
+				static assert (query.length == 1,
+					error_header
+					~ `search function can have only one argument`
+				);
+
+				static assert (
+					is (typeof(dereference!(ReturnType!search))) 
+					|| is (typeof(address!(ReturnType!search))),
+					error_header
+					~ `search return value must be pointer or reference`
+				);
+			}
+			body {/*...}*/
+				return search (query);
+			}
+	}
+
+///////////////////
 
 import std.exception; // TODO versio n(unittest)
 void error (T)(lazy T event) {assertThrown!Error (event);}
@@ -1166,6 +1235,8 @@ void slice_ops_tests ()
 	}
 void write_ops_tests ()
 	{/*...}*/
+		import evx.math;
+
 		static struct Basic
 			{/*...}*/
 				enum size_t length = 256;
@@ -1334,6 +1405,8 @@ void write_ops_tests ()
 	}
 void transfer_ops_tests ()
 	{/*...}*/
+		import evx.math;
+
 		template Basic ()
 			{/*...}*/
 				enum size_t length = 256;
@@ -1554,7 +1627,7 @@ void transfer_ops_tests ()
 
 				mixin TransferOps!(pull, access, length);
 			}
-		static struct FPSource
+		static struct Domain
 			{/*...}*/
 				double factor = 1;
 				double offset = 0;
@@ -1575,7 +1648,7 @@ void transfer_ops_tests ()
 		assert (a[0.50] == 0.50);
 		assert (a[0.75] == 0.75);
 
-		FPSource b;
+		Domain b;
 		b.factor = 2; b.offset = 1;
 		assert (b[0.50] == 2.00);
 		assert (b[0.75] == 2.50);
@@ -1595,6 +1668,8 @@ void transfer_ops_tests ()
 	}
 void buffer_ops_tests ()
 	{/*...}*/
+		import evx.math;
+
 		static struct Basic
 			{/*...}*/
 				int[] data;
@@ -1630,7 +1705,7 @@ void buffer_ops_tests ()
 
 		assert (x == y);
 
-		assert (x.length == 25, `ok`);
+		assert (x.length == 25);
 		assert (x[0] == 500);
 		assert (x[1] == 501);
 		assert (x[$-1] == 524);
@@ -1644,6 +1719,60 @@ void buffer_ops_tests ()
 		assert (y.length == 2);
 		assert (y[0] == 510);
 		assert (y[$-1] == 511);
+
+		y = null;
+		assert (y.length == 0);
+		assert (y[].limit!0 == [0,0]);
+	}
+void search_ops_tests ()
+	{/*...}*/
+		import std.algorithm: find;
+
+		static struct ByPtr
+			{/*...}*/
+				int[] data = [1,2,4,6,9];
+
+				auto search (int x)
+					{/*...}*/
+						auto result = data.find (x);
+
+						if (result.empty)
+							return null;
+						else return result.ptr;
+					}
+
+				mixin SearchOps!search;
+			}
+		static struct ByRef
+			{/*...}*/
+				string[] data = [`one`, `two`, `four`, `seven`];
+
+				const string not_found;
+
+				ref search (string i)
+					{/*...}*/
+						if (data.find (i).empty)
+							return not_found;
+						else return data.find (i).front;
+					}
+
+				mixin SearchOps!search;
+			}
+
+		if (auto x = 4 in ByPtr())
+			assert (*x == 4);
+
+		if (auto x = 3 in ByPtr())
+			assert (0);
+
+		if (auto x = `four` in ByRef())
+			assert (x == `four`);
+
+		if (auto x = `five` in ByRef())
+			assert (0);
+
+		assert ((3 in ByPtr()) == null);
+		assert ((`three` in ByRef()) == null);
 	}
 void main ()
 	{/*...}*/
@@ -1652,4 +1781,5 @@ void main ()
 		write_ops_tests;
 		transfer_ops_tests;
 		buffer_ops_tests;
+		search_ops_tests;
 	}
