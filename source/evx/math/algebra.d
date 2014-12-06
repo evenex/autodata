@@ -2,6 +2,7 @@ module evx.math.algebra;
 
 private {/*...}*/
 	import std.traits;
+	import std.range;
 }
 
 pure nothrow:
