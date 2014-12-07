@@ -4,6 +4,7 @@ debug = profiler;
 
 private {/*imports}*/
 	import std.typetuple;
+	import std.traits;
 	import std.algorithm;
 	import std.string;
 	import std.range;

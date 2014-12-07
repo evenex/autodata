@@ -221,5 +221,5 @@ auto ct_values_as_parameter_string (Args...)()
 				static assert (isBuiltinType!(typeof(Arg)));
 			}
 
-		return Args.tuple.text.retro.findSplitAfter (`(`)[0].text.retro.text;
+		return Args.text.retro.findSplitAfter (`(`)[0].text.retro.text;
 	}

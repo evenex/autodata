@@ -546,7 +546,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 						{/*...}*/
 							string[] code;
 
-							foreach (i, extension; Filter!(not!has_identity, LimitsAndExtensions))
+							foreach (i, extension; Filter!(Not!has_identity, LimitsAndExtensions))
 								static if (is (typeof(extension!().identity) == string))
 									code ~= q{
 										mixin(} ~ __traits(identifier, extension) ~ q{!());
