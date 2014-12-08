@@ -283,8 +283,10 @@ template IndexOps (alias access, limits...)
 		mixin LimitOps!limits;
 	}
 
-/* generate slicing and indexing operators from an access function, a set of index limits, 
-	and (optionally) a set of uninstantiated, parameterless mixin templates to extend the Sub structure
+/* generate slicing operators with IndexOps
+	(optionally) using a set of uninstantiated, parameterless templates to extend the Sub structure
+	templates which resolve to a string upon instantiation will be mixed in as strings
+	otherwise they are mixed in as mixin templates
 */
 template SliceOps (alias access, LimitsAndExtensions...)
 	{/*...}*/
@@ -367,7 +369,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 								alias Subspace = Sub!(
 									Map!(Pair!().First!Identity,
 										Filter!(Pair!().Second!Identity,
-											Zip!(Iota!(0, Selected.length),
+											Zip!(Count!Selected,
 												Map!(λ!q{(T) = is (T == U[2], U)},
 													Selected
 												)
@@ -375,7 +377,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 										)
 									)
 								);
-							else alias Subspace = Sub!(Iota!(0, limits.length));
+							else alias Subspace = Sub!(Count!limits);
 
 							typeof(Subspace.bounds) bounds;
 
@@ -449,6 +451,11 @@ template SliceOps (alias access, LimitsAndExtensions...)
 
 								version (all)
 									{/*type check}*/
+										static if (Selected.length > 0)
+											static assert (Selected.length == Dimensions.length,
+												type_mismatch_error
+											);
+
 										mixin LambdaCapture;
 
 										static assert (
@@ -568,8 +575,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 		}
 	}
 
-/* generate index assignment, slicing and indexing operators from a pull template,
-	and the arguments required for SliceOps
+/* generate index assignment from a pull template, with SliceOps 
 */
 template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
@@ -628,10 +634,10 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 							typeof(bounds[i].left)
 						);
 
-						Map!(Selection, Iota!(0, bounds.length))
+						Map!(Selection, Count!bounds)
 							selection;
 
-						foreach (i; Iota!(0, bounds.length))
+						foreach (i; Count!bounds)
 							static if (is (typeof(selection[i]) == T[2], T))
 								{/*...}*/
 									static if (Selected.length == 0)
@@ -656,7 +662,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 		mixin SliceOps!(access, LimitsAndExtensions, SubWriteOps);
 	}
 
-/* generate write ops with input bounds checking
+/* generate WriteOps with input bounds checking
 */
 template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
@@ -673,9 +679,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 					}
 
 				static if (not (Any!(λ!q{(T) = is (T == U[2], U)}, Selected)))
-					{/*...}*/
-						// we are assigning to a single element TODO
-					}
+					{}
 				else static if (is (typeof(space.limit!0)))
 					{/*...}*/
 						foreach (i; Iota!(0, 999))
@@ -703,8 +707,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 		mixin WriteOps!(verified_limit_pull, access, LimitsAndExtensions);
 	}
 
-/* generate RAII ctor/dtor and assignment operators from an allocate function,
-	and the arguments required for TransferOps
+/* generate RAII ctor/dtor and assignment operators from an allocate function, with TransferOps 
 */
 template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
@@ -748,7 +751,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 				ParameterTypeTuple!access size;
 
 				static if (is (typeof(space.limit!0)))
-					foreach (i; Iota!(0, ParameterTypeTuple!access.length))
+					foreach (i; Count!(ParameterTypeTuple!access))
 						size[i] = space.limit!i.difference;
 
 				else size[0] = space.length;
@@ -778,7 +781,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 		mixin TransferOps!(pull, access, LimitsAndExtensions);
 	}
 
-/* generate search operators from a search function
+/* generate an `in` operator from a search function
 */
 template SearchOps (alias search)
 	{/*...}*/
@@ -803,6 +806,25 @@ template SearchOps (alias search)
 			}
 			body {/*...}*/
 				return search (query);
+			}
+	}
+
+/* generate random access range primitives
+	note that the resulting range only qualifies as bidirectional
+	because std.range.isRandomAccessRange does not handle template or non-property range primitives
+	though the range does meet the definition of random access
+*/
+template RangeOps ()
+	{/*...}*/
+		static if (Dimensions.length == 1)
+			@property {/*...}*/
+				auto ref front () {return this[~$];}
+				auto ref back () {return this[$-1];}
+				auto popFront () {++bounds[Dimensions[0]].left;}
+				auto popBack () {--bounds[Dimensions[0]].right;}
+				auto empty () {return length == 0;}
+				auto length () {return bounds[Dimensions[0]].difference;}
+				alias save = this;
 			}
 	}
 
@@ -1774,7 +1796,50 @@ void search_ops_tests ()
 		assert ((3 in ByPtr()) == null);
 		assert ((`three` in ByRef()) == null);
 	}
-void main ()
+void range_ops_tests ()
+	{/*...}*/
+		static struct Basic
+			{/*...}*/
+				int[] data = [1,2,3,4];
+
+				auto access (size_t i) {return data[i];}
+				auto length () {return data.length;}
+
+				mixin SliceOps!(access, length, RangeOps);
+			}
+		assert (Basic()[].length == 4);
+		assert (Basic()[0..$/2].length == 2);
+		foreach (_; Basic()[]){}
+		foreach_reverse (_; Basic()[]){}
+
+		static struct MultiDimensional
+			{/*...}*/
+				double[9] matrix = [
+					1, 2, 3,
+					4, 5, 6,
+					7, 8, 9,
+				];
+
+				auto ref access (size_t i, size_t j)
+					{/*...}*/
+						return matrix[3*i + j];
+					}
+
+				enum size_t rows = 3, columns = 3;
+
+				mixin SliceOps!(access, rows, columns, RangeOps);
+			}
+		assert (MultiDimensional()[0..$, 0].length == 3);
+		assert (MultiDimensional()[0, 0..$].length == 3);
+		foreach (_; MultiDimensional()[0..$, 0]){}
+		foreach (_; MultiDimensional()[0, 0..$]){}
+		foreach_reverse (_; MultiDimensional()[0..$, 0]){}
+		foreach_reverse (_; MultiDimensional()[0, 0..$]){}
+	}
+
+///////////////////
+	
+void all_ops_tests ()
 	{/*...}*/
 		index_ops_tests;
 		slice_ops_tests;
@@ -1782,4 +1847,328 @@ void main ()
 		transfer_ops_tests;
 		buffer_ops_tests;
 		search_ops_tests;
+		range_ops_tests;
+	}
+
+///////////////////
+
+struct Mapped (Domain, alias f)
+	{/*...}*/
+		Domain domain;
+		//alias domain this;
+		auto length ()() {return domain.length;}
+
+		auto opIndex (Args...)(Args args) // REVIEW
+			{/*...}*/
+				static if (Args.length == 0)
+					return this;
+				else static if (is (typeof (f (domain[args]))))
+					return f (domain[args]);
+				else static if (is (typeof (f (domain[args].expand))))
+					return f (domain[args].expand);
+				else static if (is (typeof(domain.opIndex (args)) == S, S))
+					return Mapped!(S,f)(domain.opIndex (args));
+				else static if (Args.length == 1)
+					return Mapped (domain[args[0].left..args[0].right]);
+					// REVIEW i miss Filter....
+			}
+		auto opSlice (size_t d, Args...)(Args args)
+			{/*...}*/
+				auto multi ()() {return domain.opSlice!d (args);}
+				auto single ()() if (d == 0) {return domain.opSlice (args);}
+				CommonType!Args[2] index ()() {return [args];}
+
+				return Filter!(has_identity,
+					multi, single, index
+				)[0];
+			}
+		auto opDollar (size_t d)()
+			{/*...}*/
+				auto multi ()() {return domain.opDollar!d;}
+				auto single ()() if (d == 0) {return domain.opDollar;}
+				auto length ()() if (d == 0) {return domain.length;}
+
+				return Filter!(has_identity,
+					multi, single, length
+				)[0];
+			}
+		auto opEquals (S)(S that)
+			{/*...}*/
+				return this.equal (that);
+			}
+
+		auto front ()() // REVIEW
+			{/*...}*/
+				static if (is (typeof(f (domain.front))))
+					return f (domain.front);
+				else static if (is (typeof(f (domain.front.expand))))
+					return f (domain.front.expand);
+				else static assert (0);
+			}
+		auto back ()()
+			{/*...}*/
+				auto single_back ()() {return f (domain.back);}
+				auto tuple_back  ()() {return f (domain.back.expand);}
+
+				return Filter!(has_identity,
+					single_back, tuple_back
+				)[0];
+			}
+		auto popFront ()()
+			{/*...}*/
+				domain.popFront;
+			}
+		auto popBack ()()
+			{/*...}*/
+				domain.popBack;
+			}
+		auto empty ()()
+			{/*...}*/
+				return domain.empty;
+			}
+		@property save ()()
+			{/*...}*/
+				return this;
+			}
+	}
+
+auto map (alias f, Domain)(Domain domain)
+	{/*...}*/
+		return Mapped!(Domain, f)(domain);
+	}
+
+void map_test ()
+	{/*...}*/
+		int[8] x = [1,2,3,4,5,6,7,8];
+
+		auto y = x[].map!(i => 2*i);
+
+		assert (x[0] == 1);
+		assert (y[0] == 2);
+
+		assert (x[$-1] == 8);
+		assert (y[$-1] == 16);
+
+		assert (x[0..4] == [1, 2, 3, 4]);
+		assert (y[0..4] == [2, 4, 6, 8]);
+
+		assert (x[] == [1, 2, 3, 4, 5, 6, 7, 8]);
+		assert (y[] == [2, 4, 6, 8, 10, 12, 14, 16]);
+
+		assert (x.length == 8);
+		assert (y.length == 8);
+
+		static struct Basic
+			{/*...}*/
+				int[] data = [1,2,3,4];
+
+				auto access (size_t i) {return data[i];}
+				auto length () {return data.length;}
+
+				mixin SliceOps!(access, length, RangeOps);
+			}
+		auto z = Basic()[].map!(i => 2*i);
+
+		assert (z[] == [2,4,6,8]);
+
+		static struct MultiDimensional
+			{/*...}*/
+				double[9] matrix = [
+					1, 2, 3,
+					4, 5, 6,
+					7, 8, 9,
+				];
+
+				auto ref access (size_t i, size_t j)
+					{/*...}*/
+						return matrix[3*i + j];
+					}
+
+				enum size_t rows = 3, columns = 3;
+
+				mixin SliceOps!(access, rows, columns, RangeOps);
+			}
+		auto m = MultiDimensional()[];
+		auto w = MultiDimensional()[].map!(i => 2*i);
+
+		assert (m[0,0] == 1);
+		assert (w[0,0] == 2);
+		assert (m[2,2] == 9);
+		assert (w[2,2] == 18);
+
+		assert (w[0..$, 0] == [2, 8, 14]);
+		assert (w[0, 0..$] == [2, 4, 6]);
+	}
+
+///////////////////
+
+struct Zipped (Spaces...)
+	{/*...}*/
+		Spaces spaces;
+
+		invariant ()
+			{/*...}*/
+				auto limit (size_t i, size_t d)() {return spaces[i].limit!d;}
+				size_t[2] length (size_t i, size_t d:0)() {return [0, spaces[i].length];}
+			}
+
+		auto opIndex (Args...)(Args args)
+			{/*...}*/
+				auto point (size_t i)() {return spaces[i].map!identity[args];}
+
+				Map!(ReturnType, 
+					Map!(point, Count!Spaces)
+				) zipped;
+
+				foreach (i,_; zipped)
+					zipped[i] = point!i;
+
+				static if (not (Any!(λ!q{(T) = is (T == U[2], U)}, Args)))
+					return tuple (zipped);
+				else return Zipped!(typeof(zipped))(zipped);
+			}
+		auto opSlice (size_t d, Args...)(Args args)
+			{/*...}*/
+				auto attempt ()
+					{/*...}*/
+						foreach (i; Count!Spaces)
+							{/*...}*/
+								auto multi ()() {return domain.opSlice!d (args);}
+								auto single ()() if (d == 0) {return domain.opSlice (args);}
+
+								alias Attempt = Filter!(has_identity,
+									multi, single
+								);
+
+								static if (Attempt.length)
+									return Attempt[0];
+								else continue;
+							}
+						assert (0);
+					}
+				CommonType!Args[2] array ()() {return [args];}
+
+				static if (is (typeof (attempt.identity)))
+					return attempt;
+				else return array;
+			}
+		auto opDollar (size_t d)()
+			{/*...}*/
+				foreach (i; Count!Spaces)
+					{/*...}*/
+						auto multi  ()() {return spaces[i].opDollar!d;}
+						auto single ()() if (d == 0) {return spaces[i].opDollar;}
+						auto length ()() if (d == 0) {return spaces[i].length;}
+
+						alias Attempt = Filter!(has_identity,
+							multi, single, length
+						);
+
+						static if (Attempt.length)
+							return Attempt[0];
+						else continue;
+					}
+				assert (0);
+			}
+		auto opEquals (S)(S that)
+			{/*...}*/
+				return this.equal (that);
+			}
+
+		auto front ()()
+			{/*...}*/
+				auto get (size_t i)() {return spaces[i].front;}
+
+				Map!(ReturnType,
+					Map!(get, Count!Spaces)
+				) front;
+
+				foreach (i; Count!Spaces)
+					front[i] = get!i;
+
+				return front.tuple;
+			}
+		auto back ()()
+			{/*...}*/
+				auto get (size_t i)() {return spaces[i].back;}
+
+				Map!(ReturnType,
+					Map!(get, Count!Spaces)
+				) back;
+
+				foreach (i; Count!Spaces)
+					back[i] = get!i;
+
+				return back.tuple;
+			}
+		auto popFront ()()
+			{/*...}*/
+				foreach (ref space; spaces)
+					space.popFront;
+			}
+		auto popBack ()()
+			{/*...}*/
+				foreach (ref space; spaces)
+					space.popBack;
+			}
+		auto empty ()()
+			{/*...}*/
+				return spaces[0].empty;
+			}
+		@property save ()()
+			{/*...}*/
+				return this;
+			}
+	}
+
+auto zip (Spaces...)(Spaces spaces)
+	{/*...}*/
+		return Zipped!Spaces (spaces);
+	}
+
+void zip_test ()
+	{/*...}*/
+		int[4] x = [1,2,3,4], y = [4,3,2,1];
+
+		auto z = zip (x[], y[]);
+
+		assert (z[0] == tuple (1,4));
+		assert (z[$-1] == tuple (4,1));
+		assert (z[0..$] == [
+			tuple (1,4),
+			tuple (2,3),
+			tuple (3,2),
+			tuple (4,1),
+		]);
+
+		static tuple_sum (T)(T t){return t[0] + t[1];}
+
+		assert (z.map!tuple_sum == [5,5,5,5]);
+		assert (z.map!(t => t[0] + t[1]) == [5,5,5,5]);
+		assert (z.map!((a,b) => a + b) == [5,5,5,5]);
+	}
+
+///////////////////
+
+void unmain ()
+	{/*...}*/
+		all_ops_tests;
+		map_test;
+		zip_test;
+	}
+
+auto tryit1 (int[] z) {import evx.math: map; return z[].map!(i => i*i)[0];}
+auto tryit2 (int[] z) {import evx.math: map; auto local = 9; return z[].map!(i => i + local)[0];} // REVIEW doesn't work w/ new map
+auto tryit3 (int[] z) {auto lf (int x) {return x*x;} return z[].map!lf;} // REVIEW doesn't work w/ new map unless static
+auto tryit4 (int[] z) {import evx.math: map; auto lf (int x) {return x*x;} return z[].map!lf;} // REVIEW doesn't work w/ new map unless static
+
+void main () // TODO sort out function frame bullshit
+	{/*...}*/
+		auto z = [1,2,4];
+		// TODO use local variables in function or something
+		//tryit3 (z)[0].writeln; // BUG function experimental.tryit3.Mapped!(int[], lf).Mapped.opIndex!(int).opIndex cannot access frame of function experimental.tryit3
+		tryit4 (z)[0].writeln; // BUG new map returns 1,2,4, old map is correct.. how the FUCK??
+		auto local = 3;
+		//writeln (z[].map!(i => i * local)[0]); // BUG function experimental.main.Mapped!(int[], __lambda1).Mapped.opIndex!(int).opIndex cannot access frame of function D main
+		writeln (z[].map!(i => i * 3)[0]);
 	}

@@ -9,19 +9,21 @@ private {/*import}*/
 	import evx.math.algebra;
 }
 
-// TODO doc and organize
+// TODO doc and organize, REFACTOR to metafunctional
 
 alias Identity (T...) = T[0];
-
-alias Select = std.typecons.Select;
-
-alias Iota = staticIota;
 
 alias Cons = TypeTuple;
 
 alias Map = staticMap;
 
 alias Filter = std.typetuple.Filter;
+
+alias Select = std.typecons.Select;
+
+alias Iota = staticIota;
+
+alias Count (T...) = Iota!(0, T.length);
 
 alias IndexOf = staticIndexOf;
 

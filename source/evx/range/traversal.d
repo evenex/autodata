@@ -1,4 +1,4 @@
-module evx.range.traversal;
+module evx.range.traversal; // REFACTOR construction and traversal or adaptors or something
 
 private {/*imports}*/
 	import std.range;
@@ -17,18 +17,6 @@ private {/*imports}*/
 /* buffer a range to an array 
 */
 alias array = std.array.array;
-
-/* check if a range contains a value 
-*/
-alias contains = std.algorithm.canFind;
-
-/* check if any elements in a range meet a given criteria 
-*/
-alias any = std.algorithm.any;
-
-/* check if all elements in a range meet a given criteria 
-*/
-alias all = std.algorithm.all;
 
 /* construct a range from a repeated value 
 */
@@ -228,19 +216,6 @@ auto enumerate (R)(R range)
 		return ℕ[0..range.length].zip (range);
 	}
 
-/* explicitly count the number of elements in an input_range 
-*/
-size_t count (alias criteria = exists => true, R)(R range)
-	if (is_input_range!R)
-	{/*...}*/
-		size_t count;
-
-		foreach (_; range)
-			++count;
-
-		return count;
-	}
-
 /* iterate over a range, skipping a fixed number of elements each iteration 
 */
 struct Stride (R)
@@ -310,15 +285,4 @@ struct Stride (R)
 auto stride (R,T)(R range, T stride)
 	{/*...}*/
 		return Stride!R (range, stride.to!size_t);
-	}
-
-/* verify that the length of a range is its true length 
-*/
-debug void verify_length (R)(R range)
-	{/*...}*/
-		auto length = range.length;
-		auto count = range.count;
-
-		if (length != count)
-			assert (0, R.stringof~ ` length (` ~count.text~ `) doesn't match reported length (` ~length.text~ `)`);
 	}
