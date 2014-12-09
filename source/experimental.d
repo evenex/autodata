@@ -201,7 +201,7 @@ struct MultiLimit (T...)
 	}
 
 /* generate an indexing operator from an access function and a set of index limits
-	access must be a function which returns an element of type E
+	access must be a non-template function which returns an element of type E
 
 	limits must be aliases to single variables or arrays of two,
 	whose types (or element types, if any are arrays), given in order, 
@@ -286,7 +286,7 @@ template IndexOps (alias access, limits...)
 /* generate slicing operators with IndexOps
 	(optionally) using a set of uninstantiated, parameterless templates to extend the Sub structure
 	templates which resolve to a string upon instantiation will be mixed in as strings
-	otherwise they are mixed in as mixin templates
+	otherwise they are mixed in as templates
 */
 template SliceOps (alias access, LimitsAndExtensions...)
 	{/*...}*/
@@ -1484,7 +1484,7 @@ void transfer_ops_tests ()
 			}
 
 		assert (is (typeof(AltWrite()[0..3] = [`hello`]))); // won't do input type check - who knows if we're assigning to a space of tagged unions?
-		assert (is (typeof(AltTransfer()[0..3] = [`hello`])));
+		assert (is (typeof(AltTransfer()[0..3] = [`hello`])));// REVIEW should this pass?
 
 		static struct Negative
 			{/*...}*/
@@ -1688,7 +1688,7 @@ void transfer_ops_tests ()
 		assert (a[0.13] == 666.0);
 		assert (a[0.14].approx (2.28));
 	}
-void buffer_ops_tests ()
+void buffer_ops_tests () // TODO error tests, multidim tests
 	{/*...}*/
 		import evx.math;
 
@@ -1905,8 +1905,8 @@ struct Mapped (Domain, alias f, Parameters...)
 
 		auto front ()()
 			{/*...}*/
-				auto single_front ()() {return f (domain.front, parameters);}
-				auto tuple_front  ()() {return f (domain.front.expand, parameters);}
+				auto single_front ()() {return apply (domain.front);}
+				auto tuple_front  ()() {return apply (domain.front.expand);}
 
 				return Filter!(has_identity,
 					single_front, tuple_front
@@ -1914,8 +1914,8 @@ struct Mapped (Domain, alias f, Parameters...)
 			}
 		auto back ()()
 			{/*...}*/
-				auto single_back ()() {return f (domain.back);}
-				auto tuple_back  ()() {return f (domain.back.expand);}
+				auto single_back ()() {return apply (domain.back);}
+				auto tuple_back  ()() {return apply (domain.back.expand);}
 
 				return Filter!(has_identity,
 					single_back, tuple_back
