@@ -1852,6 +1852,40 @@ void all_ops_tests ()
 
 ///////////////////
 
+template dimensionality (Space)
+	{/*...}*/
+		template count (size_t d = 0)
+			{/*...}*/
+				static if (is (typeof(Space.init.limit!d)))
+					enum count = 1 + count!(d+1);
+
+				else static if (d == 0 && is (typeof(Space.init.length)))
+					enum count = 1;
+
+				else enum count = 0;
+			}
+
+		enum dimensionality = count!();
+	}
+
+template Coords (Space)
+	{/*...}*/
+		template Coord (size_t i)
+			{/*...}*/
+				static if (is (typeof(Space.init.limit!i) == T, T))
+					alias Coord = T;
+
+				else static if (i == 0 && is (typeof(Space.init.length)))
+					alias Coord = size_t;
+
+				else static assert (0);
+			}
+
+		alias Coords = Map!(Coord, Iota!(0, dimensionality!(Space)));
+	}
+
+///////////////////
+
 struct Mapped (Domain, alias f, Parameters...)
 	{/*...}*/
 		Domain domain;
@@ -1864,17 +1898,13 @@ struct Mapped (Domain, alias f, Parameters...)
 				auto get_space ()() {return domain.opIndex (args);}
 				auto get_range ()() if (Args.length == 1) {return domain[args[0].left..args[0].right];}
 
-				auto subdomain = Filter!(has_identity,
-					slice_all, get_point, get_space, get_range
-				)[0];
+				auto subdomain = Match!(slice_all, get_point, get_space, get_range);
 
 				auto map_point ()() {return apply (subdomain);}
 				auto map_tuple ()() {return apply (subdomain.expand);}
 				auto map_space ()() {return remap (subdomain);}
 
-				return Filter!(has_identity,
-					map_point, map_tuple, map_space
-				)[0];
+				return Match!(map_point, map_tuple, map_space);
 			}
 		auto opSlice (size_t d, Args...)(Args args)
 			{/*...}*/
@@ -1882,9 +1912,7 @@ struct Mapped (Domain, alias f, Parameters...)
 				auto single ()() if (d == 0) {return domain.opSlice (args);}
 				CommonType!Args[2] index ()() {return [args];}
 
-				return Filter!(has_identity,
-					multi, single, index
-				)[0];
+				return Match!(multi, single, index);
 			}
 		auto opDollar (size_t d)()
 			{/*...}*/
@@ -1892,9 +1920,7 @@ struct Mapped (Domain, alias f, Parameters...)
 				auto single ()() if (d == 0) {return domain.opDollar;}
 				auto length ()() if (d == 0) {return domain.length;}
 
-				return Filter!(has_identity,
-					multi, single, length
-				)[0];
+				return Match!(multi, single, length);
 			}
 		auto opEquals (S)(S that)
 			{/*...}*/
@@ -1908,18 +1934,14 @@ struct Mapped (Domain, alias f, Parameters...)
 				auto single_front ()() {return apply (domain.front);}
 				auto tuple_front  ()() {return apply (domain.front.expand);}
 
-				return Filter!(has_identity,
-					single_front, tuple_front
-				)[0];
+				return Match!(single_front, tuple_front);
 			}
 		auto back ()()
 			{/*...}*/
 				auto single_back ()() {return apply (domain.back);}
 				auto tuple_back  ()() {return apply (domain.back.expand);}
 
-				return Filter!(has_identity,
-					single_back, tuple_back
-				)[0];
+				return Match!(single_back, tuple_back);
 			}
 		auto popFront ()()
 			{/*...}*/
@@ -1945,6 +1967,10 @@ struct Mapped (Domain, alias f, Parameters...)
 			{/*...}*/
 				return domain.limit!d;
 			}
+		auto limit ()() const
+			{/*...}*/
+				 return domain.limit;
+			}
 
 		private {/*...}*/
 			auto apply (Point...)(Point point)
@@ -1955,7 +1981,7 @@ struct Mapped (Domain, alias f, Parameters...)
 				{/*...}*/
 					return Mapped!(Subdomain, f, Parameters)(subdomain, parameters);
 				}
-			void _context_pointer ()
+			void context ()
 				{/*...}*/
 					template Dimensions (size_t i = 0)
 						{/*...}*/
@@ -1993,12 +2019,14 @@ auto map (alias f, Domain, Parameters...)(Domain domain, Parameters parameters)
 		return Mapped!(Domain, f, Parameters)(domain, parameters);
 	}
 
-void map_test () // TODO multidim slices
+void map_test ()
 	{/*...}*/
 		int[8] x = [1,2,3,4,5,6,7,8];
 
 		{/*ranges}*/
 			auto y = x[].map!(i => 2*i);
+
+			assert (y.length == 8);
 
 			assert (x[0] == 1);
 			assert (y[0] == 2);
@@ -2027,6 +2055,7 @@ void map_test () // TODO multidim slices
 				}
 			auto z = Basic()[].map!(i => 2*i);
 
+			assert (z[].limit == [0,4]);
 			assert (z[] == [2,4,6,8]);
 
 			static struct MultiDimensional
@@ -2049,6 +2078,11 @@ void map_test () // TODO multidim slices
 			auto m = MultiDimensional()[];
 			auto w = MultiDimensional()[].map!(i => 2*i);
 
+			assert (m[].limit!0 == [0,3]);
+			assert (m[].limit!1 == [0,3]);
+			assert (w[].limit!0 == [0,3]);
+			assert (w[].limit!1 == [0,3]);
+
 			assert (m[0,0] == 1);
 			assert (w[0,0] == 2);
 			assert (m[2,2] == 9);
@@ -2056,6 +2090,9 @@ void map_test () // TODO multidim slices
 
 			assert (w[0..$, 0] == [2, 8, 14]);
 			assert (w[0, 0..$] == [2, 4, 6]);
+
+			assert (m[0..$, 1].map!(x => x*x) == [4, 25, 64]);
+			assert (w[0..$, 1].map!(x => x*x) == [16, 100, 256]);
 
 			static struct FloatingPoint
 				{/*...}*/
@@ -2116,6 +2153,7 @@ void map_test () // TODO multidim slices
 struct Zipped (Spaces...)
 	{/*...}*/
 		Spaces spaces;
+		this (Spaces spaces) {this.spaces = spaces;}
 
 		auto opIndex (Args...)(Args args)
 			{/*...}*/
@@ -2226,36 +2264,24 @@ struct Zipped (Spaces...)
 			{/*...}*/
 				return this;
 			}
-		auto length ()()
+		auto length ()() const
 			{/*...}*/
-				return spaces[0].length;
+				return spaces[0].length; // REVIEW get the space that has a length, might not be the first one
 			}
-		auto limit (size_t i)()
+		auto limit (size_t i)() const
 			{/*...}*/
-				return spaces[0].limit!i;
+				return spaces[0].limit!i; // REVIEW get the space that has a limit, might not be the first one
+			}
+		auto limit ()() const
+			{/*...}*/
+				 return spaces[0].limit; // REVIEW get the space that has a limit, might not be the first one
 			}
 
 		invariant ()
 			{/*...}*/
 				mixin LambdaCapture;
 
-				template dimensionality (size_t i)
-					{/*...}*/
-						template count (size_t d = 0)
-							{/*...}*/
-								static if (is (typeof(spaces[i].limit!d)))
-									enum count = 1 + count!(d+1);
-
-								else static if (d == 0 && is (typeof(spaces[i].length)))
-									enum count = 1;
-
-								else enum count = 0;
-							}
-
-						enum dimensionality = count!();
-					}
-
-				alias Dimensionalities =  Map!(dimensionality, Count!Spaces);
+				alias Dimensionalities =  Map!(dimensionality, Spaces);
 
 				static assert (All!(λ!q{(size_t d) = d == Dimensionalities[0]}, Dimensionalities),
 					`zip error: dimension mismatch! ` 
@@ -2268,7 +2294,8 @@ struct Zipped (Spaces...)
 					foreach (i; Count!Spaces)
 						{/*bounds check}*/
 							enum no_measure_error (size_t i) = `zip error: `
-								~ Spaces[i].stringof ~ ` has no length or limit`;
+								~ Spaces[i].stringof
+								~ ` does not define length or limit (const)`;
 
 							static if (is (typeof(spaces[0].limit!d)))
 								auto base = spaces[0].limit!d;
@@ -2294,7 +2321,6 @@ struct Zipped (Spaces...)
 							);
 						}
 			}
-		this (Spaces spaces) {this.spaces = spaces;}
 	}
 
 auto zip (Spaces...)(Spaces spaces)
@@ -2302,11 +2328,13 @@ auto zip (Spaces...)(Spaces spaces)
 		return Zipped!Spaces (spaces);
 	}
 
-void zip_test () // TODO do multidim test, assert thrown there too, do various indices, do multidim slices
+void zip_test ()
 	{/*...}*/
 		int[4] x = [1,2,3,4], y = [4,3,2,1];
 
 		auto z = zip (x[], y[]);
+
+		assert (z.length == 4);
 
 		assert (z[0] == tuple (1,4));
 		assert (z[$-1] == tuple (4,1));
@@ -2346,6 +2374,18 @@ void zip_test () // TODO do multidim test, assert thrown there too, do various i
 			auto c = zip (a[], b[]);
 
 			assert (c[1, 1] == tuple (5, 10));
+
+			error (zip (a[1..$, ~$..$], b[~$..$, ~$..$]));
+			error (zip (a[~$..$, 1..$], b[~$..$, ~$..$]));
+
+			error (zip (a[0, ~$..$], x[]));
+
+			no_error (zip (a[0, ~$..$], x[0..3], y[0..3], z[0..3]));
+
+			 // TODO do multidim slices
+		}
+		{/*TODO various indices}*/
+			
 		}
 		{/*map's automatic tuple expansion}*/
 			static tuple_sum (T)(T t){return t[0] + t[1];}
@@ -2360,9 +2400,76 @@ void zip_test () // TODO do multidim test, assert thrown there too, do various i
 
 ///////////////////
 
+struct Product (Spaces...)
+	{/*...}*/
+		alias Offsets = Scan!(Sum, Map!(dimensionality, Spaces));
+
+		Spaces spaces;
+
+		auto limit (size_t d)() const
+			{/*...}*/
+				mixin LambdaCapture;
+
+				alias LimitOffsets = Offsets[0..$ - Filter!(λ!q{(size_t i) = d < i}, Offsets).length + 1];
+					
+				enum i = LimitOffsets.length - 1;
+				enum d = LimitOffsets[0] - 1;
+
+				size_t[2] get_length ()() if (d == 0) {return [0, spaces[i].length];}
+				auto get_limit ()() {return spaces[i].limit!d;}
+
+				return Match!(get_limit, get_length);
+			}
+
+		auto access (Map!(Coords, Spaces) point)
+			{/*...}*/
+				template projection (size_t i)
+					{/*...}*/
+						auto π_i ()() {return spaces[i][point[Offsets[i]-1..Offsets[i+1]-1]];}
+						auto π_n ()() {return spaces[i][point[Offsets[i]-1..$]];}
+
+						alias projection = Match!(π_i, π_n);
+					}
+
+				Map!(Λ!q{(alias π) = typeof(π.identity)}, 
+					Map!(projection, Count!Spaces)
+				) mapped;
+
+				foreach (i; Count!Spaces)
+					mapped[i] = projection!i;
+
+				return mapped.tuple;
+			}
+
+		pragma(msg, ReturnType!(limit!0));
+
+		//mixin SliceOps!(access, Map!(limit, Count!Spaces), RangeOps);
+	}
+
+auto by (S,R)(S left, R right)
+	{/*...}*/
+		static if (is (typeof(S.spaces)))
+			return Product!(typeof(S.spaces), R)(left.spaces, right);
+
+		else return Product!(S,R)(left, right);
+	}
+
+void product_test ()
+	{/*...}*/
+		int[3] x = [1,2,3];
+		int[3] y = [4,5,6];
+
+		auto z = x[].by (y[]);
+
+		writeln (z.access (1,1));
+	}
+
+///////////////////
+
 void main ()
 	{/*...}*/
 		all_ops_tests;
 		map_test;
 		zip_test;
+		product_test;
 	}

@@ -32,6 +32,32 @@ enum Contains (T...) = IndexOf!(T[0], T[1..$]) > -1;
 alias Repeat (size_t n, T...) = Cons!(T, Repeat!(n-1, T));
 alias Repeat (size_t n : 1, T...) = Cons!T;
 
+template Reduce (alias f, T...)
+	if (T.length > 1)
+	{/*...}*/
+		static if (T.length == 2)
+			alias Reduce = f!T;
+
+		else alias Reduce = f!(T[0], Reduce!(f, T[1..$]));
+	}
+
+alias Sum (T...) = Reduce!(λ!q{(size_t a, size_t b) = a + b}, T);
+	static assert (Sum!(0,1,2,3,4,5) == 15);
+
+template Scan (alias f, T...)
+	{/*...}*/
+		template Sweep (size_t i)
+			{/*...}*/
+				static if (i == 0)
+					alias Sweep = Cons!(T[i]);
+
+				else alias Sweep = Reduce!(f, T[0..i+1]);
+			}
+
+		alias Scan = Map!(Sweep, Count!T);
+	}
+	static assert (Scan!(Sum, 0,1,2,3,4,5) == Cons!(0,1,3,6,10,15));
+
 template LambdaCapture ()
 	{/*...}*/
 		static template Λ (string op)
@@ -105,6 +131,22 @@ template Sort (alias compare, T...)
 		else alias Sort = T;
 	}
 	static assert (Sort!(λ!q{(T...) = T[0] < T[1]}, 5,4,2,7,4,3,1) == Cons!(1,2,3,4,4,5,7));
+
+template Match (patterns...)
+	{/*...}*/
+		import std.algorithm: find; // REVIEW how am i handling local vs global imports?
+		import std.array: replace; // REVIEW
+		alias Filtered = Filter!(has_identity, patterns);
+
+		static if (Filtered.length == 0)
+			static assert (0, 
+				`none of ` ~ patterns.stringof
+				.find (`(`).replace (`(`,``).replace (`)`,``)
+				~ ` could be matched`
+			);
+
+		else alias Match = Filtered[0];
+	}
 
 ////REFACTOR /////////////////////////////
 
