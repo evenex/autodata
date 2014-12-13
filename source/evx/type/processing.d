@@ -21,10 +21,12 @@ alias Filter = std.typetuple.Filter;
 
 alias Select = std.typecons.Select;
 
-alias Iota = staticIota;
+alias Iota (size_t n) = staticIota!(0,n);
+alias Iota (size_t l, size_t r) = staticIota!(l,r);
 
-alias Count (T...) = Iota!(0, T.length);
+alias Count (T...) = Iota!(T.length);
 
+alias Indexed (T...) = Zip!(Count!T, T);
 alias IndexOf = staticIndexOf;
 
 enum Contains (T...) = IndexOf!(T[0], T[1..$]) > -1;
@@ -109,7 +111,7 @@ template Zip (T...)
 	{/*...}*/
 		alias ToPair (size_t i) = Pair!(T[i], T[$/2 + i]);
 
-		alias Zip = Map!(ToPair, Iota!(0, T.length/2));
+		alias Zip = Map!(ToPair, Iota!(T.length/2));
 	}
 
 alias Interleave (T...) = Map!(Pair!().Both!Cons, Zip!T);
