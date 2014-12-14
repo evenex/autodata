@@ -6,7 +6,9 @@ private {/*imports}*/
 	import std.range;
 
 	import evx.math.logic;
-	import evx.traits;
+	import evx.math.algebra;
+	import evx.type.classification;
+	import evx.type.introspection;
 }
 
 /* extract an array of identifiers for members of T which match the given UDA tag 
@@ -36,95 +38,7 @@ template collect_members (T, alias attribute)
 		static assert (collect_members!(Test, Tag) == [`x`, `y`]);
 	}
 
-/* build a TypeTuple of all nested struct and class definitions within T 
-*/
-template get_substructs (T)
-	{/*...}*/
-		private template get_substruct (T)
-			{/*...}*/
-				template get_substruct (string member)
-					{/*...}*/
-						immutable name = q{T.} ~member;
+static alias ExprType (alias symbol) = typeof(symbol.identity);
 
-						static if (member.empty)
-							enum get_substruct = 0;
-						
-						else static if (mixin(q{is (} ~name~ q{)})
-							&& is_accessible!(T, member)
-							&& not (mixin(q{is (} ~name~ q{ == T)}))
-						) mixin(q{
-							alias get_substruct = T.} ~member~ q{;
-						});
-						else enum get_substruct = 0;
-					}
-			}
+// TODO DEPRECATE:
 
-		alias get_substructs = Filter!(not!is_numerical_param, 
-			staticMap!(get_substruct!T, __traits(allMembers, T))
-		);
-	}
-	unittest {/*...}*/
-		struct Test {enum a = 0; int b = 0; struct InnerStruct {} class InnerClass {}}
-
-		foreach (i, T; TypeTuple!(Test.InnerStruct, Test.InnerClass))
-			static assert (staticIndexOf!(T, get_substructs!Test) == i);
-	}
-
-/* build a string tuple of all assignable members of T 
-*/
-template get_assignable_members (T)
-	{/*...}*/
-		private template is_assignable (T)
-			{/*...}*/
-				template is_assignable (string member)
-					{/*...}*/
-						enum is_assignable = __traits(compiles,
-							(T type) {/*...}*/
-								mixin(q{
-									type.} ~member~ q{ = typeof(type.} ~member~ q{).init;
-								});
-							}
-						);
-					}
-			}
-
-		alias get_assignable_members = Filter!(is_assignable!T, __traits(allMembers, T));
-	}
-	unittest {/*...}*/
-		struct Test {int a; const int b; immutable int c; enum d = 0; int e (){return 1;}}
-
-		static assert (get_assignable_members!Test == TypeTuple!`a`);
-	}
-
-template IndexType (R)
-	{/*...}*/
-		// filter is unary?
-		static if (hasMember!(R, `opIndex`))
-			alias IndexType = staticMap!(FirstParameter, Filter!(is_unary_function, __traits(getOverloads, R, `opIndex`)))[0];
-		else static if (__traits(compiles, R.init[0]))
-			alias IndexType = size_t;
-	}
-
-/* get the type of a function's first parameter 
-*/
-template FirstParameter (alias func)
-	{/*...}*/
-		alias FirstParameter = FirstParameter!(typeof(func));
-	}
-template FirstParameter (F)
-	{/*...}*/
-		static if (ParameterTypeTuple!F.length > 0)
-			alias FirstParameter = ParameterTypeTuple!F;
-		else alias FirstParameter = void;
-	}
-
-template DollarType (R)
-	{/*...}*/
-		static if (__traits(compiles, R.init[$]))
-			{/*...}*/
-				static if (hasMember!(R, `opDollar`))
-					alias DollarType = Unqual!(ReturnType!(R.opDollar));
-				else alias DollarType = size_t;
-			}
-		else alias DollarType = void;
-	}

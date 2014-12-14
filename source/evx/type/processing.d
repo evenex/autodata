@@ -4,7 +4,7 @@ private {/*import}*/
 	import std.typecons;
 	import std.typetuple;
 
-	import evx.traits;
+	import evx.type.classification;
 	import evx.math.logic;
 	import evx.math.algebra;
 }
