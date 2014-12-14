@@ -8,7 +8,7 @@ module evx.operators.range;
 template RangeOps ()
 	{/*...}*/
 		private {/*import}*/
-			import evx.range;
+			import std.algorithm : equal;
 		}
 
 		static if (Dimensions.length == 1)
@@ -20,7 +20,7 @@ template RangeOps ()
 				auto empty () {return length == 0;}
 				auto length () {return bounds[Dimensions[0]].width;}
 				auto save () {return this;}
-				auto opEquals (R)(R range) {return evx.range.equal (save, range);}
+				auto opEquals (R)(R range) {return equal (save, range);} // BUG UFCS FAILURE
 			}
 	}
 	unittest {/*...}*/

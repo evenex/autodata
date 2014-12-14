@@ -8,7 +8,6 @@ private {/*imports}*/
 	import evx.math.logic;
 	import evx.math.algebra;
 	import evx.math.intervals;
-	import evx.operators;
 }
 
 /* a sequence defined by a generating function of the form f(T, size_t) 
