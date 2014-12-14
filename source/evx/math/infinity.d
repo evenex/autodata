@@ -1,9 +1,11 @@
 module evx.math.infinity;
 
 private {/*imports}*/
-	import evx.math.continuity;
+	import std.traits;
+
 	import evx.math.algebra;
 	import evx.math.logic;
+	import evx.type;
 
 	import evx.range.classification;
 }
@@ -12,7 +14,7 @@ private {/*imports}*/
 alias infinity = infinite!real;
 
 template infinite (T)
-	if (is_continuous!T)
+	if (is_floating_point!(RepresentationTypeTuple!T))
 	{/*...}*/
 		alias infinite = group_element!(real.infinity).of_group!T;
 	}

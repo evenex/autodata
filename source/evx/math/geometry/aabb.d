@@ -193,10 +193,21 @@ struct Box (T)
 		private {/*defs}*/
 			alias Vec = Vector!(2, T);
 
-			Vec[4] verts;
+			enum size_t n_verts = 4;
+			Vec[n_verts] verts;
 
-			mixin TransferOps!verts;
+			void pull (R)(R range, size_t i, size_t j)
+				{/*...}*/
+					foreach (k; i..j)
+						verts[k] = range[k-i];
+				}
+			Vec access (size_t i)
+				{/*...}*/
+					return verts[i];
+				}
 		}
+
+		public mixin TransferOps!(pull, access, n_verts, RangeOps);
 	}
 	unittest {/*...}*/
 		import evx.math;//		import evx.math.geometry.polygons;

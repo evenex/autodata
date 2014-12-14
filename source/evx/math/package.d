@@ -3,7 +3,6 @@ public:
 import evx.math.algebra;
 import evx.math.arithmetic;
 import evx.math.constants;
-import evx.math.continuity;
 import evx.math.floatingpoint;
 import evx.math.functional;
 import evx.math.geometry;

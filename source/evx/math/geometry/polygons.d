@@ -117,22 +117,26 @@ auto flip (string direction, T)(T geometry)
 		return geometry[].map!(v => (v - c) * w + c);
 	}
 	unittest {/*...}*/
-		import std.range: retro;
-		import std.algorithm: equal;
-
 		static if (__traits(compiles, {import evx.math.geometry.aabb;}))
 			{/*...}*/
 				import evx.math;//				import evx.math.geometry.aabb;
 
 				assert (not (square.flip!`vertical`.equal (square)));
+				assert (equal (
+					square.flip!`vertical`.bounding_box[],
+					square.bounding_box[]
+				));  /* BUG was:
 				assert (square.flip!`vertical`.bounding_box[]
 					.equal (square.bounding_box[])
 				);
+					but UFCS fails... says Error: template std.algorithm.equal cannot deduce function from argument types !()(Sub!0)... wtf? non-UFCS rewrite works
+				*/
 
 				assert (not (square.flip!`horizontal`.equal (square)));
-				assert (square.flip!`horizontal`.bounding_box[]
-					.equal (square.bounding_box[])
-				);
+				assert (equal (
+					square.flip!`horizontal`.bounding_box[],
+					square.bounding_box[]
+				));
 			}
 
 		auto triangle = [-î!vec, ĵ!vec, î!vec];

@@ -3,140 +3,89 @@ module evx.math.sequence;
 private {/*imports}*/
 	import std.conv;
 
-	import evx.traits;
 	import evx.type;
 	import evx.range.classification;
 	import evx.math.logic;
 	import evx.math.algebra;
+	import evx.math.intervals;
+	import evx.operators;
 }
 
 /* a sequence defined by a generating function of the form f(T, size_t) 
 */
-struct Sequence (alias func, T)
-	if (is_binary_function!(func!(T, size_t)))
+struct Sequence (alias f, T) 
 	{/*...}*/
-		public {/*[i]}*/
-			auto opIndex (size_t i)
-				in {/*...}*/
-					assert (i < length);
-					assert (i != infinity);
-				}
-				body {/*...}*/
-					return func (initial, i + start).to!T;
-				}
+		T initial;
+		size_t[2] bounds = [0, size_t.max];
 
-			static assert (is(IndexType!Sequence));
-		}
-		public {/*[i..j]}*/
-			auto opSlice ()
-				{/*...}*/
-					return this;
-				}
-			auto opSlice (size_t i, size_t j) // TODO to opIndex
-				in {/*...}*/
-					assert (i != infinity);
+		T access (size_t i)
+			{/*...}*/
+				return f (initial, i + bounds.left).to!T;
+			}
 
-					if (j != infinity)
-						assert (i < j && j <= length, 
-							`[` ~i.text ~ `, ` ~j.text~ `] exceeds ` ~length.text
-						);
-				}
-				body {/*...}*/
-					if (j == infinity)
-						return Sequence (initial, start + i, infinity);
-					else return Sequence (initial, start + i, start + j);
-				}
-		}
-		@property {/*InputRange}*/
-			auto popFront ()
-				in {/*...}*/
-					assert (not (empty));
-				}
-				body {/*...}*/
-					++start;
-				}
-			auto front ()
-				in {/*...}*/
-					assert (not (empty));
-				}
-				body {/*...}*/
-					return this[0];
-				}
-			auto empty ()
-				{/*...}*/
-					return this.length == 0;
-				}
+		version (all) // TODO pending bugfix
+			{/*...}*/
+				auto opIndex (size_t i)
+					{/*...}*/
+						return access (i);
+					}
+				auto opIndex (size_t[2] slice)
+					{/*...}*/
+						auto t = this;
 
-			static assert (is_input_range!Sequence);
-		}
-		@property {/*ForwardRange}*/
-			auto save ()
-				{/*...}*/
-					return this;
-				}
+						t.bounds.left += slice.left;
+						t.bounds.right = t.bounds.left + slice.width;
 
-			static assert (is_forward_range!Sequence);
-		}
-		@property {/*BidirectionalRange}*/
-			auto popBack ()
-				in {/*...}*/
-					assert (not (empty));
-					assert (not (is_infinite));
-				}
-				body {/*...}*/
-					--end;
-				}
-			auto back ()
-				in {/*...}*/
-					assert (not (empty));
-					assert (not (is_infinite));
-				}
-				body {/*...}*/
-					return this[$-1];
-				}
+						return t;
+					}
+				auto opIndex ()
+					{/*...}*/
+						return this;
+					}
+				size_t[2] opSlice (size_t d: 0)(size_t i, size_t j)
+					{/*...}*/
+						return [i,j];
+					}
+				auto front ()
+					{/*...}*/
+						return this[0];
+					}
+				auto back ()
+					{/*...}*/
+						return this[$-1];
+					}
+				auto opDollar ()
+					{/*...}*/
+						return length;
+					}
+				auto popFront ()
+					{/*...}*/
+						bounds.left++;
+					}
+				auto popBack ()
+					{/*...}*/
+						bounds.right--;
+					}
+				auto empty ()
+					{/*...}*/
+						return length == 0;
+					}
+				@property save ()
+					{/*...}*/
+						return this;
+					}
+				bool opEquals (R)(R range)
+					{/*...}*/
+						return evx.range.equal (save, range);
+					}
+				@property length () const
+					{/*...}*/
+						return bounds.width;
+					}
+			}
 
-			static assert (is_bidirectional_range!Sequence);
-		}
-		const @property {/*length}*/
-			auto length ()
-				{/*...}*/
-					if (this.is_finite)
-						return end - start;
-					else return infinity;
-				}
-			alias opDollar = length;
-
-			bool is_infinite ()
-				{/*...}*/
-					return this.end == this.infinity;
-				}
-			bool is_finite ()
-				{/*...}*/
-					return not (this.is_infinite);
-				}
-		}
-
-		private:
-		private {/*ctor}*/
-			this (T initial, size_t start = 0, size_t end = infinity)
-				{/*...}*/
-					this.initial = initial;
-					this.start = start;
-					this.end = end;
-				}
-		}
-
-		private {/*data}*/
-			T initial;
-
-			size_t start;
-			size_t end;
-
-			enum infinity = size_t.max;
-		}
-		invariant (){/*}*/
-			assert (start < infinity);
-		}
+		//mixin SliceOps!(access, bounds, RangeOps);// BUG https://issues.dlang.org/show_bug.cgi?id=13861
+	//	mixin RangeOps;
 	}
 
 /* build a sequence from an index-based generating function and an initial value 
@@ -145,13 +94,13 @@ auto sequence (alias func, T)(T initial)
 	{/*...}*/
 		return Sequence!(func, T)(initial);
 	}
-	unittest {/*...}*/
-		import std.algorithm: equal;
+	void main () {/*...}*/
+		auto N = ℕ;
+		assert (ℕ[0..10] == [0,1,2,3,4,5,6,7,8,9]);
+		assert (ℕ[4..9] == [4,5,6,7,8]);
 
-		assert (ℕ[0..10].equal ([0,1,2,3,4,5,6,7,8,9]));
-		assert (ℕ[4..9].equal ([4,5,6,7,8]));
-		assert (ℕ[4..9][1..4].equal ([5,6,7]));
-		assert (ℕ[4..9][1..4][1] == 6);
+		assert (N[4..9][1..4] == [5,6,7]);
+		assert (N[4..9][1..4][1] == 6);
 
 		for (auto i = 0; i < 10; ++i)
 			assert (ℕ[0..10][i] == i);

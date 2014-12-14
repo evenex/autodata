@@ -1,5 +1,5 @@
 module evx.math.functional;
-
+ // TODO redocument
 private {/*imports}*/
 	import std.conv;
 	import std.traits;
@@ -10,144 +10,304 @@ private {/*imports}*/
 	import evx.range;
 
 	import evx.math.logic;
-	import evx.math.continuity;
+	import evx.math.algebra;
 	import evx.math.intervals;
 	import evx.math.ordinal;
+	import evx.math.space;
+	import evx.operators.slice;
+	import evx.operators.range;
 }
 
 public {/*map}*/
 	/* apply a given function to the elements in a range 
 	*/
 
-	struct Mapped (R, alias func)
+	struct Mapped (Domain, alias f, Parameters...)
 		{/*...}*/
-			alias Index = IndexType!R;
-			enum is_n_ary_function = is(typeof(func (range.front.expand)));
+			Domain domain;
+			Parameters parameters;
 
-			static if (is(IndexType!R))
+			auto opIndex (Args...)(Args args)
 				{/*...}*/
-					auto ref opIndex (Index i)
-						in {/*...}*/
-							static if (is_continuous!Index)
-								assert (i < range.measure, `index out of bounds`);
-							else static if (has_length!R)
-								assert (i < range.length, `index out of bounds`);
-							else static assert (0);
-						}
-						body {/*...}*/
-							static if (is_n_ary_function)
-								return func (range[i].expand);
-							else return func (range[i]);
-						}
-				}
+					auto slice_all ()() if (Args.length == 0) {return domain;}
+					auto get_point ()() {return domain[args];}
+					auto get_space ()() {return domain.opIndex (args);}
+					auto get_range ()() if (Args.length == 1) {return domain[args[0].left..args[0].right];}
 
-			auto opSlice ()()
+					auto subdomain = Match!(slice_all, get_point, get_space, get_range);
+
+					auto map_point ()() {return apply (subdomain);}
+					auto map_tuple ()() {return apply (subdomain.expand);}
+					auto map_space ()() {return remap (subdomain);}
+
+					return Match!(map_point, map_tuple, map_space);
+				}
+			auto opSlice (size_t d, Args...)(Args args)
 				{/*...}*/
-					return this;
-				}
+					auto multi ()() {return TEMPdomain.opSlice!d (args);}
+					auto single ()() if (d == 0) {return TEMPdomain.opSlice (args);}
+					CommonType!Args[2] index ()() {return [args];}
 
-			auto opSlice ()(Index i, Index j)
-				in {/*...}*/
-					static if (is_continuous!Index)
-						assert (i < j && j <= measure);
-					else static if (has_length!R)
-						assert (i < j && j <= length, `attempted to slice [` ~i.text~ `, ` ~j.text~ `] with length ` ~length.text);
+					return Match!(multi, single, index);
 				}
-				body {/*...}*/
-					return Mapped (range[i..j]);
+			auto opDollar (size_t d)()
+				{/*...}*/
+					auto multi ()() {return domain.opDollar!d;}
+					auto single ()() if (d == 0) {return domain.opDollar;}
+					auto length ()() if (d == 0) {return domain.length;}
+
+					return Match!(multi, single, length);
+				}
+			auto opEquals (S)(S that)
+				{/*...}*/
+					return this.equal (that);
 				}
 
 			@property:
-			static if (is_input_range!R)
-				{/*...}*/
-					auto ref front ()
-						{/*...}*/
-							static if (is_n_ary_function)
-								return func (range.front.expand);
-							else return func (range.front);
-						}
-					void popFront ()
-						{/*...}*/
-							range.popFront;
-						}
-					bool empty ()
-						{/*...}*/
-							return range.empty;
-						}
 
-					static assert (is_input_range!Mapped);
+			auto front ()()
+				{/*...}*/
+					auto single_front ()() {return apply (domain.front);}
+					auto tuple_front  ()() {return apply (domain.front.expand);}
+
+					return Match!(single_front, tuple_front);
 				}
-			static if (is_forward_range!R)
+			auto back ()()
 				{/*...}*/
-					auto save ()
-						{/*...}*/
-							return this;
-						}
+					auto single_back ()() {return apply (domain.back);}
+					auto tuple_back  ()() {return apply (domain.back.expand);}
 
-					static assert (is_forward_range!Mapped);
+					return Match!(single_back, tuple_back);
 				}
-			static if (is_bidirectional_range!R)
+			auto popFront ()()
 				{/*...}*/
-					auto ref back ()
-						{/*...}*/
-							static if (is_n_ary_function)
-								return func (range.back.expand);
-							else return func (range.back);
-						}
-					void popBack ()
-						{/*...}*/
-							range.popBack;
-						}
-
-					static assert (is_bidirectional_range!Mapped);
+					domain.popFront;
 				}
-			static if (has_length!R)
+			auto popBack ()()
 				{/*...}*/
-					@property length () const
-						{/*...}*/
-							return range.length;
-						}
-
-					static if (is(DollarType!R == size_t))
-						alias opDollar = length;
-
-					static assert (has_length!Mapped);
+					domain.popBack;
 				}
-			static if (is_continuous_range!R)
+			auto empty ()()
 				{/*...}*/
-					@property measure () const
-						{/*...}*/
-							return range.measure;
-						}
-
-					static if (not(is(DollarType!R == size_t)))
-						alias opDollar = measure;
-
-					static assert (is_continuous_range!Mapped);
+					return domain.empty;
+				}
+			auto save ()()
+				{/*...}*/
+					return this;
+				}
+			auto length ()() const
+				{/*...}*/
+					return domain.length;
+				}
+			auto limit (size_t d)() const
+				{/*...}*/
+					return domain.limit!d;
+				}
+			auto limit ()() const
+				{/*...}*/
+					 return domain.limit;
 				}
 
-			private:
-			R range;
+			private {/*...}*/
+				auto apply (Point...)(Point point)
+					{/*...}*/
+						return f (point, parameters);
+					}
+				auto remap (Subdomain...)(Subdomain subdomain)
+					{/*...}*/
+						return Mapped!(Subdomain, f, Parameters)(subdomain, parameters);
+					}
+				void context ()
+					{/*...}*/
+						template Dimensions (size_t i = 0)
+							{/*...}*/
+								static if (is (typeof(Domain.limit!i)))
+									alias Dimensions = Cons!(i, Dimensions!(i+1));
+								else alias Dimensions = Cons!();
+							}
+
+						alias Coord (int i) = ElementType!(typeof(Domain.limit!i.identity));
+
+						static if (is (typeof(domain.limit!0)))
+							auto subdomain = domain[Map!(Coord, Dimensions!()).init];
+						else static if (is (typeof(domain.front)))
+							auto subdomain = domain.front;
+						else static assert (0, `map error: `
+							~ Domain.stringof ~ ` is not a range (no front) or a space (no limit!i)`
+						);
+
+						static if (is (typeof (f (subdomain))))
+							cast(void) f (subdomain);
+						else static if (is (typeof (f (subdomain.expand))))
+							cast(void) f (subdomain.expand);
+
+						assert (0, `this function exists only to force the compiler`
+							` to capture the context of local functions`
+							` or functions using local symbols,`
+							` and is not meant to be invoked`
+						);
+					}
+			}
 		}
 
-	template map (alias func)
+	template map (alias f)
 		{/*...}*/
-			auto map (R)(R range)
+			auto map (Domain, Parameters...)(Domain domain, Parameters parameters)
 				{/*...}*/
-					return Mapped!(R, func)(range);
+					return Mapped!(Domain, f, Parameters)(domain, parameters);
 				}
 		}
 		unittest {/*...}*/
-			import std.algorithm: equal;
+			int[8] x = [1,2,3,4,5,6,7,8];
 
-			auto a = [1, 2, 3];
+			{/*ranges}*/
+				auto y = x[].map!(i => 2*i);
 
-			auto b = a.map!(x => x + 1);
+				assert (y.length == 8);
 
-			auto c = b.map!(x => x * 2);
+				assert (x[0] == 1);
+				assert (y[0] == 2);
 
-			assert (b.equal ([2, 3, 4]));
-			assert (c.equal ([4, 6, 8]));
+				assert (x[$-1] == 8);
+				assert (y[$-1] == 16);
+
+				assert (x[0..4] == [1, 2, 3, 4]);
+				assert (y[0..4] == [2, 4, 6, 8]);
+
+				assert (x[] == [1, 2, 3, 4, 5, 6, 7, 8]);
+				assert (y[] == [2, 4, 6, 8, 10, 12, 14, 16]);
+
+				assert (x.length == 8);
+				assert (y.length == 8);
+
+				foreach (i; y)
+					assert (i);
+			}
+			{/*spaces}*/
+				static struct Basic
+					{/*...}*/
+						int[] data = [1,2,3,4];
+
+						auto access (size_t i) {return data[i];}
+						auto length () {return data.length;}
+
+						mixin SliceOps!(access, length, RangeOps);
+					}
+				auto z = Basic()[].map!(i => 2*i);
+
+				assert (z[].limit == [0,4]);
+				assert (z[] == [2,4,6,8]);
+
+				static struct MultiDimensional
+					{/*...}*/
+						double[9] matrix = [
+							1, 2, 3,
+							4, 5, 6,
+							7, 8, 9,
+						];
+
+						auto ref access (size_t i, size_t j)
+							{/*...}*/
+								return matrix[3*i + j];
+							}
+
+						enum size_t rows = 3, columns = 3;
+
+						mixin SliceOps!(access, rows, columns, RangeOps);
+					}
+				auto m = MultiDimensional()[];
+				auto w = MultiDimensional()[].map!(i => 2*i);
+
+				assert (m[].limit!0 == [0,3]);
+				assert (m[].limit!1 == [0,3]);
+				assert (w[].limit!0 == [0,3]);
+				assert (w[].limit!1 == [0,3]);
+
+				assert (m[0,0] == 1);
+				assert (w[0,0] == 2);
+				assert (m[2,2] == 9);
+				assert (w[2,2] == 18);
+
+				assert (w[0..$, 0] == [2, 8, 14]);
+				assert (w[0, 0..$] == [2, 4, 6]);
+
+				assert (m[0..$, 1].map!(x => x*x) == [4, 25, 64]);
+				assert (w[0..$, 1].map!(x => x*x) == [16, 100, 256]);
+
+				static struct FloatingPoint
+					{/*...}*/
+						auto access (double x)
+							{/*...}*/
+								return x;
+							}
+
+						enum double length = 1;
+
+						mixin SliceOps!(access, length);
+					}
+				auto sq = FloatingPoint()[].map!(x => x*x);
+				assert (sq[0.5] == 0.25);
+			}
+			{/*local}*/
+				static static_variable = 7;
+				assert (x[].map!(i => i + static_variable)[0..4] == [8,9,10,11]);
+
+				static static_function (int x) {return x + 2;}
+				assert (x[].map!static_function[0..4] == [3,4,5,6]);
+
+				static static_template (T)(T x) {return 3*x;}
+				assert (x[].map!static_template[0..4] == [3,6,9,12]);
+
+				auto local_variable = 9;
+				assert (x[].map!(i => i + local_variable)[0..4] == [10,11,12,13]);
+
+				auto local_function (int x) {return x + 1;}
+				assert (x[].map!local_function[0..4] == [2,3,4,5]);
+
+				auto local_function_local_variable (int x) {return x * local_variable;}
+				assert (x[].map!local_function_local_variable[0..4] == [9,18,27,36]);
+
+				auto local_template (T)(T x) {return 3*x;}
+				// assert (x[].map!local_template[0..4] == [3,6,9,12]); BUG cannot capture context pointer for local template
+			}
+			{/*ctfe}*/
+				static ctfe_func (int x) {return x + 2;}
+
+				enum a = [1,2,3].map!(i => i + 100);
+				enum b = [1,2,3].map!ctfe_func;
+
+				static assert (a == [101, 102, 103]);
+				static assert (b == [3, 4, 5]);
+				static assert (typeof(a).sizeof == (int[]).sizeof + (void*).sizeof); // template lambda makes room for the context pointer but doesn't save it... weird.
+				static assert (typeof(b).sizeof == (int[]).sizeof); // static function omits context pointer
+			}
+			{/*params}*/
+				static r () @nogc {return only (1,2,3).map!((a,b,c) => a + b + c)(3, 2);}
+
+				assert (r == [6,7,8]);
+			}
+			{/*alias}*/
+				alias fmap = map!(x => x*x);
+
+				assert (fmap ([1,2]) == [1,4]);
+
+				auto f2 (int x) {return x - 1;}
+				alias gmap = map!f2;
+
+				assert (gmap ([1,2]) == [0,1]);
+			}
+			{/*compose}*/
+				auto a = x[].map!(x => x*x);
+				auto b = a.map!(x => x*x);
+
+				foreach (i; a)
+					assert (i);
+
+				foreach (i; b)
+					assert (i);
+
+				assert (b == [1, 16, 81, 256, 625, 1296, 2401, 4096]);
+			}
 		}
 }
 public {/*reduce}*/
@@ -228,212 +388,273 @@ public {/*zip}*/
 		into a range of tuples of the elements of the original ranges 
 	*/
 
-	struct Zipped (Ranges...)
+	struct Zipped (Spaces...)
 		{/*...}*/
-			static if (not(is(CommonIndex == void)))
+			Spaces spaces;
+			this (Spaces spaces) {this.spaces = spaces;}
+
+			auto opIndex (Args...)(Args args)
 				{/*...}*/
-					auto ref opIndex (CommonIndex i)
-						in {/*...}*/
-							static if (is_continuous!CommonIndex)
-								assert (i < measure);
-							else static if (has_length!Zipped)
-								assert (i < length);
-						}
-						body {/*...}*/
-							return zip_with!`[args[0]]`(i);
-						}
+					auto point (size_t i)() {return spaces[i].map!identity[args];}
 
-					static assert (is(IndexType!Zipped == CommonIndex));
+					Map!(ReturnType, 
+						Map!(point, Count!Spaces)
+					) zipped;
 
-					auto opSlice ()()
-						{/*...}*/
-							return this;
-						}
-					auto opSlice ()(CommonIndex i, CommonIndex j)
-						{/*...}*/
-							Zipped copy = this;
+					foreach (i,_; zipped)
+						zipped[i] = point!i;
 
-							foreach (r, ref range; copy.ranges)
-								range = this.ranges[r][i..j];
-							
-							return copy;
-						}
+					static if (not (Any!(λ!q{(T) = is (T == U[2], U)}, Args)))
+						return tuple (zipped);
+					else return Zipped!(typeof(zipped))(zipped);
 				}
-
-			static if (All!(is_input_range, Ranges))
-				@property {/*...}*/
-					auto ref front ()
+			auto opSlice (size_t d, Args...)(Args args)
+				{/*...}*/
+					auto attempt ()
 						{/*...}*/
-							return zip_with!`.front`;
-						}
-					void popFront ()
-						{/*...}*/
-							foreach (ref range; ranges)
-								range.popFront;
-						}
-					bool empty ()
-						{/*...}*/
-							foreach (range; ranges)
-								if (range.empty)
-									return true;
+							foreach (i; Count!Spaces)
+								{/*...}*/
+									auto multi ()() {return domain.opSlice!d (args);}
+									auto single ()() if (d == 0) {return domain.opSlice (args);}
 
-							return false;
-						}
-
-					static assert (is_input_range!Zipped);
-				}
-			static if (All!(is_forward_range, Ranges))
-				@property {/*...}*/
-					auto save ()
-						{/*...}*/
-							return this;
-						}
-
-					static assert (is_forward_range!Zipped);
-				}
-			static if (All!(is_bidirectional_range, Ranges))
-				@property {/*...}*/
-					auto ref back ()
-						{/*...}*/
-							return zip_with!`.back`;
-						}
-					void popBack ()
-						{/*...}*/
-							foreach (ref range; ranges)
-								range.popBack;
-						}
-
-					static assert (is_bidirectional_range!Zipped);
-				}
-			static if (All!(is_output_range, Ranges))
-				@property {/*...}*/
-					void put ()(auto ref ZipTuple element)
-						{/*...}*/
-							foreach (i, ref range; ranges)
-								range.put (element[i]);
-						}
-
-					static assert (.is_output_range!(Zipped, ZipTuple));
-				}
-			static if (All!(has_length, Ranges))
-				@property {/*...}*/
-					auto length () const
-						out (result) {/*...}*/
-							foreach (range; ranges)
-								assert (result == range.length);
-						}
-						body {/*...}*/
-							return ranges[0].length;
-						}
-
-					static if (is(CommonDollar == size_t))
-						alias opDollar = length;
-
-					static assert (has_length!Zipped);
-				}
-			static if (All!(is_continuous_range, Ranges))
-				@property {/*...}*/
-					auto measure () const
-						out (result) {/*...}*/
-							foreach (range; ranges)
-								assert (result == range.measure);
-						}
-						body {/*...}*/
-							return ranges[0].measure;
-						}
-
-					static if (not(is(CommonDollar == size_t)))
-						alias opDollar = measure;
-
-					static assert (is_continuous_range!Zipped);
-				}
-
-			alias CommonIndex = CommonType!(staticMap!(IndexType, Ranges));
-			alias CommonDollar = CommonType!(staticMap!(DollarType, Ranges));
-
-			private:
-			private {/*defs}*/
-				alias ZipTuple = Tuple!(staticMap!(Unqual, staticMap!(ElementType, Ranges)));
-
-				static if (is(CommonIndex == void))
-					alias Indices = Interval!size_t;
-				else alias Indices = Interval!CommonIndex;
-
-				auto zip_with (string op, Args...)(Args args)
-					{/*...}*/
-						static code ()
-							{/*...}*/
-								string code;
-
-								foreach (r; 0..Ranges.length)
-									code ~= q{ranges[} ~r.text~ q{]} ~op~ q{, };
-
-								return code;
-							}
-
-						mixin(q{
-							return ZipTuple (} ~code[0..$-2]~ q{);
-						});
-					}
-
-				template is_output_range (R)
-					{/*...}*/
-						alias is_output_range = .is_output_range!(R, ElementType!R);
-					}
-
-				template can_slice (R)
-					{/*...}*/
-						enum can_slice = is(R.init[CommonIndex.init..CommonIndex.init]);
-					}
-			}
-			private {/*ctor}*/
-			this (Ranges ranges)
-					in {/*...}*/
-						static if (is_continuous!CommonIndex)
-							{/*...}*/
-								auto measure = ranges[0].measure;
-
-								foreach (range; ranges)
-									assert (range.measure == measure, `range measure mismatch: `
-										~typeof(range).stringof~ ` ` ~range.measure.text~ 
-										` vs `
-										~typeof(ranges[0]).stringof~ ` ` ~measure.text
+									alias Attempt = Filter!(has_identity,
+										multi, single
 									);
-							}
-						static if (All!(has_length, Ranges))
-							{/*...}*/
-								auto length = ranges[0].length;
 
-								foreach (range; ranges)
-									assert (range.length == length, 
-										typeof(range).stringof~ ` length (` ~range.length.text~ `) does not match`
-										` length ` ~length.text~ ` (established by ` ~typeof(ranges[0]).stringof~ `)`
-									);
+									static if (Attempt.length)
+										return Attempt[0];
+									else continue;
+								}
+							assert (0);
+						}
+					CommonType!Args[2] array ()() {return [args];}
+
+					static if (is (typeof (attempt.identity)))
+						return attempt;
+					else return array;
+				}
+			auto opDollar (size_t d)()
+				{/*...}*/
+					foreach (i; Count!Spaces)
+						{/*...}*/
+							auto multi  ()() {return spaces[i].opDollar!d;}
+							auto single ()() if (d == 0) {return spaces[i].opDollar;}
+							auto length ()() if (d == 0) {return spaces[i].length;}
+
+							alias Attempt = Filter!(has_identity,
+								multi, single, length
+							);
+
+							static if (Attempt.length)
+								return Attempt[0];
+							else continue;
+						}
+					assert (0);
+				}
+			auto opEquals (S)(S that)
+				{/*...}*/
+					return this.equal (that);
+				}
+
+			static if (not (Contains!(void, Map!(ElementType, Spaces)))) // TEMP HACK foreach tuple expansion causes compiler segfault on template range ops, opApply is workaround
+				int opApply (int delegate(Map!(ElementType, Spaces)) op)
+					{/*...}*/
+						int result = 0;
+
+						for (auto x = front; not (empty); popFront)
+							{/*...}*/
+								static if (is (typeof(op (x.expand))))
+									result = op (x.expand);
+								else result = op (x);
+
+								if (result) break;
 							}
+
+						return result;
 					}
-					body {/*...}*/
-						this.ranges = ranges;
-					}
-			}
-			private {/*data}*/
-				Ranges ranges;
-			}
+
+			@property:
+
+			auto front ()()
+				{/*...}*/
+					auto get (size_t i)() {return spaces[i].front;}
+
+					Map!(ReturnType,
+						Map!(get, Count!Spaces)
+					) front;
+
+					foreach (i; Count!Spaces)
+						front[i] = get!i;
+
+					return front.tuple;
+				}
+			auto back ()()
+				{/*...}*/
+					auto get (size_t i)() {return spaces[i].back;}
+
+					Map!(ReturnType,
+						Map!(get, Count!Spaces)
+					) back;
+
+					foreach (i; Count!Spaces)
+						back[i] = get!i;
+
+					return back.tuple;
+				}
+			auto popFront ()()
+				{/*...}*/
+					foreach (ref space; spaces)
+						space.popFront;
+				}
+			auto popBack ()()
+				{/*...}*/
+					foreach (ref space; spaces)
+						space.popBack;
+				}
+			auto empty ()()
+				{/*...}*/
+					return spaces[0].empty;
+				}
+			auto save ()()
+				{/*...}*/
+					return this;
+				}
+			auto length ()() const
+				{/*...}*/
+					return spaces[0].length; // REVIEW get the space that has a length, might not be the first one
+				}
+			auto limit (size_t i)() const
+				{/*...}*/
+					return spaces[0].limit!i; // REVIEW get the space that has a limit, might not be the first one
+				}
+			auto limit ()() const
+				{/*...}*/
+					 return spaces[0].limit; // REVIEW get the space that has a limit, might not be the first one
+				}
+
+			invariant ()
+				{/*...}*/
+					mixin LambdaCapture;
+
+					alias Dimensionalities =  Map!(dimensionality, Spaces);
+
+					static assert (All!(λ!q{(int d) = d == Dimensionalities[0]}, Dimensionalities),
+						`zip error: dimension mismatch! ` 
+						~ Interleave!(Spaces, Dimensionalities)
+							.stringof[`tuple(`.length..$-1]
+							.replace (`),`, `):`)
+					);
+
+					foreach (d; Iota!(Dimensionalities[0]))
+						foreach (i; Count!Spaces)
+							{/*bounds check}*/
+								enum no_measure_error (int i) = `zip error: `
+									~ Spaces[i].stringof
+									~ ` does not define length or limit (const)`;
+
+								static if (is (typeof(spaces[0].limit!d)))
+									auto base = spaces[0].limit!d;
+
+								else static if (d == 0 && is (typeof(spaces[0].length)))
+									size_t[2] base = [0, spaces[0].length];
+
+								else static assert (0, no_measure_error!i);
+
+
+								static if (is (typeof(spaces[i].limit!d)))
+									auto lim = spaces[i].limit!d;
+
+								else static if (d == 0 && is (typeof(spaces[i].length)))
+									size_t[2] lim = [0, spaces[i].length];
+
+								else static assert (0, no_measure_error!i);
+
+
+								assert (base == lim, `zip error: `
+									`mismatched limits! ` ~ lim.text ~ ` != ` ~ base.text
+									~ ` in ` ~ Spaces[i].stringof
+								);
+							}
+				}
 		}
 
-	auto zip (Ranges...)(Ranges ranges)
+	auto zip (Spaces...)(Spaces spaces)
 		{/*...}*/
-			return Zipped!Ranges (ranges);
+			return Zipped!Spaces (spaces);
 		}
-		unittest {
-			import std.algorithm: equal;
-			alias τ = std.typecons.tuple;
+		unittest {/*...}*/
+			import evx.misc.test;
 
-			auto a = [1,2,3];
-			auto b = [`a`, `b`, `c`];
+			int[4] x = [1,2,3,4], y = [4,3,2,1];
 
-			auto c = zip (a,b);
+			auto z = zip (x[], y[]);
 
-			assert (c.equal ([τ(1, `a`), τ(2, `b`), τ(3, `c`)]));
+			assert (z.length == 4);
+
+			assert (z[0] == tuple (1,4));
+			assert (z[$-1] == tuple (4,1));
+			assert (z[0..$] == [
+				tuple (1,4),
+				tuple (2,3),
+				tuple (3,2),
+				tuple (4,1),
+			]);
+
+			{/*bounds check}*/
+				error (zip (x[], [1,2,3]));
+				error (zip (x[], [1,2,3,4,5]));
+			}
+			{/*multidimensional}*/
+				static struct MultiDimensional
+					{/*...}*/
+						double[9] matrix = [
+							1, 2, 3,
+							4, 5, 6,
+							7, 8, 9,
+						];
+
+						auto ref access (size_t i, size_t j)
+							{/*...}*/
+								return matrix[3*i + j];
+							}
+
+						enum size_t rows = 3, columns = 3;
+
+						mixin SliceOps!(access, rows, columns, RangeOps);
+					}
+
+				auto a = MultiDimensional();
+				auto b = MultiDimensional()[].map!(x => x*2);
+
+				auto c = zip (a[], b[]);
+
+				assert (c[1, 1] == tuple (5, 10));
+
+				error (zip (a[1..$, ~$..$], b[~$..$, ~$..$]));
+				error (zip (a[~$..$, 1..$], b[~$..$, ~$..$]));
+
+				error (zip (a[0, ~$..$], x[]));
+
+				no_error (zip (a[0, ~$..$], x[0..3], y[0..3], z[0..3]));
+
+				 // TODO do multidim slices
+			}
+			{/*TODO various indices}*/
+				
+			}
+			{/*map tuple expansion}*/
+				static tuple_sum (T)(T t){return t[0] + t[1];}
+				static binary_sum (T)(T a, T b){return a + b;}
+
+				assert (z.map!tuple_sum == [5,5,5,5]);
+				assert (z.map!binary_sum == [5,5,5,5]);
+				assert (z.map!(t => t[0] + t[1]) == [5,5,5,5]);
+				assert (z.map!((a,b) => a + b) == [5,5,5,5]);
+			}
+			{/*foreach tuple expansion}*/
+				foreach (a,b; z)
+					assert (1);
+			}
 		}
 }
 public {/*extract}*/
@@ -591,7 +812,7 @@ public {/*select}*/
 	*/
 	auto select (alias op, R)(R range)
 		{/*...}*/
-			static if (__traits(compiles, op (range.disperse.expand)))
+			static if (__traits(compiles, op (range.disperse.expand))) // TODO Match
 				return op (range.disperse.expand);
 			else return op (range);
 		}
@@ -600,8 +821,6 @@ public {/*select}*/
 
 			auto a = [1, 2, 3];
 			auto b = [`a`,`b`,`c`];
-
-			// TODO overload == for hof ranges.. by doing what? RangeOps?
 
 			assert (a.select!(x => x.length + x[0]) == 4);
 			assert (zip (a,b).select!((x,y) => x.reduce!max.to!string ~ y[0..2].join.to!string) == `3ab`);
@@ -616,5 +835,111 @@ public {/*transform}*/
 			static if (__traits(compiles, (){range[] = select!op (range);}))
 				range[] = select!op (range);
 			else return select!op (range);
+		}
+}
+public {/*product}*/
+	struct Product (Spaces...)
+		{/*...}*/
+			// HACK if the contents were out in the Product definition, the following error would arise from attempting to get the returntypes of limit or access (especially puzzling since i'm pretty sure access isn't a template): 
+				//source/experimental.d(2403): Error: struct experimental.Product!(int[], int[]).Product no size yet for forward reference
+				//ulong[2]
+				//source/experimental.d(2452): Error: template instance experimental.Product!(int[], int[]) error instantiating
+				//source/experimental.d(2460):        instantiated from here: by!(int[], int[])
+			// that is, it prints pragma(msg, ReturnType!(limit!0)); but then crashes on error.
+			struct Base // BUG https://issues.dlang.org/show_bug.cgi?id=13860
+				{/*...}*/
+					alias Offsets = Scan!(Sum, Map!(dimensionality, Spaces));
+
+					Spaces spaces;
+
+					auto limit (size_t d)() const
+						{/*...}*/
+							mixin LambdaCapture;
+
+							alias LimitOffsets = Offsets[0..$ - Filter!(λ!q{(int i) = d < i}, Offsets).length + 1];
+								
+							enum i = LimitOffsets.length - 1;
+							enum d = LimitOffsets[0] - 1;
+
+							size_t[2] get_length ()() if (d == 0) {return [0, spaces[i].length];}
+							auto get_limit ()() {return spaces[i].limit!d;}
+
+							return Match!(get_limit, get_length);
+						}
+
+					auto access (Map!(Coords, Spaces) point) // TODO flatten tuples
+						{/*...}*/
+							template projection (size_t i)
+								{/*...}*/
+									auto π_i ()() {return spaces[i][point[0..Offsets[i]]];}
+									auto π_n ()() {return spaces[i][point[Offsets[i-1]..Offsets[i]]];}
+
+									alias projection = Match!(π_i, π_n);
+								}
+
+							Map!(Λ!q{(alias π) = typeof(π.identity)}, 
+								Map!(projection, Count!Spaces)
+							) mapped;
+
+							foreach (i; Count!Spaces)
+								mapped[i] = projection!i;
+
+							union Cast
+								{/*...}*/
+									typeof(mapped.tuple) input;
+
+									Tuple!(RepresentationTypeTuple!(typeof(input)))
+										flattened;
+								}
+
+							return Cast (mapped.tuple).flattened;
+						}
+				}
+			Base base;
+			alias base this;
+			this (Spaces spaces) {base.spaces = spaces;}
+
+			auto limit (size_t d)()
+				{/*...}*/
+					return base.limit!d;
+				}
+			auto access (Map!(Coords, Spaces) point)
+				{/*...}*/
+					return base.access (point);
+				}
+
+			mixin SliceOps!(access, Map!(limit, Iota!(Sum!(Map!(dimensionality, Spaces)))), RangeOps);
+		}
+
+	auto by (S,R)(S left, R right)
+		{/*...}*/
+			static if (is (typeof(S.spaces)))
+				return Product!(typeof(S.spaces), R)(left.spaces, right);
+
+			else return Product!(S,R)(left, right);
+		}
+		unittest {/*...}*/
+			import evx.math; 
+
+			int[3] x = [1,2,3];
+			int[3] y = [4,5,6];
+
+			auto z = x[].by (y[]);
+
+			assert (z.access (0,1) == tuple (1,5));
+			assert (z.access (1,1) == tuple (2,5));
+			assert (z.access (2,1) == tuple (3,5));
+
+			auto w = z[].map!((a,b) => a * b);
+
+			assert (w[0,0] == 4);
+			assert (w[1,1] == 10);
+			assert (w[2,2] == 18);
+
+			auto p = w[].by (z[]);
+
+			assert (p[0,0,0,0] == tuple (4,1,4));
+			assert (p[1,1,0,1] == tuple (10,1,5));
+			assert (p[2,2,2,1] == tuple (18,3,5));
 		}
 }

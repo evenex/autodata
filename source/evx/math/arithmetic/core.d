@@ -8,7 +8,7 @@ private {/*imports}*/
 	import evx.math.logic;
 	import evx.math.algebra;
 
-	import evx.traits;
+	import evx.type;
 }
 
 /* test whether a type is capable of addition, subtraction, multiplication and division 

@@ -5,172 +5,63 @@ import std.conv;
 
 import evx.math.ordinal;
 import evx.math.infinity;
-import evx.math.continuity;
 import evx.math.algebra;
 import evx.math.logic;
 
 /* generic interval type 
 */
-struct Interval (Index) // TODO restructure with vector? or let cast be explicit?
-	{/*...}*/
-		const @property toString ()
-			{/*...}*/
-				return `[` ~min.text~ `..` ~max.text~ `]`;
-			}
-
-		pure:
-		static if (is_continuous!Index)
-			alias measure = size;
-		else alias length = size;
-
-		const @property empty ()
-			{/*...}*/
-				return end - start == zero!Index;
-			}
-
-		const @property start ()
-			{/*...}*/
-				return bounds[0];
-			}
-		const @property end ()
-			{/*...}*/
-				return bounds[1];
-			}
-
-		@property start ()(Index i)
-			{/*...}*/
-				bounds[0] = i;
-			}
-		@property end ()(Index i)
-			{/*...}*/
-				bounds[1] = i;
-			}
-
-		const @property size ()
-			{/*...}*/
-				return end - start;
-			}
-
-		alias min = start;
-		alias max = end;
-
-		this (Index start, Index end)
-			{/*...}*/
-				bounds = [start, end];
-			}
-		this (Index[2] bounds)
-			{/*...}*/
-				this.bounds = bounds;
-			}
-		this (R)(R range)
-			{/*...}*/
-				this.bounds = [range[0], range[1]];
-			}
-
-		auto tuple ()
-			{/*...}*/
-				return std.typecons.tuple (bounds[0], bounds[1]);
-			}
-
-		bool is_infinite ()
-			{/*...}*/
-				return start.is_infinite || end.is_infinite;
-			}
-
-		private:
-		Index[2] bounds = [zero!Index, zero!Index];
-
-		invariant (){/*...}*/
-			assert (bounds[0] <= bounds[1], `bounds inverted`);
-		}
-	}
-	pure {/*interval comparison predicates}*/
-		bool ends_before_end (T)(const Interval!T a, const Interval!T b)
-			{/*...}*/
-				return a.end < b.end;
-			}
-		bool ends_before_start (T)(const Interval!T a, const Interval!T b)
-			{/*...}*/
-				return a.end < b.start;
-			}
-		bool starts_before_end (T)(const Interval!T a, const Interval!T b)
-			{/*...}*/
-				return a.start < b.end;
-			}
-		bool starts_before_start (T)(const Interval!T a, const Interval!T b)
-			{/*...}*/
-				return a.start < b.start;
-			}
-	}
-	unittest {/*...}*/
-		auto x = interval (-10, 10);
-		auto y = interval (-infinity, 10);
-		auto z = interval (-10, infinity);
-
-		assert (x.is_finite);
-		assert (y.is_infinite);
-		assert (z.is_infinite);
-	}
 
 /* convenience constructor 
 */
-auto interval (T,U)(T start, U end)
+CommonType!(T,U)[2] interval (T,U)(T left, U right)
 	if (not(is(CommonType!(T,U) == void)))
 	{/*...}*/
-		return Interval!(CommonType!(T,U)) (start, end);
+		return [left, right];
 	}
 auto interval (T)(T[2] bounds)
 	{/*...}*/
-		return Interval!T (bounds);
+		return bounds;
 	}
 	unittest {/*...}*/
-		import std.exception;
-
 		auto A = interval (0, 10);
-		assert (A.length == 10);
+		assert (A.width == 10);
 
-		A.start = 9;
-		assert (A.length == 1);
+		A.left = 9;
+		assert (A.width == 1);
 
-		assertThrown!Error (A.end = 8);
-		A.bounds[1] = 10;
-
-		assert (not (A.empty));
-		A.end = 9;
-		assert (A.empty);
-		assert (A.length == 0);
+		A.right = 9;
+		assert (A.width == 0);
 	}
 
 /* test if two intervals overlap 
 */
-bool overlaps (T)(const Interval!T A, const Interval!T B)
+bool overlaps (T)(const T[2] A, const T[2] B)
 	{/*...}*/
-		if (A.starts_before_start (B))
-			return B.starts_before_end (A);
-		else return A.starts_before_end (B);
+		if (A.left < B.left)
+			return B.left < A.right;
+		else return A.left < B.right;
 	}
 	unittest {/*...}*/
 		auto A = interval (0, 10);
-
 		auto B = interval (11, 13);
 
-		assert (A.starts_before_start (B));
-		assert (A.ends_before_start (B));
+		assert (A.left < B.left);
+		assert (A.right < B.left);
 
 		assert (not (A.overlaps (B)));
-		A.end = 11;
+		A.right = 11;
 		assert (not (A.overlaps (B)));
-		A.end = 12;
+		A.right = 12;
 		assert (A.overlaps (B));
-		B.start = 13;
+		B.left = 13;
 		assert (not (A.overlaps (B)));
 	}
 
 /* test if an interval is contained within another 
 */
-bool is_contained_in (T)(Interval!T A, Interval!T B)
+bool is_contained_in (T)(T[2] A, T[2] B)
 	{/*...}*/
-		return A.start >= B.start && A.end <= B.end;
+		return A.left >= B.left && A.right <= B.right;
 	}
 	unittest {/*...}*/
 		auto A = interval (0, 10);
@@ -197,14 +88,14 @@ bool is_contained_in (T)(Interval!T A, Interval!T B)
 
 /* test if a point is contained within an interval 
 */
-bool is_contained_in (T)(T x, Interval!T I)
+bool is_contained_in (T)(T x, T[2] I)
 	{/*...}*/
-		return x.between (I.start, I.end);
+		return x.between (I.left, I.right);
 	}
 
 /* clamp a value to an interval
 */
-auto clamp (T,U)(T value, Interval!U interval)
+auto clamp (T,U)(T value, U[2] interval)
 	{/*...}*/
 		value = max (value, interval.min);
 		value = min (value, interval.max);
@@ -221,7 +112,7 @@ auto ref right (T)(auto ref T[2] bounds)
 	{/*...}*/
 		return bounds[1];
 	}
-auto difference (T)(T[2] bounds)
+auto width (T)(T[2] bounds) // TODO WIDTH
 	{/*...}*/
 		return bounds.right - bounds.left;
 	}
