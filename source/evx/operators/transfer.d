@@ -14,9 +14,9 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 					{/*error messages}*/
 						enum error_header = fullyQualifiedName!(typeof(this)) ~ `: `;
 
-						enum type_mismatch_error (int i) = error_header
-							~ `cannot transfer ` ~ i.text ~ `-d ` ~ S.stringof ~ ` to `
-							~ Filter!(λ!q{(T) = is (T == U[2], U)}, Selected).text
+						enum type_mismatch_error = error_header
+							~ `cannot transfer ` ~ S.stringof ~ ` to `
+							~ Filter!(λ!q{(T) = is (T == U[2], U)}, Selected).stringof
 							~ ` subspace`;
 					}
 

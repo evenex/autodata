@@ -5,11 +5,9 @@ private {/*...}*/
 	import std.range;
 }
 
-pure nothrow:
-
 /* generic identity operator
 */
-auto identity (T)(T that)
+T identity (T)(T that)
 	{/*...}*/
 		return that;
 	}

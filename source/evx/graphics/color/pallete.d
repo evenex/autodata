@@ -23,6 +23,7 @@ public enum {/*Color palette}*/
 unittest {/*...}*/
 	assert (red + blue == magenta);
 	assert (red + green == yellow);
+	
 	assert (cyan - blue == green);
 	assert (cyan - blue - green == black);
 	assert (red + yellow + blue == white);

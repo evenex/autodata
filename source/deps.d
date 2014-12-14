@@ -274,7 +274,7 @@ version (generate_dependency_graph) void main ()
 
 			auto root_packages = paths.map!(path => path.back).uniq;
 
-			foreach (root, color; zip (root_packages, rainbow (root_packages.count)))
+			foreach (root, color; lockstep (root_packages, rainbow (root_packages.count)))
 				{/*...}*/
 					root.color = color (0.5);
 

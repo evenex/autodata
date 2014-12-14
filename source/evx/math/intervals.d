@@ -97,8 +97,8 @@ bool is_contained_in (T)(T x, T[2] I)
 */
 auto clamp (T,U)(T value, U[2] interval)
 	{/*...}*/
-		value = max (value, interval.min);
-		value = min (value, interval.max);
+		value = max (value, interval.left);
+		value = min (value, interval.right);
 
 		return value;
 	}

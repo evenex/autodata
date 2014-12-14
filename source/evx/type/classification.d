@@ -33,7 +33,7 @@ alias is_implicitly_convertible = isImplicitlyConvertible;
 
 /* test if a type defines an identity
 */
-enum has_identity (T...) = is (typeof(T[0].identity));
+enum has_identity (T...) = is (typeof(identity (T[0]))); // BUG ANOTHER UFCS FAILURE!!!!
 
 /* test if an expression can be made into an enum
 */

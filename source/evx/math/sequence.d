@@ -94,7 +94,7 @@ auto sequence (alias func, T)(T initial)
 	{/*...}*/
 		return Sequence!(func, T)(initial);
 	}
-	void main () {/*...}*/
+	unittest {/*...}*/
 		auto N = ℕ;
 		assert (ℕ[0..10] == [0,1,2,3,4,5,6,7,8,9]);
 		assert (ℕ[4..9] == [4,5,6,7,8]);

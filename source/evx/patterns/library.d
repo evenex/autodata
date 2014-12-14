@@ -8,7 +8,7 @@ mixin template DynamicLibrary ()
 	{/*...}*/
 		static assert (is(typeof(this)), `mixin requires host struct`);
 
-		import evx.traits;
+		import evx.type;
 		import evx.math.logic;
 		import std.traits;
 

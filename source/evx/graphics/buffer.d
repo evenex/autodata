@@ -13,8 +13,6 @@ private {/*imports}*/
 	import evx.range;
 }
 
-/* base buffer type, BufferOps capable 
-*/
 struct GLBuffer (T, GLenum target, GLenum usage)
 	{/*...}*/
 		enum gl_buffer;
@@ -31,44 +29,68 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 			{/*...}*/
 				T value;
 
-				push (&value, i, i+1);
+				push (&value, interval (i, i+1));
 
 				return value;
 			}
-		auto pull (R)(R range, size_t i, size_t j)
+
+		auto pull (R,U)(R range, U slice)
 			{/*...}*/
-				static if (is(R.Source.gl_buffer))
+				static if (is (R.gl_buffer))
 					{/*copy in vram}*/
-						alias U = ElementType!R;
-						auto read_index = range.offset * U.sizeof;
+						alias V = ElementType!(R.Sub!0);
+						auto read_index = range.offset * V.sizeof;
 
 						gl.BindBuffer (GL_COPY_READ_BUFFER, range.main_buffer.handle);
 						gl.BindBuffer (GL_COPY_WRITE_BUFFER, handle);
 
+						auto i = slice.left, j = slice.right;
+
 						gl.CopyBufferSubData (GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, read_index, gl_slice (i,j).expand);
 					}
 				else {/*copy over pci}*/
-					static if (is(typeof(range.ptr) == T*))
+					static if (is (typeof(range.ptr) == T*))
 						auto ptr = range.ptr;
-					else {/*...}*/
-						scope array = range.map!(to!T).array;
+					else static if (is (typeof(range.map!(to!T))))
+						{/*...}*/
+							scope array = range.map!(to!T).array;
 
-						auto ptr = array.ptr;
+							auto ptr = array.ptr;
+						}
+					else {/*...}*/
+						auto value = range.to!T;
+						auto ptr = &value;
 					}
+
+					static if (is (U == V[2], V))
+						auto i = slice.left, j = slice.right;
+					else auto i = slice, j = slice + 1;
 
 					bind;
 
 					gl.BufferSubData (target, gl_slice (i,j).expand, ptr);
 				}
 			}
-		auto push (T* target, size_t i, size_t j)
+
+		auto push (U)(T* target, U slice)
 			{/*...}*/
+				static if (is (U == V[2], V))
+					auto i = slice.left, j = slice.right;
+				else auto i = slice, j = slice + 1;
+
 				gl.BindBuffer (GL_COPY_READ_BUFFER, handle);
 
 				gl.GetBufferSubData (GL_COPY_READ_BUFFER, gl_slice (i,j).expand, target);
 			}
+
 		auto allocate (size_t length)
 			{/*...}*/
+				if (length == 0)
+					{/*...}*/
+						free;
+						return;
+					}
+
 				if (handle == 0)
 					gl.GenBuffers (1, &handle);
 
@@ -82,6 +104,7 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 			{/*...}*/
 				gl.DeleteBuffers (1, &handle);
 
+				_length = 0;
 				handle = 0;
 			}
 
@@ -93,6 +116,8 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 				gl.BindBuffer (target, handle);
 			}
 
+		mixin BufferOps!(allocate, pull, access, length, RangeOps);
+
 		private:
 		auto gl_slice (size_t i, size_t j)
 			{/*...}*/
@@ -102,21 +127,13 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 
 /* generic VRAM buffer 
 */
-struct GPUArray (T)
-	{/*...}*/
-		GLBuffer!(T, GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW)
-			buffer;
-
-		alias buffer this;
-
-		mixin BufferOps!buffer;
-	}
+alias GPUArray (T) = GLBuffer!(T, GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW);
 auto gpu_array (R)(R range)
 	{/*...}*/
 		return GPUArray!(ElementType!R)(range);
 	}
 	unittest {/*...}*/
-		import evx.graphics;//		import evx.graphics.display;
+		import evx.graphics.display;//		import evx.graphics.display;
 		import evx.math;//		import evx.math.sequence;
 		import evx.containers;//		import evx.containers.m_array;
 
@@ -125,13 +142,15 @@ auto gpu_array (R)(R range)
 		auto vram = ℕ[0..999].gpu_array; // copies data from ram to gpu
 		assert (vram[0..10] == [0,1,2,3,4,5,6,7,8,9]);
 
-		vram[6..9] = 6;
+		vram[6..9] = 6.repeat (3);
 		assert (vram[0..10] == [0,1,2,3,4,5,6,6,6,9]);
+
 
 		vram[0] = 9001;
 		assert (vram[0..2] == [9001, 1]);
 
-		auto ram = vram[124..168].m_array; // copies data from gpu to ram
+		//auto ram = vram[124..168].array; // copies data from gpu to ram
+		auto ram = array (vram[124..168]); // BUG ANOTHER UFCS failure?!?
 		assert (ram[] == vram[124..168]);
 
 		auto vram2 = vram[0..$/2].gpu_array; // copies directly between vram buffers
@@ -143,34 +162,10 @@ auto gpu_array (R)(R range)
 
 /* standard openGL buffer types 
 */
-struct VertexBuffer
-	{/*...}*/
-		GLBuffer!(fvec, GL_ARRAY_BUFFER, GL_STATIC_DRAW)
-			buffer;
-
-		mixin BufferOps!buffer;
-	}
-struct IndexBuffer
-	{/*...}*/
-		GLBuffer!(ushort, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW)
-			buffer;
-
-		mixin BufferOps!buffer;
-	}
-struct UniformBuffer (T)
-	{/*...}*/
-		GLBuffer!(T, GL_UNIFORM_BUFFER, GL_STATIC_DRAW)
-			buffer;
-
-		mixin BufferOps!buffer;
-	}
-struct ColorBuffer
-	{/*...}*/
-		GLBuffer!(Vector!(4, float), GL_ARRAY_BUFFER, GL_STATIC_DRAW)
-			buffer;
-
-		mixin BufferOps!buffer;
-	}
+alias VertexBuffer = GLBuffer!(fvec, GL_ARRAY_BUFFER, GL_STATIC_DRAW);
+alias IndexBuffer = GLBuffer!(ushort, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW);
+alias UniformBuffer (T) = GLBuffer!(T, GL_UNIFORM_BUFFER, GL_STATIC_DRAW);
+alias ColorBuffer = GLBuffer!(Vector!(4, float), GL_ARRAY_BUFFER, GL_STATIC_DRAW);
 
 /* composite buffer types 
 */
@@ -181,7 +176,7 @@ struct Geometry
 
 		void bind ()
 			{/*...}*/
-				vertices.buffer.bind;
-				indices.buffer.bind;
+				vertices.bind;
+				indices.bind;
 			}
 	}

@@ -259,6 +259,5 @@ struct Color
 
 					this[0..3] += m;
 				}
-
 		}
 	}

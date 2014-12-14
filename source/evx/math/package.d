@@ -13,5 +13,6 @@ import evx.math.ordinal;
 import evx.math.overloads;
 import evx.math.probability;
 import evx.math.sequence;
+import evx.math.space;
 import evx.math.statistics;
 import evx.math.vectors;

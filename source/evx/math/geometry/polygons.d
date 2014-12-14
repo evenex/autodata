@@ -125,8 +125,8 @@ auto flip (string direction, T)(T geometry)
 				assert (equal (
 					square.flip!`vertical`.bounding_box[],
 					square.bounding_box[]
-				));  /* BUG was:
-				assert (square.flip!`vertical`.bounding_box[]
+				));  // BUG was:
+				/*assert (square.flip!`vertical`.bounding_box[]
 					.equal (square.bounding_box[])
 				);
 					but UFCS fails... says Error: template std.algorithm.equal cannot deduce function from argument types !()(Sub!0)... wtf? non-UFCS rewrite works

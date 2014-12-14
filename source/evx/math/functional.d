@@ -534,9 +534,11 @@ public {/*zip}*/
 
 			invariant ()
 				{/*...}*/
+					import std.algorithm: find, replace;
+
 					mixin LambdaCapture;
 
-					alias Dimensionalities =  Map!(dimensionality, Spaces);
+					alias Dimensionalities = Map!(dimensionality, Spaces);
 
 					static assert (All!(λ!q{(int d) = d == Dimensionalities[0]}, Dimensionalities),
 						`zip error: dimension mismatch! ` 

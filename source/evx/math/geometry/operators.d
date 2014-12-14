@@ -2,7 +2,6 @@ module evx.math.geometry.operators;
 
 /* define affine transformation operators in a Builder pattern 
 */
-static if (0)
 mixin template AffineTransform (T = double)
 	{/*...}*/
 		auto translation ()
