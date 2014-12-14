@@ -1,0 +1,40 @@
+module evx.operators.limit;
+
+/* generate $ and ~$ right and left limit operators
+*/
+template LimitOps (limits...)
+	{/*...}*/
+		private {/*imports}*/
+			import std.traits;
+
+			import evx.type;
+			import evx.range;
+			import evx.math.algebra;
+		}
+
+		auto opDollar (size_t i)()
+			{/*...}*/
+				alias T = ElementType!(Select!(is (typeof(limits[i].identity) == U[2], U), typeof(limits[i].identity), typeof(limits[i].identity)[2]));
+
+				static if (is (typeof(limits[i].identity) == T[2]))
+					return Limit!T (limits[i]);
+
+				else return Limit!T ([zero!T, limits[i]]);
+			}
+	}
+struct Limit (T)
+	{/*...}*/
+		union {/*limit}*/
+			T[2] limit;
+			struct {T left, right;}
+		}
+
+		alias right this;
+
+		auto opUnary (string op)()
+			{/*...}*/
+				static if (op is `~`)
+					return left;
+				else return mixin(op ~ q{right});
+			}
+	}

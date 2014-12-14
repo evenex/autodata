@@ -1,206 +1,137 @@
 module evx.operators.buffer;
 
-private {/*imports}*/
-	import evx.operators.transfer;
-
-	import evx.traits;
-}
-
-// TODO document
-struct BufferTraits (Buffer)
+/* generate RAII ctor/dtor and assignment operators from an allocate function, with TransferOps 
+*/
+template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
-		static {/*alias}*/
-			private Buffer buffer = Buffer.init;
-
-			alias Element = TransferTraits!Buffer.Element;
+		private {/*imports}*/
+			import evx.operators.transfer;
 		}
 
-		mixin Traits!(
-			`can_assign_length`, q{buffer.length = size_t.min;},
+		this (S)(S space)
+			{/*...}*/
+				this = space;
+			}
+		~this ()
+			{/*...}*/
+				this = null;
+			}
 
-			`can_allocate`, q{buffer.allocate (size_t.max);},
-			`can_free`,     q{buffer.free ();},
+		ref opAssign (S)(S space)
+			in {/*...}*/
+				enum error_header = fullyQualifiedName!(typeof(this)) ~ `: `;
 
-			`has_variable_length`, q{static assert (can_assign_length || can_allocate);},
-			`is_nullable`, 		   q{static assert (can_assign_length || can_free);},
-		);
-	}
+				enum cannot_assign_error = error_header
+					~ `cannot assign ` ~ S.stringof ~
+					` to ` ~ typeof(this).stringof;
 
-mixin template BufferOps (alias buffer)
-	{/*...}*/
-		static {/*analysis}*/
-			alias BufferTraits = evx.operators.buffer.BufferTraits!(typeof(buffer));
-
-			mixin template require (string trait)
-				{/*...}*/
-					alias require = BufferTraits.require!(typeof(this), trait, BufferOps);
-				}
-
-			mixin require!`has_variable_length`;
-			mixin require!`is_nullable`;
-		}
-		public {/*dependencies}*/
-			import evx.misc.binary;
-
-			mixin TransferOps!buffer;
-		}
-
-		public:
-		public {/*primitives}*/
-			static if (BufferTraits.can_assign_length)
-				{/*length assignment}*/
-					@property length ()
-						{/*...}*/
-							return buffer.length;
-						}
-					@property length (size_t new_length)
-						{/*...}*/
-							buffer.length = new_length;
-						}
-				}
-
-			static if (BufferTraits.can_allocate)
-				void allocate (size_t n)
+				static if (is (typeof(space.limit!0)))
 					{/*...}*/
-						buffer.allocate (n);
-					}
+						foreach (i, LimitType; ParameterTypeTuple!access)
+							static assert (is (typeof(space.limit!i.left) : LimitType),
+								cannot_assign_error ~ ` (dimension or type mismatch)`
+							);
 
-			static if (BufferTraits.can_free)
-				void free ()
+						static assert (not (is (typeof(space.limit!(ParameterTypeTuple!access.length)))),
+							cannot_assign_error ~ `(` ~ S.stringof ~ ` has too many dimensions)`
+						);
+					}
+				else static if (is (typeof(space.length)) && not (is (typeof(this[selected].limit!1))))
 					{/*...}*/
-						buffer.free;
+						static assert (is (typeof(space.length.identity) : ParameterTypeTuple!access[0]),
+							cannot_assign_error ~ ` (length is incompatible)`
+						);
 					}
-		}
-		public {/*assignment}*/
-			this (R)(R range)
-				{/*...}*/
-					this = range;
-				}
+				else static assert (0, cannot_assign_error);
+			}
+			body {/*...}*/
+				ParameterTypeTuple!access size;
 
-			auto opAssign (typeof(this) that)
-				{/*...}*/
-					binary_copy (that, this);
-				}
-			auto opAssign (R)(R range)
-				{/*...}*/
-					enum range_has_length = .TransferTraits!R.has_length;
+				static if (is (typeof(space.limit!0)))
+					foreach (i; Count!(ParameterTypeTuple!access))
+						size[i] = space.limit!i.width;
 
-					this = null;
+				else size[0] = space.length;
 
-					{/*reserve storage}*/
-						static if (range_has_length)
-							{/*reserve length}*/
-								static if (BufferTraits.can_allocate)
-									buffer.allocate (range.length);
-								else static if (BufferTraits.can_assign_length)
-									buffer.length = range.length;
-								else static assert (0);
-							}
-						else static if (BufferTraits.can_assign_length)
-							{/*grow and append}*/
-								foreach (item; range)
-									this.length = this.length + 1;
-							}
-						else static if (BufferTraits.can_allocate)
-							{/*count length}*/
-								buffer.allocate (range[].count);
-							}
-						else static assert (0);
-					}
+				allocate (size);
 
-					this[] = range;
-				}
-			auto opAssign (typeof(null))
-				{/*...}*/
-					static if (BufferTraits.can_assign_length)
-						buffer.length = 0;
-					else static if (BufferTraits.can_free)
-						buffer.free;
-					else static assert (0);
-				}
-		}
+				this[] = space;
 
-		static {/*verification}*/
-			static assert (.BufferTraits!(typeof(this)).info == BufferTraits.info, 
-				typeof(this).stringof ~ ` ` ~ .BufferTraits!(typeof(this)).info 
-				~ typeof(buffer).stringof ~ ` ` ~ BufferTraits.info
-			);
-		}
+				return this;
+			}
+		ref opAssign (typeof(null))
+			out {/*...}*/
+				foreach (i, T; ParameterTypeTuple!access)
+					assert (this[].limit!i.width == zero!T);
+			}
+			body {/*...}*/
+				ParameterTypeTuple!access zeroed;
+
+				foreach (ref size; zeroed)
+					size = zero!(typeof(size));
+
+				allocate (zeroed);
+
+				return this;
+			}
+
+		mixin TransferOps!(pull, access, LimitsAndExtensions);
 	}
 	unittest {/*...}*/
-		struct Test
-			{/*...}*/
-				int[] buffer;
+		import evx.math;
+		import std.conv;
 
-				mixin BufferOps!buffer;
-			}
-		struct Test_ii
+		static struct Basic
 			{/*...}*/
-				struct Buffer
+				int[] data;
+				auto length () {return data.length;}
+
+				void allocate (size_t length)
 					{/*...}*/
-						import core.stdc.stdlib;
-
-						int* ptr;
-						size_t length;
-
-						void resize (size_t length)
-							{/*...}*/
-								clear;
-
-								ptr = cast(int*) malloc (length * int.sizeof);
-							}
-
-						auto ref access (size_t i)
-							{/*...}*/
-								return ptr[i];
-							}
-
-						auto pull (R)(R range, size_t i, size_t j)
-							{/*...}*/
-								
-							}
-
-						auto clear ()
-							{/*...}*/
-								if (ptr)
-									free (ptr);
-							}
-
-						~this ()
-							{/*...}*/
-								clear;
-							}
+						data.length = length;
 					}
 
-				Buffer buffer;
+				auto pull (int x, size_t i)
+					{/*...}*/
+						data[i] = x;
+					}
+				auto pull (R)(R range, size_t[2] limits)
+					{/*...}*/
+						foreach (i, j; enumerate (ℕ[limits.left..limits.right]))
+							data[j] = range[i];
+					}
 
-				mixin BufferOps!buffer;
+				ref access (size_t i)
+					{/*...}*/
+						return data[i];
+					}
+
+				mixin BufferOps!(allocate, pull, access, length);
 			}
 
-		void test (T)()
-			{/*...}*/
-				T t;
+		auto N = ℕ[500..525].map!(to!int);
 
-				assert (t.length == 0);
+		Basic x = N;
+		auto y = Basic (N);
 
-				t = [1,2,3];
+		assert (x == y);
 
-				assert (t[] == [1,2,3]);
-				assert (t[$-1] == 3);
+		assert (x.length == 25);
+		assert (x[0] == 500);
+		assert (x[1] == 501);
+		assert (x[$-1] == 524);
 
-				t = [6,7,8,9];
-				t.length = 3;
+		assert (y.length == 25);
+		assert (y[0] == 500);
+		assert (y[1] == 501);
+		assert (y[$-1] == 524);
 
-				assert (t[] == [6,7,8]);
+		y = x[10..12];
+		assert (y.length == 2);
+		assert (y[0] == 510);
+		assert (y[$-1] == 511);
 
-				t.length = 1;
-
-				assert (t[] == [6]);
-
-				t = null;
-
-				assert (t[] == []);
-			}
-
-		test!Test;
+		y = null;
+		assert (y.length == 0);
+		assert (y[].limit!0 == [0,0]);
 	}

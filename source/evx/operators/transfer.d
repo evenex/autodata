@@ -1,469 +1,316 @@
 module evx.operators.transfer;
 
-private {/*imports}*/
-	import evx.traits;
-}
-
-/* trivial input range for probing range capabilities 
+/* generate WriteOps with input bounds checking
 */
-struct NullInputRange (T)
+template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
-		enum front = T.init;
-		void popFront (){}
-		enum empty = true;
-		enum length = 0;
-	}
-
-/* convenience template to turn Buffer.Sub into Sub!Buffer 
-*/
-template Sub (Buffer)
-	{/*...}*/
-		alias Sub = Buffer.Sub;
-	}
-
-/* code to be mixed in to Sub!Buffer definition 
-*/
-struct ExtendSlice (string mixin_code)
-	{/*...}*/
-		enum code = mixin_code;
-	}
-
-/* generate a report of range capabilities 
-*/
-struct TransferTraits (Buffer)
-	{/*...}*/
-		static {/*alias}*/
-			private Buffer buffer = Buffer.init;
-
-			static if (is(typeof(buffer.access (0))))
-				alias Element = typeof(buffer.access (0));
-			else static if (is(typeof(buffer.ptr[0])))
-				alias Element = typeof(buffer.ptr[0]);
-			else alias Element = void;
+		private {/*imports}*/
+			import evx.operators.write;
 		}
 
-		mixin Traits!(
-			`has_pointer`, q{*(buffer.ptr + 1) = Element.init;},
-			`has_length`,  q{size_t x = buffer.length;},
+		auto verified_limit_pull (S, Selected...)(S space, Selected selected)
+			in {/*...}*/
+				version (all)
+					{/*error messages}*/
+						enum error_header = fullyQualifiedName!(typeof(this)) ~ `: `;
 
-			`can_access`, q{Element x = buffer.access (size_t.min);},
-			`can_pull`,   q{buffer.pull (NullInputRange!Element.init, size_t.min, size_t.max);},
-			`can_push`,   q{buffer.push ((Element*).init, size_t.min, size_t.max);},
+						enum type_mismatch_error (int i) = error_header
+							~ `cannot transfer ` ~ i.text ~ `-d ` ~ S.stringof ~ ` to `
+							~ Filter!(λ!q{(T) = is (T == U[2], U)}, Selected).text
+							~ ` subspace`;
+					}
 
-			`access_by_ref`, q{buffer.access (size_t.min) = Element.init;},
-
-			`access_primitive`,   q{static assert (can_access || has_pointer);},
-			`transfer_primitive`, q{static assert (can_pull || has_pointer);},
-		);
-	}
-
-/* define standardized, higher-order-compatible, auto-optimizing opSlice/opIndex operators over a member with data transfer primitives 
-	required primitives:
-		ACCESS PRIMITIVE: returns the i'th data element of the buffer, used for reading the contents of the buffer. preserves ref storage class.
-			Element x = member.access (size_t.min);
-			|| Element x = member.ptr[size_t.min];
-
-		TRANSFER PRIMITIVE: copies the entire contents of range into the region bounded by indices i and j.
-			member.pull (Element[].init, size_t.min, size_t.max);
-			|| *member.ptr = Element.init;
-
-		LENGTH PRIMITIVE: the upper bound of indexable data, used for controlling access and slicing limits.
-			size_t x = member.length;
-
-	optional primitives:
-		push (Element[] target): if target has ptr, copies the entire contents of the buffer into target. used for inverted-control data transfer.
-		ptr: enables optimized data transfer when target and source both have ptr.
-
-	extension:
-		because the sub-buffer is generated within TransferOps, its definition is not directly accessible.
-		ExtendSlice!"" is provided as a means of injecting code into the sub-buffer definition.
-*/
-mixin template TransferOps (alias buffer, Extension = ExtendSlice!``)
-	if (is(typeof(Extension.code)))
-	{/*...}*/
-		import std.conv;
-		import evx.patterns.aliasthis;
-
-		static {/*analysis}*/
-			alias TransferTraits = evx.operators.transfer.TransferTraits!(typeof(buffer));
-
-			mixin template require (string trait)
-				{/*...}*/
-					alias requirement = TransferTraits.require!(typeof(buffer), trait, TransferOps);
-				}
-
-			mixin require!`access_primitive`;
-			mixin require!`transfer_primitive`;
-			mixin require!`has_length`;
-		}
-
-		mixin AliasThis!buffer;
-
-		public:
-		public {/*element}*/
-			auto ref front ()
-				{/*...}*/
-					return this[0];
-				}
-		}
-		public {/*primitives}*/
-			static if (TransferTraits.has_pointer)
-				auto ptr ()
+				static if (not (Any!(λ!q{(T) = is (T == U[2], U)}, Selected)))
+					{}
+				else static if (is (typeof(space.limit!0)))
 					{/*...}*/
-						return buffer.ptr;
+						foreach (i; Iota!(0, 999))
+							static if (is (typeof(space.limit!i)) || is (typeof(this[selected].limit!i)))
+								static assert (is (typeof(space.limit!i.left == this[selected].limit!i.left)),
+									type_mismatch_error
+								);
+							else break;
 					}
-
-			static if (TransferTraits.can_access)
-				auto ref access (size_t i)
+				else static if (is (typeof(space.length)) && not (is (typeof(this[selected].limit!1))))
 					{/*...}*/
-						return buffer.access (i);
+						assert (space.length == this[selected].limit!0.width,
+							error_header
+							~ `assignment size mismatch `
+							~ S.stringof ~ `.length != ` ~ typeof(this[selected]).stringof ~ `.limit `
+							`(` ~ space.length.text ~ ` != ` ~ this[selected].limit!0.width.text ~ `)`
+						);
 					}
+				else static assert (0, type_mismatch_error);
+			}
+			body {/*...}*/
+				return pull (space, selected);
+			}
 
-			static if (TransferTraits.can_pull)
-				void pull (R)(R range, size_t i, size_t j)
-					{/*...}*/
-						buffer.pull (range, i, j);
-					}
-
-			static if (TransferTraits.can_push)
-				void push (TransferTraits.Element* ptr, size_t i, size_t j)
-					{/*...}*/
-						buffer.push (ptr, i, j);
-					}
-		}
-		public {/*length}*/
-			@property length () const
-				{/*...}*/
-					return buffer.length;
-				}
-			alias opDollar = length;
-		}
-		public {/*access}*/
-			auto ref opIndex (size_t i)
-				in {/*...}*/
-					assert (i < length);
-				}
-				body {/*...}*/
-					return access (&buffer, i);
-				}
-		}
-		public {/*slicing}*/
-			auto opIndex ()
-				{/*...}*/
-					return this[0..$];
-				}
-			auto opIndex (size_t[2] slice)
-				{/*...}*/
-					return Sub (&buffer, slice);
-				}
-			size_t[2] opSlice (size_t dim: 0)(size_t i, size_t j)
-				in {/*...}*/
-					assert (i <= j && j <= length, `[` ~i.text~ `..` ~j.text~ `] exceeds ` ~length.text);
-				}
-				body {/*...}*/
-					return [i,j];
-				}
-		}
-		public {/*range assignment}*/
-			auto opIndexAssign (R)(R range)
-				{/*...}*/
-					this[0..$] = range;
-				}
-			auto opIndexAssign (R)(R range, size_t[2] slice)
-				{/*...}*/
-					range_assign (&buffer, range, slice);
-				}
-		}
-		public {/*element assignment}*/
-			auto ref opIndexAssign (TransferTraits.Element element, size_t i)
-				in {/*...}*/
-					assert (i < length);
-				}
-				body {/*...}*/
-					return element_assign (&buffer, element, i);
-				}
-			auto opIndexAssign (TransferTraits.Element element, size_t[2] slice)
-				{/*...}*/
-					multi_element_assign (&buffer, element, slice);
-				}
-		}
-		private:
-		private {/*sub_buffer}*/
-			struct Sub
-				{/*...}*/
-					mixin(Extension.code);
-
-					public:
-					public {/*pointer/offset}*/
-						static if (TransferTraits.has_pointer)
-							auto ptr ()
-								{/*...}*/
-									return main_buffer.ptr + bounds[0];
-								}
-						else auto offset ()
-							{/*...}*/
-								return bounds[0];
-							}
-					}
-					public {/*length}*/
-						@property length () const
-							{/*...}*/
-								return bounds[1] - bounds[0];
-							}
-						alias opDollar = length;
-					}
-					public {/*access}*/
-						auto ref opIndex (size_t i)
-							{/*...}*/
-								return access (main_buffer, bounds[0] + i);
-							}
-					}
-					public {/*slicing}*/
-						auto opIndex ()
-							{/*...}*/
-								return this[0..$];
-							}
-						auto opIndex (size_t[2] slice)
-							{/*...}*/
-								slice[] += bounds[0];
-
-								return Sub (main_buffer, slice);
-							}
-						size_t[2] opSlice (size_t dim: 0)(size_t i, size_t j)
-							in {/*...}*/
-								assert (i <= j && j <= length);
-							}
-							body {/*...}*/
-								return [i,j];
-							}
-					}
-					public {/*iteration}*/
-						auto ref front ()
-							{/*...}*/
-								return this[0];
-							}
-						void popFront ()
-							{/*...}*/
-								++bounds[0];
-							}
-
-						auto ref back ()
-							{/*...}*/
-								return this[$-1];
-							}
-						void popBack ()
-							{/*...}*/
-								--bounds[1];
-							}
-
-						bool empty ()
-							{/*...}*/
-								return length == 0;
-							}
-
-						@property save ()
-							{/*...}*/
-								return this;
-							}
-					}
-					public {/*range assignment}*/
-						auto opIndexAssign (R)(R range)
-							{/*...}*/
-								this[0..$] = range;
-							}
-						auto opIndexAssign (R)(R range, size_t[2] slice)
-							{/*...}*/
-								slice[] += bounds[0];
-
-								range_assign (main_buffer, range, slice);
-							}
-					}
-					public {/*element assignment}*/
-						auto ref opIndexAssign (TransferTraits.Element element, size_t i)
-							{/*...}*/
-								return element_assign (main_buffer, element, i + bounds[0]);
-							}
-						auto opIndexAssign (TransferTraits.Element element, size_t[2] slice)
-							{/*...}*/
-								slice[] += bounds[0];
-
-								multi_element_assign (main_buffer, element, slice);
-							}
-					}
-					public {/*equality comparison}*/
-						bool opEquals (R)(R range)
-							{/*...}*/
-								import std.algorithm: equal;
-
-								static if (is(R == void[]))
-									return this.empty;
-								else return this.equal (range); // TODO this is costly for gpu buffers, maybe "has_equality" or something for custom overrides?
-							}
-					}
-					private:
-					private {/*data}*/
-						typeof(buffer)* main_buffer;
-						size_t[2] bounds;
-					}
-				}
-		}
-		static {/*access/transfer}*/
-			auto ref access (typeof(buffer)* buffer, size_t i)
-				{/*...}*/
-					static if (TransferTraits.can_access)
-						return buffer.access (i);
-					else static if (TransferTraits.has_pointer)
-						return buffer.ptr[i];
-					else static assert (0);
-				}
-
-			auto range_assign (R)(typeof(buffer)* buffer, R range, size_t[2] slice)
-				in {/*...}*/
-					static if (evx.operators.transfer.TransferTraits!R.has_length)
-						assert (range.length == slice[1] - slice[0]);
-					else assert (range.count == slice[1] - slice[0]);
-				}
-				body {/*...}*/
-					static if (TransferTraits.has_pointer && evx.operators.transfer.TransferTraits!R.has_pointer)
-						{/*...}*/
-							auto this_ptr = buffer.ptr + slice[0]; // TODO vector blit optimization
-							auto that_ptr = range.ptr;
-
-							foreach (_; slice[0]..slice[1])
-								*(this_ptr++) = *(that_ptr++);
-						}
-					else static if (TransferTraits.has_pointer && evx.operators.transfer.TransferTraits!R.can_push)
-						{/*...}*/
-							auto ptr = buffer.ptr + slice[0];
-
-							static if (is(R == Sub))
-								range.push (ptr, range.bounds[0], range.bounds[1]);
-							else range.push (ptr, 0, range.length);
-						}
-					else static if (TransferTraits.can_pull)
-						{/*...}*/
-							buffer.pull (range, slice[0], slice[1]);
-						}
-					else static if (TransferTraits.has_pointer)
-						{/*...}*/
-							auto ptr = buffer.ptr + slice [0];
-
-							foreach (item; range)
-								*(ptr++) = item;
-						}
-					else static assert (0);
-				}
-
-			auto ref element_assign (typeof(buffer)* buffer, TransferTraits.Element element, size_t i)
-				{/*...}*/
-					static if (TransferTraits.access_by_ref)
-						return buffer.access (i) = element;
-					else static if (TransferTraits.can_pull)
-						return buffer.pull ((&element)[0..1], i, i+1);
-					else static if (TransferTraits.has_pointer)
-						return buffer.ptr[i] = element;
-					else static assert (0);
-				}
-
-			auto multi_element_assign (typeof(buffer)* buffer, TransferTraits.Element element, size_t[2] slice)
-				{/*...}*/
-					static if (TransferTraits.can_pull)
-						{/*...}*/
-							import std.range: repeat;
-
-							buffer.pull (element.repeat (slice[1] - slice[0]), slice[0], slice[1]);
-						}
-					else static if (TransferTraits.has_pointer)
-						{/*...}*/
-							foreach (i; slice[0]..slice[1])
-								buffer.ptr[i] = element;
-						}
-					else static assert (0);
-				}
-		}
-
-		static {/*verification}*/
-			static assert (.TransferTraits!(typeof(this)).info == TransferTraits.info, 
-				typeof(this).stringof ~ ` ` ~ .TransferTraits!(typeof(this)).info 
-				~ typeof(buffer).stringof ~ ` ` ~ TransferTraits.info
-			);
-		}
+		mixin WriteOps!(verified_limit_pull, access, LimitsAndExtensions);
 	}
 	unittest {/*...}*/
-		{/*basic functionality test}*/
-			struct Test_StaticArray
-				{/*...}*/
-					int[3] buffer;
+		import evx.math;
+		import evx.range;
+		import evx.misc.test;
+		import evx.operators.write;
+		import evx.operators.slice;
 
-					mixin TransferOps!buffer;
-				}
-			struct Test_DynamicArray
-				{/*...}*/
-					int[] buffer;
+		template Basic ()
+			{/*...}*/
+				enum size_t length = 256;
 
-					mixin TransferOps!buffer;
-				}
+				int[length] data;
 
-			void basic_transfer_test (T)()
-				{/*...}*/
-					T test = {buffer: [1,2,3]};
+				auto pull (int x, size_t i)
+					{/*...}*/
+						data[i] = x;
+					}
+				auto pull (R)(R range, size_t[2] limits)
+					{/*...}*/
+						foreach (i, j; enumerate (ℕ[limits.left..limits.right]))
+							data[j] = range[i];
+					}
 
-					assert (test.length == 3);
+				ref access (size_t i)
+					{/*...}*/
+						return data[i];
+					}
+			}
+		static struct WriteBasic
+			{/*...}*/
+				mixin Basic;
+				mixin WriteOps!(pull, access, length);
+			}
+		static struct TransferBasic
+			{/*...}*/
+				mixin Basic;
+				mixin TransferOps!(pull, access, length);
+			}
 
-					// element access
-					assert (test[0] == 1);
-					assert (test[1] == 2);
-					assert (test[2] == 3);
-					assert (test[$-1] == 3);
+		no_error (WriteBasic()[0..3] = [1,2,3,4]);
+		error (TransferBasic()[0..3] = [1,2,3,4]);
 
-					// element mutation
-					test[0] = 4;
-					assert (test[0] == 4);
-					assert (test[] == [4,2,3]);
+		template AlternativePull ()
+			{/*...}*/
+				mixin Basic A;
 
-					// range mutation
-					test[] = [4,5,6];
-					assert (test[] == [4,5,6]);
-					
-					// subrange mutation
-					test[0..2] = [7,8];
-					assert (test[] == [7,8,6]);
+				auto pull (string[], size_t[2]){}
+				auto pull (Args...)(Args args)
+					{A.pull (args);}
+			}
+		static struct AltWrite
+			{/*...}*/
+				mixin AlternativePull;
+				mixin WriteOps!(pull, access, length);
+			}
+		static struct AltTransfer
+			{/*...}*/
+				mixin AlternativePull;
+				mixin TransferOps!(pull, access, length);
+			}
 
-					// slice equality
-					assert (test[0..1] == [7]);
-					assert (test[1..3] == [8,6]);
-					assert (test[0..$] == [7,8,6]);
+		assert (is (typeof(AltWrite()[0..3] = [`hello`]))); // won't do input type check - who knows if we're assigning to a space of tagged unions?
+		assert (is (typeof(AltTransfer()[0..3] = [`hello`])));// REVIEW should this pass?
 
-					// slice equivalence
-					assert (test[][] == test[]);
-					assert (test[][0] == test[0]);
-					assert (test[][1] == test[1]);
-					assert (test[][2] == test[2]);
-					assert (test[][0..1] == test[0..1]);
-					assert (test[][1..3] == test[1..3]);
+		static struct Negative
+			{/*...}*/
+				string[3] data = [`one`, `two`, `three`];
 
-					// slice mutation
-					auto slice = test[1..3];
-					assert (slice[] == [8,6]);
-					slice[] = [9,9];
-					assert (slice[] == [9,9]);
-					slice[0] = 8;
-					assert (test[] == [7,8,9]);
-					slice[0..2] = 6;
-					assert (test[] == [7,6,6]);
+				int[2] limits = [-1,2];
+				auto access (int i) {return data[i + 1];}
 
-					// slice range traversal
-					test[] = [1,1,1];
-					foreach (x; test[])
-						assert (x == 1);
-					foreach (x; test[0..2])
-						assert (x == 1);
-				}
+				auto pull (R)(R r, int[2] x)
+					{/*...}*/
+						foreach (i; x.left..x.right)
+							data[i + 1] = r[i - x.left];
+					}
+				auto pull (R)(R r, int x)
+					{/*...}*/
+						data[x + 1] = r;
+					}
 
-			basic_transfer_test!Test_StaticArray;
-			basic_transfer_test!Test_DynamicArray;
-		}
-		{/*active/passive copying}*/
-			// TODO test active/passive copying
-		}
+				mixin TransferOps!(pull, access, limits);
+			}
+		Negative x;
+		assert (x[-1] == `one`);
+		x[-1] = `minus one`;
+		assert (x[-1] == `minus one`);
+		assert (x[0] == `two`);
+		assert (x[1] == `three`);
+		x[0..$] = [`zero`, `one`];
+		assert (x[0] == `zero`);
+		assert (x[1] == `one`);
+		error (x[~$..$] = [`1`, `2`, `3`, `4`]);
+
+		static struct MultiDimensional
+			{/*...}*/
+				double[9] matrix = [
+					1, 2, 3,
+					4, 5, 6,
+					7, 8, 9,
+				];
+
+				auto ref access (size_t i, size_t j)
+					{/*...}*/
+						return matrix[3*i + j];
+					}
+
+				enum size_t rows = 3, columns = 3;
+
+				alias Slice = size_t[2];
+
+				void pull (R)(R r, size_t[2] y, size_t x)
+					{/*...}*/
+						foreach (i; y.left..y.right)
+							access (i,x) = r[i - y.left];
+					}
+				void pull (R)(R r, size_t y, size_t[2] x)
+					{/*...}*/
+						foreach (j; x.left..x.right)
+							access (y,j) = r[j - x.left];
+					}
+				void pull (R)(R r, size_t[2] y, size_t[2] x)
+					{/*...}*/
+						foreach (i; y.left..y.right)
+							pull (r[i - y.left, 0..$], i, x);
+					}
+
+				mixin TransferOps!(pull, access, rows, columns);
+			}
+		MultiDimensional y;
+		assert (y.matrix == [
+			1,2,3,
+			4,5,6,
+			7,8,9
+		]);
+		y[0,0] = 0; // pull (r, size_t, size_t) is unnecessary because access is ref
+		assert (y.matrix == [
+			0,2,3,
+			4,5,6,
+			7,8,9
+		]);
+		y[0..$, 0] = [6,6,6];
+		assert (y.matrix == [
+			6,2,3,
+			6,5,6,
+			6,8,9
+		]);
+		y[0, 0..$] = [9,9,9];
+		assert (y.matrix == [
+			9,9,9,
+			6,5,6,
+			6,8,9
+		]);
+
+		y.matrix = [
+			0,0,1,
+			0,0,1,
+			1,1,1
+		];
+
+		MultiDimensional z;
+		assert (z.matrix == [
+			1,2,3,
+			4,5,6,
+			7,8,9
+		]);
+		z[0..2, 0..2] = y[0..2, 0..2];
+		assert (z.matrix == [
+			0,0,3,
+			0,0,6,
+			7,8,9
+		]);
+		z[0..2, 0..2] = y[1..3, 1..3];
+		assert (z.matrix == [
+			0,1,3,
+			1,1,6,
+			7,8,9
+		]);
+		z[1..3, 1..3] = y[1..3, 1..3];
+		assert (z.matrix == [
+			0,1,3,
+			1,0,1,
+			7,1,1
+		]);
+		z[0, 0..$] = y[0..$, 2];
+		assert (z.matrix == [
+			1,1,1,
+			1,0,1,
+			7,1,1
+		]);
+
+		error (z[0..2, 0..3] = y[0..3, 0..2]);
+		error (z[0..2, 0] = y[0, 1..2]);
+		assert (not (is (typeof( (z[0..2, 0..3] = y[0..3, 1])))));
+		assert (not (is (typeof( (z[1, 0..3] = y[0..3, 0..2])))));
+
+		static struct FloatingPoint
+			{/*...}*/
+				double delegate(double)[] maps;
+
+				auto access (double x)
+					{/*...}*/
+						foreach (map; maps[].retro)
+							if (x == map (x))
+								continue;
+							else return map (x);
+
+						return x;
+					}
+
+				enum double length = 1;
+
+				auto pull (T)(T y, double x)
+					{/*...}*/
+						maps ~= (t) => t == x? y : t;
+					}
+				auto pull (R)(R range, double[2] domain)
+					{/*...}*/
+						if (domain.left == 0.0 && domain.right == 1.0)
+							maps = null;
+
+						maps ~= (t) => domain.left <= t && t < domain.right? 
+							range[t - domain.left] : t;
+					}
+
+				mixin TransferOps!(pull, access, length);
+			}
+		static struct Domain
+			{/*...}*/
+				double factor = 1;
+				double offset = 0;
+
+				auto access (double x)
+					{/*...}*/
+						return factor * x + offset;
+					}
+
+				enum double length = 1;
+
+				mixin SliceOps!(access, length);
+			}
+		FloatingPoint a;
+
+		assert (a[0.00] == 0.00);
+		assert (a[0.25] == 0.25);
+		assert (a[0.50] == 0.50);
+		assert (a[0.75] == 0.75);
+
+		Domain b;
+		b.factor = 2; b.offset = 1;
+		assert (b[0.50] == 2.00);
+		assert (b[0.75] == 2.50);
+
+		a[0..$/2] = b[$/2..$];
+
+		assert (a[0.75] == 0.75);
+		assert (a[0.50] == 0.50);
+		assert (a[0.25] == 2.50);
+		assert (a[0.00] == 2.00);
+
+		a[0.13] = 666;
+
+		assert (a[0.12].approx (2.24));
+		assert (a[0.13] == 666.0);
+		assert (a[0.14].approx (2.28));
 	}
