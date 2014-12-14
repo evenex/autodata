@@ -3,10 +3,9 @@ module evx.patterns.policy;
 private {/*imports}*/
 	import std.typetuple;
 
-	import evx.codegen;//	import evx;//	import evx.codegen;//	import evx.codegen.declarations;
-	import evx.traits;//	import evx;//	import evx.traits;//	import evx.traits.classification;
-	import evx.type;//	import evx;//	import evx.type;//	import evx.type.processing;
-	import evx.math;//	import evx;//	import evx.math;//	import evx.math.logic;
+	import evx.codegen;
+	import evx.type;
+	import evx.math;
 }
 
 /* group a set of policy names with their default values 

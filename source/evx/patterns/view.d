@@ -2,7 +2,7 @@ module evx.patterns.view;
 
 private {/*import}*/
 	import evx.math;
-	import evx.traits;
+	import evx.type;
 }
 
 mixin template View (alias target, Invalidators, Refreshers)

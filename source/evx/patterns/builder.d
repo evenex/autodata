@@ -23,7 +23,7 @@ mixin template Builder (Args...)
 				isDelegate, isFunctionPointer;
 		}
 		private {/*import evx}*/
-			import evx.traits:
+			import evx.type:
 				is_type, is_string_param;
 			import evx.codegen:
 				ParameterSplitter;
