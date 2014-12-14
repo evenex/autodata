@@ -3,7 +3,7 @@ module evx.codegen.instructions;
 private {/*imports}*/
 	import std.typetuple;
 
-	import evx.traits;
+	import evx.type;
 	import evx.math.logic;
 }
 

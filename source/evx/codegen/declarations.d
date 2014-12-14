@@ -7,7 +7,7 @@ private {/*imports}*/
 	import std.traits;
 	import std.range;
 
-	import evx.traits;
+	import evx.type;
 	import evx.math.logic;
 }
 
