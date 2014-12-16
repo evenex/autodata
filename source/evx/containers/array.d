@@ -1,9 +1,12 @@
+module evx.containers.array;
 
 private {/*import}*/
 	import std.typecons;
+
 	import evx.type;
 	import evx.operators;
 	import evx.math;
+	import evx.range;
 }
 
 struct Array (T, uint dimensions = 1)
@@ -36,6 +39,8 @@ struct Array (T, uint dimensions = 1)
 
 		Base base;
 		alias base this;
+
+		auto array (){return this;} // REVIEW HACK, to get around some kind of builtin .array thing that conflicts with UFCS array
 
 		auto length (size_t d = 0)()
 			{/*...}*/
@@ -121,14 +126,7 @@ struct Array (T, uint dimensions = 1)
 
 		mixin BufferOps!(allocate, pull, access, Map!(length, Iota!dimensions), RangeOps);
 	}
-
-auto array (S)(S space)
-	{/*...}*/
-		
-	}
-
-void main ()
-	{/*...}*/
+	unittest {/*...}*/
 		auto x = Array!int ();
 
 		x = [1,2,3];
@@ -140,13 +138,53 @@ void main ()
 		auto y = Array!(int, 2)();
 		y.allocate (5,5);
 
+		assert (y.base.data == [
+			0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0,
+		]);
+
 		y[0..$, 0] = [1,2,3,4,5];
 		y[0, 0..$] = [1,2,3,4,5];
+
+		assert (y.base.data == [
+			1, 2, 3, 4, 5,
+			2, 0, 0, 0, 0,
+			3, 0, 0, 0, 0,
+			4, 0, 0, 0, 0,
+			5, 0, 0, 0, 0,
+		]);
 
 		auto z = Array!(int, 2)(y[0..2, 0..2]);
 
 		y[2..4, 2..4] = z[];
 
-		foreach (i; 0..5)
-			std.stdio.writeln (y[0..$, i]);
+		assert (y.base.data == [
+			1, 2, 3, 4, 5,
+			2, 0, 0, 0, 0,
+			3, 0, 1, 2, 0,
+			4, 0, 2, 0, 0,
+			5, 0, 0, 0, 0,
+		]);
+	}
+
+auto array (S)(S space)
+	{/*...}*/
+		return Array!(Element!S, dimensionality!S)(space);
+	}
+	unittest {/*...}*/
+		auto x = [1,2,3].array;
+		assert (x[] == [1,2,3]);
+
+		auto y = Array!(int, 3)();
+		y.allocate (3,3,3);
+
+		assert (y[0,0,0] == 0);
+		y[] = y[].map!(i => 1);
+		assert (y[0,0,0] == 1);
+
+		auto z = y[2,0..$,1..$].array;
+		assert (z[0,0..$] == [1,1]);
 	}

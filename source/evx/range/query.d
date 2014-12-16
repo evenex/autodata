@@ -12,6 +12,10 @@ private {/*imports}*/
 */
 alias contains = std.algorithm.canFind;
 
+/* get the subrange beginning with a given element or meeting a given criteria 
+*/
+alias find = std.algorithm.find;
+
 /* check if any elements in a range meet a given criteria 
 */
 alias any = std.algorithm.any;

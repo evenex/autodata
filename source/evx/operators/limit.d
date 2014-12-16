@@ -14,7 +14,7 @@ template LimitOps (limits...)
 
 		auto opDollar (size_t i)()
 			{/*...}*/
-				alias T = ElementType!(Select!(is (typeof(limits[i].identity) == U[2], U), typeof(limits[i].identity), typeof(limits[i].identity)[2]));
+				alias T = Element!(typeof(limits[i].identity));
 
 				static if (is (typeof(limits[i].identity) == T[2]))
 					return Limit!T (limits[i]);

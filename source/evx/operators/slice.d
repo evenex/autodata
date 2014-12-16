@@ -241,7 +241,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 										)(source, bounds);
 									}
 								else {/*...}*/
-									Map!(ElementType, typeof(bounds))
+									Map!(ElementType, typeof(bounds)) // BUG using Element causes compilation failure
 										point;
 
 									foreach (i,_; typeof(bounds))
@@ -275,6 +275,8 @@ template SliceOps (alias access, LimitsAndExtensions...)
 			struct Sub (Dimensions...)
 				{/*...}*/
 					mixin SubGenerator!Dimensions sub;
+
+					alias Element = ReturnType!access;
 
 					static extensions ()
 						{/*...}*/

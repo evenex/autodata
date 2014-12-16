@@ -29,6 +29,7 @@ struct Status (string name, string condition, Etc...) {}
 
 alias count = evx.range.traversal.count; // TODO make count like std.algorithm count except by default it takes TRUE and just counts up all the elements
 alias join = std.algorithm.joiner;
+alias array = std.array.array;
 
 ///////////////////
 

@@ -149,8 +149,7 @@ auto gpu_array (R)(R range)
 		vram[0] = 9001;
 		assert (vram[0..2] == [9001, 1]);
 
-		//auto ram = vram[124..168].array; // copies data from gpu to ram
-		auto ram = array (vram[124..168]); // BUG ANOTHER UFCS failure?!?
+		auto ram = vram[124..168].array; // copies data from gpu to ram
 		assert (ram[] == vram[124..168]);
 
 		auto vram2 = vram[0..$/2].gpu_array; // copies directly between vram buffers
