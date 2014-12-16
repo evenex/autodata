@@ -383,6 +383,112 @@ public {/*reduce}*/
 			) == τ(6, -4, 0));
 		}
 }
+public {/*by}*/
+	struct Product (Spaces...)
+		{/*...}*/
+			// HACK if the contents were out in the Product definition, the following error would arise from attempting to get the returntypes of limit or access (especially puzzling since i'm pretty sure access isn't a template): 
+				//source/experimental.d(2403): Error: struct experimental.Product!(int[], int[]).Product no size yet for forward reference
+				//ulong[2]
+				//source/experimental.d(2452): Error: template instance experimental.Product!(int[], int[]) error instantiating
+				//source/experimental.d(2460):        instantiated from here: by!(int[], int[])
+			// that is, it prints pragma(msg, ReturnType!(limit!0)); but then crashes on error.
+			struct Base // BUG https://issues.dlang.org/show_bug.cgi?id=13860
+				{/*...}*/
+					alias Offsets = Scan!(Sum, Map!(dimensionality, Spaces));
+
+					Spaces spaces;
+
+					auto limit (size_t d)() const
+						{/*...}*/
+							mixin LambdaCapture;
+
+							alias LimitOffsets = Offsets[0..$ - Filter!(λ!q{(int i) = d < i}, Offsets).length + 1];
+								
+							enum i = LimitOffsets.length - 1;
+							enum d = LimitOffsets[0] - 1;
+
+							size_t[2] get_length ()() if (d == 0) {return [0, spaces[i].length];}
+							auto get_limit ()() {return spaces[i].limit!d;}
+
+							return Match!(get_limit, get_length);
+						}
+
+					auto access (Map!(Coords, Spaces) point) // TODO flatten tuples
+						{/*...}*/
+							template projection (size_t i)
+								{/*...}*/
+									auto π_i ()() {return spaces[i][point[0..Offsets[i]]];}
+									auto π_n ()() {return spaces[i][point[Offsets[i-1]..Offsets[i]]];}
+
+									alias projection = Match!(π_i, π_n);
+								}
+
+							Map!(Λ!q{(alias π) = typeof(π.identity)}, 
+								Map!(projection, Count!Spaces)
+							) mapped;
+
+							foreach (i; Count!Spaces)
+								mapped[i] = projection!i;
+
+							union Cast
+								{/*...}*/
+									typeof(mapped.tuple) input;
+
+									Tuple!(RepresentationTypeTuple!(typeof(input)))
+										flattened;
+								}
+
+							return Cast (mapped.tuple).flattened;
+						}
+				}
+			Base base;
+			alias base this;
+			this (Spaces spaces) {base.spaces = spaces;}
+
+			auto limit (size_t d)()
+				{/*...}*/
+					return base.limit!d;
+				}
+			auto access (Map!(Coords, Spaces) point)
+				{/*...}*/
+					return base.access (point);
+				}
+
+			mixin SliceOps!(access, Map!(limit, Iota!(Sum!(Map!(dimensionality, Spaces)))), RangeOps);
+		}
+
+	auto by (S,R)(S left, R right)
+		{/*...}*/
+			static if (is (typeof(S.spaces)))
+				return Product!(typeof(S.spaces), R)(left.spaces, right);
+
+			else return Product!(S,R)(left, right);
+		}
+		unittest {/*...}*/
+			import evx.math; 
+
+			int[3] x = [1,2,3];
+			int[3] y = [4,5,6];
+
+			auto z = x[].by (y[]);
+
+			assert (z.access (0,1) == tuple (1,5));
+			assert (z.access (1,1) == tuple (2,5));
+			assert (z.access (2,1) == tuple (3,5));
+
+			auto w = z[].map!((a,b) => a * b);
+
+			assert (w[0,0] == 4);
+			assert (w[1,1] == 10);
+			assert (w[2,2] == 18);
+
+			auto p = w[].by (z[]);
+
+			assert (p[0,0,0,0] == tuple (4,1,4));
+			assert (p[1,1,0,1] == tuple (10,1,5));
+			assert (p[2,2,2,1] == tuple (18,3,5));
+		}
+}
 public {/*zip}*/
 	/* join several ranges together transverse-wise, 
 		into a range of tuples of the elements of the original ranges 
@@ -659,39 +765,13 @@ public {/*zip}*/
 			}
 		}
 }
-public {/*extract}*/
-	/* from a range of elements, extract a range of element members 
-	*/
-	auto extract (string field, R)(R range)
-		{/*...}*/
-			mixin(q{
-				return range.map!(x => x.} ~field~ q{);
-			});
-		}
-}
 public {/*disperse}*/
 	/* split a range of tuples, transverse-wise, 
 		into a tuple of ranges 
 	*/
-	auto disperse (R)(R range)
+	auto disperse (Spaces...)(Zipped!Spaces zipped)
 		{/*...}*/
-			static if (isTuple!(ElementType!R))
-				{/*...}*/
-					static extraction_code ()
-						{/*...}*/
-							string[] code;
-
-							foreach (i, _; ElementType!R.Types)
-								code ~= q{range.extract!}`"expand[` ~i.text~ `]"`;
-
-							return code.join (`, `).to!string;
-						}
-
-					mixin(q{
-						return tuple (} ~extraction_code~ q{);
-					});
-				}
-			else return range;
+			return zipped.spaces.tuple;
 		}
 		unittest {/*...}*/
 			import std.algorithm: equal;
@@ -839,109 +919,13 @@ public {/*transform}*/
 			else return select!op (range);
 		}
 }
-public {/*product}*/
-	struct Product (Spaces...)
+public {/*extract}*/
+	/* from a range of elements, extract a range of element members 
+	*/
+	auto extract (string field, R)(R range)
 		{/*...}*/
-			// HACK if the contents were out in the Product definition, the following error would arise from attempting to get the returntypes of limit or access (especially puzzling since i'm pretty sure access isn't a template): 
-				//source/experimental.d(2403): Error: struct experimental.Product!(int[], int[]).Product no size yet for forward reference
-				//ulong[2]
-				//source/experimental.d(2452): Error: template instance experimental.Product!(int[], int[]) error instantiating
-				//source/experimental.d(2460):        instantiated from here: by!(int[], int[])
-			// that is, it prints pragma(msg, ReturnType!(limit!0)); but then crashes on error.
-			struct Base // BUG https://issues.dlang.org/show_bug.cgi?id=13860
-				{/*...}*/
-					alias Offsets = Scan!(Sum, Map!(dimensionality, Spaces));
-
-					Spaces spaces;
-
-					auto limit (size_t d)() const
-						{/*...}*/
-							mixin LambdaCapture;
-
-							alias LimitOffsets = Offsets[0..$ - Filter!(λ!q{(int i) = d < i}, Offsets).length + 1];
-								
-							enum i = LimitOffsets.length - 1;
-							enum d = LimitOffsets[0] - 1;
-
-							size_t[2] get_length ()() if (d == 0) {return [0, spaces[i].length];}
-							auto get_limit ()() {return spaces[i].limit!d;}
-
-							return Match!(get_limit, get_length);
-						}
-
-					auto access (Map!(Coords, Spaces) point) // TODO flatten tuples
-						{/*...}*/
-							template projection (size_t i)
-								{/*...}*/
-									auto π_i ()() {return spaces[i][point[0..Offsets[i]]];}
-									auto π_n ()() {return spaces[i][point[Offsets[i-1]..Offsets[i]]];}
-
-									alias projection = Match!(π_i, π_n);
-								}
-
-							Map!(Λ!q{(alias π) = typeof(π.identity)}, 
-								Map!(projection, Count!Spaces)
-							) mapped;
-
-							foreach (i; Count!Spaces)
-								mapped[i] = projection!i;
-
-							union Cast
-								{/*...}*/
-									typeof(mapped.tuple) input;
-
-									Tuple!(RepresentationTypeTuple!(typeof(input)))
-										flattened;
-								}
-
-							return Cast (mapped.tuple).flattened;
-						}
-				}
-			Base base;
-			alias base this;
-			this (Spaces spaces) {base.spaces = spaces;}
-
-			auto limit (size_t d)()
-				{/*...}*/
-					return base.limit!d;
-				}
-			auto access (Map!(Coords, Spaces) point)
-				{/*...}*/
-					return base.access (point);
-				}
-
-			mixin SliceOps!(access, Map!(limit, Iota!(Sum!(Map!(dimensionality, Spaces)))), RangeOps);
-		}
-
-	auto by (S,R)(S left, R right)
-		{/*...}*/
-			static if (is (typeof(S.spaces)))
-				return Product!(typeof(S.spaces), R)(left.spaces, right);
-
-			else return Product!(S,R)(left, right);
-		}
-		unittest {/*...}*/
-			import evx.math; 
-
-			int[3] x = [1,2,3];
-			int[3] y = [4,5,6];
-
-			auto z = x[].by (y[]);
-
-			assert (z.access (0,1) == tuple (1,5));
-			assert (z.access (1,1) == tuple (2,5));
-			assert (z.access (2,1) == tuple (3,5));
-
-			auto w = z[].map!((a,b) => a * b);
-
-			assert (w[0,0] == 4);
-			assert (w[1,1] == 10);
-			assert (w[2,2] == 18);
-
-			auto p = w[].by (z[]);
-
-			assert (p[0,0,0,0] == tuple (4,1,4));
-			assert (p[1,1,0,1] == tuple (10,1,5));
-			assert (p[2,2,2,1] == tuple (18,3,5));
+			mixin(q{
+				return range.map!(x => x.} ~field~ q{);
+			});
 		}
 }

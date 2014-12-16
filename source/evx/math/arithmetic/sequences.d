@@ -15,10 +15,9 @@ private {/*...}*/
 auto product (R)(R range)
 	if (is_input_range!R)
 	{/*...}*/
-		return range.select!(
-			r => r.empty, r => zero!(ElementType!R),
-			reduce!multiply
-		);
+		return range.empty?
+			zero!(typeof(range.reduce!multiply))
+			: range.reduce!multiply;
 	}
 alias Π = product;
 

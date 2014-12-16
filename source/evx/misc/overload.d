@@ -2,7 +2,7 @@ module evx.misc.overload;
 
 private {/*import}*/
 	import std.conv;
-	import std.algorithm;
+	import std.range;
 }
 
 private static string attempt_overloads (string call, MixinAliases...)()
