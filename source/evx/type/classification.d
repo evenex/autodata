@@ -82,6 +82,10 @@ template is_string_param (T...)
 */
 enum is_tuple (T...)= is(typeof(τ(T[0].init.tupleof)) == T[0]);
 
+/* test if a type is a builtin scalar type 
+*/
+alias is_scalar_type = std.traits.isScalarType;
+
 /* generate a predicate to test if a given type matches another 
 */
 template is_type_of (T)

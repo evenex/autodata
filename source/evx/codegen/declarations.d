@@ -108,7 +108,7 @@ mixin template ParameterSplitter (string first, alias first_pred, string second,
 	the .be_listed member template generates a raw declaration list which can be passed into other templates
 	the .be_declared member generates a compile-time code string which declares the items in the list
 */
-struct Let (Decls...)
+struct Let (Decls...) // TODO deprecate
 	{/*...}*/
 		mixin ParameterSplitter!(
 			`Types`, is_type,
@@ -217,7 +217,7 @@ auto ct_values_as_parameter_string (Args...)()
 	{/*...}*/
 		foreach (Arg; Args)
 			{/*...}*/
-				static assert (is(typeof(Arg)));
+				static assert (is (typeof(Arg)));
 				static assert (isBuiltinType!(typeof(Arg)));
 			}
 
