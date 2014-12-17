@@ -130,10 +130,13 @@ struct VertexShader (string main, Vars...)
 						code ~= `uniform ` ~ glsl_typename!(Var.first) ~ ` ` ~ Var.second ~ `;`"\n";
 					else code ~= `layout (location = ` ~ (location++).text ~ `) in ` ~ glsl_typename!(Element!(Var.first)) ~ ` ` ~ Var.second ~ `;`"\n";
 
-				return code.join.to!string;
+				return code.join.to!string ~ 
+					q{void main () }`{`
+						~ VertexShader.code!() ~
+					`}`;
 			}
 
-		pragma(msg, code!());
+		pragma(msg, generate);
 	}
 
 struct FragmentShader (string code, Vars...)
