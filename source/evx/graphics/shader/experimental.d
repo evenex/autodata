@@ -1,6 +1,5 @@
 module evx.graphics.shader;
 
-
 __gshared struct GraphicsContext
 	{/*...}*/
 		static:
@@ -23,29 +22,9 @@ import evx.graphics.opengl;
 
 alias array = evx.containers.array.array; // REVIEW how to exclude std.array.array
 
-template vertex_shader (Code...)
-	{/*...}*/
-		auto vertex_shader (T...)(T args)
-			{/*...}*/
-				static if (is (T[0] == Tuple!U, U...))
-					{}
-				else alias U = T;
-
-				auto v = VertexShader!(Code[$-1], Code[0..$-1], U)();
-				return 1;
-			}
-	}
-template fragment_shader (Code...)
-	{/*...}*/
-		auto fragment_shader (T...)(T args)
-			{/*...}*/
-				return Array!(Color, 2)();
-			}
-	}
-
 template gl_type_enum (T)
 	{/*...}*/
-		alias ConversionTable = TypeTuple!(
+		alias ConversionTable = Cons!(
 			byte,   GL_BYTE,
 			ubyte,  GL_UNSIGNED_BYTE,
 			short,  GL_SHORT,
@@ -80,44 +59,106 @@ template glsl_typename (T)
 		else static if (is (T == Texture)) // TODO 2D/3D
 			enum glsl_typename = `sampler2D`;
 
-		else static assert (0, `cannot pass ` ~ T.stringof ~ ` directly to shader`);
+		else static assert (0, `no glsl equivalent for ` ~ T.stringof);
 	}
 template glsl_declaration (T, Args...)
 	{/*...}*/
 		enum glsl_declaration = glsl_typename!T ~ ` ` ~ ct_values_as_parameter_string!Args;
 	}
 
-struct VertexShader (string main, Vars...)
+private enum Stage {vertex = GL_VERTEX_SHADER, fragment = GL_FRAGMENT_SHADER}
+
+struct Uniform (Decl...) {alias Vars = Zip!Decl; enum uniform;}
+struct Attribute (Decl...) {alias Vars = Zip!Decl; enum attribute;}
+struct Smooth (Decl...) {alias Vars = Zip!Decl; enum smooth;}
+
+struct ShaderProgram (Variables...)
 	{/*...}*/
-		template GetVars (alias pair)
+		alias Uniform (Decl...)   = ShaderProgram!(Variables, .Uniform!Decl);
+		alias Attribute (Decl...) = ShaderProgram!(Variables, .Attribute!Decl);
+		alias Smooth (Decl...)    = ShaderProgram!(Variables, .Smooth!Decl);
+
+		alias Uniforms = Filter!(λ!q{(S) = is (S.uniform)}, Variables);
+		alias Attributes = Filter!(λ!q{(S) = is (S.attribute)}, Variables);
+		alias Smooths = Filter!(λ!q{(S) = is (S.smooth)}, Variables);
+
+		static assert (Uniforms.length < 2);
+		static assert (Attributes.length < 2);
+		static assert (Smooths.length < 2);
+
+		static string uniforms ()
 			{/*...}*/
-				static if (is (pair.first == VertexShader!T, T...))
-					alias GetVars = pair.first.Variables;
-				else alias GetVars = pair;
+				static if (is (Uniforms[0]))
+					{/*...}*/
+						string[] code;
+
+						foreach (pair; Uniforms[0].Vars)
+							code ~= glsl_typename!(pair.first) ~ ` ` ~ pair.second ~ `;`;
+
+						return code.join ("\n").to!string;
+					}
+				else return ``;
 			}
+		static string attributes ()
+			{/*...}*/
+				static if (is (Attributes[0]))
+					{/*...}*/
+						string[] code;
+
+						foreach (pair; Attributes[0].Vars)
+							code ~= glsl_typename!(pair.first) ~ ` ` ~ pair.second ~ `;`;
+
+						return code.join ("\n").to!string;
+					}
+				else return ``;
+			}
+		static string smooths ()
+			{/*...}*/
+				static if (is (Smooths[0]))
+					{/*...}*/
+						string[] code;
+
+						foreach (pair; Smooths[0].Vars)
+							code ~= glsl_typename!(pair.first) ~ ` ` ~ pair.second ~ `;`;
+
+						return code.join ("\n").to!string;
+					}
+				else return ``;
+			}
+
+		static string vertex_stage ()
+			{/*...}*/
+				return [uniforms, attributes, smooths].join ("\n").to!string;
+			}
+	}
+
+pragma(msg, ShaderProgram!().Uniform!(int, `poot`).vertex_stage);
+
+
+template Shader (Stage shader_stage, string main, Parameters...)
+	{/*...}*/
+		enum shader;
+		enum is_shader (T) = is (T.shader);
+		enum stage = shader_stage;
+
+		alias Shaders = Filter!(is_shader, Filter!(is_type, Parameters));
+		alias Arguments = Filter!(not!is_shader, Filter!(is_type, Parameters));
+		alias Identifiers = Filter!(not!is_type, Parameters);
+
+		alias Signature = Cons!(
+			Zip!(Arguments, Identifiers),
+			Map!(Λ!q{(S) = S.Signature}, Shaders)
+		);
 
 		template code ()
 			{/*...}*/
-				template get_code (T...)
-					{/*...}*/
-						static if (is (T[0] == VertexShader!U, U...))
-							enum this_code = T[0].code!();
-						else enum this_code = ``;
+				enum same_stage (S) = S.stage == shader_stage;
 
-						static if (T.length == 1)
-							enum get_code = this_code;
-						else enum get_code = this_code ~ get_code!(T[1..$]);
-					}
-
-				enum code = main ~ get_code!(Filter!(is_type, Vars));
+				enum code = Map!(λ!q{(T) = T.code!()}, Filter!(same_stage, Shaders)).stringof[1..$] ~ main;
 			}
 
-		alias Variables = Map!(GetVars,
-			Zip!(
-				Filter!(is_type, Vars),
-				Filter!(is_string_param, Vars),
-			)
-		);
+		Shaders shaders;
+		Arguments args;
 
 		static generate ()
 			{/*...}*/
@@ -125,23 +166,66 @@ struct VertexShader (string main, Vars...)
 
 				uint location;
 
-				foreach (Var; Variables)
+				const glsl_qualifier = stage is Stage.vertex? // BUG this is not how you tell a uniform from a smooth
+					`uniform ` : `smooth in `;
+
+				foreach (Var; Zip!(Arguments, Identifiers))
 					static if (is (typeof(glsl_typename!(Var.first))))
-						code ~= `uniform ` ~ glsl_typename!(Var.first) ~ ` ` ~ Var.second ~ `;`"\n";
+						code ~= glsl_qualifier ~ glsl_typename!(Var.first) ~ ` ` ~ Var.second ~ `;`"\n";
 					else code ~= `layout (location = ` ~ (location++).text ~ `) in ` ~ glsl_typename!(Element!(Var.first)) ~ ` ` ~ Var.second ~ `;`"\n";
 
 				return code.join.to!string ~ 
 					q{void main () }`{`
-						~ VertexShader.code!() ~
+						~ typeof(this).code!() ~
 					`}`;
 			}
-
-		pragma(msg, generate);
+	}
+struct VertexShader (string main, Parameters...)
+	{/*...}*/
+		mixin Shader!(Stage.vertex, main, Parameters);
+		//pragma(msg, generate);
+	}
+struct FragmentShader (string main, Parameters...)
+	{/*...}*/
+		mixin Shader!(Stage.fragment, main, Parameters);
+		//pragma(msg, generate);
 	}
 
-struct FragmentShader (string code, Vars...)
+template vertex_shader (Defs...)
 	{/*...}*/
-		
+		auto vertex_shader (T...)(T data)
+			{/*...}*/
+				static if (is (T[0] == Tuple!Args, Args...))
+					auto args = data[0].expand;
+				else {/*...}*/
+					alias Args = T;
+					alias args = data;
+				}
+
+				alias signature = Defs[0..$-1];
+				enum code = Defs[$-1];
+
+				return VertexShader!(code, signature, Args)(args);
+			}
+	}
+template fragment_shader (Defs...)
+	{/*...}*/
+		auto fragment_shader (T...)(T data)
+			{/*...}*/
+				static if (is (T[0] == Tuple!Args, Args...))
+					auto args = data[0].expand;
+				else {/*...}*/
+					alias Args = T;
+					alias args = data;
+				}
+
+				alias signature = Defs[0..$-1];
+				enum code = Defs[$-1];
+
+			//	auto f = FragmentShader!(code, signature, Args)(args);
+
+				return Array!(Color, 2)();
+			}
 	}
 
 void main () // TODO the goal
@@ -164,8 +248,6 @@ void main () // TODO the goal
 
 		static assert (is (typeof(weight_map) == Array!(Color, 2)));
 
-		static if (0)
-		{/*...}*/
 		alias aspect_correction = vertex_shader!(`aspect_ratio`, q{
 			gl_Position *= aspect_ratio;
 		});
@@ -184,8 +266,8 @@ void main () // TODO the goal
 			Texture, `tex`, q{
 				glFragColor = texture2D (tex, frag_tex_coords);
 			}
-		)(texture)
-		.aspect_correction (aspect_ratio)
-		.output_to (display);
-		}
+		)(texture);
+//		.aspect_correction (aspect_ratio)
+//		;
+		//.output_to (display);
 	}

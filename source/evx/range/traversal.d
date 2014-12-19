@@ -123,7 +123,7 @@ struct Join (R)
 				{/*...}*/
 					if (at_separator)
 						return separator[i];
-					else return ranges[j][i];
+					else return ranges[j][i]; // BUG what if empty range?
 				}
 			void popFront ()
 				{/*...}*/
@@ -138,7 +138,8 @@ struct Join (R)
 						}
 					else if (++i == ranges[j].length)
 						{/*...}*/
-							++j;
+							do ++j; while (j < ranges.length && ranges[j].empty);
+
 							i = 0;
 
 							if (not (separator.empty || this.empty))
