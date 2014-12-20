@@ -17,10 +17,12 @@ import evx.containers;
 
 import std.typecons;
 import std.conv;
+import std.string;
 
 import evx.graphics.opengl;
 
 alias array = evx.containers.array.array; // REVIEW how to exclude std.array.array
+alias join = evx.range.join;
 
 template gl_type_enum (T)
 	{/*...}*/
@@ -66,76 +68,53 @@ template glsl_declaration (T, Args...)
 		enum glsl_declaration = glsl_typename!T ~ ` ` ~ ct_values_as_parameter_string!Args;
 	}
 
+struct Uniform   (Decl...) {alias Vars = Zip!(Deinterleave!Decl); enum uniform;}
+struct Attribute (Decl...) {alias Vars = Zip!(Deinterleave!Decl); enum attribute;}
+struct Smooth    (Decl...) {alias Vars = Zip!(Deinterleave!Decl); enum smooth;}
+struct Vertex   (string code) {enum main = code; enum vertex;}
+struct Fragment (string code) {enum main = code; enum fragment;}
+
+/* notes
+	Vert
+		.in = x[]
+		.out = frag.in
+		.uniform = x
+
+	Frag
+		.in = x ¬ϵ RTArgs 
+		.uniform = x ϵ RTArgs
+
+	on any concat:
+		union all.uniform
+	on vert concat:
+		concat vert.code
+		union vert.in
+	on frag concat:
+		concat frag.code
+		union frag.in
+		union vert.out
+*/
+
+alias TestShader = Shader!(
+	).Uniform!(
+		int, `a`,
+		fvec, `b`,
+	).Attribute!(
+		fvec, `c`,
+		double, `d`,
+	).Smooth!(
+		Color, `e`,
+		uint, `f`,
+	).Vertex!q{
+		glPosition = b;
+	}.Fragment!q{
+		glFragColor = vec4 (0,0,1,1);
+	};
+
+pragma(msg, TestShader.vertex_stage);
+
 private enum Stage {vertex = GL_VERTEX_SHADER, fragment = GL_FRAGMENT_SHADER}
-
-struct Uniform (Decl...) {alias Vars = Zip!Decl; enum uniform;}
-struct Attribute (Decl...) {alias Vars = Zip!Decl; enum attribute;}
-struct Smooth (Decl...) {alias Vars = Zip!Decl; enum smooth;}
-
-struct ShaderProgram (Variables...)
-	{/*...}*/
-		alias Uniform (Decl...)   = ShaderProgram!(Variables, .Uniform!Decl);
-		alias Attribute (Decl...) = ShaderProgram!(Variables, .Attribute!Decl);
-		alias Smooth (Decl...)    = ShaderProgram!(Variables, .Smooth!Decl);
-
-		alias Uniforms = Filter!(λ!q{(S) = is (S.uniform)}, Variables);
-		alias Attributes = Filter!(λ!q{(S) = is (S.attribute)}, Variables);
-		alias Smooths = Filter!(λ!q{(S) = is (S.smooth)}, Variables);
-
-		static assert (Uniforms.length < 2);
-		static assert (Attributes.length < 2);
-		static assert (Smooths.length < 2);
-
-		static string uniforms ()
-			{/*...}*/
-				static if (is (Uniforms[0]))
-					{/*...}*/
-						string[] code;
-
-						foreach (pair; Uniforms[0].Vars)
-							code ~= glsl_typename!(pair.first) ~ ` ` ~ pair.second ~ `;`;
-
-						return code.join ("\n").to!string;
-					}
-				else return ``;
-			}
-		static string attributes ()
-			{/*...}*/
-				static if (is (Attributes[0]))
-					{/*...}*/
-						string[] code;
-
-						foreach (pair; Attributes[0].Vars)
-							code ~= glsl_typename!(pair.first) ~ ` ` ~ pair.second ~ `;`;
-
-						return code.join ("\n").to!string;
-					}
-				else return ``;
-			}
-		static string smooths ()
-			{/*...}*/
-				static if (is (Smooths[0]))
-					{/*...}*/
-						string[] code;
-
-						foreach (pair; Smooths[0].Vars)
-							code ~= glsl_typename!(pair.first) ~ ` ` ~ pair.second ~ `;`;
-
-						return code.join ("\n").to!string;
-					}
-				else return ``;
-			}
-
-		static string vertex_stage ()
-			{/*...}*/
-				return [uniforms, attributes, smooths].join ("\n").to!string;
-			}
-	}
-
-pragma(msg, ShaderProgram!().Uniform!(int, `poot`).vertex_stage);
-
-
-template Shader (Stage shader_stage, string main, Parameters...)
+template SSShader (Stage shader_stage, string main, Parameters...)
 	{/*...}*/
 		enum shader;
 		enum is_shader (T) = is (T.shader);
@@ -182,13 +161,114 @@ template Shader (Stage shader_stage, string main, Parameters...)
 	}
 struct VertexShader (string main, Parameters...)
 	{/*...}*/
-		mixin Shader!(Stage.vertex, main, Parameters);
+		mixin SSShader!(Stage.vertex, main, Parameters);
 		//pragma(msg, generate);
 	}
 struct FragmentShader (string main, Parameters...)
 	{/*...}*/
-		mixin Shader!(Stage.fragment, main, Parameters);
+		mixin SSShader!(Stage.fragment, main, Parameters);
 		//pragma(msg, generate);
+	}
+
+struct Shader (Program...)
+	{/*...}*/
+		template Variables (string storage_class)
+			{/*...}*/
+				enum StorageClass = storage_class.capitalize;
+				enum Decls = StorageClass ~ `s`;
+
+				mixin(q{
+					alias } ~ StorageClass ~ q{ (Decl...) = Shader!(Program, .} ~ StorageClass ~ q{!Decl);
+
+					enum is_storage_class (S) = is (S.} ~ storage_class ~ q{);
+
+					alias } ~ Decls ~ q{ = Filter!(is_storage_class, Program);
+
+					static assert (} ~ Decls ~ q{.length < 2);
+				});
+			}
+		template Code (string stage)
+			{/*...}*/
+				enum Stage = stage.capitalize;
+
+				mixin(q{
+					alias } ~ Stage ~ q{ (string code) = Shader!(Program, .} ~ Stage ~ q{!code);
+
+					enum is_shader_stage (S) = is (S.} ~ stage ~ q{);
+
+					enum } ~ stage ~ q{_code () = [Map!(λ!q{(T) = T.main}, Filter!(is_shader_stage, Program))].join.to!string;
+				});
+			}
+
+		mixin Variables!`uniform`;
+		mixin Variables!`attribute`;
+		mixin Variables!`smooth`;
+		mixin Code!`vertex`;
+		mixin Code!`fragment`;
+
+		static string uniforms ()
+			{/*...}*/
+				static if (is (Uniforms[0]))
+					{/*...}*/
+						string[] code;
+
+						foreach (pair; Uniforms[0].Vars)
+							code ~= `uniform ` ~ glsl_typename!(pair.first) ~ ` ` ~ pair.second ~ `;`;
+
+						return code.join ("\n").to!string;
+					}
+				else return ``;
+			}
+		static string attributes ()
+			{/*...}*/
+				static if (is (Attributes[0]))
+					{/*...}*/
+						string[] code;
+
+						foreach (pair; Attributes[0].Vars)
+							code ~= `in ` ~ glsl_typename!(pair.first) ~ ` ` ~ pair.second ~ `;`;
+
+						return code.join ("\n").to!string;
+					}
+				else return ``;
+			}
+		static string smooths (string in_out)()
+			{/*...}*/
+				static if (is (Smooths[0]))
+					{/*...}*/
+						string[] code;
+
+						foreach (pair; Smooths[0].Vars)
+							code ~= `smooth ` ~ in_out ~ ` ` ~ glsl_typename!(pair.first) ~ ` ` ~ pair.second ~ `;`;
+
+						return code.join ("\n").to!string;
+					}
+				else return ``;
+			}
+
+		static string vertex_stage ()()
+			{/*...}*/
+				return [
+					uniforms,
+					attributes,
+					smooths!`out`,
+
+					q{void main ()},
+					`{`, vertex_code!(), `}`
+
+				].join ("\n").to!string;
+			}
+		static string fragment_stage ()()
+			{/*...}*/
+				return [
+					uniforms,
+					smooths!`in`, 
+
+					q{void main ()}, 
+					`{`, fragment_code!(), `}`
+
+				].join ("\n").to!string;
+			}
 	}
 
 template vertex_shader (Defs...)

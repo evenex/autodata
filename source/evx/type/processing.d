@@ -116,6 +116,16 @@ template Zip (T...)
 
 alias Interleave (T...) = Map!(Pair!().Both!Cons, Zip!T);
 	static assert (Interleave!(1,2,3,4,5,6) == Cons!(1,4,2,5,3,6));
+template Deinterleave (T...)
+	if (T.length % 2 == 0)
+	{/*...}*/
+		alias Even = Map!(λ!q{(uint i) = 2*i}, Iota!(T.length/2));
+		alias Odd = Map!(λ!q{(uint i) = i + 1}, Even);
+		alias Get (uint i) = Cons!(T[i]);
+
+		alias Deinterleave = Cons!(Map!(Get, Even, Odd));
+	}
+	static assert (Deinterleave!(1,4,2,5,3,6) == Cons!(1,2,3,4,5,6));
 
 template Sort (alias compare, T...)
 	{/*...}*/
