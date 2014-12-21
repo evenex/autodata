@@ -52,14 +52,15 @@ private {/*glsl variables}*/
 	enum StorageClass {vertex_input, vertex_fragment, uniform}
 
 	struct Type (uint n, Base)
-		if (Contains!(Base, bool, int, uint, float, double))
+		if (Contains!(Base, bool, int, uint, float, double, Texture))
 		{/*...}*/
 			enum decl =	n > 1? (
 				is (Base == float)?
 				`` : Base.stringof[0].to!string
 			) ~ q{vec} ~ n.text
 			: (
-				Base.stringof
+				is (Base == Texture)?
+				q{sampler2D} : Base.stringof
 			);
 		}
 
@@ -70,27 +71,6 @@ private {/*glsl functions}*/
 
 	struct Function (Stage stage, string code){}
 }
-
-/* notes 
-	Vert
-		.in = x[]
-		.out = frag.in
-		.uniform = x
-
-	Frag
-		.in = x ¬ϵ RTArgs 
-		.uniform = x ϵ RTArgs
-
-	on any concat:
-		union all.uniform
-	on vert concat:
-		concat vert.code
-		union vert.in
-	on frag concat:
-		concat frag.code
-		union frag.in
-		union vert.out
-*/
 
 alias ShaderProgramId = GLuint;
 __gshared ShaderProgramId[string] shader_ids;
@@ -164,8 +144,8 @@ struct Shader (Parameters...)
 		}
 	}
 
-pragma(msg, 
-	Shader!(
+unittest {/*codegen}*/
+	alias TestShader = Shader!(
 		Variable!(StorageClass.vertex_input, Type!(1, bool), `foo`),
 		Variable!(StorageClass.vertex_fragment, Type!(2, double), `bar`),
 		Variable!(StorageClass.uniform, Type!(4, float), `baz`),
@@ -175,13 +155,60 @@ pragma(msg,
 
 		Variable!(StorageClass.uniform, Type!(2, float), `ar`),
 		Function!(Stage.vertex, q{glPosition *= ar;}),
-	).fragment_code
-);
+	);
+
+	static assert (
+		TestShader.fragment_code == [
+			`in dvec2 bar;`,
+			`uniform vec4 baz;`,
+			`uniform vec2 ar;`,
+			`void main ()`,
+			`{`,
+			`	glFragColor = baz * vec2 (bar, 0, 1);`,
+			`}`
+		].join ("\n").text
+	);
+
+	static assert (
+		TestShader.vertex_code == [
+			`in bool foo;`,
+			`out dvec2 bar;`,
+			`uniform vec4 baz;`,
+			`uniform vec2 ar;`,
+			`void main ()`,
+			`{`,
+			`	glPosition = foo;`,
+			`	glPosition *= ar;`,
+			`}`,
+		].join ("\n").text
+	);
+}
+
+template decl_syntax_check (Decl...)
+	{/*...}*/
+		static assert (
+			All!(is_string_param, Decl)
+			|| (
+				All!(is_type, Deinterleave!Decl[0..$/2])
+				&& All!(is_string_param, Deinterleave!Decl[$/2..$])
+			),
+			`shader declarations must either all be explicitly typed (T, "a", U, "b"...)`
+			` or auto typed ("a", "b"...) and cannot be mixed`
+		);
+	}
+
+private alias Front (T...) = T[0]; // HACK https://issues.dlang.org/show_bug.cgi?id=13883
 
 template vertex_shader (Decl...)
 	{/*...}*/
+		mixin decl_syntax_check!(Decl[0..$-1]);
+
 		auto vertex_shader (Input...)(Input input)
 			{/*...}*/
+				alias DeclTypes = Filter!(is_type, Decl[0..$-1]);
+				alias Identifiers = Filter!(is_string_param, Decl[0..$-1]);
+				enum code = Decl[$-1];
+
 				template Parse (Vars...)
 					{/*...}*/
 						template GetType (Var)
@@ -198,12 +225,17 @@ template vertex_shader (Decl...)
 						template MakeVar (uint i, Var)
 							{/*...}*/
 								static if (is (GetType!Var))
-									alias MakeVar = Variable!(StorageClass.uniform, GetType!Var, Decl[i]);
+									alias MakeVar = Variable!(StorageClass.uniform, GetType!Var, Identifiers[i]);
 
 								else static if (is (Element!Var == T, T))
-									alias MakeVar = Variable!(StorageClass.vertex_input, GetType!T, Decl[i]);
+									alias MakeVar = Variable!(StorageClass.vertex_input, GetType!T, Identifiers[i]);
 
 								else static assert (0);
+
+								static if (is (DeclTypes[i] == U, U))
+									static assert (is (MakeVar == MakeVar!(i, U)), 
+										`argument type does not match declared type`
+									);
 							}
 
 						alias Parse = Map!(Pair!().Both!MakeVar, Indexed!Vars);
@@ -213,11 +245,11 @@ template vertex_shader (Decl...)
 					{/*...}*/
 						static if (is (Input[1]))
 							{/*...}*/
-								alias Symbols = Cons!(Sym, Parse!(Input[1..$]));
+								alias Symbols = Cons!(Input[0].Symbols, Parse!(Input[1..$]));
 								auto args = tuple (input[0].args, input[1..$]).expand;
 							}
 						else {/*...}*/
-							alias Symbols = Sym;
+							alias Symbols = Front!Input.Symbols; // HACK https://issues.dlang.org/show_bug.cgi?id=13883
 							auto args = input[0].args;
 						}
 					}
@@ -238,24 +270,73 @@ template vertex_shader (Decl...)
 					 auto args = input;
 				}
 
-				return Shader!(Symbols, typeof(args))(args);
+				return Shader!(Symbols, Function!(Stage.vertex, code), typeof(args))(args);
 			}
 	}
-template fragment_shader (Defs...)
+template fragment_shader (Decl...)
 	{/*...}*/
-		auto fragment_shader (T...)(T data)
+		mixin decl_syntax_check!(Decl[0..$-1]);
+
+		static assert (is (Decl[0]), 
+			`fragment shader auto type deduction not implemented`
+		);
+
+		auto fragment_shader (Input...)(Input input)
 			{/*...}*/
-				static if (is (T[0] == Tuple!Args, Args...))
-					auto args = data[0].expand;
+				alias DeclTypes = Filter!(is_type, Decl[0..$-1]);
+				alias Identifiers = Filter!(is_string_param, Decl[0..$-1]);
+				enum code = Decl[$-1];
+
+				template GetType (uint i)
+					{/*...}*/
+						alias T = DeclTypes[i];
+
+						static if (is (T == Vector!(n,U), size_t n, U))
+							alias GetType = Type!(n,U);
+
+						else alias GetType = Type!(1,T);
+					}
+
+				alias Uniform (uint i) = Variable!(StorageClass.uniform, GetType!i, Identifiers[i]);
+				alias Smooth (uint i) = Variable!(StorageClass.vertex_fragment, GetType!i, Identifiers[i]);
+
+				static if (is (Input[1]))
+					static assert (
+						All!(Pair!().Both!(λ!q{(T, U) = is (T == U)}),
+							Zip!(Input[1..$], DeclTypes[$-(Input.length - 1)..$])
+						)
+					);
+
+				static if (is (Input[0] == Shader!Sym, Sym...))
+					{/*...}*/
+						enum is_uniform (uint i) =
+							i > DeclTypes.length - Input.length // tail Decltypes correspond with Inputs, and all Inputs are Uniforms, therefore tail Decltypes are Uniforms
+							|| Contains!(Uniform!i, Input[0].Symbols);
+
+						static if (is (Input[1]))
+							{/*...}*/
+								alias Symbols = Front!Input.Symbols; // HACK https://issues.dlang.org/show_bug.cgi?id=13883
+								auto args = tuple (input[0].args, input[1..$]).expand;
+							}
+						else {/*...}*/
+							alias Symbols = Front!Input.Symbols; // HACK https://issues.dlang.org/show_bug.cgi?id=13883
+							auto args = input[0].args;
+						}
+					}
+				else static if (is (Input[0] == Tuple!Data, Data...))
+					{/*...}*/
+						static assert (0, `tuple arg not valid for fragment shader`);
+					}
 				else {/*...}*/
-					alias Args = T;
-					alias args = data;
+					static assert (0, `fragment shader must be attached to vertex shader`);
 				}
 
-				alias signature = Defs[0..$-1];
-				enum code = Defs[$-1];
-
-				return FragmentShader!(code, signature, Args)(args);
+				return Shader!(Symbols, 
+					Map!(Uniform, Filter!(is_uniform, Count!DeclTypes)),
+					Map!(Smooth, Filter!(not!is_uniform, Count!DeclTypes)),
+					Function!(Stage.fragment, code),
+					typeof(args)
+				)(args);
 			}
 	}
 
@@ -270,20 +351,15 @@ void main () // TODO the goal
 		Color color;
 
 		auto weight_map = τ(positions, weights, color)
-			.vertex_shader!(`position`, `weight`, `color`, q{
+			.vertex_shader!(`position`, `weight`, `base_color`, q{
 				glPosition = position;
-				frag_color = color;
+				frag_color = vec4 (base_color.rgb, weight);
 				frag_alpha = weight;
-			},
-);
-std.stdio.writeln (weight_map);
-static if (0){
-		fragment_shader!(
-			Color, `frag_color`, q{
+			}).fragment_shader!(Color, `frag_color`, q{
 				glFragColor = vec4 (frag_color.rgb, frag_alpha);
-			}
-		);//.array;
+			});
 
+		//);//.array;
 		//static assert (is (typeof(weight_map) == Array!(Color, 2)));
 
 		auto aspect_ratio = vec(1.0, 2.0);
@@ -291,6 +367,7 @@ static if (0){
 		vec[] tex_coords;
 		Texture texture;
 
+		import std.stdio;
 		τ(positions, tex_coords).vertex_shader!(
 			`position`, `tex_coords`, q{
 				glPosition = position;
@@ -304,5 +381,4 @@ static if (0){
 		)(texture)
 		.aspect_correction (aspect_ratio);
 		//.output_to (display);
-		}
 	}
