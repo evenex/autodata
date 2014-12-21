@@ -102,10 +102,7 @@ struct Array (T, uint dimensions = 1)
 								return index[i];
 							}
 
-						static if (is (S == V[], V)) // BUG https://issues.dlang.org/show_bug.cgi?id=13864
-							base.data[offset] = space[index[Filter!(Pair!().Second!Identity, Indexed!open)[0].first]];
-
-						else base.data[offset] = space[
+						base.data[offset] = space[
 							Map!(get_index,
 								Map!(Pair!().First!Identity,
 									Filter!(Pair!().Second!Identity,
