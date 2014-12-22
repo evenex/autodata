@@ -121,21 +121,3 @@ struct gl
 				});
 			}
 	}
-
-struct Texture
-	{/*...}*/
-		 GLuint id;
-		 alias id this;
-
-		 void bind (GLuint index = 0)
-			in {/*...}*/
-				assert (id != 0);
-			}
-			body {/*...}*/
-				auto target = GL_TEXTURE0 + index;
-
-				gl.ActiveTexture (target);
-
-				gl.BindTexture (GL_TEXTURE_2D, id);
-			}
-	}

@@ -11,7 +11,6 @@ import evx.range;
 
 import evx.math;
 import evx.type;
-import evx.graphics.color;
 import evx.misc.tuple;
 import evx.misc.utils;
 import evx.containers;
@@ -23,6 +22,8 @@ import std.ascii;
 
 import evx.graphics.opengl;
 import evx.graphics.buffer;
+import evx.graphics.texture;
+import evx.graphics.color;
 
 alias array = evx.containers.array.array; // REVIEW how to exclude std.array.array
 alias join = evx.range.join;
@@ -81,6 +82,15 @@ auto to_gpu (T...)(T args)
 			data = args[i].gpu_type;
 
 		return gpu_data.tuple;
+	}
+
+static string exec_trace (string name)() // REFACTOR
+	{/*...}*/
+		return q{
+			std.stdio.stderr.writeln (}`"` ~ name ~ `"`q{);
+			scope (failure) std.stdio.stderr.writeln (}`"` ~ name ~ q{ fail}`"`q{);
+			scope (success) std.stdio.stderr.writeln (}`"` ~ name ~ q{ ok}`"`q{);
+		};
 	}
 
 struct Shader (Parameters...)
@@ -170,6 +180,7 @@ struct Shader (Parameters...)
 					assert (gl.IsProgram (program_id) && program_id != 0);
 				}
 				body {/*...}*/
+					mixin(exec_trace!(`init`));
 					auto key = [vertex_code, fragment_code].join.filter!(not!isWhite).to!string;
 
 					if (auto id = key in shader_ids)
@@ -263,6 +274,7 @@ struct Shader (Parameters...)
 
 			void activate ()
 				{/*...}*/
+					mixin(exec_trace!(`activate`));
 					if (program_id == 0)
 						initialize;
 
@@ -275,11 +287,11 @@ struct Shader (Parameters...)
 							static if (is_texture!T)
 								arg.bind (IndexOf!(T, Filter!(is_texture, Variables)));
 
-							else static if (is_uniform!T)
-								gl.uniform (arg, IndexOf!(T, Filter!(is_uniform, Variables)));
-
 							else static if (is_vertex_input!T)
 								arg.bind (IndexOf!(T, Filter!(is_vertex_input, Variables)));
+
+							else static if (is_uniform!T)
+								gl.uniform (arg, IndexOf!(T, Filter!(is_uniform, Variables)));
 						}
 				}
 		}
@@ -415,6 +427,13 @@ template vertex_shader (Decl...)
 					 auto args = input;
 				}
 
+				mixin(exec_trace!(`vertex shader`));
+				std.stdio.stderr.writeln (Interleave!(typeof(args), typeof(args.to_gpu.expand)).stringof);
+				foreach (arg; args)
+					{/*...}*/
+						static if (is (typeof(arg.length)))
+						std.stdio.stderr.writeln (arg.length, ` ` , typeof(arg).stringof);
+					}
 				return Shader!(Symbols,
 					Function!(Stage.vertex, code),
 					typeof(args.to_gpu.expand)
