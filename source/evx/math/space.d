@@ -37,3 +37,24 @@ template Coords (Space)
 
 		alias Coords = Map!(Coord, Iota!(dimensionality!(Space)));
 	}
+
+auto volume (S)(S space) // TODO doc and unittest
+	{/*...}*/
+		static if (dimensionality!S == 1 && is (typeof(space.length)))
+			return space.length;
+		else {/*...}*/
+			auto product (T...)(T args) // REVIEW generalize... how conflicts with range product? can template constraints reconcile?
+				{/*...}*/
+					static if (is (T[1]))
+						return args[0] * product (args[1..$]);
+					else return args[0];
+				}
+
+			Map!(Element, typeof(space.bounds)) measures;
+
+			foreach (i, ref measure; measures)
+				measure = space.bounds[i].width;
+
+			return product (measures);
+		}
+	}

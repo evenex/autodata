@@ -34,15 +34,19 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 
 		auto pull (R,U)(R range, U slice)
 			{/*...}*/
-				static if (is (R == GLBuffer!V, V...))
+				static if (is (U == V[2], V))
+					auto i = slice.left, j = slice.right;
+				else auto i = slice, j = slice + 1;
+
+				if (j-i == 0) // REVIEW should i be checking for this at the operator level? that would require a volume function
+					return;
+
+				static if (is (R == GLBuffer!(T,S), S...))
 					{/*copy in vram}*/
-						alias W = ElementType!(R.Sub!0);
-						auto read_index = range.offset * W.sizeof;
+						auto read_index = range.offset * T.sizeof;
 
 						gl.BindBuffer (GL_COPY_READ_BUFFER, range[].source.handle);
 						gl.BindBuffer (GL_COPY_WRITE_BUFFER, this.handle);
-
-						auto i = slice.left, j = slice.right;
 
 						gl.CopyBufferSubData (GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, read_index, gl_slice (i,j).expand);
 					}
@@ -59,10 +63,6 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 						auto value = range.to!T;
 						auto ptr = &value;
 					}
-
-					static if (is (U == V[2], V))
-						auto i = slice.left, j = slice.right;
-					else auto i = slice, j = slice + 1;
 
 					bind;
 

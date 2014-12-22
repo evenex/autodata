@@ -100,7 +100,7 @@ struct Shader (Parameters...)
 
 			static string shader_code (Stage stage)()
 				{/*...}*/
-					string[] code;
+					string[] code = [q{#version 420}];
 
 					{/*variables}*/
 						foreach (V; Variables)
