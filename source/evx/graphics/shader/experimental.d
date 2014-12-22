@@ -243,6 +243,12 @@ struct Shader (Parameters...)
 		public {/*runtime}*/
 			Args args;
 
+			enum is_uniform (T) = is (T == Variable!(StorageClass.uniform, U), U...);
+			enum is_vertex_input (T) = is (T == Variable!(StorageClass.vertex_input, U), U...);
+			enum is_texture (T) = is (T == Variable!(StorageClass.uniform, Type!(1, Texture), U), U...);
+
+			static assert (Args.length == Filter!(or!(is_uniform, is_vertex_input), Variables).length);
+
 			void activate ()
 				{/*...}*/
 					if (program_id == 0)
@@ -250,21 +256,19 @@ struct Shader (Parameters...)
 
 					gl.UseProgram (program_id);
 
-					foreach (i, Var; Variables)
-						static if (is (Var == Variable!(storage, T, name),
-							StorageClass storage, T, string name
-						))
-							{/*...}*/
-								static if (storage is StorageClass.uniform)
-									{/*...}*/
-									}
+					foreach (i, ref arg; args)
+						{/*...}*/
+							alias T = Filter!(or!(is_uniform, is_vertex_input), Variables)[i];
 
-								else static if (storage is StorageClass.vertex_input)
-									{/*...}*/
-										
-									}
-							}
-						else static assert (0);
+							static if (is_texture!T)
+								args[i].bind (IndexOf!(T, Filter!(is_texture, Variables)));
+
+							else static if (is_uniform!T)
+								gl.uniform (args[i], IndexOf!(T, Filter!(is_uniform, Variables)));
+
+							else static if (is_vertex_input!T)
+								args[i].bind (IndexOf!(T, Filter!(is_vertex_input, Variables)));
+						}
 				}
 
 			void bind_temp_array (uint i)()
@@ -481,10 +485,44 @@ alias aspect_correction = vertex_shader!(`aspect_ratio`, q{
 	gl_Position.xy *= aspect_ratio;
 });
 
+template RenderTarget (int permanent_id = -1)
+	{/*...}*/
+		static if (permanent_id < 0)
+			GLuint renderbuffer_id;
+		else enum GLuint renderbuffer_id = permanent_id.to!GLuint;
+
+		void draw (T)(T order)
+			if (is(T.render_order))
+			{/*...}*/
+				order.renderer.process (order);
+			}
+		void draw (R...)(R orders)
+			if (All!(has_trait!`render_order`, staticMap!(ElementType, R)))
+			{/*...}*/
+				foreach (queue; orders)
+					foreach (subqueue; queue.group!((a,b) => a.renderer == b.renderer))
+						queue.front.renderer.process (queue);
+			}
+	}
+
+auto output_to (S,R,T...)(S shader, R render_target, T args)
+	{/*...}*/
+		//GLuint framebuffer_id = 0; // TODO create framebuffer
+		//gl.GenFramebuffers (1, &framebuffer_id); TODO to create a framebuffer
+		//gl.BindFramebuffer (GL_FRAMEBUFFER, framebuffer_id); // TODO to create a framebuffer
+		// gl.FramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, renderedTexture, 0); TODO to set texture output
+		// gl.DrawBuffers TODO set frag outputs to draw to these buffers, if you use this then you'll need to modify the shader program, to add some fragment_output variables
+
+		shader.activate;
+		gl.BindFramebuffer (GL_FRAMEBUFFER, render_target.framebuffer_id);
+		// render_target.bind; REVIEW how does this interact with texture.bind, or any other bindable I/O type
+		// render_target.draw (shader.args, args); REVIEW do this, or get length of shader array args? in latter case, how do we pick the draw mode?
+	}
+
 void main () // TODO the goal
 	{/*...}*/
 	import evx.graphics.display;
-	auto gfx = new Display; // BUG display launches gfx context which is required for shader stuff, but fialure to do so segs. need sensible errmsg:
+	auto display = new Display; // BUG display launches gfx context which is required for shader stuff, but fialure to do so segs. need sensible errmsg:
 
 		auto positions = circle.map!(to!fvec);
 		auto weights = ℕ[0..circle.length].map!(to!float);
@@ -501,10 +539,8 @@ void main () // TODO the goal
 				gl_FragColor = vec4 (frag_color.rgb, frag_alpha);
 			});
 
-		weight_map.initialize; // TEMP
-
-		//);//.array;
-		//static assert (is (typeof(weight_map) == Array!(Color, 2)));
+		//);//.array; TODO
+		//static assert (is (typeof(weight_map) == Array!(Color, 2))); TODO
 
 		auto aspect_ratio = fvec(1.0, 2.0);
 
@@ -514,7 +550,7 @@ void main () // TODO the goal
 		import std.stdio;
 		τ(positions, tex_coords).vertex_shader!(
 			`position`, `tex_coords`, q{
-				gl_Positionz = vec4 (position, 0, 1);
+				gl_Position = vec4 (position, 0, 1);
 				frag_tex_coords = tex_coords;
 			}
 		).fragment_shader!(
@@ -524,6 +560,5 @@ void main () // TODO the goal
 			}
 		)(texture)
 		.aspect_correction (aspect_ratio)
-		.initialize; // TEMP
-		//.output_to (display);
+		.triangle_fan.output_to (display);
 	}
