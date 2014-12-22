@@ -455,7 +455,7 @@ template fragment_shader (Decl...)
 	}
 
 alias aspect_correction = vertex_shader!(`aspect_ratio`, q{
-	gl_Position *= aspect_ratio;
+	gl_Position.xy *= aspect_ratio;
 });
 
 void main () // TODO the goal
@@ -469,12 +469,16 @@ void main () // TODO the goal
 
 		auto weight_map = τ(positions, weights, color)
 			.vertex_shader!(`position`, `weight`, `base_color`, q{
-				glPosition = position;
+				gl_Position = vec4 (position, 0, 1);
 				frag_color = vec4 (base_color.rgb, weight);
 				frag_alpha = weight;
-			}).fragment_shader!(Color, `frag_color`, q{
-				glFragColor = vec4 (frag_color.rgb, frag_alpha);
+			}).fragment_shader!(
+				Color, `frag_color`,
+				float, `frag_alpha`, q{
+				gl_FragColor = vec4 (frag_color.rgb, frag_alpha);
 			});
+
+		weight_map.initialize; // TEMP
 
 		//);//.array;
 		//static assert (is (typeof(weight_map) == Array!(Color, 2)));
@@ -487,15 +491,16 @@ void main () // TODO the goal
 		import std.stdio;
 		τ(positions, tex_coords).vertex_shader!(
 			`position`, `tex_coords`, q{
-				glPosition = position;
+				gl_Position = vec4 (position, 0, 1);
 				frag_tex_coords = tex_coords;
 			}
 		).fragment_shader!(
-			vec, `frag_tex_coords`,
+			fvec, `frag_tex_coords`,
 			Texture, `tex`, q{
-				glFragColor = texture2D (tex, frag_tex_coords);
+				gl_FragColor = texture2D (tex, frag_tex_coords);
 			}
 		)(texture)
-		.aspect_correction (aspect_ratio).initialize;
+		.aspect_correction (aspect_ratio)
+		.initialize; // TEMP
 		//.output_to (display);
 	}
