@@ -13,36 +13,20 @@ import evx.math;
 import evx.type;
 import evx.graphics.color;
 import evx.misc.tuple;
+import evx.misc.utils;
 import evx.containers;
 
 import std.typecons;
 import std.conv;
 import std.string;
+import std.ascii;
 
 import evx.graphics.opengl;
+import evx.graphics.buffer;
 
 alias array = evx.containers.array.array; // REVIEW how to exclude std.array.array
 alias join = evx.range.join;
 
-template gl_type_enum (T)
-	{/*...}*/
-		alias ConversionTable = Cons!(
-			byte,   GL_BYTE,
-			ubyte,  GL_UNSIGNED_BYTE,
-			short,  GL_SHORT,
-			ushort, GL_UNSIGNED_SHORT,
-			int,    GL_INT,
-			uint,   GL_UNSIGNED_INT,
-			float,  GL_FLOAT,
-			double, GL_DOUBLE,
-		);
-
-		enum index = IndexOf!(T, ConversionTable) + 1;
-
-		static if (index > 0)
-			enum gl_type_enum = ConversionTable[index];
-		else static assert (0, T.stringof ~ ` has no opengl equivalent`);
-	}
 template glsl_declaration (T, Args...)
 	{/*...}*/
 		enum glsl_declaration = glsl_typename!T ~ ` ` ~ ct_values_as_parameter_string!Args;
@@ -74,6 +58,30 @@ private {/*glsl functions}*/
 
 alias ShaderProgramId = GLuint;
 __gshared ShaderProgramId[string] shader_ids;
+
+template GPUType (T)
+	{/*...}*/
+		static if (is (T == GLBuffer!U, U...))
+			alias GPUType = T;
+		else static if (is (typeof(T.init.gpu_array) == U, U))
+			alias GPUType = U;
+		else alias GPUType = T;
+	}
+auto ref gpu_type (T)(auto ref T data)
+	{/*...}*/
+		static if (is (T == GPUType!T))
+			return data;
+		else return data.gpu_array;
+	}
+auto to_gpu (T...)(T args)
+	{/*...}*/
+		Map!(GPUType, T) gpu_data;
+
+		foreach (i, ref data; gpu_data)
+			data = args[i].gpu_type;
+
+		return gpu_data.tuple;
+	}
 
 struct Shader (Parameters...)
 	{/*...}*/
@@ -139,8 +147,111 @@ struct Shader (Parameters...)
 					return code.join ("\n").to!string;
 				}
 		}
+		static {/*runtime}*/
+			__gshared ShaderProgramId program_id = 0;
+			GLint[Variables.length] variable_locations;
+
+			void initialize ()
+				in {/*...}*/
+					assert (not (gl.IsProgram (program_id)));
+				}
+				out {/*...}*/
+					assert (gl.IsProgram (program_id) && program_id != 0);
+				}
+				body {/*...}*/
+					auto key = [vertex_code, fragment_code].join.filter!(not!isWhite).to!string;
+
+					if (auto id = key in shader_ids)
+						program_id = *id;
+					else {/*...}*/
+						build_program;
+
+						shader_ids[key] = program_id;
+					}
+				}
+			void build_program ()
+				{/*...}*/
+					program_id = gl.CreateProgram ();
+
+					auto vert = compile_shader (vertex_code, Stage.vertex);
+					auto frag = compile_shader (fragment_code, Stage.fragment);
+
+					gl.AttachShader (program_id, vert);
+					gl.AttachShader (program_id, frag);
+
+					gl.LinkProgram (program_id);
+					gl.verify!`Program` (program_id);
+					link_variables;
+
+					gl.DeleteShader (vert);
+					gl.DeleteShader (frag);
+					gl.DetachShader (program_id, vert);
+					gl.DetachShader (program_id, frag);
+				}
+			auto compile_shader (string code, Stage stage)
+				{/*...}*/
+					auto source = code.to_c[0];
+
+					auto shader = gl.CreateShader (stage);
+					gl.ShaderSource (shader, 1, &source, null);
+					gl.CompileShader (shader);
+
+					gl.verify!`Shader` (shader);
+
+					return shader;
+				}
+			void link_variables ()
+				{/*...}*/
+					foreach (i, Var; Variables)
+						static if (is (Var == Variable!(storage_class, T, name),
+							StorageClass storage_class, T, string name
+						))
+							{/*...}*/
+								static if (storage_class is StorageClass.uniform)
+									variable_locations[i] = gl.GetUniformLocation (program_id, name.to_c.expand);
+
+								else static if (storage_class is StorageClass.vertex_input)
+									variable_locations[i] = gl.GetAttribLocation (program_id, name.to_c.expand);
+
+								else static if (storage_class is StorageClass.vertex_fragment)
+									variable_locations[i] = -1;
+
+								else static assert (0);
+							}
+						else static assert (0);
+				}
+		}
 		public {/*runtime}*/
 			Args args;
+
+			void activate ()
+				{/*...}*/
+					if (program_id == 0)
+						initialize;
+
+					gl.UseProgram (program_id);
+
+					foreach (i, Var; Variables)
+						static if (is (Var == Variable!(storage, T, name),
+							StorageClass storage, T, string name
+						))
+							{/*...}*/
+								static if (storage is StorageClass.uniform)
+									{/*...}*/
+									}
+
+								else static if (storage is StorageClass.vertex_input)
+									{/*...}*/
+										
+									}
+							}
+						else static assert (0);
+				}
+
+			void bind_temp_array (uint i)()
+				{/*...}*/
+					auto temp = args[i].gpu_array;
+				}
 		}
 	}
 
@@ -270,7 +381,10 @@ template vertex_shader (Decl...)
 					 auto args = input;
 				}
 
-				return Shader!(Symbols, Function!(Stage.vertex, code), typeof(args))(args);
+				return Shader!(Symbols,
+					Function!(Stage.vertex, code),
+					typeof(args.to_gpu.expand)
+				)(args.to_gpu.expand);
 			}
 	}
 template fragment_shader (Decl...)
@@ -335,8 +449,8 @@ template fragment_shader (Decl...)
 					Map!(Uniform, Filter!(is_uniform, Count!DeclTypes)),
 					Map!(Smooth, Filter!(not!is_uniform, Count!DeclTypes)),
 					Function!(Stage.fragment, code),
-					typeof(args)
-				)(args);
+					typeof(args.to_gpu.expand)
+				)(args.to_gpu.expand);
 			}
 	}
 
@@ -346,9 +460,12 @@ alias aspect_correction = vertex_shader!(`aspect_ratio`, q{
 
 void main () // TODO the goal
 	{/*...}*/
-		vec[] positions;
-		double[] weights;
-		Color color;
+	import evx.graphics.display;
+	auto gfx = new Display; // BUG display launches gfx context which is required for shader stuff, but fialure to do so segs. need sensible errmsg:
+
+		auto positions = circle.map!(to!fvec);
+		auto weights = ℕ[0..circle.length].map!(to!float);
+		Color color = red;
 
 		auto weight_map = τ(positions, weights, color)
 			.vertex_shader!(`position`, `weight`, `base_color`, q{
@@ -362,9 +479,9 @@ void main () // TODO the goal
 		//);//.array;
 		//static assert (is (typeof(weight_map) == Array!(Color, 2)));
 
-		auto aspect_ratio = vec(1.0, 2.0);
+		auto aspect_ratio = fvec(1.0, 2.0);
 
-		vec[] tex_coords;
+		auto tex_coords = circle.scale (0.5).map!(to!fvec);
 		Texture texture;
 
 		import std.stdio;
@@ -379,6 +496,6 @@ void main () // TODO the goal
 				glFragColor = texture2D (tex, frag_tex_coords);
 			}
 		)(texture)
-		.aspect_correction (aspect_ratio);
+		.aspect_correction (aspect_ratio).initialize;
 		//.output_to (display);
 	}

@@ -14,7 +14,15 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 			}
 		~this ()
 			{/*...}*/
-				this = null;
+				//this = null; // BUG https://issues.dlang.org/show_bug.cgi?id=13886
+				{/*HACK}*/
+					ParameterTypeTuple!access zeroed;
+
+					foreach (ref size; zeroed)
+						size = zero!(typeof(size));
+
+					allocate (zeroed);
+				}
 			}
 
 		ref opAssign (S)(S space)
@@ -55,7 +63,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 
 				allocate (size);
 
-				this[] = space;
+				pull (space, this[].bounds);
 
 				return this;
 			}

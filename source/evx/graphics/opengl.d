@@ -2,8 +2,11 @@ module evx.graphics.opengl;
 
 private {/*imports}*/
 	import std.conv;
+	import std.typecons;
 
 	import evx.misc.utils;
+	import evx.type;
+	import evx.math;
 }
 public:
 	import derelict.glfw3.glfw3;
@@ -15,11 +18,9 @@ struct gl
 			{/*...}*/
 				debug scope (exit) check_GL_error!name (args);
 
-				static if (name == "GetUniformLocation")
-					mixin (q{
-						return gl} ~name~ q{ (to_c (args).expand); }
-					);
-				else mixin ("return gl"~name~" (args);");
+				mixin (q{
+					return gl} ~ name ~ q{ (args);
+				});
 			}
 		static check_GL_error (string name, Args...) (Args args)
 			{/*...}*/
@@ -84,6 +85,40 @@ struct gl
 						assert (null, `GL error: ` ~error_log);
 					}
 			}
+
+		template type (T)
+			{/*...}*/
+				alias ConversionTable = Cons!(
+					byte,   GL_BYTE,
+					ubyte,  GL_UNSIGNED_BYTE,
+					short,  GL_SHORT,
+					ushort, GL_UNSIGNED_SHORT,
+					int,    GL_INT,
+					uint,   GL_UNSIGNED_INT,
+					float,  GL_FLOAT,
+					double, GL_DOUBLE,
+				);
+
+				enum index = IndexOf!(T, ConversionTable) + 1;
+
+				static if (index > 0)
+					enum type = ConversionTable[index];
+				else static assert (0, T.stringof ~ ` has no opengl equivalent`);
+			}
+
+		static uniform (T)(T value, GLuint index = 0)
+			{/*...}*/
+				static if (is (T == Vector!(n,U), uint n, U))
+					{}
+				else {/*...}*/
+					enum n = 1;
+					alias U = T;
+				}
+
+				mixin(q{
+					gl.Uniform} ~ n.text ~ U.stringof[0] ~ q{ (index, value.tuple.expand);
+				});
+			}
 	}
 
 struct Texture
@@ -91,11 +126,15 @@ struct Texture
 		 GLuint id;
 		 alias id this;
 
-		 void bind ()
-			 in {/*...}*/
-			 	assert (id != 0);
-			 }
-			 body {/*...}*/
-			 	gl.BindTexture (GL_TEXTURE_2D, id);
-			 }
+		 void bind (GLuint index = 0)
+			in {/*...}*/
+				assert (id != 0);
+			}
+			body {/*...}*/
+				auto target = GL_TEXTURE0 + index;
+
+				gl.ActiveTexture (target);
+
+				gl.BindTexture (GL_TEXTURE_2D, id);
+			}
 	}

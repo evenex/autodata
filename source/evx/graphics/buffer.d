@@ -15,8 +15,6 @@ private {/*imports}*/
 
 struct GLBuffer (T, GLenum target, GLenum usage)
 	{/*...}*/
-		enum gl_buffer;
-
 		GLuint handle = 0;
 		GLsizei _length;
 
@@ -36,13 +34,13 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 
 		auto pull (R,U)(R range, U slice)
 			{/*...}*/
-				static if (is (R.gl_buffer))
+				static if (is (R == GLBuffer!V, V...))
 					{/*copy in vram}*/
-						alias V = ElementType!(R.Sub!0);
-						auto read_index = range.offset * V.sizeof;
+						alias W = ElementType!(R.Sub!0);
+						auto read_index = range.offset * W.sizeof;
 
-						gl.BindBuffer (GL_COPY_READ_BUFFER, range.main_buffer.handle);
-						gl.BindBuffer (GL_COPY_WRITE_BUFFER, handle);
+						gl.BindBuffer (GL_COPY_READ_BUFFER, range[].source.handle);
+						gl.BindBuffer (GL_COPY_WRITE_BUFFER, this.handle);
 
 						auto i = slice.left, j = slice.right;
 
@@ -91,10 +89,12 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 						return;
 					}
 
-				if (handle == 0)
+				if (not (gl.IsBuffer (handle)))
 					gl.GenBuffers (1, &handle);
 
-				bind;
+				gl.BindBuffer (target, handle);
+
+				assert (gl.IsBuffer (handle));
 
 				gl.BufferData (target, length * T.sizeof, null, usage);
 
@@ -108,15 +108,38 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 				handle = 0;
 			}
 
-		auto bind ()
+		auto bind (GLuint index = 0)
 			in {/*...}*/
-				assert (handle > 0, GLBuffer.stringof~ ` uninitialized`);
+				assert (gl.IsBuffer (handle), GLBuffer.stringof~ ` uninitialized`);
 			}
 			body {/*...}*/
 				gl.BindBuffer (target, handle);
+
+				gl.EnableVertexAttribArray (index);
+
+				static if (is (T == Vector!(n,U), int n, U))
+					{}
+				else {/*...}*/
+					enum n = 1;
+					alias U = T;
+				}
+
+				gl.VertexAttribPointer (
+					index, n, gl.type!U, 
+					GL_FALSE, 0, null
+				);
 			}
 
-		mixin BufferOps!(allocate, pull, access, length, RangeOps);
+		template GLRangeOps ()
+			{/*...}*/
+				auto offset ()
+					{/*...}*/
+						return this[].bounds.left;
+					}
+			}
+
+		mixin GLRangeOps;
+		mixin BufferOps!(allocate, pull, access, length, RangeOps, GLRangeOps);
 
 		private:
 		auto gl_slice (size_t i, size_t j)
@@ -139,7 +162,7 @@ auto gpu_array (R)(R range)
 
 		scope display = new Display;
 
-		auto vram = ℕ[0..999].gpu_array; // copies data from ram to gpu
+		auto vram = ℕ[0..999].map!(to!int).gpu_array; // copies data from ram to gpu
 		assert (vram[0..10] == [0,1,2,3,4,5,6,7,8,9]);
 
 		vram[6..9] = 6.repeat (3);
