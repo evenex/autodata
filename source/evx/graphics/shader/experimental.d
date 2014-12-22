@@ -180,7 +180,10 @@ struct Shader (Parameters...)
 					gl.AttachShader (program_id, frag);
 
 					gl.LinkProgram (program_id);
-					gl.verify!`Program` (program_id);
+
+					if (auto error = gl.verify!`Program` (program_id))
+						{assert (0, error);}
+
 					link_variables;
 
 					gl.DeleteShader (vert);
@@ -196,7 +199,23 @@ struct Shader (Parameters...)
 					gl.ShaderSource (shader, 1, &source, null);
 					gl.CompileShader (shader);
 
-					gl.verify!`Shader` (shader);
+					
+					if (auto error = gl.verify!`Shader` (shader))
+						{/*...}*/
+							auto line_number = error.dup
+								.after (`:`)
+								.after (`:`)
+								.after (`:`)
+								.before (`:`)
+								.strip.to!uint;
+
+							auto line = code;
+							while (--line_number)
+								line = line.after ("\n");
+							line = line.before ("\n").strip;
+
+							assert (0, [``, line, error].join ("\n").text);
+						}
 
 					return shader;
 				}
@@ -270,6 +289,7 @@ unittest {/*codegen}*/
 
 	static assert (
 		TestShader.fragment_code == [
+			`#version 420`,
 			`in dvec2 bar;`,
 			`uniform vec4 baz;`,
 			`uniform vec2 ar;`,
@@ -277,11 +297,13 @@ unittest {/*codegen}*/
 			`{`,
 			`	glFragColor = baz * vec2 (bar, 0, 1);`,
 			`}`
-		].join ("\n").text
+		].join ("\n").text,
+		TestShader.fragment_code
 	);
 
 	static assert (
 		TestShader.vertex_code == [
+			`#version 420`,
 			`in bool foo;`,
 			`out dvec2 bar;`,
 			`uniform vec4 baz;`,
@@ -291,7 +313,8 @@ unittest {/*codegen}*/
 			`	glPosition = foo;`,
 			`	glPosition *= ar;`,
 			`}`,
-		].join ("\n").text
+		].join ("\n").text,
+		TestShader.vertex_code
 	);
 }
 
@@ -491,7 +514,7 @@ void main () // TODO the goal
 		import std.stdio;
 		τ(positions, tex_coords).vertex_shader!(
 			`position`, `tex_coords`, q{
-				gl_Position = vec4 (position, 0, 1);
+				gl_Positionz = vec4 (position, 0, 1);
 				frag_tex_coords = tex_coords;
 			}
 		).fragment_shader!(

@@ -82,8 +82,9 @@ struct gl
 							} ~glGet_InfoLog~ q{(gl_object, log_length, null, error_log.ptr);
 						});
 
-						assert (null, `GL error: ` ~error_log);
+						return error_log.to!string;
 					}
+				else return null;
 			}
 
 		template type (T)

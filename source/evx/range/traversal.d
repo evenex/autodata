@@ -121,6 +121,11 @@ struct Join (R)
 
 			auto ref front ()
 				{/*...}*/
+					while (ranges[j].empty)
+						if (empty)
+							assert (0);
+						else popFront;
+
 					if (at_separator)
 						return separator[i];
 					else return ranges[j][i]; // BUG what if empty range?
@@ -129,14 +134,14 @@ struct Join (R)
 				{/*...}*/
 					if (at_separator)
 						{/*...}*/
-							if (++i == separator.length)
+							if (++i >= separator.length)
 								{/*...}*/
 									i = 0;
 
 									at_separator = false;
 								}
 						}
-					else if (++i == ranges[j].length)
+					else if (++i >= ranges[j].length)
 						{/*...}*/
 							do ++j; while (j < ranges.length && ranges[j].empty);
 
