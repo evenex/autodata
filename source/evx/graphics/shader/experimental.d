@@ -85,6 +85,17 @@ auto to_gpu (T...)(T args)
 
 struct Shader (Parameters...)
 	{/*...}*/
+		enum Mode
+			{/*...}*/
+				points = GL_POINTS,
+				l_strip = GL_LINE_STRIP,
+				l_loop = GL_LINE_LOOP,
+				lines = GL_LINES,
+				t_strip = GL_TRIANGLE_STRIP,
+				t_fan = GL_TRIANGLE_FAN,
+				tris = GL_TRIANGLES
+			}
+
 		alias Symbols = Filter!(or!(is_variable, is_function), Parameters);
 		alias Args = Filter!(not!(or!(is_variable, is_function)), Parameters);
 
@@ -242,6 +253,7 @@ struct Shader (Parameters...)
 		}
 		public {/*runtime}*/
 			Args args;
+			Mode mode;
 
 			enum is_uniform (T) = is (T == Variable!(StorageClass.uniform, U), U...);
 			enum is_vertex_input (T) = is (T == Variable!(StorageClass.vertex_input, U), U...);
@@ -261,19 +273,14 @@ struct Shader (Parameters...)
 							alias T = Filter!(or!(is_uniform, is_vertex_input), Variables)[i];
 
 							static if (is_texture!T)
-								args[i].bind (IndexOf!(T, Filter!(is_texture, Variables)));
+								arg.bind (IndexOf!(T, Filter!(is_texture, Variables)));
 
 							else static if (is_uniform!T)
-								gl.uniform (args[i], IndexOf!(T, Filter!(is_uniform, Variables)));
+								gl.uniform (arg, IndexOf!(T, Filter!(is_uniform, Variables)));
 
 							else static if (is_vertex_input!T)
-								args[i].bind (IndexOf!(T, Filter!(is_vertex_input, Variables)));
+								arg.bind (IndexOf!(T, Filter!(is_vertex_input, Variables)));
 						}
-				}
-
-			void bind_temp_array (uint i)()
-				{/*...}*/
-					auto temp = args[i].gpu_array;
 				}
 		}
 	}
@@ -484,6 +491,14 @@ template fragment_shader (Decl...)
 alias aspect_correction = vertex_shader!(`aspect_ratio`, q{
 	gl_Position.xy *= aspect_ratio;
 });
+
+// DRAW MODES
+auto triangle_fan (S)(S shader)
+	{/*...}*/
+		shader.mode = S.Mode.t_fan;
+
+		return shader;
+	}
 
 template RenderTarget (int permanent_id = -1)
 	{/*...}*/
