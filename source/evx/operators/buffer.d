@@ -1,8 +1,10 @@
 module evx.operators.buffer;
 
-/* generate RAII ctor/dtor and assignment operators from an allocate function, with TransferOps 
+/* generate RAII ctor/dtor and assignment operators from allocate and own functions, with TransferOps 
+	allocate should take a multidimensional measure and expand to meet that volume
+	own should assume ownership of a resource
 */
-template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtensions...)
+template BufferOps (alias allocate, alias own, alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
 		private {/*imports}*/
 			import evx.operators.transfer;
@@ -25,7 +27,15 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 				}
 			}
 
-		ref opAssign (S)(S space) // TODO attempt move and transfer... what priority?
+		ref opAssign (S)(auto ref S space)
+			if (is (typeof(own (space))))
+			{/*...}*/
+				own (space);
+
+				return this;
+			}
+		ref opAssign (S)(S space)
+			if (not (is (typeof(own (space)))))
 			in {/*...}*/
 				enum error_header = fullyQualifiedName!(typeof(this)) ~ `: `;
 
@@ -57,19 +67,14 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 
 				auto read_limits ()()
 					{/*...}*/
-						foreach (i; Count!(ParameterTypeTuple!access))
-							size[i] = space.limit!i.width;
+						foreach (i; Count!(ParameterTypeTuple!access)) size[i] = space.limit!i.width;
 					}
 				auto read_length ()()
 					{/*...}*/
 						size[0] = space.length;
 					}
-				auto move ()()
-					{/*...}*/
-						// TODO move??
-					}
 
-				Match!(read_limits, read_length, move);
+				Match!(read_limits, read_length);
 
 				allocate (size);
 
@@ -108,6 +113,12 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 					{/*...}*/
 						data.length = length;
 					}
+				void own ()(auto ref Basic that)
+					{/*...}*/
+						this.data = that.data;
+
+						that.data = null;
+					}
 
 				auto pull (int x, size_t i)
 					{/*...}*/
@@ -124,32 +135,46 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 						return data[i];
 					}
 
-				mixin BufferOps!(allocate, pull, access, length);
+				mixin BufferOps!(allocate, own, pull, access, length);
 			}
 
 		auto N = ℕ[500..525].map!(to!int);
 
+		// can initialize via assignment or constructor from any element-compatible range
 		Basic x = N;
 		auto y = Basic (N);
 
+		// y is equivalent to x
 		assert (x == y);
 
+		// y is equivalent to x
 		assert (x.length == 25);
 		assert (x[0] == 500);
 		assert (x[1] == 501);
 		assert (x[$-1] == 524);
 
+		// y is equivalent to x
 		assert (y.length == 25);
 		assert (y[0] == 500);
 		assert (y[1] == 501);
 		assert (y[$-1] == 524);
 
-		y = x[10..12];
+		// slice assignment copies data
+		y = x[10..12]; 
 		assert (y.length == 2);
 		assert (y[0] == 510);
 		assert (y[$-1] == 511);
 
+		// null assignment allocates 0, freeing data
 		y = null;
 		assert (y.length == 0);
 		assert (y[].limit!0 == [0,0]);
+		
+		// x is independent of y
+		assert (x.length == 25);
+
+		 // direct assignment (not slice) changes ownership
+		y = x;
+		assert (x.length == 0);
+		assert (y.length == 25);
 	}

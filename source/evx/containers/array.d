@@ -120,8 +120,16 @@ struct Array (T, uint dimensions = 1)
 				base.data = new T[only (lengths).product];
 				base.lengths = lengths;
 			}
+		void own ()(auto ref Array that)
+			{/*...}*/
+				this.base.data = that.base.data;
+				this.base.lengths = that.base.lengths;
 
-		mixin BufferOps!(allocate, pull, access, Map!(length, Iota!dimensions), RangeOps);
+				that.base.data = null;
+				that.base.lengths = Repeat!(dimensions, 0);
+			}
+
+		mixin BufferOps!(allocate, own, pull, access, Map!(length, Iota!dimensions), RangeOps);
 	}
 	unittest {/*...}*/
 		auto x = Array!int ();

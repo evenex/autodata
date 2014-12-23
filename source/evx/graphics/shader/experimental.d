@@ -67,6 +67,7 @@ template GPUType (T)
 		else static if (is (typeof(T.init.gpu_array) == U, U))
 			alias GPUType = U;
 		else alias GPUType = T;
+		//pragma(msg, T , ` -> `, GPUType, ` [] -> `, typeof(T.init[].gpu_array));
 	}
 auto ref gpu_type (T)(auto ref T data)
 	{/*...}*/
@@ -270,10 +271,11 @@ struct Shader (Parameters...)
 			enum is_vertex_input (T) = is (T == Variable!(StorageClass.vertex_input, U), U...);
 			enum is_texture (T) = is (T == Variable!(StorageClass.uniform, Type!(1, Texture), U), U...);
 
-			static assert (Args.length == Filter!(or!(is_uniform, is_vertex_input), Variables).length);
-
-			void activate ()
-				{/*...}*/
+			void activate ()()
+				in {/*...}*/
+					static assert (Args.length == Filter!(or!(is_uniform, is_vertex_input), Variables).length);
+				}
+				body {/*...}*/
 					mixin(exec_trace!(`activate`));
 					if (program_id == 0)
 						initialize;

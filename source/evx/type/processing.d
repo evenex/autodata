@@ -144,11 +144,14 @@ template Sort (alias compare, T...)
 	}
 	static assert (Sort!(λ!q{(T...) = T[0] < T[1]}, 5,4,2,7,4,3,1) == Cons!(1,2,3,4,4,5,7));
 
+/* given a set of zero-parameter templates, invoke the first which successfully compiles 
+*/
 template Match (patterns...)
 	{/*...}*/
 		import std.algorithm: find; // REVIEW how am i handling local vs global imports?
 		import std.array: replace; // REVIEW
-		alias Filtered = Filter!(has_identity, patterns);
+
+		alias Filtered = Filter!(λ!q{(alias pattern) = __traits(compiles, pattern!())}, patterns);
 
 		static if (Filtered.length == 0)
 			static assert (0, 
