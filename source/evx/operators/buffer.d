@@ -25,7 +25,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 				}
 			}
 
-		ref opAssign (S)(S space)
+		ref opAssign (S)(S space) // TODO attempt move and transfer... what priority?
 			in {/*...}*/
 				enum error_header = fullyQualifiedName!(typeof(this)) ~ `: `;
 
@@ -55,11 +55,21 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 			body {/*...}*/
 				ParameterTypeTuple!access size;
 
-				static if (is (typeof(space.limit!0)))
-					foreach (i; Count!(ParameterTypeTuple!access))
-						size[i] = space.limit!i.width;
+				auto read_limits ()()
+					{/*...}*/
+						foreach (i; Count!(ParameterTypeTuple!access))
+							size[i] = space.limit!i.width;
+					}
+				auto read_length ()()
+					{/*...}*/
+						size[0] = space.length;
+					}
+				auto move ()()
+					{/*...}*/
+						// TODO move??
+					}
 
-				else size[0] = space.length;
+				Match!(read_limits, read_length, move);
 
 				allocate (size);
 

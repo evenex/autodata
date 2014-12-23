@@ -288,7 +288,7 @@ struct Shader (Parameters...)
 								arg.bind (IndexOf!(T, Filter!(is_texture, Variables)));
 
 							else static if (is_vertex_input!T)
-								arg.bind (IndexOf!(T, Filter!(is_vertex_input, Variables)));
+								arg.bind (IndexOf!(T, Filter!(is_vertex_input, Variables))); // BUG this is binding arg, i need to bind arg gpu
 
 							else static if (is_uniform!T)
 								gl.uniform (arg, IndexOf!(T, Filter!(is_uniform, Variables)));
