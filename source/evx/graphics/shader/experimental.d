@@ -275,13 +275,13 @@ struct Shader (Parameters...)
 							alias T = Filter!(or!(is_uniform, is_vertex_input), Variables)[i];
 
 							static if (is_texture!T)
-								arg.bind (IndexOf!(T, Filter!(is_texture, Variables)));
+								arg.bind (variable_locations[IndexOf!(T, Variables)]);
 
 							else static if (is_vertex_input!T)
-								arg.bind (IndexOf!(T, Filter!(is_vertex_input, Variables)));
+								arg.bind (variable_locations[IndexOf!(T, Variables)]);
 
 							else static if (is_uniform!T)
-								gl.uniform (arg, IndexOf!(T, Filter!(is_uniform, Variables)));
+								gl.uniform (arg, variable_locations[IndexOf!(T, Variables)]);
 						}
 				}
 		}
