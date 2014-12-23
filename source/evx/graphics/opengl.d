@@ -124,8 +124,9 @@ struct gl
 				char[256] name;
 				GLint sizeof;
 				GLenum type;
+				GLint length;
 
-				gl.GetActiveUniform (program, index, name.length.to!int, null, &sizeof, &type, name.ptr);
+				gl.GetActiveUniform (program, index, name.length.to!int, &length, &sizeof, &type, name.ptr);
 
 				auto uniform_type (T)()
 					{/*...}*/
@@ -140,15 +141,19 @@ struct gl
 							Texture, `SAMPLER_2D`,
 						);
 
-						enum n = `_VEC` ~ T.length.text;
+						static if (is (T == Vector!(n,U), uint n, U))
+							enum components = `_VEC` ~ n.text;
+						else {/*...}*/
+							enum components = ``;
+							alias U = T;
+						}
 							
-						static if (Contains!(T, ConversionTable))
+						static if (Contains!(U, ConversionTable))
 							mixin(q{
-								return ConversionTable[IndexOf!(T, ConversionTable) + 1];
+								return GL_} ~ ConversionTable[IndexOf!(U, ConversionTable) + 1] ~ components ~ q{;
 							});
 						else return -1;
 					}
-
 				auto uniform_call (GLenum type)
 					{/*...}*/
 						return [
@@ -263,7 +268,8 @@ struct gl
 					}
 
 				assert (type == uniform_type!T,
-					`attempted to upload ` ~ T.stringof ~ ` to uniform ` ~ uniform_call (type) ~ ` ` ~ name
+					`attempted to upload ` ~ T.stringof ~ ` to uniform ` ~ uniform_call (type) ~ ` ` ~ name[0..length]
+					~ `, use ` ~ uniform_call (uniform_type!T) ~ ` instead.`
 				);
 			}
 			body {/*...}*/
@@ -279,5 +285,3 @@ struct gl
 				});
 			}
 	}
-
-
