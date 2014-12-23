@@ -18,6 +18,28 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 		GLuint handle = 0;
 		GLsizei _length;
 
+		auto bind (GLuint index = 0)
+			in {/*...}*/
+				assert (gl.IsBuffer (handle), GLBuffer.stringof~ ` uninitialized`);
+			}
+			body {/*...}*/
+				gl.BindBuffer (target, handle);
+
+				gl.EnableVertexAttribArray (index);
+
+				static if (is (T == Vector!(n,U), int n, U))
+					{}
+				else {/*...}*/
+					enum n = 1;
+					alias U = T;
+				}
+
+				gl.VertexAttribPointer (
+					index, n, gl.type!U, 
+					GL_FALSE, 0, null
+				);
+			}
+
 		size_t length () const
 			{/*...}*/
 				return _length;
@@ -100,34 +122,13 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 
 				_length = length.to!GLsizei;
 			}
+
 		void free ()
 			{/*...}*/
 				gl.DeleteBuffers (1, &handle);
 
 				_length = 0;
 				handle = 0;
-			}
-
-		auto bind (GLuint index = 0)
-			in {/*...}*/
-				assert (gl.IsBuffer (handle), GLBuffer.stringof~ ` uninitialized`);
-			}
-			body {/*...}*/
-				gl.BindBuffer (target, handle);
-
-				gl.EnableVertexAttribArray (index);
-
-				static if (is (T == Vector!(n,U), int n, U))
-					{}
-				else {/*...}*/
-					enum n = 1;
-					alias U = T;
-				}
-
-				gl.VertexAttribPointer (
-					index, n, gl.type!U, 
-					GL_FALSE, 0, null
-				);
 			}
 
 		template GLRangeOps ()
@@ -138,7 +139,6 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 					}
 			}
 
-		mixin GLRangeOps;
 		mixin BufferOps!(allocate, pull, access, length, RangeOps, GLRangeOps);
 
 		private:

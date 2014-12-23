@@ -125,6 +125,15 @@ public {/*debug}*/
 			catch (Exception) assert (0, `tid_string failed`);
 			else return `???`;
 		}
+
+	static string trace (string name)()
+		{/*...}*/
+			return q{
+				std.stdio.stderr.writeln (}`"` ~ name ~ `"`q{);
+				scope (failure) std.stdio.stderr.writeln (}`"` ~ name ~ q{ fail}`"`q{);
+				scope (success) std.stdio.stderr.writeln (}`"` ~ name ~ q{ ok}`"`q{);
+			};
+		}
 }
 public {/*UDA tags}*/
 	/* for non-const sections or members in a series of consts 

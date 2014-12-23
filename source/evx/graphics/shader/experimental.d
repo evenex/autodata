@@ -74,16 +74,7 @@ template GPUType (T)
 		else alias GPUType = T;
 	}
 
-static string trace (string name)() // REFACTOR
-	{/*...}*/
-		return q{
-			std.stdio.stderr.writeln (}`"` ~ name ~ `"`q{);
-			scope (failure) std.stdio.stderr.writeln (}`"` ~ name ~ q{ fail}`"`q{);
-			scope (success) std.stdio.stderr.writeln (}`"` ~ name ~ q{ ok}`"`q{);
-		};
-	}
-
-struct Shader (Parameters...) // REVIEW alternative strategy for buffer RAII -> instead of disable copy ctor, use is_copy flag
+struct Shader (Parameters...)
 	{/*...}*/
 		enum Mode
 			{/*...}*/
@@ -449,7 +440,7 @@ template fragment_shader (Decl...)
 			`fragment shader auto type deduction not implemented`
 		);
 
-		auto fragment_shader (Input...)(auto ref Input input) // REVIEW auto ref
+		auto fragment_shader (Input...)(auto ref Input input)
 			{/*...}*/
 				alias DeclTypes = Filter!(is_type, Decl[0..$-1]);
 				alias Identifiers = Filter!(is_string_param, Decl[0..$-1]);
@@ -596,7 +587,7 @@ void main () // TODO the goal
 		auto aspect_ratio = fvec(1.0, 2.0);
 
 		auto tex_coords = circle.scale (0.5).map!(to!fvec);
-		Texture texture;
+		auto texture = Texture (ℕ[0..256].by (ℕ[0..256]).map!((i,j) => red));
 
 		import std.stdio;
 		τ(positions, tex_coords).vertex_shader!(

@@ -26,7 +26,7 @@ struct Texture
 				gl.BindTexture (GL_TEXTURE_2D, id);
 			}
 
-		//mixin BufferOps!(allocate, pull, access, width, height, RangeOps);
+		mixin BufferOps!(allocate, pull, access, width, height, RangeOps);
 
 		Color access (size_t x, size_t y)
 			 {/*...}*/
@@ -37,6 +37,10 @@ struct Texture
 				return value;
 			 }
 		void allocate (size_t width, size_t height)
+			{/*...}*/
+				
+			}
+		void free ()
 			{/*...}*/
 				
 			}
