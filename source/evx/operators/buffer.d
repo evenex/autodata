@@ -1,10 +1,8 @@
 module evx.operators.buffer;
 
 /* generate RAII ctor/dtor and assignment operators from allocate and own functions, with TransferOps 
-	allocate should take a multidimensional measure and expand to meet that volume
-	own should assume ownership of a resource
 */
-template BufferOps (alias allocate, alias own, alias pull, alias access, LimitsAndExtensions...)
+template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
 		private {/*imports}*/
 			import evx.operators.transfer;
@@ -26,16 +24,20 @@ template BufferOps (alias allocate, alias own, alias pull, alias access, LimitsA
 					allocate (zeroed);
 				}
 			}
+		@disable this (this);
 
-		ref opAssign (S)(auto ref S space)
-			if (is (typeof(own (space))))
+		ref opAssign ()(auto ref typeof(this) space)
 			{/*...}*/
-				own (space);
+				if (&space != &this)
+					{/*...}*/
+						std.algorithm.swap (this, space);
+
+						space = null;
+					}
 
 				return this;
 			}
 		ref opAssign (S)(S space)
-			if (not (is (typeof(own (space)))))
 			in {/*...}*/
 				enum error_header = fullyQualifiedName!(typeof(this)) ~ `: `;
 
@@ -108,16 +110,14 @@ template BufferOps (alias allocate, alias own, alias pull, alias access, LimitsA
 			{/*...}*/
 				int[] data;
 				auto length () {return data.length;}
+				static bool destroyed;
 
 				void allocate (size_t length)
 					{/*...}*/
+						if (length == 0 && this.length != 0)
+							destroyed = true;
+							
 						data.length = length;
-					}
-				void own ()(auto ref Basic that)
-					{/*...}*/
-						this.data = that.data;
-
-						that.data = null;
 					}
 
 				auto pull (int x, size_t i)
@@ -135,7 +135,7 @@ template BufferOps (alias allocate, alias own, alias pull, alias access, LimitsA
 						return data[i];
 					}
 
-				mixin BufferOps!(allocate, own, pull, access, length);
+				mixin BufferOps!(allocate, pull, access, length);
 			}
 
 		auto N = ℕ[500..525].map!(to!int);
@@ -177,4 +177,73 @@ template BufferOps (alias allocate, alias own, alias pull, alias access, LimitsA
 		y = x;
 		assert (x.length == 0);
 		assert (y.length == 25);
+
+		// RAII
+		Basic.destroyed = false;
+		{/*...}*/
+			Basic z = N;
+		}
+		assert (Basic.destroyed);
+
+		Basic.destroyed = false;
+
+		// changing ownership prevents premature destruction of data
+		Basic z;
+		{/*...}*/
+			Basic w = N;
+
+			z = w;
+			
+			assert (z.length);
+		}
+		assert (not (Basic.destroyed));
+		assert (z.length);
+
+		// to avoid double free, copying a buffer is not allowed
+		auto f ()(Basic a)
+			{/*...}*/
+				Basic x = a;
+
+				return x;
+			}
+		assert (not (is (typeof(f (z)))));
+
+		auto g ()(ref Basic a)
+			{/*...}*/
+				Basic x = a;
+
+				return x;
+			}
+		assert (not (is (typeof(g (z)))));
+
+		auto h ()(Basic a)
+			{return a;}
+		assert (not (is (typeof(h (z)))));
+
+		auto φ ()(ref Basic a)
+			{return a;}
+		assert (not (is (typeof(h (z)))));
+
+		// passing by reference is allowed
+		ref γ ()(ref Basic a)
+			{return a;}
+		z = γ (z);
+		assert (not (Basic.destroyed));
+		assert (z.length);
+
+		// transferring ownership is allowed
+		auto χ ()(ref Basic a)
+			{/*...}*/
+				Basic x;
+
+				x = a;
+
+				return x;
+			}
+		z = χ (z);
+		assert (not (Basic.destroyed));
+		assert (z.length);
+
+		z = null;
+		assert (Basic.destroyed);
 	}

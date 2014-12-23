@@ -64,25 +64,12 @@ template GPUType (T)
 	{/*...}*/
 		static if (is (T == GLBuffer!U, U...))
 			alias GPUType = T;
+		else static if (is (typeof(T.init[].source) == GLBuffer!U, U...))
+			alias GPUType = T;
 		else static if (is (typeof(T.init.gpu_array) == U, U))
 			alias GPUType = U;
+
 		else alias GPUType = T;
-		//pragma(msg, T , ` -> `, GPUType, ` [] -> `, typeof(T.init[].gpu_array));
-	}
-auto ref gpu_type (T)(auto ref T data)
-	{/*...}*/
-		static if (is (T == GPUType!T))
-			return data;
-		else return data.gpu_array;
-	}
-auto to_gpu (T...)(T args)
-	{/*...}*/
-		Map!(GPUType, T) gpu_data;
-
-		foreach (i, ref data; gpu_data)
-			data = args[i].gpu_type;
-
-		return gpu_data.tuple;
 	}
 
 static string exec_trace (string name)() // REFACTOR
@@ -94,7 +81,7 @@ static string exec_trace (string name)() // REFACTOR
 		};
 	}
 
-struct Shader (Parameters...)
+struct Shader (Parameters...) // REVIEW alternative strategy for buffer RAII -> instead of disable copy ctor, use is_copy flag
 	{/*...}*/
 		enum Mode
 			{/*...}*/
@@ -267,6 +254,14 @@ struct Shader (Parameters...)
 			Args args;
 			Mode mode;
 
+			this (T...)(auto ref T input)
+				{/*...}*/
+					foreach (i,_; Args)
+						static if (is (Args[i] == T[i]))
+							std.algorithm.swap (args[i], input[i]);
+						else args[i] = input[i].gpu_array;
+				}
+
 			enum is_uniform (T) = is (T == Variable!(StorageClass.uniform, U), U...);
 			enum is_vertex_input (T) = is (T == Variable!(StorageClass.vertex_input, U), U...);
 			enum is_texture (T) = is (T == Variable!(StorageClass.uniform, Type!(1, Texture), U), U...);
@@ -290,7 +285,7 @@ struct Shader (Parameters...)
 								arg.bind (IndexOf!(T, Filter!(is_texture, Variables)));
 
 							else static if (is_vertex_input!T)
-								arg.bind (IndexOf!(T, Filter!(is_vertex_input, Variables))); // BUG this is binding arg, i need to bind arg gpu
+								arg.bind (IndexOf!(T, Filter!(is_vertex_input, Variables)));
 
 							else static if (is_uniform!T)
 								gl.uniform (arg, IndexOf!(T, Filter!(is_uniform, Variables)));
@@ -298,6 +293,7 @@ struct Shader (Parameters...)
 				}
 		}
 	}
+
 
 unittest {/*codegen}*/
 	alias TestShader = Shader!(
@@ -358,11 +354,11 @@ template decl_syntax_check (Decl...)
 
 private alias Front (T...) = T[0]; // HACK https://issues.dlang.org/show_bug.cgi?id=13883
 
-template vertex_shader (Decl...)
+template vertex_shader (Decl...) // TODO enforce that data containers don't belong as args... only shit thats copy constructible... slices and PODs
 	{/*...}*/
 		mixin decl_syntax_check!(Decl[0..$-1]);
 
-		auto vertex_shader (Input...)(Input input)
+		auto vertex_shader (Input...)(auto ref Input input)
 			{/*...}*/
 				alias DeclTypes = Filter!(is_type, Decl[0..$-1]);
 				alias Identifiers = Filter!(is_string_param, Decl[0..$-1]);
@@ -405,11 +401,11 @@ template vertex_shader (Decl...)
 						static if (is (Input[1]))
 							{/*...}*/
 								alias Symbols = Cons!(Input[0].Symbols, Parse!(Input[1..$]));
-								auto args = tuple (input[0].args, input[1..$]).expand;
+								alias Args = Cons!(Input[0].Args, Input[1..$]);
 							}
 						else {/*...}*/
 							alias Symbols = Front!Input.Symbols; // HACK https://issues.dlang.org/show_bug.cgi?id=13883
-							auto args = input[0].args;
+							alias Args = Front!Input.Args;
 						}
 					}
 				else static if (is (Input[0] == Tuple!Data, Data...))
@@ -417,29 +413,30 @@ template vertex_shader (Decl...)
 						static if (is (Input[1]))
 							{/*...}*/
 								alias Symbols = Parse!(Data, Input[1..$]);
-								auto args = tuple (input[0].expand, input[1..$]).expand;
+								alias Args = Cons!(Input[0].Types, Input[1..$]);
 							}
 						else {/*...}*/
 							alias Symbols = Parse!Data;
-							auto args = input[0].expand;
+							alias Args = Front!Input.Types; // HACK https://issues.dlang.org/show_bug.cgi?id=13883
 						}
 					}
 				else {/*...}*/
 					 alias Symbols = Parse!Input;
-					 auto args = input;
+					 alias Args = Input;
 				}
 
-				mixin(exec_trace!(`vertex shader`));
-				std.stdio.stderr.writeln (Interleave!(typeof(args), typeof(args.to_gpu.expand)).stringof);
-				foreach (arg; args)
-					{/*...}*/
-						static if (is (typeof(arg.length)))
-						std.stdio.stderr.writeln (arg.length, ` ` , typeof(arg).stringof);
-					}
-				return Shader!(Symbols,
+				alias S = Shader!(Symbols, 
 					Function!(Stage.vertex, code),
-					typeof(args.to_gpu.expand)
-				)(args.to_gpu.expand);
+					Map!(GPUType, Args),
+				);
+				
+				auto shader 	()() {return S (input[0].args);}
+				auto shader_etc ()() {return S (input[0].args, input[1..$]);}
+				auto tuple 		()() {return S (input[0].expand);}
+				auto tuple_etc 	()() {return S (input[0].expand, input[1..$]);}
+				auto forward_all ()() {return S (input);}
+
+				return Match!(shader_etc, shader, tuple_etc, tuple, forward_all);
 			}
 	}
 template fragment_shader (Decl...)
@@ -450,7 +447,7 @@ template fragment_shader (Decl...)
 			`fragment shader auto type deduction not implemented`
 		);
 
-		auto fragment_shader (Input...)(Input input)
+		auto fragment_shader (Input...)(auto ref Input input) // REVIEW auto ref
 			{/*...}*/
 				alias DeclTypes = Filter!(is_type, Decl[0..$-1]);
 				alias Identifiers = Filter!(is_string_param, Decl[0..$-1]);
@@ -485,11 +482,11 @@ template fragment_shader (Decl...)
 						static if (is (Input[1]))
 							{/*...}*/
 								alias Symbols = Front!Input.Symbols; // HACK https://issues.dlang.org/show_bug.cgi?id=13883
-								auto args = tuple (input[0].args, input[1..$]).expand;
+								alias Args = Cons!(Front!Input.Args, Input[1..$]);
 							}
 						else {/*...}*/
 							alias Symbols = Front!Input.Symbols; // HACK https://issues.dlang.org/show_bug.cgi?id=13883
-							auto args = input[0].args;
+							alias Args = Front!Input.Args;
 						}
 					}
 				else static if (is (Input[0] == Tuple!Data, Data...))
@@ -500,12 +497,18 @@ template fragment_shader (Decl...)
 					static assert (0, `fragment shader must be attached to vertex shader`);
 				}
 
-				return Shader!(Symbols, 
+				alias S = Shader!(Symbols, 
 					Map!(Uniform, Filter!(is_uniform, Count!DeclTypes)),
 					Map!(Smooth, Filter!(not!is_uniform, Count!DeclTypes)),
 					Function!(Stage.fragment, code),
-					typeof(args.to_gpu.expand)
-				)(args.to_gpu.expand);
+					Map!(GPUType, Args)
+				);
+				
+				auto forward_all_args 	 ()() {return S (input[0].args, input[1..$]);}
+				auto forward_shader_args ()() {return S (input[0].args);}
+				auto forward_input_args  ()() {return S (input);}
+
+				return Match!(forward_all_args, forward_shader_args, forward_input_args);
 			}
 	}
 
@@ -514,11 +517,21 @@ alias aspect_correction = vertex_shader!(`aspect_ratio`, q{
 });
 
 // DRAW MODES
-auto triangle_fan (S)(S shader)
+ref triangle_fan (S)(ref S shader)
 	{/*...}*/
 		shader.mode = S.Mode.t_fan;
 
 		return shader;
+	}
+auto triangle_fan (S)(S shader)
+	{/*...}*/
+		S swapped;
+
+		std.algorithm.swap (swapped, shader);
+
+		swapped.triangle_fan;
+
+		return swapped;
 	}
 
 template RenderTarget (int permanent_id = -1)

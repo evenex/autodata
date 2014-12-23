@@ -40,7 +40,7 @@ struct Array (T, uint dimensions = 1)
 		Base base;
 		alias base this;
 
-		auto array (){return this;} // REVIEW HACK, to get around some kind of builtin .array thing that conflicts with UFCS array
+		auto ref array (){return this;} // REVIEW HACK, to get around some kind of builtin .array thing that conflicts with UFCS array
 
 		auto length (size_t d = 0)()
 			{/*...}*/
@@ -120,16 +120,8 @@ struct Array (T, uint dimensions = 1)
 				base.data = new T[only (lengths).product];
 				base.lengths = lengths;
 			}
-		void own ()(auto ref Array that)
-			{/*...}*/
-				this.base.data = that.base.data;
-				this.base.lengths = that.base.lengths;
 
-				that.base.data = null;
-				that.base.lengths = Repeat!(dimensions, 0);
-			}
-
-		mixin BufferOps!(allocate, own, pull, access, Map!(length, Iota!dimensions), RangeOps);
+		mixin BufferOps!(allocate, pull, access, Map!(length, Iota!dimensions), RangeOps);
 	}
 	unittest {/*...}*/
 		auto x = Array!int ();

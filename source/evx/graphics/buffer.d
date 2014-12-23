@@ -100,15 +100,6 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 
 				_length = length.to!GLsizei;
 			}
-		void own ()(auto ref GLBuffer that)
-			{/*...}*/
-				this.free;
-
-				this.handle = that.handle;
-				that.handle = 0;
-
-				that._length = 0;
-			}
 		void free ()
 			{/*...}*/
 				gl.DeleteBuffers (1, &handle);
@@ -148,7 +139,7 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 			}
 
 		mixin GLRangeOps;
-		mixin BufferOps!(allocate, own, pull, access, length, RangeOps, GLRangeOps);
+		mixin BufferOps!(allocate, pull, access, length, RangeOps, GLRangeOps);
 
 		private:
 		auto gl_slice (size_t i, size_t j)
