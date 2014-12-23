@@ -74,7 +74,7 @@ template GPUType (T)
 		else alias GPUType = T;
 	}
 
-static string exec_trace (string name)() // REFACTOR
+static string trace (string name)() // REFACTOR
 	{/*...}*/
 		return q{
 			std.stdio.stderr.writeln (}`"` ~ name ~ `"`q{);
@@ -170,7 +170,7 @@ struct Shader (Parameters...) // REVIEW alternative strategy for buffer RAII -> 
 					assert (gl.IsProgram (program_id) && program_id != 0);
 				}
 				body {/*...}*/
-					mixin(exec_trace!(`init`));
+					mixin(trace!(`init`));
 					auto key = [vertex_code, fragment_code].join.filter!(not!isWhite).to!string;
 
 					if (auto id = key in shader_ids)
@@ -260,7 +260,7 @@ struct Shader (Parameters...) // REVIEW alternative strategy for buffer RAII -> 
 				{/*...}*/
 					foreach (i,_; Args)
 						static if (is (Args[i] == T[i]))
-							move (input[i], args[i]); // input[i].move (args[i]); // BUG RAII failure
+							move (input[i], args[i]); // input[i].move (args[i]); // BUG UFCS failure
 						else args[i] = input[i].gpu_array;
 				}
 
@@ -273,7 +273,7 @@ struct Shader (Parameters...) // REVIEW alternative strategy for buffer RAII -> 
 					static assert (Args.length == Filter!(or!(is_uniform, is_vertex_input), Variables).length);
 				}
 				body {/*...}*/
-					mixin(exec_trace!(`activate`));
+					mixin(trace!(`activate`));
 					if (program_id == 0)
 						initialize;
 
@@ -510,7 +510,6 @@ template fragment_shader (Decl...)
 				auto forward_shader_args ()() {return S (input[0].args);}
 				auto forward_input_args  ()() {return S (input);}
 
-				forward_all_args;
 				return Match!(forward_all_args, forward_shader_args, forward_input_args);
 			}
 	}

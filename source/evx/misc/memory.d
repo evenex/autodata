@@ -4,9 +4,11 @@ private {/*imports}*/
 	import std.algorithm;
 }
 
+/* convenience structure for representing structs as byte arrays 
+*/
 struct Bytes (T)
 	{/*...}*/
-		ubyte[T.sizeof] data;
+		byte[T.sizeof] data;
 		alias data this;
 
 		auto ref bytes ()
@@ -14,12 +16,12 @@ struct Bytes (T)
 				return data[];
 			}
 
-		auto opEquals (ubyte[] that)
+		auto opEquals (byte[] that)
 			{/*...}*/
 				return bytes[].equal (that[]);
 			}
 
-		this (ubyte[] that)
+		this (byte[] that)
 			{/*...}*/
 				bytes[] = that;
 			}
@@ -38,7 +40,7 @@ auto bytes (T)(T x)
 
 /* byte-by-byte copy, circumventing all ctors/dtors/assign 
 */
-void blit (ubyte[] src, ubyte[] tgt)
+void blit (byte[] src, byte[] tgt)
 	{/*...}*/
 		src.copy (tgt);
 	}

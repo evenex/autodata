@@ -85,7 +85,7 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 			{/*...}*/
 				if (length == 0)
 					{/*...}*/
-						//free; BUG premature free
+						free;
 						return;
 					}
 
