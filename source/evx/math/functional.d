@@ -445,7 +445,7 @@ public {/*by}*/
 			alias base this;
 			this (Spaces spaces) {base.spaces = spaces;}
 
-			auto limit (size_t d)()
+			auto limit (size_t d)() const
 				{/*...}*/
 					return base.limit!d;
 				}
