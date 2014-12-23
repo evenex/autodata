@@ -150,7 +150,8 @@ struct Shader (Parameters...)
 				}
 		}
 		static {/*runtime}*/
-			__gshared ShaderProgramId program_id = 0;
+			__gshared:
+			ShaderProgramId program_id = 0;
 			GLint[Variables.length] variable_locations;
 
 			void initialize ()
@@ -201,7 +202,6 @@ struct Shader (Parameters...)
 					auto shader = gl.CreateShader (stage);
 					gl.ShaderSource (shader, 1, &source, null);
 					gl.CompileShader (shader);
-
 					
 					if (auto error = gl.verify!`Shader` (shader))
 						{/*...}*/
@@ -604,3 +604,6 @@ void main () // TODO the goal
 		.aspect_correction (aspect_ratio)
 		.triangle_fan.output_to (display);
 	}
+/*
+GL_INVALID_OPERATION is generated if the size of the uniform variable declared in the shader does not match the size indicated by the glUniform command.
+*/

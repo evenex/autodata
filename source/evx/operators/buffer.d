@@ -66,7 +66,8 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 
 				auto read_limits ()()
 					{/*...}*/
-						foreach (i; Count!(ParameterTypeTuple!access)) size[i] = space.limit!i.width;
+						foreach (i; Count!(ParameterTypeTuple!access))
+							size[i] = space.limit!i.width;
 					}
 				auto read_length ()()
 					{/*...}*/
