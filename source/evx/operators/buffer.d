@@ -6,7 +6,6 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 	{/*...}*/
 		private {/*imports}*/
 			import evx.operators.transfer;
-			import evx.misc.memory;
 		}
 
 		this (S)(auto ref S space)
@@ -29,8 +28,10 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 
 		ref opAssign ()(auto ref typeof(this) space)
 			{/*...}*/
+				import evx.misc.memory;
+
 				if (&space != &this)
-					move (space, this); // space.move (this); // BUG RAII failure
+					space.move (this);
 
 				return this;
 			}

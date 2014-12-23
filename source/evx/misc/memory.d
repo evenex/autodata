@@ -55,9 +55,9 @@ void swap (T)(ref T a, ref T b)
 	{/*...}*/
 		Bytes!T t;
 
-		bytes (a).blit (bytes (t)); // BUG UFCS Error: cannot resolve type for a.bytes(T)(T x)
-		bytes (b).blit (bytes (a));
-		bytes (t).blit (bytes (b));
+		a.bytes.blit (t.bytes);
+		b.bytes.blit (a.bytes);
+		t.bytes.blit (b.bytes);
 	}
 
 /* swap in memory, circumcenting ctors/assign, invoking dtor 

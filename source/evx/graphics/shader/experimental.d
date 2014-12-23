@@ -162,7 +162,6 @@ struct Shader (Parameters...)
 					assert (gl.IsProgram (program_id) && program_id != 0);
 				}
 				body {/*...}*/
-					mixin(trace!(`init`));
 					auto key = [vertex_code, fragment_code].join.filter!(not!isWhite).to!string;
 
 					if (auto id = key in shader_ids)
@@ -251,7 +250,7 @@ struct Shader (Parameters...)
 				{/*...}*/
 					foreach (i,_; Args)
 						static if (is (Args[i] == T[i]))
-							move (input[i], args[i]); // input[i].move (args[i]); // BUG UFCS failure
+							input[i].move (args[i]);
 						else args[i] = input[i].gpu_array;
 				}
 
@@ -264,7 +263,6 @@ struct Shader (Parameters...)
 					static assert (Args.length == Filter!(or!(is_uniform, is_vertex_input), Variables).length);
 				}
 				body {/*...}*/
-					mixin(trace!(`activate`));
 					if (program_id == 0)
 						initialize;
 
@@ -274,14 +272,13 @@ struct Shader (Parameters...)
 						{/*...}*/
 							alias T = Filter!(or!(is_uniform, is_vertex_input), Variables)[i];
 
-							static if (is_texture!T)
-								arg.bind (variable_locations[IndexOf!(T, Variables)]);
-
-							else static if (is_vertex_input!T)
-								arg.bind (variable_locations[IndexOf!(T, Variables)]);
+							static if (is_texture!T || is_vertex_input!T)
+								arg.bind (variable_locations[IndexOf!(T, Variables)]); // TODO ensure that what you're binding to has compatible properties
 
 							else static if (is_uniform!T)
 								gl.uniform (arg, variable_locations[IndexOf!(T, Variables)]);
+
+							else static assert (0);
 						}
 				}
 		}
@@ -604,6 +601,3 @@ void main () // TODO the goal
 		.aspect_correction (aspect_ratio)
 		.triangle_fan.output_to (display);
 	}
-/*
-GL_INVALID_OPERATION is generated if the size of the uniform variable declared in the shader does not match the size indicated by the glUniform command.
-*/
