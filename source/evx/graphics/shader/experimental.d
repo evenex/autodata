@@ -11,9 +11,11 @@ import evx.range;
 
 import evx.math;
 import evx.type;
+import evx.containers;
+
 import evx.misc.tuple;
 import evx.misc.utils;
-import evx.containers;
+import evx.misc.memory;
 
 import std.typecons;
 import std.conv;
@@ -258,7 +260,7 @@ struct Shader (Parameters...) // REVIEW alternative strategy for buffer RAII -> 
 				{/*...}*/
 					foreach (i,_; Args)
 						static if (is (Args[i] == T[i]))
-							std.algorithm.swap (args[i], input[i]);
+							move (input[i], args[i]); // input[i].move (args[i]); // BUG RAII failure
 						else args[i] = input[i].gpu_array;
 				}
 
@@ -508,6 +510,7 @@ template fragment_shader (Decl...)
 				auto forward_shader_args ()() {return S (input[0].args);}
 				auto forward_input_args  ()() {return S (input);}
 
+				forward_all_args;
 				return Match!(forward_all_args, forward_shader_args, forward_input_args);
 			}
 	}
@@ -525,13 +528,13 @@ ref triangle_fan (S)(ref S shader)
 	}
 auto triangle_fan (S)(S shader)
 	{/*...}*/
-		S swapped;
+		S next;
 
-		std.algorithm.swap (swapped, shader);
+		swap (shader, next);
 
-		swapped.triangle_fan;
+		next.triangle_fan;
 
-		return swapped;
+		return next;
 	}
 
 template RenderTarget (int permanent_id = -1)

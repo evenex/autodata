@@ -1,14 +1,15 @@
 module evx.operators.buffer;
 
-/* generate RAII ctor/dtor and assignment operators from allocate and own functions, with TransferOps 
+/* generate RAII ctor/dtor and move/copy/free assignment operators from allocate and own functions, with TransferOps 
 */
 template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
 		private {/*imports}*/
 			import evx.operators.transfer;
+			import evx.misc.memory;
 		}
 
-		this (S)(S space)
+		this (S)(auto ref S space)
 			{/*...}*/
 				this = space;
 			}
@@ -29,11 +30,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 		ref opAssign ()(auto ref typeof(this) space)
 			{/*...}*/
 				if (&space != &this)
-					{/*...}*/
-						std.algorithm.swap (this, space);
-
-						space = null;
-					}
+					move (space, this); // space.move (this); // BUG RAII failure
 
 				return this;
 			}

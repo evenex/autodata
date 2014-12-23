@@ -5,7 +5,7 @@ private {/*imports}*/
 	import std.math;
 	
 	import evx.range;
-	import evx.misc.binary;
+	import evx.misc.memory;
 
 	import evx.math.geometry.vectors;
 	import evx.math.geometry.traits;
@@ -176,7 +176,7 @@ auto rotate (T, U = ElementType!(ElementType!T), V = ElementType!T)(T geometry, 
 	{/*...}*/
 		import evx.math;//		import evx.math.geometry.vectors;
 
-		auto c = pivot.binary_equal (V.init)? geometry.mean: pivot;
+		auto c = pivot.bytes == V.init.bytes? geometry.mean: pivot;
 
 		return geometry.map!(v => (v-c).rotate (θ) + c);
 	}
