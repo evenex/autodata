@@ -116,7 +116,10 @@ template SliceOps (alias access, LimitsAndExtensions...)
 									bounds[i][] = limit;
 								else bounds[i] = [zero!(typeof(limit.identity)), limit];
 
-							return Subspace (&this, bounds);
+							auto local_access ()() {return Subspace (&this, bounds);}
+							auto static_access ()() {return Subspace (null, bounds);}
+
+							return Match!(local_access, static_access);
 						}
 					else return indexing.opIndex (selected);
 				}
