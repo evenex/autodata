@@ -1,4 +1,5 @@
 module evx.math.floatingpoint;
+// TODO MAJOR GOAL: REPLACE COMPLICATED STATIC-IF LADDERS WITH MATCH PATTERN, REPLACE INDUCTIVE TYPE ANALYSIS WITH PATTERN MATCHING
 
 private {/*imports}*/
 	import std.typetuple;
@@ -7,6 +8,8 @@ private {/*imports}*/
 	import std.conv;
 
 	import evx.range;
+	import evx.operators;
+	import evx.math.infinity;
 	import evx.math.algebra;
 	import evx.math.ordinal;
 	import evx.math.logic;
@@ -61,4 +64,21 @@ bool all_approx_equal (Args...)(Args args)
 			if (not (args[i].approx (args[i+1])))
 				return false;
 		return true;
+	}
+
+/* the set of real¹ numbers 
+	1. actually the doubles
+*/
+struct ℝ
+	{/*...}*/
+		static:
+
+		enum double[2] boundary = [-infinity, infinity];
+
+		double access (double x)
+			{/*...}*/
+				return x;
+			}
+
+		mixin SliceOps!(access, boundary);
 	}
