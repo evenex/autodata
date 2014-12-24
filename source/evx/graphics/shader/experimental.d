@@ -266,7 +266,7 @@ struct Shader (Parameters...)
 					if (program_id == 0)
 						initialize;
 
-					gl.UseProgram (program_id);
+					gl.program = program_id;
 
 					foreach (i, ref arg; args)
 						{/*...}*/
@@ -524,24 +524,92 @@ auto triangle_fan (S)(S shader)
 		return next;
 	}
 
-template RenderTarget (int permanent_id = -1)
+template CanvasOps (alias preprocess, alias bind, alias framebuffer_id = identity)
 	{/*...}*/
-		static if (permanent_id < 0)
-			GLuint renderbuffer_id;
-		else enum GLuint renderbuffer_id = permanent_id.to!GLuint;
+		static assert (is (typeof(preprocess(Shader!().init)) == Shader!Sym, Sym...),
+			`preprocess: Shader → Shader`
+		);
+		// TODO really the bufferops belong over here, renderops opindex is just for convenience
 
-		void draw (T)(T order)
-			if (is(T.render_order))
+		static if (is (typeof(framebuffer_id.identity) == GLuint))
+			alias fbo_id = framebuffer_id;
+		else GLuint fbo_id;
+
+		auto attach (S)(S shader)
+			if (is (S == Shader!Sym, Sym...))
 			{/*...}*/
-				order.renderer.process (order);
+				void bind_framebuffer () // REVIEW redundant calls can be avoided with global gl state
+					{/*...}*/
+						if (not (gl.IsFramebuffer (fbo_id)))
+							{/*...}*/
+								void gen_fbo ()() {gl.GenFramebuffers (1, &fbo_id);}
+								void set_fbo ()() {fbo_id = framebuffer_id;}
+
+								Match!(gen_fbo, set_fbo);
+							}
+
+						gl.BindFramebuffer (GL_FRAMEBUFFER, fbo_id);
+					}
+
+				bind;
+
+				bind_framebuffer;
+
+				preprocess (shader).activate;
 			}
-		void draw (R...)(R orders)
-			if (All!(has_trait!`render_order`, staticMap!(ElementType, R)))
-			{/*...}*/
-				foreach (queue; orders)
-					foreach (subqueue; queue.group!((a,b) => a.renderer == b.renderer))
-						queue.front.renderer.process (queue);
-			}
+	}
+
+template RenderOps (alias draw, shaders...)
+	{/*...}*/
+		static {/*analysis}*/
+			enum is_shader (alias s) = is (typeof(s) == Shader!Sym, Sym...);
+			enum rendering_stage_exists (uint i) = is (typeof(draw!i ()) == void);
+
+			static assert (All!(is_shader, shaders),
+				`shader symbols must resolve to Shaders`
+			);
+			static assert (All!(rendering_stage_exists, Count!shaders),
+				`each given shader symbol must be accompanied by a function `
+				`draw: (uint n)() → void, where n is the index of the associated rendering stage`
+			);
+		}
+		public {/*rendering}*/
+			auto ref render_to (T)(auto ref T canvas)
+				{/*...}*/
+					// gl.framebuffer = canvas (is framebuffer, has  framebuffer_id);
+					// gl.program = program; (is shader, has program_id)
+					// gl.texture!i = tex (is texture, has texture_id)
+
+					void render (uint i = 0)()
+						{/*...}*/
+							canvas.attach (shaders[i]);
+							draw!i;
+
+							static if (i+1 < shaders.length)
+								render!(i+1);
+						}
+
+					render;
+
+					return canvas;
+				}
+		}
+		public {/*convenience}*/
+			Texture default_canvas;
+
+			alias default_canvas this;
+
+			auto opIndex (Args...)(Args args)
+				{/*...}*/
+					if (default_canvas.volume == 0)
+						{/*...}*/
+							default_canvas.allocate (256, 256); // REVIEW where to get default resolution?
+							render_to (default_canvas);
+						}
+
+					return default_canvas.opIndex (args);
+				}
+		}
 	}
 
 auto output_to (S,R,T...)(S shader, R render_target, T args)
@@ -553,7 +621,7 @@ auto output_to (S,R,T...)(S shader, R render_target, T args)
 		// gl.DrawBuffers TODO set frag outputs to draw to these buffers, if you use this then you'll need to modify the shader program, to add some fragment_output variables
 
 		shader.activate;
-		gl.BindFramebuffer (GL_FRAMEBUFFER, render_target.framebuffer_id);
+		gl.framebuffer = render_target.framebuffer_id;
 
 		template length (uint i)
 			{/*...}*/
@@ -592,16 +660,18 @@ void main () // TODO the goal
 		//);//.array; TODO
 		//static assert (is (typeof(weight_map) == Array!(Color, 2))); TODO
 
-		auto aspect_ratio = fvec(1.0, 2.0);
+		auto tex_coords = circle.scale (0.5).map!(to!fvec).flip!`vertical`;
 
-		auto tex_coords = circle.scale (0.5).map!(to!fvec);
-		auto texture = Texture (ℕ[0..256].by (ℕ[0..256]).map!((i,j) => blue));
+		auto texture = ℕ[0..512].by (ℕ[0..512])
+			.map!((i,j) => vec(10*i/512.0, j/512.0))
+			.map!(v => τ(sin (v.x), v.y))
+			.map!((x,y) => Color (abs (x), abs (y), 0, 1) * 1)
+			.Texture;
 
-		import std.stdio;
 		τ(positions, tex_coords).vertex_shader!(
 			`position`, `tex_coords`, q{
 				gl_Position = vec4 (position, 0, 1);
-				frag_tex_coords = tex_coords;
+				frag_tex_coords = (tex_coords + vec2 (1,1))/2;
 			}
 		).fragment_shader!(
 			fvec, `frag_tex_coords`,
@@ -609,7 +679,7 @@ void main () // TODO the goal
 				gl_FragColor = texture2D (tex, frag_tex_coords);
 			}
 		)(texture)
-		.aspect_correction (aspect_ratio)
+		.aspect_correction (display.aspect_ratio)
 		.triangle_fan.output_to (display);
 
 		display.render;

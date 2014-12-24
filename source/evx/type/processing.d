@@ -160,13 +160,10 @@ template Match (patterns...)
 				~ ` could be matched`
 			);
 
-		else alias Match = Invoke!(Filtered[0]);
+		else alias Match = Instantiate!(Filtered[0]);
 	}
 
-template Invoke (alias symbol)
-	{/*...}*/
-		alias Invoke = symbol!();
-	}
+alias Instantiate (alias symbol) = symbol!();
 
 ////REFACTOR /////////////////////////////
 

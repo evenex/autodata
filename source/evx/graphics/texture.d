@@ -1,5 +1,6 @@
 module evx.graphics.texture;
 
+import evx.graphics.shader;// TEMP
 private {/*imports}*/
 	import std.conv;
 
@@ -14,9 +15,9 @@ private {/*imports}*/
 	alias array = evx.containers.array.array; // REVIEW namespace clash
 }
 
-ubyte[4] texel (Color color)
+ubyte[4] texel (Vector!(4, float) color)
 	{/*...}*/
-		return (color.vector * 255).each!(to!ubyte);
+		return (color.each!clamp (interval (0,1)).vector * 255).each!(to!ubyte);
 	}
 
 struct Texture
@@ -35,10 +36,20 @@ struct Texture
 
 				gl.ActiveTexture (target);
 
-				gl.BindTexture (GL_TEXTURE_2D, id);
+				gl.texture_2D = id; // TODO autodiscover
 			}
 
 		mixin BufferOps!(allocate, pull, access, width, height, RangeOps);
+		mixin CanvasOps!(preprocess, bind_output);
+
+		void bind_output ()
+			{/*...}*/
+				gl.FramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, id, 0); // REVIEW if any of these redundant calls starts impacting performance, there is generally some piece of state that can inform the decision to elide. this state can be maintained in the global gl structure.
+			}
+		auto ref preprocess (S)(auto ref S shader)
+			{/*...}*/
+				return shader;
+			}
 
 		Color access (size_t x, size_t y)
 			 {/*...}*/
@@ -66,7 +77,7 @@ struct Texture
 					{/*...}*/
 						gl.GenTextures (1, &id);
 
-						gl.BindTexture (GL_TEXTURE_2D, id);
+						gl.texture_2D = id;
 
 						gl.TexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 						gl.TexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -74,12 +85,12 @@ struct Texture
 						gl.TexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 						gl.TexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
-						gl.TexParameterfv (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, Color (0,0,0,0)[].ptr);
+						gl.TexParameterfv (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, magenta[].ptr);
 
 						assert (gl.IsTexture (id));
 					}
 
-				gl.BindTexture (GL_TEXTURE_2D, id);
+				gl.texture_2D = id;
 
 				gl.TexImage2D (GL_TEXTURE_2D, 
 					base_mip_level,

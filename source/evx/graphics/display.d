@@ -99,7 +99,7 @@ class Display
 
 		auto aspect_ratio ()
 			{/*...}*/
-				return 1/normalized_dimensions;
+				return (1/normalized_dimensions).to!fvec;
 			}
 
 		void attach (S)(S shader) // TODO move this functionality to renderer

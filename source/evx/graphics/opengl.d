@@ -3,10 +3,12 @@ module evx.graphics.opengl;
 private {/*imports}*/
 	import std.conv;
 	import std.typecons;
+	import std.string;
 
 	import evx.misc.utils;
 	import evx.type;
 	import evx.math;
+	import evx.range;
 }
 public:
 	import derelict.glfw3.glfw3;
@@ -14,7 +16,7 @@ public:
 
 struct gl
 	{/*...}*/
-		static:
+		static __gshared:
 
 		template type (T)
 			{/*...}*/
@@ -36,10 +38,107 @@ struct gl
 				else static assert (0, T.stringof ~ ` has no opengl equivalent`);
 			}
 
-		auto ref opDispatch (string name, Args...) (Args args)
+		private struct State
 			{/*...}*/
-				debug scope (exit) check_GL_error!name (args);
+				__gshared GLuint program, 
+					// BIND BUFFER TARGETS
+					array_buffer,
+					element_array_buffer,
+					copy_read_buffer,
+					copy_write_buffer,
+					pixel_pack_buffer,
+					pixel_unpack_buffer,
+					query_buffer,
+					shader_storage_buffer,
+					transform_feedback_buffer,
+					uniform_buffer,
+					// BIND FRAMEBUFFER TARGETS
+					draw_framebuffer,
+					read_framebuffer,
+					// BIND TEXTURE TARGET
+					texture_1D,
+					texture_2D,
+					texture_3D,
+					texture_1D_array,
+					texture_2D_array,
+					texture_rectangle,
+					texture_cube_map,
+					texture_cube_map_array,
+					texture_buffer,
+					texture_2D_multisample,
+					texture_2D_multisample_array;
 
+					static framebuffer (GLuint buffer)
+						{return draw_framebuffer = read_framebuffer = buffer;}
+					static framebuffer ()
+						{return draw_framebuffer == read_framebuffer? draw_framebuffer : 0;}
+			}
+
+		auto opDispatch (string name, Args...) (Args args)
+			{/*...}*/
+				auto use_program ()()
+					{/*...}*/
+						static assert (name == `program`);
+
+						static if (is (Args[0]))
+							{/*...}*/
+								auto id = args[0];
+
+								if (State.program == id)
+									return;
+
+								call!`UseProgram` (id);
+
+								State.program = id;
+							}
+						else return State.program;
+					}
+				auto bind ()()
+					{/*...}*/
+						static assert (name != `program`);
+
+						enum target = mixin(q{GL_} ~ name.toUpper);
+						alias id = args;
+
+						static if (is (Args[0]))
+							{/*...}*/
+								if (mixin(q{State.} ~ name) == id[0])
+									return;
+
+								static if (name.contains (`texture`))
+									call!`BindTexture` (target, id);
+
+								else static if (name.contains (`framebuffer`))
+									call!`BindFramebuffer` (target, id);
+
+								else call!`BindBuffer` (target, id);
+
+								mixin(q{
+									State.} ~ name ~ q{ = id[0];
+								});
+							}
+						else mixin(q{
+							return State.} ~ name ~ q{;
+						});
+					}
+				auto forward ()()
+					{/*...}*/
+						static assert (
+							name.not!contains (`UseProgram`)
+							&& name.not!contains (`Bind`)
+						);
+
+						return call!name (args);
+					}
+
+				return Match!(use_program, bind, forward);
+			}
+
+		private auto call (string name, Args...)(Args args)
+			out {/*...}*/
+				check_GL_error!name (args);
+			}
+			body {/*...}*/
 				mixin (q{
 					return gl} ~ name ~ q{ (args);
 				});

@@ -3,6 +3,7 @@ module evx.graphics.buffer;
 private {/*imports}*/
 	import std.conv;
 	import std.array;
+	import std.string;
 
 	import evx.operators;
 	import evx.misc.tuple;
@@ -13,8 +14,11 @@ private {/*imports}*/
 	import evx.range;
 }
 
-struct GLBuffer (T, GLenum target, GLenum usage)
+struct GLBuffer (T, alias target, GLenum usage)
+	if (is (typeof(target) == GLenum))
 	{/*...}*/
+		enum bind_call = q{gl.} ~ __traits(identifier, target)[3..$].toLower;
+
 		GLuint handle = 0;
 		GLsizei _length;
 
@@ -23,8 +27,6 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 				assert (gl.IsBuffer (handle), GLBuffer.stringof~ ` uninitialized`);
 			}
 			body {/*...}*/
-				gl.BindBuffer (target, handle);
-
 				gl.EnableVertexAttribArray (index);
 
 				static if (is (T == Vector!(n,U), int n, U))
@@ -38,6 +40,8 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 					index, n, gl.type!U, 
 					GL_FALSE, 0, null
 				);
+
+				mixin(bind_call) = handle;
 			}
 
 		size_t length () const
@@ -67,8 +71,8 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 					{/*copy in vram}*/
 						auto read_index = range.offset * T.sizeof;
 
-						gl.BindBuffer (GL_COPY_READ_BUFFER, range[].source.handle);
-						gl.BindBuffer (GL_COPY_WRITE_BUFFER, this.handle);
+						gl.copy_read_buffer = range[].source.handle; // TODO look for the GLuint buffer id auto on assignment
+						gl.copy_write_buffer = this.handle;
 
 						gl.CopyBufferSubData (GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, read_index, gl_slice (i,j).expand);
 					}
@@ -98,7 +102,7 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 					auto i = slice.left, j = slice.right;
 				else auto i = slice, j = slice + 1;
 
-				gl.BindBuffer (GL_COPY_READ_BUFFER, handle);
+				gl.copy_read_buffer = handle;
 
 				gl.GetBufferSubData (GL_COPY_READ_BUFFER, gl_slice (i,j).expand, target);
 			}
@@ -114,7 +118,7 @@ struct GLBuffer (T, GLenum target, GLenum usage)
 				if (not (gl.IsBuffer (handle)))
 					gl.GenBuffers (1, &handle);
 
-				gl.BindBuffer (target, handle);
+				mixin(bind_call) = handle;
 
 				assert (gl.IsBuffer (handle));
 
