@@ -266,7 +266,7 @@ struct Shader (Parameters...)
 					if (program_id == 0)
 						initialize;
 
-					gl.program = program_id;
+					gl.program = this;
 
 					foreach (i, ref arg; args)
 						{/*...}*/
@@ -524,37 +524,39 @@ auto triangle_fan (S)(S shader)
 		return next;
 	}
 
-template CanvasOps (alias preprocess, alias bind, alias framebuffer_id = identity)
+template CanvasOps (alias preprocess, alias setup, alias managed_id = identity)
 	{/*...}*/
 		static assert (is (typeof(preprocess(Shader!().init)) == Shader!Sym, Sym...),
 			`preprocess: Shader → Shader`
 		);
 		// TODO really the bufferops belong over here, renderops opindex is just for convenience
 
-		static if (is (typeof(framebuffer_id.identity) == GLuint))
-			alias fbo_id = framebuffer_id;
+		GLuint framebuffer_id ()
+			{/*...}*/
+				setup;
+
+				auto managed ()()
+					{/*...}*/
+						return managed_id;
+					}
+				auto unmanaged ()()
+					{/*...}*/
+						if (fbo_id == 0)
+							gl.GenFramebuffers (1, &fbo_id);
+
+						return fbo_id;
+					}
+
+				return Match!(managed, unmanaged);
+			}
+
+		static if (is (typeof(managed_id.identity)))
+			alias fbo_id = managed_id;
 		else GLuint fbo_id;
 
 		auto attach (S)(S shader)
 			if (is (S == Shader!Sym, Sym...))
 			{/*...}*/
-				void bind_framebuffer () // REVIEW redundant calls can be avoided with global gl state
-					{/*...}*/
-						if (not (gl.IsFramebuffer (fbo_id)))
-							{/*...}*/
-								void gen_fbo ()() {gl.GenFramebuffers (1, &fbo_id);}
-								void set_fbo ()() {fbo_id = framebuffer_id;}
-
-								Match!(gen_fbo, set_fbo);
-							}
-
-						gl.BindFramebuffer (GL_FRAMEBUFFER, fbo_id);
-					}
-
-				bind;
-
-				bind_framebuffer;
-
 				preprocess (shader).activate;
 			}
 	}
@@ -576,10 +578,6 @@ template RenderOps (alias draw, shaders...)
 		public {/*rendering}*/
 			auto ref render_to (T)(auto ref T canvas)
 				{/*...}*/
-					// gl.framebuffer = canvas (is framebuffer, has  framebuffer_id);
-					// gl.program = program; (is shader, has program_id)
-					// gl.texture!i = tex (is texture, has texture_id)
-
 					void render (uint i = 0)()
 						{/*...}*/
 							canvas.attach (shaders[i]);
@@ -588,6 +586,8 @@ template RenderOps (alias draw, shaders...)
 							static if (i+1 < shaders.length)
 								render!(i+1);
 						}
+
+					gl.framebuffer = canvas;
 
 					render;
 
@@ -639,14 +639,14 @@ auto output_to (S,R,T...)(S shader, R render_target, T args)
 
 void main () // TODO the goal
 	{/*...}*/
-	import evx.graphics.display;
-	auto display = new Display; // BUG display launches gfx context which is required for shader stuff, but fialure to do so segs. need sensible errmsg:
+		import evx.graphics.display;
+		auto display = new Display; // BUG display launches gfx context which is required for shader stuff, but failure to do so segs. need sensible errmsg
 
-		auto positions = circle.map!(to!fvec);
+		auto vertices = circle.map!(to!fvec);
 		auto weights = ℕ[0..circle.length].map!(to!float);
 		Color color = red;
 
-		auto weight_map = τ(positions, weights, color)
+		auto weight_map = τ(vertices, weights, color)
 			.vertex_shader!(`position`, `weight`, `base_color`, q{
 				gl_Position = vec4 (position, 0, 1);
 				frag_color = vec4 (base_color.rgb, weight);
@@ -660,15 +660,16 @@ void main () // TODO the goal
 		//);//.array; TODO
 		//static assert (is (typeof(weight_map) == Array!(Color, 2))); TODO
 
-		auto tex_coords = circle.scale (0.5).map!(to!fvec).flip!`vertical`;
+		auto tex_coords = vertices.scale (0.5f).flip!`vertical`;
 
-		auto texture = ℕ[0..512].by (ℕ[0..512])
-			.map!((i,j) => vec(10*i/512.0, j/512.0))
+		auto texture = ℝ[0..1].by (ℝ[0..1]) // TEMP
+			.map!((i,j) => vec(10*i, j))
 			.map!(v => τ(sin (v.x), v.y))
 			.map!((x,y) => Color (abs (x), abs (y), 0, 1) * 1)
+			.grid (1.0/256)
 			.Texture;
 
-		τ(positions, tex_coords).vertex_shader!(
+		τ(vertices, tex_coords).vertex_shader!(
 			`position`, `tex_coords`, q{
 				gl_Position = vec4 (position, 0, 1);
 				frag_tex_coords = (tex_coords + vec2 (1,1))/2;
@@ -685,5 +686,5 @@ void main () // TODO the goal
 		display.render;
 
 		import core.thread;
-		Thread.sleep (1.seconds);
+		Thread.sleep (4.seconds);
 	}

@@ -170,6 +170,10 @@ struct Array (T, uint dimensions = 1)
 
 auto array (S)(S space)
 	{/*...}*/
+		static assert (dimensionality!S > 0,
+			S.stringof ~ ` has 0 dimensions`
+		);
+
 		return Array!(Element!S, dimensionality!S)(space);
 	}
 	unittest {/*...}*/

@@ -17,14 +17,14 @@ private {/*imports}*/
 struct GLBuffer (T, alias target, GLenum usage)
 	if (is (typeof(target) == GLenum))
 	{/*...}*/
-		enum bind_call = q{gl.} ~ __traits(identifier, target)[3..$].toLower;
+		private enum bind_call = q{gl.} ~ __traits(identifier, target)[3..$].toLower;
 
-		GLuint handle = 0;
-		GLsizei _length;
+		GLuint buffer_id = 0;
+		size_t length;
 
 		auto bind (GLuint index = 0)
 			in {/*...}*/
-				assert (gl.IsBuffer (handle), GLBuffer.stringof~ ` uninitialized`);
+				assert (gl.IsBuffer (buffer_id), GLBuffer.stringof~ ` uninitialized`);
 			}
 			body {/*...}*/
 				gl.EnableVertexAttribArray (index);
@@ -41,12 +41,7 @@ struct GLBuffer (T, alias target, GLenum usage)
 					GL_FALSE, 0, null
 				);
 
-				mixin(bind_call) = handle;
-			}
-
-		size_t length () const
-			{/*...}*/
-				return _length;
+				mixin(bind_call) = buffer_id;
 			}
 
 		auto access (size_t i)
@@ -71,8 +66,8 @@ struct GLBuffer (T, alias target, GLenum usage)
 					{/*copy in vram}*/
 						auto read_index = range.offset * T.sizeof;
 
-						gl.copy_read_buffer = range[].source.handle; // TODO look for the GLuint buffer id auto on assignment
-						gl.copy_write_buffer = this.handle;
+						gl.copy_read_buffer = range[].source;
+						gl.copy_write_buffer = this;
 
 						gl.CopyBufferSubData (GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, read_index, gl_slice (i,j).expand);
 					}
@@ -102,7 +97,7 @@ struct GLBuffer (T, alias target, GLenum usage)
 					auto i = slice.left, j = slice.right;
 				else auto i = slice, j = slice + 1;
 
-				gl.copy_read_buffer = handle;
+				gl.copy_read_buffer = this;
 
 				gl.GetBufferSubData (GL_COPY_READ_BUFFER, gl_slice (i,j).expand, target);
 			}
@@ -115,24 +110,24 @@ struct GLBuffer (T, alias target, GLenum usage)
 						return;
 					}
 
-				if (not (gl.IsBuffer (handle)))
-					gl.GenBuffers (1, &handle);
+				if (not (gl.IsBuffer (buffer_id)))
+					gl.GenBuffers (1, &buffer_id);
 
-				mixin(bind_call) = handle;
+				mixin(bind_call) = buffer_id;
 
-				assert (gl.IsBuffer (handle));
+				assert (gl.IsBuffer (buffer_id));
 
 				gl.BufferData (target, length * T.sizeof, null, usage);
 
-				_length = length.to!GLsizei;
+				this.length = length.to!GLsizei;
 			}
 
 		void free ()
 			{/*...}*/
-				gl.DeleteBuffers (1, &handle);
+				gl.DeleteBuffers (1, &buffer_id);
 
-				_length = 0;
-				handle = 0;
+				this.length = 0;
+				buffer_id = 0;
 			}
 
 		template GLRangeOps ()

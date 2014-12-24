@@ -16,7 +16,7 @@ public:
 
 struct gl
 	{/*...}*/
-		static __gshared:
+		static:
 
 		template type (T)
 			{/*...}*/
@@ -38,43 +38,7 @@ struct gl
 				else static assert (0, T.stringof ~ ` has no opengl equivalent`);
 			}
 
-		private struct State
-			{/*...}*/
-				__gshared GLuint program, 
-					// BIND BUFFER TARGETS
-					array_buffer,
-					element_array_buffer,
-					copy_read_buffer,
-					copy_write_buffer,
-					pixel_pack_buffer,
-					pixel_unpack_buffer,
-					query_buffer,
-					shader_storage_buffer,
-					transform_feedback_buffer,
-					uniform_buffer,
-					// BIND FRAMEBUFFER TARGETS
-					draw_framebuffer,
-					read_framebuffer,
-					// BIND TEXTURE TARGET
-					texture_1D,
-					texture_2D,
-					texture_3D,
-					texture_1D_array,
-					texture_2D_array,
-					texture_rectangle,
-					texture_cube_map,
-					texture_cube_map_array,
-					texture_buffer,
-					texture_2D_multisample,
-					texture_2D_multisample_array;
-
-					static framebuffer (GLuint buffer)
-						{return draw_framebuffer = read_framebuffer = buffer;}
-					static framebuffer ()
-						{return draw_framebuffer == read_framebuffer? draw_framebuffer : 0;}
-			}
-
-		auto opDispatch (string name, Args...) (Args args)
+		auto opDispatch (string name, Args...)(auto ref Args args)
 			{/*...}*/
 				auto use_program ()()
 					{/*...}*/
@@ -82,27 +46,44 @@ struct gl
 
 						static if (is (Args[0]))
 							{/*...}*/
-								auto id = args[0];
+								auto has_id ()() {return args[0].program_id;}
+								auto is_id ()() {return args[0];}
 
-								if (State.program == id)
+								GLuint id = Match!(has_id, is_id);
+
+								if (state.program == id)
 									return;
 
 								call!`UseProgram` (id);
 
-								State.program = id;
+								state.program = id;
 							}
-						else return State.program;
+						else return state.program;
 					}
 				auto bind ()()
 					{/*...}*/
 						static assert (name != `program`);
 
 						enum target = mixin(q{GL_} ~ name.toUpper);
-						alias id = args;
 
 						static if (is (Args[0]))
 							{/*...}*/
-								if (mixin(q{State.} ~ name) == id[0])
+								auto has_id ()()
+									{/*...}*/
+										static if (name.contains (`texture`))
+											return args[0].texture_id;
+										else static if (name.contains (`framebuffer`))
+											return args[0].framebuffer_id;
+										else return args[0].buffer_id;
+									}
+								auto is_id ()()
+									{/*...}*/
+										return args[0];
+									}
+
+								GLuint id = Match!(has_id, is_id);
+
+								if (mixin(q{state.} ~ name) == id)
 									return;
 
 								static if (name.contains (`texture`))
@@ -114,11 +95,11 @@ struct gl
 								else call!`BindBuffer` (target, id);
 
 								mixin(q{
-									State.} ~ name ~ q{ = id[0];
+									state.} ~ name ~ q{ = id;
 								});
 							}
 						else mixin(q{
-							return State.} ~ name ~ q{;
+							return state.} ~ name ~ q{;
 						});
 					}
 				auto forward ()()
@@ -132,81 +113,6 @@ struct gl
 					}
 
 				return Match!(use_program, bind, forward);
-			}
-
-		private auto call (string name, Args...)(Args args)
-			out {/*...}*/
-				check_GL_error!name (args);
-			}
-			body {/*...}*/
-				mixin (q{
-					return gl} ~ name ~ q{ (args);
-				});
-			}
-
-		void check_GL_error (string name, Args...) (Args args)
-			{/*...}*/
-				GLenum error;
-
-				while ((error = glGetError ()) != GL_NO_ERROR)
-					{/*...}*/
-						string error_msg;
-
-						final switch (error)
-							{/*...}*/
-								case GL_INVALID_ENUM:
-									error_msg = "GL_INVALID_ENUM";
-									break;
-								case GL_INVALID_VALUE:
-									error_msg = "GL_INVALID_VALUE";
-									break;
-								case GL_INVALID_OPERATION:
-									error_msg = "GL_INVALID_OPERATION";
-									break;
-								case GL_INVALID_FRAMEBUFFER_OPERATION:
-									error_msg = "GL_INVALID_FRAMEBUFFER_OPERATION";
-									break;
-								case GL_OUT_OF_MEMORY:
-									error_msg = "GL_OUT_OF_MEMORY";
-									break;
-							}
-
-						assert (0, `OpenGL error ` ~error.text~ `: ` ~error_msg~ "\n"
-							`    calling gl` ~function_call_to_string!name (args)
-						);
-					}
-			}
-
-		auto verify (string object_type)(GLuint gl_object)
-			{/*...}*/
-				GLint status;
-
-				const string glGet_iv = q{glGet} ~object_type~ q{iv};
-				const string glGet_InfoLog = q{glGet} ~object_type~ q{InfoLog};
-				const string glStatus = object_type == `Shader`? `COMPILE`:`LINK`;
-
-				mixin(q{
-					} ~glGet_iv~ q{ (gl_object, GL_} ~glStatus~ q{_STATUS, &status);
-				});
-
-				if (status == GL_FALSE) 
-					{/*error}*/
-						GLchar[] error_log; 
-						GLsizei log_length;
-
-						mixin(q{
-							} ~glGet_iv~ q{(gl_object, GL_INFO_LOG_LENGTH, &log_length);
-						});
-
-						error_log.length = log_length;
-
-						mixin (q{
-							} ~glGet_InfoLog~ q{(gl_object, log_length, null, error_log.ptr);
-						});
-
-						return error_log.to!string;
-					}
-				else return null;
 			}
 
 		void uniform (T)(T value, GLuint index = 0)
@@ -383,4 +289,117 @@ struct gl
 					gl.Uniform} ~ n.text ~ U.stringof[0] ~ q{ (index, value.tuple.expand);
 				});
 			}
+
+		auto verify (string object_type)(GLuint gl_object)
+			{/*...}*/
+				GLint status;
+
+				const string glGet_iv = q{glGet} ~object_type~ q{iv};
+				const string glGet_InfoLog = q{glGet} ~object_type~ q{InfoLog};
+				const string glStatus = object_type == `Shader`? `COMPILE`:`LINK`;
+
+				mixin(q{
+					} ~glGet_iv~ q{ (gl_object, GL_} ~glStatus~ q{_STATUS, &status);
+				});
+
+				if (status == GL_FALSE) 
+					{/*error}*/
+						GLchar[] error_log; 
+						GLsizei log_length;
+
+						mixin(q{
+							} ~glGet_iv~ q{(gl_object, GL_INFO_LOG_LENGTH, &log_length);
+						});
+
+						error_log.length = log_length;
+
+						mixin (q{
+							} ~glGet_InfoLog~ q{(gl_object, log_length, null, error_log.ptr);
+						});
+
+						return error_log.to!string;
+					}
+				else return null;
+			}
+
+		private {/*...}*/
+			struct state
+				{/*...}*/
+					__gshared GLuint program, 
+						// BIND BUFFER TARGETS
+						array_buffer,
+						element_array_buffer,
+						copy_read_buffer,
+						copy_write_buffer,
+						pixel_pack_buffer,
+						pixel_unpack_buffer,
+						query_buffer,
+						shader_storage_buffer,
+						transform_feedback_buffer,
+						uniform_buffer,
+						// BIND FRAMEBUFFER TARGETS
+						draw_framebuffer,
+						read_framebuffer,
+						// BIND TEXTURE TARGET
+						texture_1D,
+						texture_2D,
+						texture_3D,
+						texture_1D_array,
+						texture_2D_array,
+						texture_rectangle,
+						texture_cube_map,
+						texture_cube_map_array,
+						texture_buffer,
+						texture_2D_multisample,
+						texture_2D_multisample_array;
+
+						static framebuffer (GLuint buffer)
+							{return draw_framebuffer = read_framebuffer = buffer;}
+						static framebuffer ()
+							{return draw_framebuffer == read_framebuffer? draw_framebuffer : 0;}
+				}
+
+			auto call (string name, Args...)(Args args)
+				out {/*...}*/
+					error_check!name (args);
+				}
+				body {/*...}*/
+					mixin (q{
+						return gl} ~ name ~ q{ (args);
+					});
+				}
+
+			void error_check (string name, Args...) (Args args)
+				{/*...}*/
+					GLenum error;
+
+					while ((error = glGetError ()) != GL_NO_ERROR)
+						{/*...}*/
+							string error_msg;
+
+							final switch (error)
+								{/*...}*/
+									case GL_INVALID_ENUM:
+										error_msg = "GL_INVALID_ENUM";
+										break;
+									case GL_INVALID_VALUE:
+										error_msg = "GL_INVALID_VALUE";
+										break;
+									case GL_INVALID_OPERATION:
+										error_msg = "GL_INVALID_OPERATION";
+										break;
+									case GL_INVALID_FRAMEBUFFER_OPERATION:
+										error_msg = "GL_INVALID_FRAMEBUFFER_OPERATION";
+										break;
+									case GL_OUT_OF_MEMORY:
+										error_msg = "GL_OUT_OF_MEMORY";
+										break;
+								}
+
+							assert (0, `OpenGL error ` ~error.text~ `: ` ~error_msg~ "\n"
+								`    calling gl` ~function_call_to_string!name (args)
+							);
+						}
+				}
+		}
 	}

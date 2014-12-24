@@ -33,6 +33,7 @@ enum Contains (T...) = IndexOf!(T[0], T[1..$]) > -1;
 
 alias Repeat (size_t n, T...) = Cons!(T, Repeat!(n-1, T));
 alias Repeat (size_t n : 1, T...) = Cons!T;
+alias Repeat (size_t n : 0, T...) = Cons!();
 
 template Reduce (alias f, T...)
 	if (T.length > 1)
