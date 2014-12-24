@@ -414,7 +414,12 @@ public {/*by}*/
 						}
 
 					auto access (Map!(Coords, Spaces) point) // TODO flatten tuples
-						{/*...}*/
+						in {/*...}*/
+							static assert (typeof(point).length == Spaces.length,
+								`could not deduce coordinate type for ` ~ Spaces.stringof
+							);
+						}
+						body {/*...}*/
 							template projection (size_t i)
 								{/*...}*/
 									auto π_i ()() {return spaces[i][point[0..Offsets[i]]];}
@@ -459,8 +464,8 @@ public {/*by}*/
 
 	auto by (S,R)(S left, R right)
 		{/*...}*/
-			static if (is (typeof(S.spaces)))
-				return Product!(typeof(S.spaces), R)(left.spaces, right);
+			static if (is (S == Product!T, T...))
+				return Product!(T,R)(left.spaces, right);
 
 			else return Product!(S,R)(left, right);
 		}
