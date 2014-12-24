@@ -4,11 +4,14 @@ private {/*imports}*/
 	import std.conv;
 
 	import evx.operators;
+	import evx.containers;
 
 	import evx.graphics.opengl;
 	import evx.graphics.color;
 
 	import evx.math;
+
+	alias array = evx.containers.array.array; // REVIEW namespace clash
 }
 
 ubyte[4] texel (Color color)
@@ -41,7 +44,7 @@ struct Texture
 			 {/*...}*/
 			 	Color value;
 
-				push (&value, x, y);
+			//	push (&value, x, y); TODO
 
 				return value;
 			 }
@@ -78,9 +81,6 @@ struct Texture
 
 				gl.BindTexture (GL_TEXTURE_2D, id);
 
-				enum base_mip_level = 0;
-				enum format = GL_RGBA;
-
 				gl.TexImage2D (GL_TEXTURE_2D, 
 					base_mip_level,
 					format,
@@ -100,30 +100,32 @@ struct Texture
 				height = 0;
 			}
 
-		void push (R)(R range, size_t[2] xs, size_t[2] ys) // TODO glsubtexture transfer?
+		void pull (R)(R range, size_t[2] xs, size_t[2] ys)
 			{/*...}*/
-				
-			}
-		void push (R)(R range, size_t x, size_t[2] ys) // TODO glsubtexture transfer?
-			{/*...}*/
-				
-			}
-		void push (R)(R range, size_t[2] xs, size_t y) // TODO glsubtexture transfer?
-			{/*...}*/
-				
-			}
-		void push (R)(R range, size_t x, size_t y) // TODO glsubtexture transfer?
-			{/*...}*/
-				
-			}
+				bind;
 
-		void pull (R)(R range, size_t[2] xs, size_t[2] ys) // TODO glsubtexture transfer?
-			{/*...}*/
-				
+				static if (is (typeof(R.source) == Texture))
+					{/*...}*/
+						gl.BindBuffer (range.id);
+					}
+
+				static if (is (typeof(vector (*range.ptr)) == Vector!(4, ubyte)))
+					auto ptr = range.ptr;
+				else {/*...}*/
+					auto temp = evx.containers.array.array (range.map!texel); // TEMP
+					auto ptr = temp.ptr;
+				}
+
+				gl.TexSubImage2D (GL_TEXTURE_2D,
+					base_mip_level,
+					xs.left.to!int, ys.left.to!int,
+					xs.width.to!int, ys.width.to!int,
+					format, gl.type!ubyte,
+					ptr
+				);
 			}
-		void pull (R)(R range, size_t x, size_t[2] ys) // TODO glsubtexture transfer?
+		void pull (R)(R range, size_t x, size_t[2] ys)
 			{/*...}*/
-				
 			}
 		void pull (R)(R range, size_t[2] xs, size_t y) // TODO glsubtexture transfer?
 			{/*...}*/
@@ -133,4 +135,8 @@ struct Texture
 			{/*...}*/
 				
 			}
+
+		enum base_mip_level = 0;
+		enum format = GL_RGBA;
+
 	}

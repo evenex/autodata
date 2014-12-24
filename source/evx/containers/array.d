@@ -40,7 +40,8 @@ struct Array (T, uint dimensions = 1)
 		Base base;
 		alias base this;
 
-		auto ref array (){return this;} // REVIEW HACK, to get around some kind of builtin .array thing that conflicts with UFCS array
+		auto ref array () {return this;} // REVIEW HACK, to get around some kind of builtin .array thing that conflicts with UFCS array
+		auto ptr () {return base.data.ptr;}
 
 		auto length (size_t d = 0)()
 			{/*...}*/
@@ -85,7 +86,7 @@ struct Array (T, uint dimensions = 1)
 
 						return offset;
 					}
-				void advance (uint i)()
+				void advance (uint i = 0)()
 					{/*...}*/
 						if (++index[i] >= bounds[i].width)
 							static if (i+1 < index.length)
@@ -102,6 +103,8 @@ struct Array (T, uint dimensions = 1)
 								return index[i];
 							}
 
+							pragma(msg, T);
+
 						base.data[offset] = space[
 							Map!(get_index,
 								Map!(Pair!().First!Identity,
@@ -112,7 +115,7 @@ struct Array (T, uint dimensions = 1)
 							).tuple.expand
 						];
 
-						advance!0;
+						advance;
 					}
 			}
 		void allocate (Repeat!(dimensions, size_t) lengths)

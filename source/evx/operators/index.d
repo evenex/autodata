@@ -18,9 +18,8 @@ template IndexOps (alias access, limits...)
 			import evx.math.intervals;
 			import evx.misc.overload;
 		}
-		alias Element = ReturnType!access; // REFACTOR this to ElementType, then replace all occurences of std.range.ElementType with Element
 
-		auto ref Element opIndex (ParameterTypeTuple!access selected)
+		auto ref ReturnType!access opIndex (ParameterTypeTuple!access selected)
 			in {/*...}*/
 				version (all)
 					{/*error messages}*/

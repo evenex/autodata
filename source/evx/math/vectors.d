@@ -180,7 +180,7 @@ struct Vector (size_t n, Component = double)
 					return this;
 				}
 
-			auto opCast (V)()
+			auto opCast (V)() // TODO Match pattern here
 				{/*...}*/
 					auto attempt_ctors (Strings...)()
 						{/*...}*/
