@@ -554,6 +554,17 @@ auto output_to (S,R,T...)(S shader, R render_target, T args)
 
 		shader.activate;
 		gl.BindFramebuffer (GL_FRAMEBUFFER, render_target.framebuffer_id);
+
+		template length (uint i)
+			{/*...}*/
+				auto length ()()
+					if (not (is (typeof(shader.args[i]) == Vector!U, U...)))
+					{/*...}*/
+						return shader.args[i].length.to!int;
+					}
+			}
+
+		gl.DrawArrays (shader.mode, 0, Match!(Map!(length, Count!(S.Args))));
 		// render_target.bind; REVIEW how does this interact with texture.bind, or any other bindable I/O type
 		// render_target.draw (shader.args, args); REVIEW do this, or get length of shader array args? in latter case, how do we pick the draw mode?
 	}
@@ -584,7 +595,7 @@ void main () // TODO the goal
 		auto aspect_ratio = fvec(1.0, 2.0);
 
 		auto tex_coords = circle.scale (0.5).map!(to!fvec);
-		auto texture = Texture (ℕ[0..256].by (ℕ[0..256]).map!((i,j) => red));
+		auto texture = Texture (ℕ[0..256].by (ℕ[0..256]).map!((i,j) => blue));
 
 		import std.stdio;
 		τ(positions, tex_coords).vertex_shader!(
@@ -600,4 +611,9 @@ void main () // TODO the goal
 		)(texture)
 		.aspect_correction (aspect_ratio)
 		.triangle_fan.output_to (display);
+
+		display.render;
+
+		import core.thread;
+		Thread.sleep (1.seconds);
 	}

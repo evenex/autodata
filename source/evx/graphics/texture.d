@@ -112,7 +112,7 @@ struct Texture
 				static if (is (typeof(vector (*range.ptr)) == Vector!(4, ubyte)))
 					auto ptr = range.ptr;
 				else {/*...}*/
-					auto temp = evx.containers.array.array (range.map!texel); // TEMP
+					auto temp = evx.containers.array.array (range.map!texel); // REVIEW control overloads so UFCS possible, too many clash w/ std.array
 					auto ptr = temp.ptr;
 				}
 

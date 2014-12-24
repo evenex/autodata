@@ -103,8 +103,6 @@ struct Array (T, uint dimensions = 1)
 								return index[i];
 							}
 
-							pragma(msg, T);
-
 						base.data[offset] = space[
 							Map!(get_index,
 								Map!(Pair!().First!Identity,
