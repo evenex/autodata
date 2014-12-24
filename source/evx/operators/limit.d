@@ -9,8 +9,14 @@ template LimitOps (limits...)
 
 			import evx.type;
 			import evx.range;
+
+			import evx.math.logic;
 			import evx.math.algebra;
 		}
+
+		static assert (All!(is_const_function, Filter!(is_function, limits)),
+			`LimitOps: limit functions must be const`
+		);
 
 		auto opDollar (size_t i)()
 			{/*...}*/

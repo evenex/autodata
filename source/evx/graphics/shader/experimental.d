@@ -30,14 +30,11 @@ import evx.graphics.color;
 alias array = evx.containers.array.array; // REVIEW how to exclude std.array.array
 alias join = evx.range.join;
 
-template glsl_declaration (T, Args...)
-	{/*...}*/
-		enum glsl_declaration = glsl_typename!T ~ ` ` ~ ct_values_as_parameter_string!Args;
-	}
-
+// METACOMPILER SYMBOL STUFF
 private {/*glsl variables}*/
 	enum StorageClass {vertex_input, vertex_fragment, uniform}
 
+	// TYPE INFO
 	struct Type (uint n, Base)
 		if (Contains!(Base, bool, int, uint, float, double, Texture))
 		{/*...}*/
@@ -51,17 +48,20 @@ private {/*glsl variables}*/
 			);
 		}
 
+	// SYMBOL
 	struct Variable (StorageClass storage_class, Type, string identifier){}
 }
 private {/*glsl functions}*/
 	enum Stage {vertex = GL_VERTEX_SHADER, fragment = GL_FRAGMENT_SHADER}
 
+	// SYMBOL
 	struct Function (Stage stage, string code){}
 }
 
-alias ShaderProgramId = GLuint;
-__gshared ShaderProgramId[string] shader_ids;
+// GLOBAL PRECOMPILED PROGRAM LOOKUP
+__gshared GLuint[string] shader_ids;
 
+// PODs → PODs, Arrays → GPUArrays
 template GPUType (T)
 	{/*...}*/
 		static if (is (T == GLBuffer!U, U...))
@@ -74,6 +74,7 @@ template GPUType (T)
 		else alias GPUType = T;
 	}
 
+// CONCATTING SHADER PROGRAM BACKEND
 struct Shader (Parameters...)
 	{/*...}*/
 		enum Mode
@@ -151,7 +152,7 @@ struct Shader (Parameters...)
 		}
 		static {/*runtime}*/
 			__gshared:
-			ShaderProgramId program_id = 0;
+			GLuint program_id = 0;
 			GLint[Variables.length] variable_locations;
 
 			void initialize ()
@@ -284,7 +285,6 @@ struct Shader (Parameters...)
 		}
 	}
 
-
 unittest {/*codegen}*/
 	alias TestShader = Shader!(
 		Variable!(StorageClass.vertex_input, Type!(1, bool), `foo`),
@@ -329,7 +329,8 @@ unittest {/*codegen}*/
 	);
 }
 
-template decl_syntax_check (Decl...)
+// MAKE SURE ITS A ID LIST OR AN INTERLEAVED DECL LIST
+template decl_format_check (Decl...)
 	{/*...}*/
 		static assert (
 			All!(is_string_param, Decl)
@@ -342,11 +343,13 @@ template decl_syntax_check (Decl...)
 		);
 	}
 
+// A STUPID HACK
 private alias Front (T...) = T[0]; // HACK https://issues.dlang.org/show_bug.cgi?id=13883
 
-template vertex_shader (Decl...) // TODO enforce that data containers don't belong as args... only shit thats copy constructible... slices and PODs
+// COMPOSABLE SHADER COMPONENTS
+template vertex_shader (Decl...)
 	{/*...}*/
-		mixin decl_syntax_check!(Decl[0..$-1]);
+		mixin decl_format_check!(Decl[0..$-1]);
 
 		auto vertex_shader (Input...)(auto ref Input input)
 			{/*...}*/
@@ -431,7 +434,7 @@ template vertex_shader (Decl...) // TODO enforce that data containers don't belo
 	}
 template fragment_shader (Decl...)
 	{/*...}*/
-		mixin decl_syntax_check!(Decl[0..$-1]);
+		mixin decl_format_check!(Decl[0..$-1]);
 
 		static assert (is (Decl[0]), 
 			`fragment shader auto type deduction not implemented`
@@ -502,11 +505,12 @@ template fragment_shader (Decl...)
 			}
 	}
 
+// PARTIAL SHADERS
 alias aspect_correction = vertex_shader!(`aspect_ratio`, q{
 	gl_Position.xy *= aspect_ratio;
 });
 
-// DRAW MODES
+// PROTO RENDERERS
 ref triangle_fan (S)(ref S shader)
 	{/*...}*/
 		shader.mode = S.Mode.t_fan;
@@ -524,6 +528,7 @@ auto triangle_fan (S)(S shader)
 		return next;
 	}
 
+// OPERATORS
 template CanvasOps (alias preprocess, alias setup, alias managed_id = identity)
 	{/*...}*/
 		static assert (is (typeof(preprocess(Shader!().init)) == Shader!Sym, Sym...),
@@ -612,6 +617,7 @@ template RenderOps (alias draw, shaders...)
 		}
 	}
 
+// TO DEPRECATE, GOING INTO RENDEROPS
 auto output_to (S,R,T...)(S shader, R render_target, T args)
 	{/*...}*/
 		//GLuint framebuffer_id = 0; // TODO create framebuffer
@@ -637,7 +643,7 @@ auto output_to (S,R,T...)(S shader, R render_target, T args)
 		// render_target.draw (shader.args, args); REVIEW do this, or get length of shader array args? in latter case, how do we pick the draw mode?
 	}
 
-void main () // TODO the goal
+void main () // TODO GOAL
 	{/*...}*/
 		import evx.graphics.display;
 		auto display = new Display; // BUG display launches gfx context which is required for shader stuff, but failure to do so segs. need sensible errmsg
@@ -662,13 +668,14 @@ void main () // TODO the goal
 
 		auto tex_coords = vertices.scale (0.5f).flip!`vertical`;
 
-		auto texture = ℝ[0..1].by (ℝ[0..1])
+		auto texture = ℝ[-1..1].by (ℝ[-1..1])
 			.map!((i,j) => vec(10*i, j))
 			.map!(v => τ(sin (v.x), v.y))
-			.map!((x,y) => Color (abs (x), abs (y), 0, 1) * 1)
-			.grid (1.0/256)
+			.map!((x,y) => Color (abs (x), 0, abs (y), 1) * 1)
+			.grid (256, 256)
 			.Texture;
 
+		// TEXTURED SHAPE SHADER
 		τ(vertices, tex_coords).vertex_shader!(
 			`position`, `tex_coords`, q{
 				gl_Position = vec4 (position, 0, 1);

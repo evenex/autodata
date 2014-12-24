@@ -5,6 +5,8 @@ private {/*imports}*/
 
 	import evx.math.logic;
 	import evx.math.algebra;
+
+	import evx.type.processing; // REVIEW circular
 }
 
 /* test if a symbol is a type 
@@ -38,6 +40,26 @@ enum has_identity (T...) = is (typeof(T[0].identity));
 /* test if an expression can be made into an enum
 */
 enum is_enumerable (T...) = is (typeof((){enum x = T[0];}()));
+
+/* test if a symbol refers to a function 
+*/
+template is_function (T...)
+	{/*...}*/
+		enum func () = isSomeFunction!(T[0]);
+		enum temp () = isSomeFunction!(Instantiate!(T[0]));
+
+		enum is_function = Match!(func, temp);
+	}
+
+/* test if a function is const 
+*/
+template is_const_function (T...)
+	{/*...}*/
+		enum yes () = Contains!(q{const}, __traits(getFunctionAttributes, T[0]));
+		enum no () = false;
+
+		enum is_const_function = Match!(yes, no);
+	}
 
 /* test if a template argument is an aliased symbol 
 */

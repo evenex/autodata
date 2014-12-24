@@ -43,7 +43,7 @@ struct Array (T, uint dimensions = 1)
 		auto ref array () {return this;} // REVIEW HACK, to get around some kind of builtin .array thing that conflicts with UFCS array
 		auto ptr () {return base.data.ptr;}
 
-		auto length (size_t d = 0)()
+		auto length (size_t d = 0)() const
 			{/*...}*/
 				return base.length!d;
 			}
