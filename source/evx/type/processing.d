@@ -43,7 +43,7 @@ template Reduce (alias f, T...)
 		else alias Reduce = f!(T[0], Reduce!(f, T[1..$]));
 	}
 
-alias Sum (T...) = Reduce!(λ!q{(size_t a, size_t b) = a + b}, T);
+alias Sum (T...) = Reduce!(λ!q{(long a, long b) = a + b}, T);
 	static assert (Sum!(0,1,2,3,4,5) == 15);
 
 template Scan (alias f, T...)
@@ -160,7 +160,12 @@ template Match (patterns...)
 				~ ` could be matched`
 			);
 
-		else alias Match = Filtered[0];
+		else alias Match = Invoke!(Filtered[0]);
+	}
+
+template Invoke (alias symbol)
+	{/*...}*/
+		alias Invoke = symbol!();
 	}
 
 ////REFACTOR /////////////////////////////
@@ -189,7 +194,7 @@ template array_of (T)
 
 /* perform search and replace on a typename 
 */
-string replace_in_template (Type, Find, ReplaceWith)()
+string replace_in_template (Type, Find, ReplaceWith)() // TODO deprecate
 	{/*...}*/
 		import std.algorithm: findSplit;
 
