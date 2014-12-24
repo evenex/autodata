@@ -3,9 +3,11 @@ public:
 import evx.math.algebra;
 import evx.math.arithmetic;
 import evx.math.constants;
+import evx.math.fields;
 import evx.math.floatingpoint;
 import evx.math.functional;
 import evx.math.geometry;
+import evx.math.grid;
 import evx.math.infinity;
 import evx.math.intervals;
 import evx.math.logic;

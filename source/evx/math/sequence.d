@@ -104,8 +104,3 @@ auto sequence (alias func, T)(T initial)
 		for (auto i = 0; i < 10; ++i)
 			assert (ℕ[0..10][i] == i);
 	}
-
-/* the set¹ of natural numbers 
-	1. actually a subset of cardinality 2⁶⁴
-*/
-static ℕ () {return zero!size_t.sequence!((n,i) => n + i);}

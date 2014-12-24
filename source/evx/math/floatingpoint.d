@@ -65,20 +65,3 @@ bool all_approx_equal (Args...)(Args args)
 				return false;
 		return true;
 	}
-
-/* the set of real¹ numbers 
-	1. actually the doubles
-*/
-struct ℝ
-	{/*...}*/
-		static:
-
-		enum double[2] boundary = [-infinity, infinity];
-
-		double access (double x)
-			{/*...}*/
-				return x;
-			}
-
-		mixin SliceOps!(access, boundary);
-	}

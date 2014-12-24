@@ -15,6 +15,7 @@ private {/*imports}*/
 	import evx.math.floatingpoint;
 	import evx.math.algebra;
 	import evx.math.sequence;
+	import evx.math.fields;
 	import evx.math.arithmetic;
 	import evx.math.functional;
 	import evx.math.constants;

@@ -1,13 +1,8 @@
 module evx.math.space;
 
 private {/*import}*/
-	import std.conv;
-
 	import evx.type;
-	import evx.operators;
-	import evx.range;
 
-	import evx.math.logic;
 	import evx.math.algebra;
 	import evx.math.intervals;
 }
@@ -63,34 +58,4 @@ auto volume (S)(S space) // TODO doc and unittest
 
 			return product (measures);
 		}
-	}
-
-struct Grid (Space)
-	{/*...}*/
-		Space space;
-		Coords!Space[0] width;
-
-		Element!Space access (Repeat!(dimensionality!Space, size_t) point)
-			{/*...}*/
-				auto domain_transform (uint d)() {return point[d] * width;}
-
-				return space[Map!(domain_transform, Count!(typeof(point)))];
-			}
-
-		size_t[2] limit (uint d)() const // TODO static warning about non-constness... this will cause the limit to "disappear" from static analysis
-			{/*...}*/
-				auto pre = space.limit!d;
-				
-				pre[] /= width;
-
-				return [pre.left.to!size_t, pre.right.to!size_t];
-			}
-
-		mixin SliceOps!(access, Map!(limit, Iota!(dimensionality!Space)), RangeOps);
-	}
-auto grid (S,T)(S space, T width)
-	{/*...}*/
-		static assert (All!(is_type_of!T, Coords!S));
-
-		return Grid!S (space, width);
 	}

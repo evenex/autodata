@@ -662,7 +662,7 @@ void main () // TODO the goal
 
 		auto tex_coords = vertices.scale (0.5f).flip!`vertical`;
 
-		auto texture = ℝ[0..1].by (ℝ[0..1]) // TEMP
+		auto texture = ℝ[0..1].by (ℝ[0..1])
 			.map!((i,j) => vec(10*i, j))
 			.map!(v => τ(sin (v.x), v.y))
 			.map!((x,y) => Color (abs (x), abs (y), 0, 1) * 1)
