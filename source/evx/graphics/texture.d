@@ -20,7 +20,7 @@ ubyte[4] texel (Vector!(4, float) color)
 		return (color.each!clamp (interval (0,1)).vector * 255).each!(to!ubyte);
 	}
 
-enum out_of_bounds_color = green;
+enum out_of_bounds_color = magenta;
 
 struct Texture
 	{/*...}*/
@@ -68,12 +68,10 @@ struct Texture
 				);
 			}
 			body {/*...}*/
-				if (width * height == 0)
-					{/*...}*/
-						free;
+				free;
 
-						return;
-					}
+				if (width * height == 0)
+					return;
 
 				if (texture_id == 0)
 					{/*...}*/
@@ -94,7 +92,7 @@ struct Texture
 						);
 					}
 
-				gl.texture_2D = texture_id;
+				gl.texture_2D = this;
 
 				gl.TexImage2D (GL_TEXTURE_2D, 
 					base_mip_level,
@@ -105,6 +103,8 @@ struct Texture
 
 				this.width = width;
 				this.height = height;
+
+				gl.texture_2D = 0;
 			}
 		void free ()
 			{/*...}*/

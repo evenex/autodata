@@ -222,7 +222,7 @@ struct Shader (Parameters...)
 							StorageClass storage_class, T, string name
 						))
 							{/*...}*/
-								static if (storage_class is StorageClass.uniform)
+								static if (storage_class is StorageClass.uniform) // TODO uniform value for textures should be the texture location.. set the uniform value to the texture location, then bind the texture to that location
 									auto bound = variable_locations[i] = gl.GetUniformLocation (program_id, name);
 
 								else static if (storage_class is StorageClass.vertex_input)
@@ -271,8 +271,16 @@ struct Shader (Parameters...)
 						{/*...}*/
 							alias T = Filter!(or!(is_uniform, is_vertex_input), Variables)[i];
 
-							static if (is_texture!T || is_vertex_input!T)
-								arg.bind (variable_locations[IndexOf!(T, Variables)]); // TODO ensure that what you're binding to has compatible properties
+							static if (is_texture!T)
+								{/*...}*/
+									int texture_unit = IndexOf!(T, Filter!(is_texture, Variables));
+
+									gl.uniform (texture_unit, variable_locations[IndexOf!(T, Variables)]);
+									arg.bind (texture_unit);
+								}
+							
+							else static if (is_vertex_input!T)
+								arg.bind (variable_locations[IndexOf!(T, Variables)]);
 
 							else static if (is_uniform!T)
 								gl.uniform (arg, variable_locations[IndexOf!(T, Variables)]);
@@ -434,7 +442,7 @@ template fragment_shader (Decl...)
 	{/*...}*/
 		mixin decl_format_check!(Decl[0..$-1]);
 
-		static assert (is (Decl[0]), 
+		static assert (is (Decl[0]) || is(typeof(Decl) == Cons!string),
 			`fragment shader auto type deduction not implemented`
 		);
 
@@ -545,13 +553,13 @@ template CanvasOps (alias preprocess, alias setup, alias managed_id = identity)
 						if (fbo_id == 0)
 							gl.GenFramebuffers (1, &fbo_id);
 
-						glBindFramebuffer (GL_FRAMEBUFFER, fbo_id);//TEMP
-
 						return fbo_id;
 					}
 
 				auto ret = Match!(managed, unmanaged); // TEMP return this
 
+
+				glBindFramebuffer (GL_FRAMEBUFFER, ret);//TEMP
 
 				setup; // TEMP when to do this?
 
@@ -628,9 +636,76 @@ auto ref output_to (S,R,T...)(auto ref S shader, auto ref R target, T args)
 		//gl.BindFramebuffer (GL_FRAMEBUFFER, framebuffer_id); // TODO to create a framebuffer
 		// gl.FramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, renderedTexture, 0); TODO to set texture output
 		// gl.DrawBuffers TODO set frag outputs to draw to these buffers, if you use this then you'll need to modify the shader program, to add some fragment_output variables
+			GLuint fboid;
+				static if (is (R == Texture))
+					{/*...}*/
+				//target.framebuffer_id;
+				glGenFramebuffers (1, &fboid);
+
+			//	target.allocate (256,256);
+				target = ℕ[0..100].by (ℕ[0..100]).map!(x => yellow).Texture;
+				glBindFramebuffer (GL_FRAMEBUFFER, fboid);//TEMP
+				glFramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, target.texture_id, 0); // REVIEW if any of these redundant calls starts impacting performance, there is generally some piece of state that can inform the decision to elide. this state can be maintained in the global gl structure.
+				//glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, target.texture_id, 0); // REVIEW if any of these redundant calls starts impacting performance, there is generally some piece of state that can inform the decision to elide. this state can be maintained in the global gl structure.
+					}
+
+
+
+			auto check () // TODO REFACTOR this goes somewhere... TODO make specific error messages for all the openGL calls
+				{/*...}*/
+					switch (glCheckFramebufferStatus (GL_FRAMEBUFFER)) 
+						{/*...}*/
+							case GL_FRAMEBUFFER_COMPLETE:
+								return;
+
+							case GL_FRAMEBUFFER_UNDEFINED:
+								assert(0, `target is the default framebuffer, but the default framebuffer does not exist.`);
+
+							case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+								assert(0, `some of the framebuffer attachment points are framebuffer incomplete.`);
+
+							case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+								assert(0, `framebuffer does not have at least one image attached to it.`);
+
+							case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+								assert(0, `value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for some color attachment point(s) named by GL_DRAW_BUFFERi.`);
+
+							case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+								assert(0, `GL_READ_BUFFER is not GL_NONE and the value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for the color attachment point named by GL_READ_BUFFER.`);
+
+							case GL_FRAMEBUFFER_UNSUPPORTED:
+								assert(0, `combination of internal formats of the attached images violates an implementation-dependent set of restrictions.`);
+
+							case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+								assert(0, `value of GL_RENDERBUFFER_SAMPLES is not the same for all attached renderbuffers; or the value of GL_TEXTURE_SAMPLES is the not same for all attached textures; or the attached images are a mix of renderbuffers and textures, the value of GL_RENDERBUFFER_SAMPLES does not match the value of GL_TEXTURE_SAMPLES.`
+									"\n"`or the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not the same for all attached textures; or the attached images are a mix of renderbuffers and textures, the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not GL_TRUE for all attached textures.`
+								);
+
+							case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+								assert(0, `some framebuffer attachment is layered, and some populated attachment is not layered, or all populated color attachments are not from textures of the same target.`);
+
+							default:
+								assert (0, `framebuffer error`);
+						}
+				}
 
 		shader.activate;
-		gl.framebuffer = target.framebuffer_id;
+		gl.framebuffer = fboid;
+		//gl.framebuffer = target.framebuffer_id;
+
+		if (gl.framebuffer == 0)
+			glDrawBuffer (GL_BACK);
+		else glDrawBuffer (GL_COLOR_ATTACHMENT0);
+
+		check;
+
+		if (gl.framebuffer != 0)
+			gl.ClearColor (1,0,0,1);
+		else gl.ClearColor (0.1,0.1,0.1,1);
+
+		gl.Clear (GL_COLOR_BUFFER_BIT);
+
+		// std.stdio.stderr.writeln (gl.CheckFramebufferStatus (GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE); TODO use this check
 
 		template length (uint i)
 			{/*...}*/
@@ -642,10 +717,22 @@ auto ref output_to (S,R,T...)(auto ref S shader, auto ref R target, T args)
 
 		// render_target.bind; REVIEW how does this interact with texture.bind, or any other bindable I/O type
 		// render_target.draw (shader.args, args); REVIEW do this, or get length of shader array args? in latter case, how do we pick the draw mode?
+				//glViewport (0,0,1000,1000);
+				glBindFramebuffer (GL_FRAMEBUFFER, 0);//TEMP
+
+		/*
+			init FBO
+			attach tex to FBO
+			bind FBO
+			draw
+			unbind FBO
+			use tex wherever
+		*/
 
 		return target;
 	}
 
+static if (0)
 void main () // TODO GOAL
 	{/*...}*/
 		import evx.graphics.display;
@@ -675,7 +762,7 @@ void main () // TODO GOAL
 			.flip!`vertical`;
 
 		auto texture = ℝ[0..1].by (ℝ[0..1])
-			.map!((x,y) => Color (x^^4, 0, x^^2, 1) * 1)
+			.map!((x,y) => Color (0, x^^4, x^^2, 1) * 1)
 			.grid (256, 256)
 			.Texture;
 
@@ -697,22 +784,36 @@ void main () // TODO GOAL
 		display.render;
 
 		import core.thread;
-		Thread.sleep (4.seconds);
+		Thread.sleep (2.seconds);
 
 		Texture target;
 		target.allocate (256,256);
 
-		vertices.vertex_shader!(
-			`pos`, `col`, q{
+		static if (0) // BUG variables don't route in this example
+			{/*...}*/
+				vertices.vertex_shader!(
+					`pos`, q{
+						gl_Position = vec4 (pos, 0, 1);
+					}
+				).fragment_shader!(
+					Color, `col`, q{
+						gl_FragColor = col;
+					}
+				)(blue).triangle_fan.output_to (target);
+			}
+		else τ(vertices).vertex_shader!(
+			`pos`, q{
 				gl_Position = vec4 (pos, 0, 1);
 			}
-		)(blue).fragment_shader!(
-			Color, `col`, q{
-				gl_FragColor = col;
+		).fragment_shader!(
+			q{
+				gl_FragColor = vec4 (0,1,0,1); // BUG this narrows the problem down to the framebuffer linkage
 			}
 		).triangle_fan.output_to (target);
 
-		τ(square!float, square!float).vertex_shader!(
+		std.stdio.stderr.writeln (target[0..$, 0]); // REVIEW this should output all blues
+
+		τ(square!float, square!float.scale (2.0f).translate (fvec(0.5))).vertex_shader!(
 			`pos`, `texc_in`, q{
 				gl_Position = vec4 (pos, 0, 1);
 				texc = texc_in;
@@ -727,4 +828,36 @@ void main () // TODO GOAL
 		display.render;
 
 		Thread.sleep (2.seconds);
+	}
+
+void main ()
+	{/*...}*/
+		import evx.graphics.display;
+		auto display = new Display;
+
+		auto vertices = square!float;
+		auto tex_coords = square!float.flip!`vertical`;
+
+		auto tex1 = ℕ[0..100].by (ℕ[0..100]).map!((i,j) => (i+j)%2? yellow: orange).Texture;
+		auto tex2 = ℕ[0..50].by (ℕ[0..50]).map!((i,j) => (i+j)%2? purple: cyan).Texture;
+
+		// TEXTURED SHAPE SHADER
+		τ(vertices, tex_coords).vertex_shader!(
+			`position`, `tex_coords`, q{
+				gl_Position = vec4 (position, 0, 1);
+				frag_tex_coords = (tex_coords + vec2 (1,1))/2;
+			}
+		).fragment_shader!(
+			fvec, `frag_tex_coords`,
+			Texture, `tex`, q{
+				gl_FragColor = texture2D (tex, frag_tex_coords);
+			}
+		)(tex2)
+		.aspect_correction (display.aspect_ratio)
+		.triangle_fan.output_to (display);
+
+		display.render;
+
+		import core.thread;
+		Thread.sleep (1.seconds);
 	}

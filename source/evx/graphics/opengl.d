@@ -174,7 +174,6 @@ struct gl
 							int, `INT`,
 							uint, `UNSIGNED_INT`,
 							bool, `BOOL`,
-							Texture, `SAMPLER_2D`,
 						);
 
 						static if (is (T == Vector!(n,U), uint n, U))
@@ -303,9 +302,13 @@ struct gl
 						][type];
 					}
 
-				assert (type == uniform_type!T,
-					`attempted to upload ` ~ T.stringof ~ ` to uniform ` ~ uniform_call (type) ~ ` ` ~ name[0..length]
-					~ `, use ` ~ uniform_call (uniform_type!T) ~ ` instead.`
+				if (type != GL_SAMPLER_2D)
+					assert (type == uniform_type!T,
+						`attempted to upload ` ~ T.stringof ~ ` to uniform ` ~ uniform_call (type) ~ ` ` ~ name[0..length]
+						~ `, use ` ~ uniform_call (type) ~ ` instead.`
+					);
+				else assert (is (T == int),
+					`texture sampler uniform must bind a texture unit index, not a ` ~ T.stringof
 				);
 			}
 			body {/*...}*/
