@@ -27,7 +27,7 @@ template RangeOps ()
 				int[] data = [1,2,3,4];
 
 				auto access (size_t i) {return data[i];}
-				auto length () {return data.length;}
+				auto length () const {return data.length;}
 
 				mixin SliceOps!(access, length, RangeOps);
 			}
