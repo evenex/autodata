@@ -152,7 +152,7 @@ template Match (patterns...)
 		import std.algorithm: find; // REVIEW how am i handling local vs global imports?
 		import std.array: replace; // REVIEW
 
-		alias Filtered = Filter!(λ!q{(alias pattern) = __traits(compiles, pattern!()) || __traits(compiles, pattern ())}, patterns);
+		alias Filtered = Filter!(λ!q{(alias pattern) = __traits(compiles, pattern!())}, patterns);
 
 		static if (Filtered.length == 0)
 			static assert (0, 
@@ -161,9 +161,7 @@ template Match (patterns...)
 				~ ` could be matched`
 			);
 
-		else static if (__traits(compiles, Instantiate!(Filtered[0])))
-			alias Match = Instantiate!(Filtered[0]);
-		else alias Match = Filtered[0];
+		else alias Match = Instantiate!(Filtered[0]);
 	}
 
 alias Instantiate (alias symbol) = symbol!();
