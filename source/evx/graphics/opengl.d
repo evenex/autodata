@@ -365,7 +365,7 @@ struct gl
 				}
 				body {/*...}*/
 					mixin (q{
-						return gl} ~ name ~ q{ (args);
+						return gl} ~ name ~ q{ (args.to_c.expand);
 					});
 				}
 

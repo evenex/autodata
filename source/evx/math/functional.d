@@ -17,6 +17,7 @@ private {/*imports}*/
 	import evx.operators.slice;
 	import evx.operators.range;
 
+	import evx.misc.tuple;
 	import evx.misc.patch;
 }
 
@@ -35,6 +36,9 @@ public {/*map}*/
 					auto get_point ()() {return domain[args];}
 					auto get_space ()() {return domain.opIndex (args);}
 					auto get_range ()() if (Args.length == 1) {return domain[args[0].left..args[0].right];}
+
+					static if (not (is(typeof(Match!(slice_all, get_point, get_space, get_range))))) // TEMP
+						auto x = domain[args[0].left..args[0].right]; // TEMP
 
 					auto subdomain = Match!(slice_all, get_point, get_space, get_range);
 
@@ -491,17 +495,11 @@ public {/*zip}*/
 			auto opIndex (Args...)(Args args)
 				{/*...}*/
 					auto point (size_t i)() {return spaces[i].map!identity[args];}
-
-					Map!(ReturnType, 
-						Map!(point, Count!Spaces)
-					) zipped;
-
-					foreach (i,_; zipped)
-						zipped[i] = point!i;
+					auto tuple ()() {return τ(Map!(point, Count!Spaces));}
 
 					static if (not (Any!(λ!q{(T) = is (T == U[2], U)}, Args)))
-						return tuple (zipped);
-					else return Zipped!(typeof(zipped))(zipped);
+						return tuple;
+					else return Zipped!(typeof(tuple.identity).Types)(tuple.expand);
 				}
 			auto opSlice (size_t d, Args...)(Args args)
 				{/*...}*/

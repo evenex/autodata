@@ -19,9 +19,9 @@ auto mean (T)(T set)
 auto mean (T)(T set)
 	if (not (has_length!T))
 	{/*...}*/
-		auto v = zip (set, 1.sequence!((i, n) => i)).sum;
+		auto v = enumerate (set).sum;
 
-		return v[0]/v[1];
+		return v[1]/v[0];
 	}
 
 /* compute the standard deviation of a value over a set */

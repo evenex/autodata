@@ -12,6 +12,7 @@ private {/*imports}*/
 	import evx.math.sequence;
 	import evx.math.logic;
 	import evx.math.overloads;
+	import evx.math.fields.ℕ;
 }
 
 /* buffer a range to an array 
@@ -219,7 +220,7 @@ auto adjacent_pairs (R)(R range)
 auto enumerate (R)(R range)
 	if (is_input_range!R && has_length!R)
 	{/*...}*/
-		return ℕ[0..range.length].zip (range);
+		return evx.math.functional.zip (ℕ[0..range.length], range);
 	}
 
 /* iterate over a range, skipping a fixed number of elements each iteration 

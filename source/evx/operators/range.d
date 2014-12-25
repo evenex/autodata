@@ -14,7 +14,7 @@ template RangeOps ()
 				auto popFront () {++bounds[Dimensions[0]].left;}
 				auto popBack () {--bounds[Dimensions[0]].right;}
 				auto empty () {return length == 0;}
-				auto length () {return bounds[Dimensions[0]].width;}
+				auto length () const {return bounds[Dimensions[0]].width;}
 				auto save () {return this;}
 				auto opEquals (R)(R range) {return std.algorithm.equal (save, range);}
 			}

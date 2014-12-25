@@ -639,6 +639,11 @@ auto output_to (S,R,T...)(S shader, R render_target, T args)
 			}
 
 		gl.DrawArrays (shader.mode, 0, Match!(Map!(length, Count!(S.Args))));
+		foreach (i, V; S.Variables)
+			static if (is (V == Variable!U, U...))
+				{/*...}*/
+					std.stdio.stderr.writeln (U[2], ` `, shader.variable_locations[i], ` `, gl.GetAttribLocation (gl.program, U[2]));
+				}
 		// render_target.bind; REVIEW how does this interact with texture.bind, or any other bindable I/O type
 		// render_target.draw (shader.args, args); REVIEW do this, or get length of shader array args? in latter case, how do we pick the draw mode?
 	}
@@ -649,6 +654,7 @@ void main () // TODO GOAL
 		auto display = new Display; // BUG display launches gfx context which is required for shader stuff, but failure to do so segs. need sensible errmsg
 
 		auto vertices = circle.map!(to!fvec);
+
 		auto weights = ℕ[0..circle.length].map!(to!float);
 		Color color = red;
 
@@ -666,12 +672,12 @@ void main () // TODO GOAL
 		//);//.array; TODO
 		//static assert (is (typeof(weight_map) == Array!(Color, 2))); TODO
 
-		auto tex_coords = vertices.scale (0.5f).flip!`vertical`;
+		auto tex_coords = circle.map!(to!fvec)
+			.enumerate.map!((i,v) => i%2? v : v/2)
+			.flip!`vertical`[0..$/2]; // BUG tex coords are getting hooked up as vertices
 
-		auto texture = ℝ[-1..1].by (ℝ[-1..1])
-			.map!((i,j) => vec(10*i, j))
-			.map!(v => τ(sin (v.x), v.y))
-			.map!((x,y) => Color (abs (x), 0, abs (y), 1) * 1)
+		auto texture = ℝ[0..1].by (ℝ[0..1])
+			.map!((x,y) => Color (x^^4, 0, x^^2, 1) * 1)
 			.grid (256, 256)
 			.Texture;
 
