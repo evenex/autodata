@@ -674,7 +674,7 @@ void main () // TODO GOAL
 
 		auto tex_coords = circle.map!(to!fvec)
 			.enumerate.map!((i,v) => i%2? v : v/2)
-			.flip!`vertical`[0..$/2]; // BUG tex coords are getting hooked up as vertices
+			.flip!`vertical`[$/2..$]; // BUG tex coords are getting hooked up as vertices
 
 		auto texture = ℝ[0..1].by (ℝ[0..1])
 			.map!((x,y) => Color (x^^4, 0, x^^2, 1) * 1)

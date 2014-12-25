@@ -37,9 +37,6 @@ public {/*map}*/
 					auto get_space ()() {return domain.opIndex (args);}
 					auto get_range ()() if (Args.length == 1) {return domain[args[0].left..args[0].right];}
 
-					static if (not (is(typeof(Match!(slice_all, get_point, get_space, get_range))))) // TEMP
-						auto x = domain[args[0].left..args[0].right]; // TEMP
-
 					auto subdomain = Match!(slice_all, get_point, get_space, get_range);
 
 					auto map_point ()() {return apply (subdomain);}
@@ -195,7 +192,7 @@ public {/*map}*/
 						int[] data = [1,2,3,4];
 
 						auto access (size_t i) {return data[i];}
-						auto length () {return data.length;}
+						auto length () const {return data.length;}
 
 						mixin SliceOps!(access, length, RangeOps);
 					}
@@ -496,53 +493,35 @@ public {/*zip}*/
 				{/*...}*/
 					auto point (size_t i)() {return spaces[i].map!identity[args];}
 					auto tuple ()() {return τ(Map!(point, Count!Spaces));}
+					auto zipped ()() {return Zipped!(typeof(tuple.identity).Types)(tuple.expand);}
 
-					static if (not (Any!(λ!q{(T) = is (T == U[2], U)}, Args)))
-						return tuple;
-					else return Zipped!(typeof(tuple.identity).Types)(tuple.expand);
+					return Match!(zipped, tuple);
 				}
 			auto opSlice (size_t d, Args...)(Args args)
 				{/*...}*/
-					auto attempt ()
+					auto attempt (uint i)()
 						{/*...}*/
-							foreach (i; Count!Spaces)
-								{/*...}*/
-									auto multi ()() {return domain.opSlice!d (args);}
-									auto single ()() if (d == 0) {return domain.opSlice (args);}
+							auto multi ()() {return domain.opSlice!d (args);}
+							auto single ()() if (d == 0) {return domain.opSlice (args);}
 
-									alias Attempt = Filter!(has_identity,
-										multi, single
-									);
-
-									static if (Attempt.length)
-										return Attempt[0];
-									else continue;
-								}
-							assert (0);
+							return Match!(multi, single);
 						}
 					CommonType!Args[2] array ()() {return [args];}
 
-					static if (is (typeof (attempt.identity)))
-						return attempt;
-					else return array;
+					return Match!(Map!(attempt, Count!Spaces), array);
 				}
 			auto opDollar (size_t d)()
 				{/*...}*/
-					foreach (i; Count!Spaces)
+					auto attempt (uint i)()
 						{/*...}*/
 							auto multi  ()() {return spaces[i].opDollar!d;}
 							auto single ()() if (d == 0) {return spaces[i].opDollar;}
 							auto length ()() if (d == 0) {return spaces[i].length;}
 
-							alias Attempt = Filter!(has_identity,
-								multi, single, length
-							);
-
-							static if (Attempt.length)
-								return Attempt[0];
-							else continue;
+							return Match!(multi, single, length);
 						}
-					assert (0);
+
+					return Match!(Map!(attempt, Count!Spaces));
 				}
 			auto opEquals (S)(S that)
 				{/*...}*/
@@ -556,11 +535,11 @@ public {/*zip}*/
 
 						for (auto x = front; not (empty); popFront)
 							{/*...}*/
-								static if (is (typeof(op (x.expand))))
-									result = op (x.expand);
-								else result = op (x);
+								int tuple ()() {return result = op (x.expand);}
+								int point ()() {return result = op (x);}
 
-								if (result) break;
+								if (Match!(tuple, point))
+									break;
 							}
 
 						return result;
@@ -572,27 +551,13 @@ public {/*zip}*/
 				{/*...}*/
 					auto get (size_t i)() {return spaces[i].front;}
 
-					Map!(ReturnType,
-						Map!(get, Count!Spaces)
-					) front;
-
-					foreach (i; Count!Spaces)
-						front[i] = get!i;
-
-					return front.tuple;
+					return τ(Map!(get, Count!Spaces));
 				}
 			auto back ()()
 				{/*...}*/
 					auto get (size_t i)() {return spaces[i].back;}
 
-					Map!(ReturnType,
-						Map!(get, Count!Spaces)
-					) back;
-
-					foreach (i; Count!Spaces)
-						back[i] = get!i;
-
-					return back.tuple;
+					return τ(Map!(get, Count!Spaces));
 				}
 			auto popFront ()()
 				{/*...}*/
@@ -881,9 +846,10 @@ public {/*select}*/
 	*/
 	auto select (alias op, R)(R range)
 		{/*...}*/
-			static if (__traits(compiles, op (range.disperse.expand))) // TODO Match
-				return op (range.disperse.expand);
-			else return op (range);
+			auto tuple ()() {return op (range.disperse.expand);}
+			auto apply ()() {return op (range);}
+
+			return Match!(tuple, apply);
 		}
 		unittest {/*...}*/
 			import std.algorithm: equal;
@@ -899,11 +865,12 @@ public {/*transform}*/
 	/* modify a range in-place if possible, 
 		otherwise apply a self-referencing operation 
 	*/
-	auto transform (alias op, R)(R range)
+	auto ref transform (alias op, R)(auto ref R range)
 		{/*...}*/
-			static if (__traits(compiles, (){range[] = select!op (range);}))
-				range[] = select!op (range);
-			else return select!op (range);
+			auto ref self_transform ()() {range[] = select!op (range); return range;}
+			auto ref select_op ()() {return select!op (range);}
+
+			return Match!(self_transform, select_op);
 		}
 }
 public {/*extract}*/

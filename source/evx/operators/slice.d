@@ -351,7 +351,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 		static struct LengthFunction
 			{/*...}*/
 				auto access (size_t) {return true;}
-				size_t length () {return 100;}
+				size_t length () const {return 100;}
 
 				mixin SliceOps!(access, length);
 			}

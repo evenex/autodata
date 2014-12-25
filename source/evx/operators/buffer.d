@@ -108,7 +108,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 		static struct Basic
 			{/*...}*/
 				int[] data;
-				auto length () {return data.length;}
+				auto length () const {return data.length;}
 				static bool destroyed;
 
 				void allocate (size_t length)

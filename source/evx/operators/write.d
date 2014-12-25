@@ -211,7 +211,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 					}
 				template Length ()
 					{/*...}*/
-						auto length ()
+						auto length () const
 							{/*...}*/
 								return limit!0.width;
 							}

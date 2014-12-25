@@ -20,6 +20,8 @@ ubyte[4] texel (Vector!(4, float) color)
 		return (color.each!clamp (interval (0,1)).vector * 255).each!(to!ubyte);
 	}
 
+enum out_of_bounds_color = green;
+
 struct Texture
 	{/*...}*/
 		GLuint id;
@@ -85,7 +87,7 @@ struct Texture
 						gl.TexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 						gl.TexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
-						gl.TexParameterfv (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, magenta[].ptr);
+						gl.TexParameterfv (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, out_of_bounds_color[].ptr);
 
 						assert (gl.IsTexture (id));
 					}

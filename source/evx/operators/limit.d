@@ -15,7 +15,7 @@ template LimitOps (limits...)
 		}
 
 		static assert (All!(is_const_function, Filter!(is_function, limits)),
-			`LimitOps: limit functions must be const`
+			fullyQualifiedName!(typeof(this)) ~ ` LimitOps: limit functions must be const`
 		);
 
 		auto opDollar (size_t i)()
