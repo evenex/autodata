@@ -126,7 +126,11 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 				auto pull (R)(R range, size_t[2] limits)
 					{/*...}*/
 						foreach (i, j; enumerate (ℕ[limits.left..limits.right]))
+							{/*...}*/
+						std.stdio.stderr.writeln (`!!`, i, ` , `, j);
 							data[j] = range[i];
+								
+							}
 					}
 
 				ref access (size_t i)

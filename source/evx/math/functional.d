@@ -543,12 +543,12 @@ public {/*zip}*/
 					{/*...}*/
 						int result = 0;
 
-						for (auto x = front; not (empty); popFront)
+						for (auto i = 0; i < length; ++i)
 							{/*...}*/
-								int tuple ()() {return result = op (x.expand);}
-								int point ()() {return result = op (x);}
+								int expand ()() {return result = op (this[i].expand);}
+								int closed ()() {return result = op (this[i]);}
 
-								if (Match!(tuple, point))
+								if (Match!(expand, closed))
 									break;
 							}
 
