@@ -30,7 +30,9 @@ auto square (T = double)(T side = unity!T, Vector!(2,T) center = zero!(Vector!(2
 		assert (side > zero!T);
 	}
 	body {/*...}*/
-		return [vec(1,1), vec(-1,1), vec(-1,-1), vec(1,-1)]
+		alias V = Vector!(2,T);
+
+		return [V(1,1), V(-1,1), V(-1,-1), V(1,-1)]
 			.map!(v => v*side/2 + center);
 	}
 template circle (uint samples = 24)

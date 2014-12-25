@@ -1,6 +1,7 @@
 module evx.math.algebra;
 
 private {/*...}*/
+	import std.conv;
 	import std.traits;
 	import std.range;
 }
@@ -51,6 +52,6 @@ template group_element (Element...)
 
 						return array;
 					}
-				else static assert (0, `can't compute ` ~element.text~ ` for ` ~U.stringof);
+				else static assert (0, `can't compute ` ~ element.text ~ ` for ` ~ U.stringof);
 			}
 	}
