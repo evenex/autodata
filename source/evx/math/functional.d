@@ -412,7 +412,7 @@ public {/*by}*/
 
 					auto access (Map!(Coords, Spaces) point) // TODO flatten tuples
 						in {/*...}*/
-							static assert (typeof(point).length == Spaces.length,
+							static assert (typeof(point).length >= Spaces.length,
 								`could not deduce coordinate type for ` ~ Spaces.stringof
 							);
 						}
@@ -492,8 +492,12 @@ public {/*zip}*/
 			auto opIndex (Args...)(Args args)
 				{/*...}*/
 					auto point (size_t i)() {return spaces[i].map!identity[args];}
-					auto tuple ()() {return τ(Map!(point, Count!Spaces));}
-					auto zipped ()() {return Zipped!(typeof(tuple.identity).Types)(tuple.expand);}
+
+					auto tuple ()() 
+						{return τ(Map!(point, Count!Spaces));}
+
+					auto zipped ()() if (Any!(λ!q{(T) = is (T == U[2], U)}, Args)) 
+						{return Zipped!(typeof(tuple.identity).Types)(tuple.expand);}
 
 					return Match!(zipped, tuple);
 				}
