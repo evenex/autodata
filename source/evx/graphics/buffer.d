@@ -14,8 +14,8 @@ private {/*imports}*/
 	import evx.range;
 }
 
-struct GLBuffer (T, alias target, GLenum usage)
-	if (is (typeof(target) == GLenum))
+struct GLBuffer (T, alias target, alias usage)
+	if (is (typeof(target) == GLenum) && is (typeof(usage) == GLenum))
 	{/*...}*/
 		private enum bind_call = q{gl.} ~ __traits(identifier, target)[3..$].toLower;
 
@@ -36,12 +36,12 @@ struct GLBuffer (T, alias target, GLenum usage)
 					alias U = T;
 				}
 
+				mixin(bind_call) = buffer_id;
+
 				gl.VertexAttribPointer (
 					index, n, gl.type!U, 
 					GL_FALSE, 0, null
 				);
-
-				mixin(bind_call) = buffer_id;
 			}
 
 		auto access (size_t i)

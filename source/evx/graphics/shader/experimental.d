@@ -230,17 +230,18 @@ struct Shader (Parameters...)
 						))
 							{/*...}*/
 								static if (storage_class is StorageClass.uniform)
-									auto location = variable_locations[i] = gl.GetUniformLocation (program_id, name);
+									auto bound = variable_locations[i] = gl.GetUniformLocation (program_id, name);
 
 								else static if (storage_class is StorageClass.vertex_input)
-									auto location = variable_locations[i] = gl.GetAttribLocation (program_id, name.to_c.expand);
+									auto bound = variable_locations[i] = gl.GetAttribLocation (program_id, name.to_c.expand);
 
 								else static if (storage_class is StorageClass.vertex_fragment)
-									auto location = variable_locations[i] = -1;
+									variable_locations[i] = -1;
 
 								else static assert (0);
 
-								assert (location >= 0, name ~ ` was optimized out of the shader`);
+								static if (is (typeof(bound)))
+									assert (bound >= 0, T.decl ~ ` ` ~ name ~ ` was not found in the shader (possibly optimized out due to non-use)`);
 							}
 						else static assert (0);
 				}
@@ -274,7 +275,6 @@ struct Shader (Parameters...)
 					foreach (i, ref arg; args)
 						{/*...}*/
 							alias T = Filter!(or!(is_uniform, is_vertex_input), Variables)[i];
-					std.stdio.stderr.writeln (i, ` `, typeof(arg).stringof, ` `, T.stringof, ` `, variable_locations[IndexOf!(T, Variables)]);
 
 							static if (is_texture!T || is_vertex_input!T)
 								arg.bind (variable_locations[IndexOf!(T, Variables)]); // TODO ensure that what you're binding to has compatible properties
@@ -679,25 +679,31 @@ void main () // TODO GOAL
 		auto tex_coords = circle.map!(to!fvec)
 			.enumerate.map!((i,v) => i%2? v : v/4)
 			.flip!`vertical`; // BUG tex_coords are getting linked to position, vertices linked to tex_coords
-
+			/* BUG maybe its the buffers?
+				maybe the wrong buffer is bound during an upload somewhere;
+				the linking could be correct, but the wrong buffer is being written to?
+				REVIEW how are we binding anyway?
+					we are binding to the locations we got during linking,
+						at least, we are passing those locations to the object's bind function, REVIEW what it does after then?
+				the buffers are definitely distinct, as translating them has differente effects
+*/
 		auto texture = ℝ[0..1].by (ℝ[0..1])
 			.map!((x,y) => Color (x^^4, 0, x^^2, 1) * 1)
 			.grid (256, 256)
 			.Texture;
 
 		// TEXTURED SHAPE SHADER
-		τ(vertices, tex_coords).vertex_shader!(
+		τ(vertices.translate (fvec(0.5)), tex_coords).vertex_shader!( // arg position 1 is getting linked to attr pos 0!!! and arg pos 0 is going to attr pos 1!!!!!
 			`position`, `tex_coords`, q{
 				gl_Position = vec4 (position, 0, 1);
 				frag_tex_coords = (tex_coords + vec2 (1,1))/2;
 			}
 		).fragment_shader!(
 			fvec, `frag_tex_coords`,
-			Color, `shitfuck`,
 			Texture, `tex`, q{
 				gl_FragColor = texture2D (tex, frag_tex_coords);
 			}
-		)(red, texture)
+		)(texture)
 		.aspect_correction (display.aspect_ratio)
 		.triangle_fan.output_to (display);
 
