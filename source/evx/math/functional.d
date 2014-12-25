@@ -503,12 +503,15 @@ public {/*zip}*/
 				}
 			auto opSlice (size_t d, Args...)(Args args)
 				{/*...}*/
-					auto attempt (uint i)()
+					template attempt (uint i)
 						{/*...}*/
-							auto multi ()() {return domain.opSlice!d (args);}
-							auto single ()() if (d == 0) {return domain.opSlice (args);}
+							auto attempt ()()
+								{/*...}*/
+									auto multi ()() {return domain.opSlice!d (args);}
+									auto single ()() if (d == 0) {return domain.opSlice (args);}
 
-							return Match!(multi, single);
+									return Match!(multi, single);
+								}
 						}
 					CommonType!Args[2] array ()() {return [args];}
 
@@ -516,13 +519,16 @@ public {/*zip}*/
 				}
 			auto opDollar (size_t d)()
 				{/*...}*/
-					auto attempt (uint i)()
+					template attempt (uint i)
 						{/*...}*/
-							auto multi  ()() {return spaces[i].opDollar!d;}
-							auto single ()() if (d == 0) {return spaces[i].opDollar;}
-							auto length ()() if (d == 0) {return spaces[i].length;}
+							auto attempt ()()
+								{/*...}*/
+									auto multi  ()() {return spaces[i].opDollar!d;}
+									auto single ()() if (d == 0) {return spaces[i].opDollar;}
+									auto length ()() if (d == 0) {return spaces[i].length;}
 
-							return Match!(multi, single, length);
+									return Match!(multi, single, length);
+								}
 						}
 
 					return Match!(Map!(attempt, Count!Spaces));
