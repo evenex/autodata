@@ -1,12 +1,5 @@
 module evx.graphics.shader;
 
-__gshared struct GraphicsContext
-	{/*...}*/
-		static:
-
-
-	}
-
 import evx.range;
 
 import evx.math;
@@ -88,7 +81,7 @@ struct Shader (Parameters...)
 				tris = GL_TRIANGLES
 			}
 
-		alias Symbols = Filter!(or!(is_variable, is_function), Parameters);
+		alias Symbols = NoDuplicates!(Filter!(or!(is_variable, is_function), Parameters));
 		alias Args = Filter!(not!(or!(is_variable, is_function)), Parameters);
 
 		alias vertex_code = shader_code!(Stage.vertex);
@@ -264,7 +257,9 @@ struct Shader (Parameters...)
 
 			void activate ()()
 				in {/*...}*/
-					static assert (Args.length == Filter!(or!(is_uniform, is_vertex_input), Variables).length);
+					static assert (Args.length == Filter!(or!(is_uniform, is_vertex_input), Variables).length,
+						Args.stringof ~ ` does not match ` ~ Filter!(or!(is_uniform, is_vertex_input), Variables).stringof
+					);
 				}
 				body {/*...}*/
 					if (program_id == 0)
@@ -541,8 +536,6 @@ template CanvasOps (alias preprocess, alias setup, alias managed_id = identity)
 
 		GLuint framebuffer_id ()
 			{/*...}*/
-				setup;
-
 				auto managed ()()
 					{/*...}*/
 						return managed_id;
@@ -552,10 +545,17 @@ template CanvasOps (alias preprocess, alias setup, alias managed_id = identity)
 						if (fbo_id == 0)
 							gl.GenFramebuffers (1, &fbo_id);
 
+						glBindFramebuffer (GL_FRAMEBUFFER, fbo_id);//TEMP
+
 						return fbo_id;
 					}
 
-				return Match!(managed, unmanaged);
+				auto ret = Match!(managed, unmanaged); // TEMP return this
+
+
+				setup; // TEMP when to do this?
+
+				return ret;
 			}
 
 		static if (is (typeof(managed_id.identity)))
@@ -621,7 +621,7 @@ template RenderOps (alias draw, shaders...)
 	}
 
 // TO DEPRECATE, GOING INTO RENDEROPS
-auto output_to (S,R,T...)(S shader, R render_target, T args)
+auto ref output_to (S,R,T...)(auto ref S shader, auto ref R target, T args)
 	{/*...}*/
 		//GLuint framebuffer_id = 0; // TODO create framebuffer
 		//gl.GenFramebuffers (1, &framebuffer_id); TODO to create a framebuffer
@@ -630,38 +630,33 @@ auto output_to (S,R,T...)(S shader, R render_target, T args)
 		// gl.DrawBuffers TODO set frag outputs to draw to these buffers, if you use this then you'll need to modify the shader program, to add some fragment_output variables
 
 		shader.activate;
-		gl.framebuffer = render_target.framebuffer_id;
+		gl.framebuffer = target.framebuffer_id;
 
 		template length (uint i)
 			{/*...}*/
-				auto length ()()
-					if (not (is (typeof(shader.args[i]) == Vector!U, U...)))
-					{/*...}*/
-						return shader.args[i].length.to!int;
-					}
+				auto length ()() if (not (is (typeof(shader.args[i]) == Vector!U, U...)))
+					{return shader.args[i].length.to!int;}
 			}
 
 		gl.DrawArrays (shader.mode, 0, Match!(Map!(length, Count!(S.Args))));
-		foreach (i, V; S.Variables)
-			static if (is (V == Variable!U, U...))
-				{/*...}*/
-					std.stdio.stderr.writeln (U[2], ` `, shader.variable_locations[i], ` `, gl.GetAttribLocation (gl.program, U[2]));
-				}
+
 		// render_target.bind; REVIEW how does this interact with texture.bind, or any other bindable I/O type
 		// render_target.draw (shader.args, args); REVIEW do this, or get length of shader array args? in latter case, how do we pick the draw mode?
+
+		return target;
 	}
 
 void main () // TODO GOAL
 	{/*...}*/
 		import evx.graphics.display;
-		auto display = new Display; // BUG display launches gfx context which is required for shader stuff, but failure to do so segs. need sensible errmsg
+		auto display = new Display;
 
-		auto vertices = circle.map!(to!fvec);
+		auto vertices = circle.map!(to!fvec)
+			.enumerate.map!((i,v) => i%2? v : v/4);
 
 		auto weights = ℕ[0..circle.length].map!(to!float);
 		Color color = red;
 
-		static if (0)
 		auto weight_map = τ(vertices, weights, color)
 			.vertex_shader!(`position`, `weight`, `base_color`, q{
 				gl_Position = vec4 (position, 0, 1);
@@ -671,29 +666,21 @@ void main () // TODO GOAL
 				Color, `frag_color`,
 				float, `frag_alpha`, q{
 				gl_FragColor = vec4 (frag_color.rgb, frag_alpha);
-			});
+			}).triangle_fan;
 
 		//);//.array; TODO
 		//static assert (is (typeof(weight_map) == Array!(Color, 2))); TODO
 
 		auto tex_coords = circle.map!(to!fvec)
-			.enumerate.map!((i,v) => i%2? v : v/4)
-			.flip!`vertical`; // BUG tex_coords are getting linked to position, vertices linked to tex_coords
-			/* BUG maybe its the buffers?
-				maybe the wrong buffer is bound during an upload somewhere;
-				the linking could be correct, but the wrong buffer is being written to?
-				REVIEW how are we binding anyway?
-					we are binding to the locations we got during linking,
-						at least, we are passing those locations to the object's bind function, REVIEW what it does after then?
-				the buffers are definitely distinct, as translating them has differente effects
-*/
+			.flip!`vertical`;
+
 		auto texture = ℝ[0..1].by (ℝ[0..1])
 			.map!((x,y) => Color (x^^4, 0, x^^2, 1) * 1)
 			.grid (256, 256)
 			.Texture;
 
 		// TEXTURED SHAPE SHADER
-		τ(vertices.translate (fvec(0.5)), tex_coords).vertex_shader!( // arg position 1 is getting linked to attr pos 0!!! and arg pos 0 is going to attr pos 1!!!!!
+		τ(vertices, tex_coords).vertex_shader!(
 			`position`, `tex_coords`, q{
 				gl_Position = vec4 (position, 0, 1);
 				frag_tex_coords = (tex_coords + vec2 (1,1))/2;
@@ -710,5 +697,34 @@ void main () // TODO GOAL
 		display.render;
 
 		import core.thread;
+		Thread.sleep (4.seconds);
+
+		Texture target;
+		target.allocate (256,256);
+
+		vertices.vertex_shader!(
+			`pos`, `col`, q{
+				gl_Position = vec4 (pos, 0, 1);
+			}
+		)(blue).fragment_shader!(
+			Color, `col`, q{
+				gl_FragColor = col;
+			}
+		).triangle_fan.output_to (target);
+
+		τ(square!float, square!float).vertex_shader!(
+			`pos`, `texc_in`, q{
+				gl_Position = vec4 (pos, 0, 1);
+				texc = texc_in;
+			}
+		).fragment_shader!(
+			fvec, `texc`,
+			Texture, `tex`, q{
+				gl_FragColor = texture2D (tex, texc);
+			}
+		)(target).triangle_fan.output_to (display);
+
+		display.render;
+
 		Thread.sleep (2.seconds);
 	}

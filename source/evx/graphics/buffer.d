@@ -36,7 +36,7 @@ struct GLBuffer (T, alias target, alias usage)
 					alias U = T;
 				}
 
-				mixin(bind_call) = buffer_id;
+				mixin(bind_call) = buffer_id; // REVIEW entire codebase: how many places can we reduce the mixins to a little blip like this?
 
 				gl.VertexAttribPointer (
 					index, n, gl.type!U, 

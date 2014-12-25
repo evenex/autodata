@@ -24,29 +24,29 @@ enum out_of_bounds_color = green;
 
 struct Texture
 	{/*...}*/
-		GLuint id;
-		alias id this;
+		GLuint texture_id;
+		alias texture_id this;
 
 		size_t width, height;
 
 		void bind (GLuint index = 0)
 			in {/*...}*/
-				assert (gl.IsTexture (id), `cannot bind uninitialized texture`);
+				assert (gl.IsTexture (texture_id), `cannot bind uninitialized texture`);
 			}
 			body {/*...}*/
 				auto target = GL_TEXTURE0 + index;
 
 				gl.ActiveTexture (target);
 
-				gl.texture_2D = id; // TODO autodiscover
+				gl.texture_2D = this;
 			}
 
 		mixin BufferOps!(allocate, pull, access, width, height, RangeOps);
-		mixin CanvasOps!(preprocess, bind_output);
+		mixin CanvasOps!(preprocess, setup);
 
-		void bind_output ()
+		void setup ()
 			{/*...}*/
-				gl.FramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, id, 0); // REVIEW if any of these redundant calls starts impacting performance, there is generally some piece of state that can inform the decision to elide. this state can be maintained in the global gl structure.
+				gl.FramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texture_id, 0); // REVIEW if any of these redundant calls starts impacting performance, there is generally some piece of state that can inform the decision to elide. this state can be maintained in the global gl structure.
 			}
 		auto ref preprocess (S)(auto ref S shader)
 			{/*...}*/
@@ -75,11 +75,11 @@ struct Texture
 						return;
 					}
 
-				if (id == 0)
+				if (texture_id == 0)
 					{/*...}*/
-						gl.GenTextures (1, &id);
+						gl.GenTextures (1, &texture_id);
 
-						gl.texture_2D = id;
+						gl.texture_2D = this;
 
 						gl.TexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 						gl.TexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -89,10 +89,12 @@ struct Texture
 
 						gl.TexParameterfv (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, out_of_bounds_color[].ptr);
 
-						assert (gl.IsTexture (id));
+						assert (gl.IsTexture (texture_id),
+							`failed to create texture ` ~ texture_id.text
+						);
 					}
 
-				gl.texture_2D = id;
+				gl.texture_2D = texture_id;
 
 				gl.TexImage2D (GL_TEXTURE_2D, 
 					base_mip_level,
@@ -106,9 +108,9 @@ struct Texture
 			}
 		void free ()
 			{/*...}*/
-				gl.DeleteTextures (1, &id);
+				gl.DeleteTextures (1, &texture_id);
 
-				id = 0;
+				texture_id = 0;
 				width = 0;
 				height = 0;
 			}
@@ -119,7 +121,7 @@ struct Texture
 
 				static if (is (typeof(R.source) == Texture))
 					{/*...}*/
-						gl.BindBuffer (range.id);
+						//gl.BindBuffer (range.texture_id); BUG
 					}
 
 				static if (is (typeof(vector (*range.ptr)) == Vector!(4, ubyte)))

@@ -18,6 +18,8 @@ struct gl
 	{/*...}*/
 		static:
 
+		debug bool context_initialized;
+
 		template type (T)
 			{/*...}*/
 				alias ConversionTable = Cons!(
@@ -40,10 +42,13 @@ struct gl
 
 		auto opDispatch (string name, Args...)(auto ref Args args)
 			in {/*...}*/
-				static assert (
-					name.not!contains (`UseProgram`)
-					&& name.not!contains (`Bind`),
-					`set gl.` ~ (name is `UseProgram`? `program` : name[4..$].toLower) ~ ` = an opengl id or object containing an id instead`
+				enum errmsg (string target) = `set gl.` ~ target ~ ` = ` ~ target ~ ` id or an object containing a ` ~ target ~ `_id instead`;
+
+				static assert (name.not!contains (`UseProgram`), errmsg!`program`);
+				static assert (name.not!contains (`Bind`), errmsg!(name[4..$].toLower));
+
+				debug assert (context_initialized,
+					`rendering context must exist prior to making any openGL calls`
 				);
 			}
 			body {/*...}*/
@@ -79,8 +84,10 @@ struct gl
 									{/*...}*/
 										static if (name.contains (`texture`))
 											return args[0].texture_id;
+
 										else static if (name.contains (`framebuffer`))
 											return args[0].framebuffer_id;
+
 										else return args[0].buffer_id;
 									}
 								auto is_id ()()
@@ -109,12 +116,34 @@ struct gl
 							return state.} ~ name ~ q{;
 						});
 					}
+				auto unbind ()()
+					{/*...}*/
+						static assert (name.contains (`Delete`));
+
+						auto group = mixin(q{state.} ~ name.after (`Delete`).toLower)[];
+						auto n = args[0];
+						auto ids = args[1];
+
+						foreach (id; ids[0..n])
+							{/*...}*/
+								auto result = group[].find (id);
+
+								if (result.empty)
+									continue;
+								else result.front = 0;
+							}
+
+						call!name (args);
+					}
 				auto forward ()()
 					{/*...}*/
+						static if (name.contains (`Delete`))
+							static assert (name.contains (`Program`) || name.contains (`Shader`));
+
 						return call!name (args.to_c.expand);
 					}
 
-				return Match!(use_program, bind, forward);
+				return Match!(use_program, bind, unbind, forward);
 			}
 
 		void uniform (T)(T value, GLuint index = 0)
@@ -327,38 +356,63 @@ struct gl
 		private {/*...}*/
 			struct state
 				{/*...}*/
-					__gshared GLuint program, 
-						// BIND BUFFER TARGETS
-						array_buffer,
-						element_array_buffer,
-						copy_read_buffer,
-						copy_write_buffer,
-						pixel_pack_buffer,
-						pixel_unpack_buffer,
-						query_buffer,
-						shader_storage_buffer,
-						transform_feedback_buffer,
-						uniform_buffer,
-						// BIND FRAMEBUFFER TARGETS
-						draw_framebuffer,
-						read_framebuffer,
-						// BIND TEXTURE TARGET
-						texture_1D,
-						texture_2D,
-						texture_3D,
-						texture_1D_array,
-						texture_2D_array,
-						texture_rectangle,
-						texture_cube_map,
-						texture_cube_map_array,
-						texture_buffer,
-						texture_2D_multisample,
-						texture_2D_multisample_array;
+					__gshared:
 
-						static framebuffer (GLuint buffer)
-							{return draw_framebuffer = read_framebuffer = buffer;}
-						static framebuffer ()
-							{return draw_framebuffer == read_framebuffer? draw_framebuffer : 0;}
+					GLuint program; 
+
+					union {/*buffers}*/
+						static if (0) // BUG https://issues.dlang.org/show_bug.cgi?id=13891
+						GLuint[10] buffers;
+						struct {/*...}*/
+							GLuint 
+							array_buffer,
+							element_array_buffer,
+							copy_read_buffer,
+							copy_write_buffer,
+							pixel_pack_buffer,
+							pixel_unpack_buffer,
+							query_buffer,
+							shader_storage_buffer,
+							transform_feedback_buffer,
+							uniform_buffer;
+						}
+					}
+					union {/*framebuffers}*/
+						static if (0) // BUG https://issues.dlang.org/show_bug.cgi?id=13891
+						GLuint[2] framebuffers;
+						struct {/*...}*/
+							GLuint
+								draw_framebuffer,
+								read_framebuffer;
+						}
+					}
+					union {/*textures}*/
+						static if (0) // BUG https://issues.dlang.org/show_bug.cgi?id=13891
+						GLuint[11] textures;
+						struct {/*...}*/
+							GLuint
+							texture_1D,
+							texture_2D,
+							texture_3D,
+							texture_1D_array,
+							texture_2D_array,
+							texture_rectangle,
+							texture_cube_map,
+							texture_cube_map_array,
+							texture_buffer,
+							texture_2D_multisample,
+							texture_2D_multisample_array;
+						}
+					}
+
+					static buffers () {return (&array_buffer)[0..10];} // HACK https://issues.dlang.org/show_bug.cgi?id=13891
+					static framebuffers () {return (&draw_framebuffer)[0..2];} // HACK https://issues.dlang.org/show_bug.cgi?id=13891
+					static textures () {return (&texture_1D)[0..11];} // HACK https://issues.dlang.org/show_bug.cgi?id=13891
+
+					static framebuffer (GLuint buffer)
+						{return draw_framebuffer = read_framebuffer = buffer;}
+					static framebuffer ()
+						{return draw_framebuffer == read_framebuffer? draw_framebuffer : 0;}
 				}
 
 			auto call (string name, Args...)(Args args)

@@ -166,6 +166,8 @@ template Match (patterns...)
 
 alias Instantiate (alias symbol) = symbol!();
 
+alias NoDuplicates = std.typetuple.NoDuplicates;
+
 ////REFACTOR /////////////////////////////
 
 template type_of (T...)

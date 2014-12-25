@@ -60,6 +60,8 @@ class Display
 					DerelictGL3.load ();
 					DerelictGL3.reload ();
 
+					debug gl.context_initialized = true; // TODO eventually just open a hidden context if the context doesn't already exist, then let the display pick it up if one ever gets initted
+
 					gl.ClearColor (0.1, 0.1, 0.1, 1.0);
 
 					gl.Enable (GL_BLEND);
