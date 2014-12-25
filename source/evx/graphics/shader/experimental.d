@@ -230,15 +230,17 @@ struct Shader (Parameters...)
 						))
 							{/*...}*/
 								static if (storage_class is StorageClass.uniform)
-									variable_locations[i] = gl.GetUniformLocation (program_id, name.to_c.expand);
+									auto location = variable_locations[i] = gl.GetUniformLocation (program_id, name);
 
 								else static if (storage_class is StorageClass.vertex_input)
-									variable_locations[i] = gl.GetAttribLocation (program_id, name.to_c.expand);
+									auto location = variable_locations[i] = gl.GetAttribLocation (program_id, name.to_c.expand);
 
 								else static if (storage_class is StorageClass.vertex_fragment)
-									variable_locations[i] = -1;
+									auto location = variable_locations[i] = -1;
 
 								else static assert (0);
+
+								assert (location >= 0, name ~ ` was optimized out of the shader`);
 							}
 						else static assert (0);
 				}
@@ -272,6 +274,7 @@ struct Shader (Parameters...)
 					foreach (i, ref arg; args)
 						{/*...}*/
 							alias T = Filter!(or!(is_uniform, is_vertex_input), Variables)[i];
+					std.stdio.stderr.writeln (i, ` `, typeof(arg).stringof, ` `, T.stringof, ` `, variable_locations[IndexOf!(T, Variables)]);
 
 							static if (is_texture!T || is_vertex_input!T)
 								arg.bind (variable_locations[IndexOf!(T, Variables)]); // TODO ensure that what you're binding to has compatible properties
@@ -658,6 +661,7 @@ void main () // TODO GOAL
 		auto weights = ℕ[0..circle.length].map!(to!float);
 		Color color = red;
 
+		static if (0)
 		auto weight_map = τ(vertices, weights, color)
 			.vertex_shader!(`position`, `weight`, `base_color`, q{
 				gl_Position = vec4 (position, 0, 1);
@@ -673,8 +677,8 @@ void main () // TODO GOAL
 		//static assert (is (typeof(weight_map) == Array!(Color, 2))); TODO
 
 		auto tex_coords = circle.map!(to!fvec)
-			.enumerate.map!((i,v) => i%2? v : v/2)
-			.flip!`vertical`[$/2..$]; // BUG tex coords are getting hooked up as vertices
+			.enumerate.map!((i,v) => i%2? v : v/4)
+			.flip!`vertical`; // BUG tex_coords are getting linked to position, vertices linked to tex_coords
 
 		auto texture = ℝ[0..1].by (ℝ[0..1])
 			.map!((x,y) => Color (x^^4, 0, x^^2, 1) * 1)
@@ -689,15 +693,16 @@ void main () // TODO GOAL
 			}
 		).fragment_shader!(
 			fvec, `frag_tex_coords`,
+			Color, `shitfuck`,
 			Texture, `tex`, q{
 				gl_FragColor = texture2D (tex, frag_tex_coords);
 			}
-		)(texture)
+		)(red, texture)
 		.aspect_correction (display.aspect_ratio)
 		.triangle_fan.output_to (display);
 
 		display.render;
 
 		import core.thread;
-		Thread.sleep (4.seconds);
+		Thread.sleep (2.seconds);
 	}

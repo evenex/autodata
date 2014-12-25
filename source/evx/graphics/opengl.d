@@ -39,7 +39,14 @@ struct gl
 			}
 
 		auto opDispatch (string name, Args...)(auto ref Args args)
-			{/*...}*/
+			in {/*...}*/
+				static assert (
+					name.not!contains (`UseProgram`)
+					&& name.not!contains (`Bind`),
+					`set gl.` ~ (name is `UseProgram`? `program` : name[4..$].toLower) ~ ` = an opengl id or object containing an id instead`
+				);
+			}
+			body {/*...}*/
 				auto use_program ()()
 					{/*...}*/
 						static assert (name == `program`);
@@ -104,12 +111,7 @@ struct gl
 					}
 				auto forward ()()
 					{/*...}*/
-						static assert (
-							name.not!contains (`UseProgram`)
-							&& name.not!contains (`Bind`)
-						);
-
-						return call!name (args);
+						return call!name (args.to_c.expand);
 					}
 
 				return Match!(use_program, bind, forward);
