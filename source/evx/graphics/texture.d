@@ -41,7 +41,20 @@ struct Texture
 				gl.texture_2D = this;
 			}
 
-		mixin BufferOps!(allocate, pull, access, width, height, RangeOps);
+		template TextureId ()
+			{/*...}*/
+				GLuint texture_id ()
+					{/*...}*/
+						return source.texture_id;
+					}
+
+				auto offset ()
+					{/*...}*/
+						return vector (limit!0.left, limit!1.left);
+					}
+			}
+
+		mixin BufferOps!(allocate, pull, access, width, height, RangeOps, TextureId);
 		mixin CanvasOps!(preprocess, setup);
 
 		void setup ()
@@ -57,7 +70,7 @@ struct Texture
 			 {/*...}*/
 			 	Color value;
 
-			//	push (&value, x, y); TODO
+				//push (&value, x, y); TODO
 
 				return value;
 			 }
@@ -119,36 +132,102 @@ struct Texture
 			{/*...}*/
 				bind;
 
-				static if (is (typeof(R.source) == Texture))
+				static if (is (typeof(*R.source) == Texture))
 					{/*...}*/
-						//gl.BindBuffer (range.texture_id); BUG
+						//gl.read_framebuffer = range.source.texture_id; TODO what do i even do here
+
+						gl.CopyTexSubImage2D (GL_TEXTURE_2D,
+							base_mip_level,
+							range.offset.x.to!int, range.offset.y.to!int,
+							0, 0, xs.width.to!int, ys.width.to!int,
+						);
+					}
+				else {/*...}*/
+					static if (is (typeof(vector (*range.ptr)) == Vector!(4, ubyte)))
+						auto ptr = range.ptr;
+					else {/*...}*/
+						auto temp = evx.containers.array.array (range.map!texel); // REVIEW control overloads so UFCS possible, too many clash w/ std.array.. probably local import in upstream mixin
+						auto ptr = temp.ptr;
 					}
 
-				static if (is (typeof(vector (*range.ptr)) == Vector!(4, ubyte)))
-					auto ptr = range.ptr;
-				else {/*...}*/
-					auto temp = evx.containers.array.array (range.map!texel); // REVIEW control overloads so UFCS possible, too many clash w/ std.array
-					auto ptr = temp.ptr;
+					gl.TexSubImage2D (GL_TEXTURE_2D,
+						base_mip_level,
+						xs.left.to!int, ys.left.to!int,
+						xs.width.to!int, ys.width.to!int,
+						format, gl.type!ubyte,
+						ptr
+					);
 				}
-
-				gl.TexSubImage2D (GL_TEXTURE_2D,
-					base_mip_level,
-					xs.left.to!int, ys.left.to!int,
-					xs.width.to!int, ys.width.to!int,
-					format, gl.type!ubyte,
-					ptr
-				);
 			}
 		void pull (R)(R range, size_t x, size_t[2] ys)
 			{/*...}*/
+				pull (range, [x, x+1], ys);
 			}
-		void pull (R)(R range, size_t[2] xs, size_t y) // TODO glsubtexture transfer?
+		void pull (R)(R range, size_t[2] xs, size_t y)
 			{/*...}*/
-				
+				pull (range, xs, [y, y+1]);
 			}
-		void pull (R)(R range, size_t x, size_t y) // TODO glsubtexture transfer?
+		void pull (R)(R range, size_t x, size_t y)
 			{/*...}*/
-				
+				pull (range, [x, x+1], [y, y+1]);
+			}
+
+		void push (R)(R range, size_t[2] xs, size_t[2] ys)
+			{/*...}*/
+				bind;
+
+				static if (is (typeof(*R.source) == Texture))
+					{/*...}*/
+						range.source.bind;
+						//gl.BindBuffer (range.texture_id); BUG
+						static if (0)
+							{/*...}*/
+						gl.read_buffer = this;
+
+						gl.CopyTexSubImage2D (GL_TEXTURE_2D,
+							base_mip_level,
+							xs.left.to!int, ys.left.to!int,
+
+						);
+							}
+					}
+				else {/*...}*/
+					void write_data (T)(T ptr)
+						{/*...}*/
+							auto temp = this[xs.left..xs.right, ys.left..ys.right].Texture;
+
+							temp.bind;
+
+							gl.GetTexImage (GL_TEXTURE_2D,
+								base_mip_level,
+								format, gl.type!ubyte,
+								ptr
+							);
+						}
+
+					static if (is (typeof(vector (*range.ptr)) == Vector!(4, ubyte)))
+						write_data (range.ptr);
+					else {/*convert}*/
+						Array!(2, Vector!(4, ubyte)) temp;
+						temp.allocate (xs.width, ys.width);
+
+						write_data (temp.ptr);
+
+						range[] = temp[].map!(to!(Element!R));
+					}
+				}
+			}
+		void push (R)(R range, size_t x, size_t[2] ys)
+			{/*...}*/
+				push (range, [x, x+1], ys);
+			}
+		void push (R)(R range, size_t[2] xs, size_t y)
+			{/*...}*/
+				push (range, xs, [y, y+1]);
+			}
+		void push (R)(R range, size_t x, size_t y)
+			{/*...}*/
+				push (range, [x, x+1], [y, y+1]);
 			}
 
 		enum base_mip_level = 0;

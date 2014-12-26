@@ -222,7 +222,7 @@ struct Shader (Parameters...)
 							StorageClass storage_class, T, string name
 						))
 							{/*...}*/
-								static if (storage_class is StorageClass.uniform) // TODO uniform value for textures should be the texture location.. set the uniform value to the texture location, then bind the texture to that location
+								static if (storage_class is StorageClass.uniform)
 									auto bound = variable_locations[i] = gl.GetUniformLocation (program_id, name);
 
 								else static if (storage_class is StorageClass.vertex_input)
@@ -247,7 +247,7 @@ struct Shader (Parameters...)
 				{/*...}*/
 					foreach (i,_; Args)
 						static if (is (Args[i] == T[i]))
-							input[i].move (args[i]);
+							input[i].move (args[i]); // BUG just take the IDs if possible, otherwise we will destroy the texture after running once
 						else args[i] = input[i].gpu_array;
 				}
 
@@ -836,10 +836,13 @@ void main ()
 		auto display = new Display;
 
 		auto vertices = square!float;
-		auto tex_coords = square!float.flip!`vertical`;
+		auto tex_coords = square!float.flip!`vertical`.scale (3.0f);
 
 		auto tex1 = ℕ[0..100].by (ℕ[0..100]).map!((i,j) => (i+j)%2? yellow: orange).Texture;
 		auto tex2 = ℕ[0..50].by (ℕ[0..50]).map!((i,j) => (i+j)%2? purple: cyan).Texture;
+
+		tex1[25..50, 25..50] = tex2[]; // BUG this should fail bounds check
+		tex1[50..75, 25..50] = tex2[0..25, 0..25];
 
 		// TEXTURED SHAPE SHADER
 		τ(vertices, tex_coords).vertex_shader!(
@@ -852,7 +855,7 @@ void main ()
 			Texture, `tex`, q{
 				gl_FragColor = texture2D (tex, frag_tex_coords);
 			}
-		)(tex2)
+		)(tex1)
 		.aspect_correction (display.aspect_ratio)
 		.triangle_fan.output_to (display);
 

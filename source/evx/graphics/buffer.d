@@ -62,11 +62,11 @@ struct GLBuffer (T, alias target, alias usage)
 				if (j-i == 0) // REVIEW should i be checking for this at the operator level? that would require a volume function
 					return;
 
-				static if (is (R == GLBuffer!(T,S), S...))
+				static if (is (typeof(*R.source) == GLBuffer!(T,S), S...))
 					{/*copy in vram}*/
 						auto read_index = range.offset * T.sizeof;
 
-						gl.copy_read_buffer = range[].source;
+						gl.copy_read_buffer = range;
 						gl.copy_write_buffer = this;
 
 						gl.CopyBufferSubData (GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, read_index, gl_slice (i,j).expand);
@@ -132,6 +132,11 @@ struct GLBuffer (T, alias target, alias usage)
 
 		template GLRangeOps ()
 			{/*...}*/
+				GLuint buffer_id ()
+					{/*...}*/
+						return source.buffer_id;
+					}
+
 				auto offset ()
 					{/*...}*/
 						return this[].bounds.left;
