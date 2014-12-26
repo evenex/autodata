@@ -6,6 +6,7 @@ private {/*...}*/
 	import evx.range;
 
 	import evx.math.arithmetic.core;
+	import evx.math.logic;
 	import evx.math.functional;
 	import evx.math.algebra;
 }
@@ -19,6 +20,11 @@ auto product (R)(R range)
 			zero!(typeof(range.reduce!multiply))
 			: range.reduce!multiply;
 	}
+auto product (T...)(T args)
+	if (not (Any!(is_input_range, T)))
+	{/*...}*/
+		return recursive_op!`*` (args);
+	}
 alias Π = product;
 
 /* compute the sum of a sequence 
@@ -27,6 +33,11 @@ auto sum (R)(R range)
 	if (is_input_range!R)
 	{/*...}*/
 		return range.reduce!add (zero!(ElementType!R));
+	}
+auto sum (T...)(T args)
+	if (not (Any!(is_input_range, T)))
+	{/*...}*/
+		return recursive_op!`+` (args);
 	}
 alias Σ = sum;
 
@@ -44,3 +55,11 @@ pure lcm (T)(T a, T b)
 		assert (lcm (9, 0) == 0);
 	}
 
+private auto recursive_op (string op, T...)(T args)
+	{/*...}*/
+		static if (is (T[1]))
+			mixin(q{
+				return args[0] } ~ op ~ q{ recursive_op!op (args[1..$]);
+			});
+		else return args[0];
+	}
