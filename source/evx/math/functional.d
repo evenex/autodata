@@ -410,7 +410,7 @@ public {/*by}*/
 							return Match!(get_limit, get_length);
 						}
 
-					auto access (Map!(Coords, Spaces) point) // TODO flatten tuples
+					auto access (Map!(Coords, Spaces) point)
 						in {/*...}*/
 							static assert (typeof(point).length >= Spaces.length,
 								`could not deduce coordinate type for ` ~ Spaces.stringof
