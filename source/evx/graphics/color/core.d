@@ -7,6 +7,7 @@ private {/*imports}*/
 
 	import evx.math;
 	import evx.range;
+	import evx.type;
 }
 
 struct Color
@@ -169,6 +170,7 @@ struct Color
 		}
 		public {/*ctor}*/
 			this (Args...)(Args args)
+				if (All!(is_floating_point, Args))
 				{/*...}*/
 					static if (Args.length == 1)
 						{/*...}*/
@@ -178,6 +180,30 @@ struct Color
 					else static if (Args.length == 3)
 						this.base = typeof(base)(args, 1.0);
 					else this.base = typeof(base)(args);
+
+					normalize;
+				}
+		}
+		public {/*conv}*/
+			Vector!(4, ubyte) opCast ()
+				{/*...}*/
+					return (base * 255).each!(to!ubyte);
+				}
+
+			this (Vector!(4, ubyte) pixel)
+				{/*...}*/
+					base = pixel.each!(to!float);
+
+					base /= 255;
+
+					normalize;
+				}
+
+			this (Vector!(4, float) color)
+				{/*...}*/
+					base = color;
+
+					normalize;
 				}
 		}
 		public {/*ops}*/
