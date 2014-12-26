@@ -8,7 +8,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 			import evx.operators.write;
 		}
 
-		auto verified_limit_pull (S, Selected...)(S space, Selected selected)
+		auto verified_limit_pull (S, Selected...)(S source, Selected selected)
 			in {/*...}*/
 				version (all)
 					{/*error messages}*/
@@ -17,33 +17,49 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 						enum type_mismatch_error = error_header
 							~ `cannot transfer ` ~ S.stringof ~ ` to `
 							~ Filter!(λ!q{(T) = is (T == U[2], U)}, Selected).stringof
-							~ ` subspace`;
+							~ ` subsource`;
+
+						auto size_mismatch_error (T,U)(T this_size, U that_size)
+							{/*...}*/
+								return error_header
+								~ `assignment size mismatch `
+								`(` ~ this_size.text ~ ` != ` ~ that_size.text ~ `)`;
+							}
 					}
 
 				static if (not (Any!(λ!q{(T) = is (T == U[2], U)}, Selected)))
 					{}
-				else static if (is (typeof(space.limit!0)))
+				else static if (is (typeof(source.limit!0)))
 					{/*...}*/
-						foreach (i; Iota!(0, 999))
-							static if (is (typeof(space.limit!i)) || is (typeof(this[selected].limit!i)))
-								static assert (is (typeof(space.limit!i.left == this[selected].limit!i.left)),
+						foreach (i; Iota!999)
+							static if (is (typeof(source.limit!i)) || is (typeof(this[selected].limit!i)))
+								static assert (is (typeof(source.limit!i.left == this[selected].limit!i.left)),
 									type_mismatch_error
 								);
 							else break;
+
+						foreach (i, limit; selected)
+							{/*bounds check}*/
+								auto space ()() {return source.limit!i;}
+								auto range ()() if (i == 0) {return source.length;}
+
+								auto boundary = Match!(space, range);
+
+								static if (is (typeof(limit.identity) == typeof(boundary)))
+									assert (boundary.width == limit.width,
+										size_mismatch_error (boundary.width, limit.width)
+									);
+							}
 					}
-				else static if (is (typeof(space.length)) && not (is (typeof(this[selected].limit!1))))
+				else static if (is (typeof(source.length)) && not (is (typeof(this[selected].limit!1))))
 					{/*...}*/
-						assert (space.length == this[selected].limit!0.width,
-							error_header
-							~ `assignment size mismatch `
-							~ S.stringof ~ `.length != ` ~ typeof(this[selected]).stringof ~ `.limit `
-							`(` ~ space.length.text ~ ` != ` ~ this[selected].limit!0.width.text ~ `)`
+						assert (source.length == this[selected].limit!0.width,
+							size_mismatch_error (source.length, this[selected].limit!0.width)
 						);
 					}
-				else static assert (0, type_mismatch_error);
 			}
 			body {/*...}*/
-				return pull (space, selected);
+				return pull (source, selected);
 			}
 
 		mixin WriteOps!(verified_limit_pull, access, LimitsAndExtensions);
