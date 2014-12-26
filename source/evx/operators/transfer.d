@@ -31,12 +31,17 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 					{}
 				else static if (is (typeof(source.limit!0)))
 					{/*...}*/
-						foreach (i; Iota!999)
-							static if (is (typeof(source.limit!i)) || is (typeof(this[selected].limit!i)))
-								static assert (is (typeof(source.limit!i.left == this[selected].limit!i.left)),
-									type_mismatch_error
-								);
-							else break;
+						void dimensions_check (uint i = 0)
+							{/*...}*/
+								static if (is (typeof(source.limit!i)) || is (typeof(this[selected].limit!i)))
+									{/*...}*/
+										static assert (is (typeof(source.limit!i.left == this[selected].limit!i.left)),
+											type_mismatch_error
+										);
+
+										dimensions_check!(i+1);
+									}
+							}
 
 						auto bounds_check (size_t i, T)(T limit)
 							{/*...}*/
@@ -50,6 +55,8 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 										size_mismatch_error (width, limit.width)
 									);
 							}
+
+						dimensions_check;
 
 						foreach (i,j; Map!(Pair!().First!Identity, 
 							Filter!(Pair!().Second!(λ!q{(T) = is (T == U[2], U)}),
