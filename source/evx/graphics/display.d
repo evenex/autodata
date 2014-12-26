@@ -7,6 +7,8 @@ private {/*imports}*/
 
 	import evx.math;
 	import evx.range;
+
+	import evx.misc.utils;
 }
 
 class Display
@@ -42,7 +44,7 @@ class Display
 
 
 					auto dims = display_size;
-					window = glfwCreateWindow (dims.x.to!uint, dims.y.to!uint, "evx.graphics.display", null, null);
+					window = glfwCreateWindow (dims.x.to!uint, dims.y.to!uint, ``, null, null);
 
 					if (window is null)
 						assert (0, `window creation failure`);
@@ -54,6 +56,12 @@ class Display
 					glfwSetFramebufferSizeCallback (window, &resize_framebuffer_callback);
 
 					glfwSetWindowUserPointer (window, cast(void*)this);
+
+					glfwSetWindowTitle (window, text (
+						"evx.graphics.display openGL ",
+						glfwGetWindowAttrib (window, GLFW_CONTEXT_VERSION_MAJOR), '.',
+						glfwGetWindowAttrib (window, GLFW_CONTEXT_VERSION_MINOR)
+					).to_c.expand);
 				}
 			void initialize_gl ()
 				{/*...}*/
