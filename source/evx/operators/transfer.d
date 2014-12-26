@@ -38,7 +38,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 								);
 							else break;
 
-						auto bounds_check (size_t i)()
+						auto bounds_check (size_t i, T)(T limit)
 							{/*...}*/
 								auto space ()() {return source.limit!i.width;}
 								auto range ()() if (i == 0) {return source.length;}
@@ -51,8 +51,11 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 									);
 							}
 
-						foreach (i, limit; selected)
-							bounds_check!i;
+						foreach (i,j; Map!(Pair!().First!Identity, 
+							Filter!(Pair!().Second!(λ!q{(T) = is (T == U[2], U)}),
+								Indexed!Selected
+							)
+						)) bounds_check!i (selected[j]);
 					}
 				else static if (is (typeof(source.length)) && not (is (typeof(this[selected].limit!1))))
 					{/*...}*/
