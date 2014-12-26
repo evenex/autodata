@@ -322,10 +322,9 @@ auto align_to (T)(Box!T box, Alignment alignment, Vector!(2, T) position)
 		return box.verts[].map!(v => v + offset).bounding_box;
 	}
 	unittest {/*...}*/
-		import evx.math;//		import evx.math.geometry.polygons;
-		import evx.math;//		import evx.math.floatingpoint;
+		import evx.math;
 
-		auto a = square (1).bounding_box;
+		auto a = square (1.0).bounding_box;
 
 		assert (a.center.approx (0.vec));
 
@@ -354,10 +353,9 @@ auto into_bounding_box_of (R,S)(auto ref R inner, auto ref S outer)
 		return inner.map!(v => (v - in_c) * s + ex_c); // REVIEW [] operator for priming ranges
 	}
 	unittest {/*...}*/
-		import evx.math;//		import evx.math.geometry.polygons;
-		import evx.math;//		import evx.math.floatingpoint;
+		import evx.math;
 
-		auto a = square (1);
+		auto a = square (1.0);
 		auto b = square (0.5).map!(v => v * vec(2.0, 1.0));
 
 		auto c = a.into_bounding_box_of (b);

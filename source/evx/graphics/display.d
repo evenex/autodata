@@ -42,7 +42,6 @@ class Display
 					if (not!initialized)
 						assert (0, "glfwInit failed");
 
-
 					auto dims = display_size;
 					window = glfwCreateWindow (dims.x.to!uint, dims.y.to!uint, ``, null, null);
 

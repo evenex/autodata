@@ -306,7 +306,7 @@ unittest {/*codegen}*/
 
 	static assert (
 		TestShader.fragment_code == [
-			`#version 420`,
+			`#version 440`,
 			`in dvec2 bar;`,
 			`uniform vec4 baz;`,
 			`uniform vec2 ar;`,
@@ -320,7 +320,7 @@ unittest {/*codegen}*/
 
 	static assert (
 		TestShader.vertex_code == [
-			`#version 420`,
+			`#version 440`,
 			`in bool foo;`,
 			`out dvec2 bar;`,
 			`uniform vec4 baz;`,

@@ -73,10 +73,10 @@ auto area (R)(R polygon)
 		).abs;
 	}
 	unittest {/*...}*/
-		assert (square (1).area.approx (1));
-		assert (square (2).area.approx (4));
-		assert (circle!1000 (1).area.approx (π));
-		assert (circle!1000 (2).area.approx (4*π));
+		assert (square (1.0).area.approx (1));
+		assert (square (2.0).area.approx (4));
+		assert (circle!1000 (1.0).area.approx (π));
+		assert (circle!1000 (2.0).area.approx (4*π));
 
 		// http://www.mathsisfun.com/geometry/area-irregular-polygons.html
 		auto irregular = [
