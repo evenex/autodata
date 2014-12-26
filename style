@@ -1,0 +1,17 @@
+bad:  static if ladders
+good: pattern matching
+
+bad:  traits tags
+good: isexpression matching
+
+bad:  multiline string mixins
+good: single-symbol string mixins
+
+bad:  string mixins
+good: template mixins
+
+bad:  explicit properties
+good: derivable properties
+
+bad:  temporary variables
+good: perfect forwarding, metafunctional template inlining
