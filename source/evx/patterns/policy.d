@@ -3,7 +3,6 @@ module evx.patterns.policy;
 private {/*imports}*/
 	import std.typetuple;
 
-	import evx.codegen;
 	import evx.type;
 	import evx.math;
 }
@@ -12,10 +11,12 @@ private {/*imports}*/
 */
 struct DefaultPolicies (NamesAndDefaults...)
 	{/*...}*/
-		mixin ParameterSplitter!(
-			q{PolicyNames}, is_string_param, 
-			q{PolicyDefaults}, not!(or!(is_type, is_string_param)),
-			NamesAndDefaults
+		alias PolicyNames = Filter!(is_string_param, NamesAndDefaults);
+		alias PolicyDefaults = Filter!(not!(or!(is_type, is_string_param)), NamesAndDefaults);
+
+		static assert (PolicyNames == Deinterleave!NamesAndDefaults[0..$/2] 
+			&& PolicyDefaults == Deinterleave!NamesAndDefaults[$/2..$],
+			`default policy must be interleaved list of policy names and default values, not ` ~ NamesAndDefaults.stringof
 		);
 
 		alias PolicyTypes = staticMap!(type_of, PolicyDefaults);

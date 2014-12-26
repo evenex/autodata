@@ -23,17 +23,16 @@ mixin template Builder (Args...)
 				isDelegate, isFunctionPointer;
 		}
 		private {/*import evx}*/
-			import evx.type:
-				is_type, is_string_param;
-			import evx.codegen:
-				ParameterSplitter;
+			import evx.type;
 		}
 
-		mixin ParameterSplitter!(
-			q{Types}, is_type, 
-			q{Names}, is_string_param, 
-			Args
+		alias Types = Filter!(is_type, Args);
+		alias Names = Filter!(is_string_param, Args);
+
+		static assert (is (Types == Cons!(Deinterleave!Args[0..$/2])) && Names == Deinterleave!Args[$/2..$],
+			`Builder args must be in the form of a declaration list, not ` ~ Args.stringof
 		);
+
 		mixin PolicyAssignment!(DefaultPolicies!(`chain_by`, ChainBy.reference), Args);
 
 		mixin(builder_property_declaration);
