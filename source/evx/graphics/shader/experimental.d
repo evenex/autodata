@@ -54,11 +54,13 @@ private {/*glsl functions}*/
 // GLOBAL PRECOMPILED PROGRAM LOOKUP
 __gshared GLuint[string] shader_ids;
 
-// PODs → PODs, Arrays → GPUArrays
+// PODs → PODs, Arrays → GPUArrays, Resources → Borrowed!Resources
 template GPUType (T)
 	{/*...}*/
 		static if (is (T == GLBuffer!U, U...))
-			alias GPUType = T;
+			alias GPUType = Borrowed!T;
+		else static if (is (T == Texture))
+			alias GPUType = Borrowed!T;
 		else static if (is (typeof(T.init[].source) == GLBuffer!U, U...))
 			alias GPUType = T;
 		else static if (is (typeof(T.init.gpu_array) == U, U))
@@ -245,10 +247,10 @@ struct Shader (Parameters...)
 
 			this (T...)(auto ref T input)
 				{/*...}*/
-					foreach (i,_; Args)
-						static if (is (Args[i] == T[i]))
-							input[i].move (args[i]); // BUG just take the IDs if possible, otherwise we will destroy the texture after running once
-						else args[i] = input[i].gpu_array;
+					foreach (i, ref arg; args)
+						static if (is (Args[i] == T[i]) || is (Args[i] == Borrowed!(T[i])))
+							arg = input[i];
+						else arg = input[i].gpu_array;
 				}
 
 			enum is_uniform (T) = is (T == Variable!(StorageClass.uniform, U), U...);
@@ -400,7 +402,7 @@ template vertex_shader (Decl...)
 						static if (is (Input[1]))
 							{/*...}*/
 								alias Symbols = Cons!(Input[0].Symbols, Parse!(Input[1..$]));
-								alias Args = Cons!(Input[0].Args, Input[1..$]);
+								alias Args = Cons!(Input[0].Args, Map!(GPUType, Input[1..$]));
 							}
 						else {/*...}*/
 							alias Symbols = Front!Input.Symbols; // HACK https://issues.dlang.org/show_bug.cgi?id=13883
@@ -412,21 +414,21 @@ template vertex_shader (Decl...)
 						static if (is (Input[1]))
 							{/*...}*/
 								alias Symbols = Parse!(Data, Input[1..$]);
-								alias Args = Cons!(Input[0].Types, Input[1..$]);
+								alias Args = Map!(GPUType, Cons!(Input[0].Types, Input[1..$]));
 							}
 						else {/*...}*/
 							alias Symbols = Parse!Data;
-							alias Args = Front!Input.Types; // HACK https://issues.dlang.org/show_bug.cgi?id=13883
+							alias Args = Map!(GPUType, Front!Input.Types); // HACK https://issues.dlang.org/show_bug.cgi?id=13883
 						}
 					}
 				else {/*...}*/
 					 alias Symbols = Parse!Input;
-					 alias Args = Input;
+					 alias Args = Map!(GPUType, Input);
 				}
 
 				alias S = Shader!(Symbols, 
 					Function!(Stage.vertex, code),
-					Map!(GPUType, Args),
+					Args
 				);
 				
 				auto shader 	()() {return S (input[0].args);}
@@ -481,7 +483,7 @@ template fragment_shader (Decl...)
 						static if (is (Input[1]))
 							{/*...}*/
 								alias Symbols = Front!Input.Symbols; // HACK https://issues.dlang.org/show_bug.cgi?id=13883
-								alias Args = Cons!(Front!Input.Args, Input[1..$]);
+								alias Args = Cons!(Front!Input.Args, Map!(GPUType, Input[1..$]));
 							}
 						else {/*...}*/
 							alias Symbols = Front!Input.Symbols; // HACK https://issues.dlang.org/show_bug.cgi?id=13883
@@ -500,13 +502,19 @@ template fragment_shader (Decl...)
 					Map!(Uniform, Filter!(is_uniform, Count!DeclTypes)),
 					Map!(Smooth, Filter!(not!is_uniform, Count!DeclTypes)),
 					Function!(Stage.fragment, code),
-					Map!(GPUType, Args)
+					Args
 				);
 				
 				auto forward_all_args 	 ()() {return S (input[0].args, input[1..$]);}
 				auto forward_shader_args ()() {return S (input[0].args);}
 				auto forward_input_args  ()() {return S (input);}
 
+				static if (not (is(typeof(Match!(forward_all_args, forward_shader_args, forward_input_args)))))
+					{/*...}*/
+					pragma(msg, Args);
+					forward_all_args;
+						
+					}
 				return Match!(forward_all_args, forward_shader_args, forward_input_args);
 			}
 	}
@@ -831,7 +839,7 @@ void main () // TODO GOAL
 	}
 
 void main ()
-	{/*...}*/
+	{/*texture transfer}*/
 		import evx.graphics.display;
 		auto display = new Display;
 
@@ -840,6 +848,8 @@ void main ()
 
 		auto tex1 = ℕ[0..100].by (ℕ[0..100]).map!((i,j) => (i+j)%2? red: yellow).Texture;
 		auto tex2 = ℕ[0..50].by (ℕ[0..50]).map!((i,j) => (i+j)%2? blue: green).grid (100,100).Texture;
+
+		assert (tex1[0,0] == yellow);
 
 		tex1[50..75, 25..75] = tex2[0..25, 0..50];
 
@@ -860,6 +870,8 @@ void main ()
 
 		display.render;
 
+		assert (tex1[0,0] == yellow);// BUG this gets moved when its passed to the shader...
+
 		import core.thread;
-		Thread.sleep (5.seconds);
+		Thread.sleep (1.seconds);
 	}

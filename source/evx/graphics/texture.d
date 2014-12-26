@@ -15,9 +15,9 @@ private {/*imports}*/
 	alias array = evx.containers.array.array; // REVIEW namespace clash
 }
 
-ubyte[4] texel (Vector!(4, float) color)
+ubyte[4] texel (Color color)
 	{/*...}*/
-		return (color.each!clamp (interval (0,1)).vector * 255).each!(to!ubyte);
+		return cast(Vector!(4, ubyte))(color);
 	}
 
 enum out_of_bounds_color = magenta;
@@ -50,7 +50,7 @@ struct Texture
 
 				auto offset ()
 					{/*...}*/
-						return vector (limit!0.left, limit!1.left);
+						return vector (bounds[0].left, bounds[1].left);
 					}
 			}
 
@@ -69,8 +69,9 @@ struct Texture
 		Color access (size_t x, size_t y)
 			 {/*...}*/
 			 	Color value;
+				auto view = array_view (&value, 1, 1);
 
-				//push (&value, x, y); TODO
+				push (view[], x, y);
 
 				return value;
 			 }
@@ -176,48 +177,33 @@ struct Texture
 
 		void push (R)(R range, size_t[2] xs, size_t[2] ys)
 			{/*...}*/
-				bind;
-				static assert (0);
+				static assert (not (is (typeof(*R.source) == Texture)),
+					`texture-texture transfers are handled by pull`
+				);
 
-				static if (is (typeof(*R.source) == Texture))
+				void write_data (T)(T ptr)
 					{/*...}*/
-						range.source.bind;
-						//gl.BindBuffer (range.texture_id); BUG
-						static if (0)
-							{/*...}*/
-						gl.read_buffer = this;
+						auto temp = this[xs.left..xs.right, ys.left..ys.right].Texture;
 
-						gl.CopyTexSubImage2D (GL_TEXTURE_2D,
+						temp.bind;
+
+						gl.GetTexImage (GL_TEXTURE_2D,
 							base_mip_level,
-							xs.left.to!int, ys.left.to!int,
-
+							format, gl.type!ubyte,
+							ptr
 						);
-							}
 					}
-				else {/*...}*/
-					void write_data (T)(T ptr)
-						{/*...}*/
-							auto temp = this[xs.left..xs.right, ys.left..ys.right].Texture;
 
-							temp.bind;
+				static if (is (typeof(vector (*range.ptr)) == Vector!(4, ubyte)))
+					write_data (range.ptr);
+				else {/*convert}*/
+					Array!(Vector!(4, ubyte), 2) temp;
 
-							gl.GetTexImage (GL_TEXTURE_2D,
-								base_mip_level,
-								format, gl.type!ubyte,
-								ptr
-							);
-						}
+					temp.allocate (xs.width, ys.width);
 
-					static if (is (typeof(vector (*range.ptr)) == Vector!(4, ubyte)))
-						write_data (range.ptr);
-					else {/*convert}*/
-						Array!(2, Vector!(4, ubyte)) temp;
-						temp.allocate (xs.width, ys.width);
+					write_data (temp.ptr);
 
-						write_data (temp.ptr);
-
-						range[] = temp[].map!(to!(Element!R));
-					}
+					range[] = temp[].map!(to!(Element!R));
 				}
 			}
 		void push (R)(R range, size_t x, size_t[2] ys)
