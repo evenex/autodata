@@ -168,13 +168,18 @@ struct Array (T, uint dimensions = 1)
 		]);
 	}
 
+/* allocate an array from data 
+*/
 auto array (S)(S space)
 	{/*...}*/
 		static assert (dimensionality!S > 0,
 			S.stringof ~ ` has 0 dimensions`
 		);
 
-		return Array!(Element!S, dimensionality!S)(space);
+		static if (is (typeof(S == Array!(Element!S, dimensionality!S))))
+			return space;
+
+		else return Array!(Element!S, dimensionality!S)(space);
 	}
 	unittest {/*...}*/
 		auto x = [1,2,3].array;
@@ -189,4 +194,16 @@ auto array (S)(S space)
 
 		auto z = y[2,0..$,1..$].array;
 		assert (z[0,0..$] == [1,1]);
+	}
+
+/* create an array over a pointer, without allocation 
+*/
+auto array_view (T, U...)(T* ptr, U dims)
+	{/*...}*/
+		Array!(T, U.length) array;
+
+		array.base.data = ptr[0..dims.product];
+		array.base.lengths = dims;
+
+		return array;
 	}
