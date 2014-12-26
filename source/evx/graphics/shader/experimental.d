@@ -838,8 +838,8 @@ void main ()
 		auto vertices = square!float;
 		auto tex_coords = square!float.flip!`vertical`.scale (3.0f);
 
-		auto tex1 = ℕ[0..100].by (ℕ[0..100]).map!((i,j) => (i+j)%2? yellow: orange).Texture;
-		auto tex2 = ℕ[0..50].by (ℕ[0..50]).map!((i,j) => (i+j)%2? purple: cyan).Texture;
+		auto tex1 = ℕ[0..100].by (ℕ[0..100]).map!((i,j) => (i+j)%2? red: yellow).Texture;
+		auto tex2 = ℕ[0..50].by (ℕ[0..50]).map!((i,j) => (i+j)%2? blue: green).grid (100,100).Texture;
 
 		tex1[50..75, 25..75] = tex2[0..25, 0..50];
 
@@ -861,5 +861,5 @@ void main ()
 		display.render;
 
 		import core.thread;
-		Thread.sleep (1.seconds);
+		Thread.sleep (5.seconds);
 	}

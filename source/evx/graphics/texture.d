@@ -134,8 +134,6 @@ struct Texture
 
 				static if (is (typeof(*R.source) == Texture))
 					{/*...}*/
-						//gl.read_framebuffer = range.source.texture_id; TODO what do i even do here
-
 						gl.CopyImageSubData (
 							range.source.texture_id, GL_TEXTURE_2D, base_mip_level,
 							range.offset.x.to!int, range.offset.y.to!int, 0,
@@ -143,7 +141,7 @@ struct Texture
 							this.texture_id, GL_TEXTURE_2D, base_mip_level,
 							xs.left.to!int, ys.left.to!int, 0,
 
-							xs.width.to!int, ys.width.to!int, 0
+							xs.width.to!int, ys.width.to!int, 1
 						);
 					}
 				else {/*...}*/
@@ -179,6 +177,7 @@ struct Texture
 		void push (R)(R range, size_t[2] xs, size_t[2] ys)
 			{/*...}*/
 				bind;
+				static assert (0);
 
 				static if (is (typeof(*R.source) == Texture))
 					{/*...}*/
