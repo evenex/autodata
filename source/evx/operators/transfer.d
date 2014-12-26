@@ -38,18 +38,21 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 								);
 							else break;
 
-						foreach (i, limit; selected)
-							{/*bounds check}*/
-								auto space ()() {return source.limit!i;}
+						auto bounds_check (size_t i)()
+							{/*...}*/
+								auto space ()() {return source.limit!i.width;}
 								auto range ()() if (i == 0) {return source.length;}
 
-								auto boundary = Match!(space, range);
+								auto width = Match!(space, range);
 
-								static if (is (typeof(limit.identity) == typeof(boundary)))
-									assert (boundary.width == limit.width,
-										size_mismatch_error (boundary.width, limit.width)
+								static if (is (typeof(limit.width)))
+									assert (width == limit.width,
+										size_mismatch_error (width, limit.width)
 									);
 							}
+
+						foreach (i, limit; selected)
+							bounds_check!i;
 					}
 				else static if (is (typeof(source.length)) && not (is (typeof(this[selected].limit!1))))
 					{/*...}*/

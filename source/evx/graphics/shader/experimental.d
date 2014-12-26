@@ -807,7 +807,7 @@ void main () // TODO GOAL
 			}
 		).fragment_shader!(
 			q{
-				gl_FragColor = vec4 (0,1,0,1); // BUG this narrows the problem down to the framebuffer linkage
+				gl_FragColor = vec4 (0,1,0,1);
 			}
 		).triangle_fan.output_to (target);
 
@@ -841,10 +841,7 @@ void main ()
 		auto tex1 = ℕ[0..100].by (ℕ[0..100]).map!((i,j) => (i+j)%2? yellow: orange).Texture;
 		auto tex2 = ℕ[0..50].by (ℕ[0..50]).map!((i,j) => (i+j)%2? purple: cyan).Texture;
 
-		std.stdio.writeln (tex1[25..50, 25..50].bounds);
-		std.stdio.writeln (tex2[].bounds);
-		tex1[25..50, 25..50] = tex2[]; // BUG this should fail bounds check
-	//	tex1[50..75, 25..50] = tex2[0..25, 0..25];
+		tex1[50..75, 25..75] = tex2[0..25, 0..50];
 
 		// TEXTURED SHAPE SHADER
 		τ(vertices, tex_coords).vertex_shader!(
