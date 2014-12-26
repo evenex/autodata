@@ -68,3 +68,32 @@ void move (T)(ref T src, ref T tgt)
 
 		destroy (src);
 	}
+
+/* a borrowed resource bypasses RAII And move semantics 
+*/
+struct Borrowed (T)
+	{/*...}*/
+		T* ptr;
+
+		this (ref T resource)
+			{/*...}*/
+				this = resource;
+			}
+
+		auto ref opAssign (ref T resource)
+			{/*...}*/
+				ptr = &resource;
+			}
+
+		ref deref ()
+			{/*...}*/
+				return *ptr;
+			}
+
+		alias deref this;
+	}
+
+auto borrow (T)(ref T resource)
+	{/*...}*/
+		return Borrowed!T (resource);
+	}
