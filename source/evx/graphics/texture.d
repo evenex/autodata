@@ -136,10 +136,9 @@ struct Texture
 					{/*...}*/
 						//gl.read_framebuffer = range.source.texture_id; TODO what do i even do here
 
-						static if (0) // TODO TODO TODO left off here
 						gl.CopyImageSubData (
 							range.source.texture_id, GL_TEXTURE_2D, base_mip_level,
-							range.offset.x, range.offset.y, 0,
+							range.offset.x.to!int, range.offset.y.to!int, 0,
 
 							this.texture_id, GL_TEXTURE_2D, base_mip_level,
 							xs.left.to!int, ys.left.to!int, 0,
