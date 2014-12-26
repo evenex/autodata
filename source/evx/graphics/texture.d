@@ -20,7 +20,8 @@ ubyte[4] texel (Color color)
 		return cast(Vector!(4, ubyte))(color);
 	}
 
-enum out_of_bounds_color = magenta;
+debug enum out_of_bounds_color = magenta;
+else enum out_of_bounds_color = Color ().alpha(0);
 
 struct Texture
 	{/*...}*/
