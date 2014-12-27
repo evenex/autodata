@@ -838,23 +838,9 @@ void main () // TODO GOAL
 		Thread.sleep (2.seconds);
 	}
 
-void main ()
-	{/*texture transfer}*/
-		import evx.graphics.display;
-		auto display = new Display;
-
-		auto vertices = square!float;
-		auto tex_coords = square!float.flip!`vertical`.scale (3.0f);
-
-		auto tex1 = ℕ[0..100].by (ℕ[0..100]).map!((i,j) => (i+j)%2? red: yellow).Texture;
-		auto tex2 = ℕ[0..50].by (ℕ[0..50]).map!((i,j) => (i+j)%2? blue: green).grid (100,100).Texture;
-
-		assert (tex1[0,0] == yellow);
-
-		tex1[50..75, 25..75] = tex2[0..25, 0..50];
-
-		// TEXTURED SHAPE SHADER
-		τ(vertices, tex_coords).vertex_shader!(
+auto textured_shape_shader (R)(R shape, auto ref Texture texture)
+	{/*...}*/
+		return τ(shape, shape.scale (2).flip!`vertical`).vertex_shader!(
 			`position`, `tex_coords`, q{
 				gl_Position = vec4 (position, 0, 1);
 				frag_tex_coords = (tex_coords + vec2 (1,1))/2;
@@ -864,13 +850,31 @@ void main ()
 			Texture, `tex`, q{
 				gl_FragColor = texture2D (tex, frag_tex_coords);
 			}
-		)(tex1)
+		)(texture);
+	}
+
+void main ()
+	{/*texture transfer}*/
+		import evx.graphics.display;
+		auto display = new Display;
+
+		auto vertices = square!float;
+
+		auto tex1 = ℕ[0..100].by (ℕ[0..100]).map!((i,j) => (i+j)%2? red: yellow).Texture;
+		auto tex2 = ℕ[0..50].by (ℕ[0..50]).map!((i,j) => (i+j)%2? blue: green).grid (100,100).Texture;
+
+		assert (tex1[0,0] == yellow);
+
+		tex1[50..75, 25..75] = tex2[0..25, 0..50];
+
+		// TEXTURED SHAPE SHADER
+		Cons!(vertices, tex1).textured_shape_shader // REVIEW Cons only works for symbols, rvalues need to be in tuples... with DIP32, this distinction will be removed (i think)
 		.aspect_correction (display.aspect_ratio)
 		.triangle_fan.output_to (display);
 
 		display.render;
 
-		assert (tex1[0,0] == yellow);// BUG this gets moved when its passed to the shader...
+		assert (tex1[0,0] == yellow);
 
 		import core.thread;
 		Thread.sleep (1.seconds);
