@@ -180,24 +180,13 @@ struct Vector (size_t n, Component = double)
 					return this;
 				}
 
-			auto opCast (V)() // TODO Match pattern here
+			V opCast (V)()
 				{/*...}*/
-					auto attempt_ctors (Strings...)()
-						{/*...}*/
-							foreach (code; Strings)
-								static if (__traits(compiles, mixin(code)))
-									mixin(q{
-										return } ~code~ q{;
-									});
+					auto tuple ()() {return V (this.tuple.expand);}
+					auto ctor  ()() {return V (this);}
+					auto range ()() {return V (this[]);}
 
-							assert (0, `no conversion from ` ~Vector.stringof~ ` to ` ~V.stringof);
-						}
-
-					return attempt_ctors!(
-						q{V (this.tuple.expand)},
-						q{V (this)},
-						q{V (this[])},
-					);
+					return Match!(tuple, ctor, range);
 				}
 
 			auto ref opDispatch (string swizzle)()

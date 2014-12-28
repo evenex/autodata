@@ -2,6 +2,7 @@ module evx.math.space;
 
 private {/*import}*/
 	import evx.type;
+	import evx.range;
 
 	import evx.math.algebra;
 	import evx.math.intervals;

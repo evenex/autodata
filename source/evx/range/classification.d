@@ -20,7 +20,7 @@ template Element (R) // TODO deprecate ElementType, substitute Element, watch ou
 	{/*...}*/
 		alias Standard () = typeof(ElementType!R.init);
 		alias Codomain () = typeof(R.init[Coords!(typeof(R.init[])).init]);
-		alias Identity () = R;
+		template Identity () if (not (is (Coords!(typeof(R.init[]))))) {alias Identity = R;}
 
 		alias Element = Match!(Codomain, Standard, Identity);
 	}

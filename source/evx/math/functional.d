@@ -43,6 +43,8 @@ public {/*map}*/
 					auto map_tuple ()() {return apply (subdomain.expand);}
 					auto map_space ()() {return remap (subdomain);}
 
+					static if (not (is (typeof( Match!(map_point, map_tuple, map_space)))))
+						map_point;
 					return Match!(map_point, map_tuple, map_space);
 				}
 			auto opSlice (size_t d, Args...)(Args args)
@@ -113,6 +115,7 @@ public {/*map}*/
 
 			private {/*...}*/
 				auto apply (Point...)(Point point)
+					if (is (Point == Cons!(Element!Domain)) || is (Tuple!Point == Element!Domain)) // REVIEW
 					{/*...}*/
 						return f (point, parameters);
 					}
@@ -386,97 +389,107 @@ public {/*reduce}*/
 			) == τ(6, -4, 0));
 		}
 }
-public {/*by}*/
-	struct Product (Spaces...)
+public {/*filter}*/
+	/* traverse the subrange consisting only of elements which match a given criteria 
+	*/
+
+	struct Filtered (R, alias match = identity)
 		{/*...}*/
-			struct Base
+			R range;
+			enum is_n_ary_function = is(typeof(match (range.front.expand)));
+
+			auto ref front ()
 				{/*...}*/
-					alias Offsets = Scan!(Sum, Map!(dimensionality, Spaces));
-
-					Spaces spaces;
-
-					auto limit (size_t d)() const
-						{/*...}*/
-							mixin LambdaCapture;
-
-							alias LimitOffsets = Offsets[0..$ - Filter!(λ!q{(int i) = d < i}, Offsets).length + 1];
-								
-							enum i = LimitOffsets.length - 1;
-							enum d = LimitOffsets[0] - 1;
-
-							size_t[2] get_length ()() if (d == 0) {return [0, spaces[i].length];}
-							auto get_limit ()() {return spaces[i].limit!d;}
-
-							return Match!(get_limit, get_length);
-						}
-
-					auto access (Map!(Coords, Spaces) point)
-						in {/*...}*/
-							static assert (typeof(point).length >= Spaces.length,
-								`could not deduce coordinate type for ` ~ Spaces.stringof
-							);
-						}
-						body {/*...}*/
-							template projection (size_t i)
-								{/*...}*/
-									auto π_i ()() {return spaces[i][point[0..Offsets[i]]];}
-									auto π_n ()() {return spaces[i][point[Offsets[i-1]..Offsets[i]]];}
-
-									alias projection = Match!(π_i, π_n);
-								}
-
-							Map!(Λ!q{(alias π) = typeof(π.identity)}, 
-								Map!(projection, Count!Spaces)
-							) mapped;
-
-							foreach (i; Count!Spaces)
-								mapped[i] = projection!i;
-
-							union Cast
-								{/*...}*/
-									typeof(mapped.tuple) input;
-
-									Tuple!(RepresentationTypeTuple!(typeof(input)))
-										flattened;
-								}
-
-							return Cast (mapped.tuple).flattened;
-						}
+					return range.front;
+				}
+			void popFront ()
+				{/*...}*/
+					range.popFront;
+					seek_front;
+				}
+			bool empty ()
+				{/*...}*/
+					return range.empty;
 				}
 
-			mixin Patch!(Base, 13860);
+			static assert (is_input_range!Filtered);
+
+			static if (is_forward_range!R)
+				{/*...}*/
+					@property save ()
+						{/*...}*/
+							return this;
+						}
+
+					static assert (is_forward_range!Filtered);
+				}
+
+			static if (is_bidirectional_range!R)
+				{/*...}*/
+					auto ref back ()
+						{/*...}*/
+							return range.back;
+						}
+					void popBack ()
+						{/*...}*/
+							range.popBack;
+							seek_back;
+						}
+
+					static assert (is_bidirectional_range!Filtered);
+				}
+
+			this (R range)
+				{/*...}*/
+					this.range = range;
+
+					seek_front;
+
+					static if (is_bidirectional_range!R)
+						seek_back;
+				}
+
+			private {/*seek}*/
+				void seek_front ()
+					{/*...}*/
+						static if (is_n_ary_function)
+							while (not (empty || match (front.expand)))
+								range.popFront;
+						else while (not (empty || match (front)))
+							range.popFront;
+					}
+
+				static if (is_bidirectional_range!R)
+					void seek_back ()
+						{/*...}*/
+							static if (is_n_ary_function)
+								while (not (empty || match (back.expand)))
+									range.popBack;
+							else while (not (empty || match (back)))
+								range.popBack;
+						}
+			}
 		}
 
-	auto by (S,R)(S left, R right)
+	template filter (alias match)
 		{/*...}*/
-			static if (is (S == Product!T, T...))
-				return Product!(T,R)(left.spaces, right);
-
-			else return Product!(S,R)(left, right);
+			auto filter (R)(R range)
+				if (is_input_range!R)
+				{/*...}*/
+					return Filtered!(R, match)(range);
+				}
 		}
 		unittest {/*...}*/
-			import evx.math; 
+			import std.algorithm: equal;
 
-			int[3] x = [1,2,3];
-			int[3] y = [4,5,6];
+			auto a = [1, 2, 3, 4];
 
-			auto z = x[].by (y[]);
+			auto b = a.filter!(x => x % 2);
 
-			assert (z.access (0,1) == tuple (1,5));
-			assert (z.access (1,1) == tuple (2,5));
-			assert (z.access (2,1) == tuple (3,5));
+			auto c = b.filter!(x => x > 1);
 
-			auto w = z[].map!((a,b) => a * b);
-
-			assert (w[0,0] == 4);
-			assert (w[1,1] == 10);
-			assert (w[2,2] == 18);
-
-			auto p = w[].by (z[]);
-
-			assert (p[0,0,0,0] == tuple (4,1,4));
-			assert (p[1,1,0,1] == tuple (10,1,5));
-			assert (p[2,2,2,1] == tuple (18,3,5));
+			assert (b.equal ([1, 3]));
+			assert (c.equal ([3]));
 		}
 }
 public {/*zip}*/
@@ -706,8 +719,6 @@ public {/*zip}*/
 				error (zip (a[0, ~$..$], x[]));
 
 				no_error (zip (a[0, ~$..$], x[0..3], y[0..3], z[0..3]));
-
-				 // TODO do multidim slices
 			}
 			{/*TODO various indices}*/
 				
@@ -727,125 +738,97 @@ public {/*zip}*/
 			}
 		}
 }
-public {/*disperse}*/
-	/* split a range of tuples, transverse-wise, 
-		into a tuple of ranges 
-	*/
-	auto disperse (Spaces...)(Zipped!Spaces zipped)
+public {/*by}*/
+	struct Product (Spaces...)
 		{/*...}*/
-			return zipped.spaces.tuple;
+			struct Base
+				{/*...}*/
+					alias Offsets = Scan!(Sum, Map!(dimensionality, Spaces));
+
+					Spaces spaces;
+
+					auto limit (size_t d)() const
+						{/*...}*/
+							mixin LambdaCapture;
+
+							alias LimitOffsets = Offsets[0..$ - Filter!(λ!q{(int i) = d < i}, Offsets).length + 1];
+								
+							enum i = LimitOffsets.length - 1;
+							enum d = LimitOffsets[0] - 1;
+
+							size_t[2] get_length ()() if (d == 0) {return [0, spaces[i].length];}
+							auto get_limit ()() {return spaces[i].limit!d;}
+
+							return Match!(get_limit, get_length);
+						}
+
+					auto access (Map!(Coords, Spaces) point)
+						in {/*...}*/
+							static assert (typeof(point).length >= Spaces.length,
+								`could not deduce coordinate type for ` ~ Spaces.stringof
+							);
+						}
+						body {/*...}*/
+							template projection (size_t i)
+								{/*...}*/
+									auto π_i ()() {return spaces[i][point[0..Offsets[i]]];}
+									auto π_n ()() {return spaces[i][point[Offsets[i-1]..Offsets[i]]];}
+
+									alias projection = Match!(π_i, π_n);
+								}
+
+							Map!(Λ!q{(alias π) = typeof(π.identity)}, 
+								Map!(projection, Count!Spaces)
+							) mapped;
+
+							foreach (i; Count!Spaces)
+								mapped[i] = projection!i;
+
+							union Cast
+								{/*...}*/
+									typeof(mapped.tuple) input;
+
+									Tuple!(RepresentationTypeTuple!(typeof(input)))
+										flattened;
+								}
+
+							return Cast (mapped.tuple).flattened;
+						}
+				}
+
+			mixin Patch!(Base, 13860);
+		}
+
+	auto by (S,R)(S left, R right)
+		{/*...}*/
+			static if (is (S == Product!T, T...))
+				return Product!(T,R)(left.spaces, right);
+
+			else return Product!(S,R)(left, right);
 		}
 		unittest {/*...}*/
-			import std.algorithm: equal;
+			import evx.math; 
 
-			auto a = [1,2,3];
-			auto b = [4,5,6];
+			int[3] x = [1,2,3];
+			int[3] y = [4,5,6];
 
-			assert (zip (a,b).disperse[0].equal (a));
-			assert (zip (a,b).disperse[1].equal (b));
-		}
-}
-public {/*filter}*/
-	/* traverse the subrange consisting only of elements which match a given criteria 
-	*/
+			auto z = x[].by (y[]);
 
-	struct Filtered (R, alias match = identity)
-		{/*...}*/
-			R range;
-			enum is_n_ary_function = is(typeof(match (range.front.expand)));
+			assert (z.access (0,1) == tuple (1,5));
+			assert (z.access (1,1) == tuple (2,5));
+			assert (z.access (2,1) == tuple (3,5));
 
-			auto ref front ()
-				{/*...}*/
-					return range.front;
-				}
-			void popFront ()
-				{/*...}*/
-					range.popFront;
-					seek_front;
-				}
-			bool empty ()
-				{/*...}*/
-					return range.empty;
-				}
+			auto w = z[].map!((a,b) => a * b);
 
-			static assert (is_input_range!Filtered);
+			assert (w[0,0] == 4);
+			assert (w[1,1] == 10);
+			assert (w[2,2] == 18);
 
-			static if (is_forward_range!R)
-				{/*...}*/
-					@property save ()
-						{/*...}*/
-							return this;
-						}
+			auto p = w[].by (z[]);
 
-					static assert (is_forward_range!Filtered);
-				}
-
-			static if (is_bidirectional_range!R)
-				{/*...}*/
-					auto ref back ()
-						{/*...}*/
-							return range.back;
-						}
-					void popBack ()
-						{/*...}*/
-							range.popBack;
-							seek_back;
-						}
-
-					static assert (is_bidirectional_range!Filtered);
-				}
-
-			this (R range)
-				{/*...}*/
-					this.range = range;
-
-					seek_front;
-
-					static if (is_bidirectional_range!R)
-						seek_back;
-				}
-
-			private {/*seek}*/
-				void seek_front ()
-					{/*...}*/
-						static if (is_n_ary_function)
-							while (not (empty || match (front.expand)))
-								range.popFront;
-						else while (not (empty || match (front)))
-							range.popFront;
-					}
-
-				static if (is_bidirectional_range!R)
-					void seek_back ()
-						{/*...}*/
-							static if (is_n_ary_function)
-								while (not (empty || match (back.expand)))
-									range.popBack;
-							else while (not (empty || match (back)))
-								range.popBack;
-						}
-			}
-		}
-
-	template filter (alias match)
-		{/*...}*/
-			auto filter (R)(R range)
-				if (is_input_range!R)
-				{/*...}*/
-					return Filtered!(R, match)(range);
-				}
-		}
-		unittest {/*...}*/
-			import std.algorithm: equal;
-
-			auto a = [1, 2, 3, 4];
-
-			auto b = a.filter!(x => x % 2);
-
-			auto c = b.filter!(x => x > 1);
-
-			assert (b.equal ([1, 3]));
-			assert (c.equal ([3]));
+			assert (p[0,0,0,0] == tuple (4,1,4));
+			assert (p[1,1,0,1] == tuple (10,1,5));
+			assert (p[2,2,2,1] == tuple (18,3,5));
 		}
 }
 public {/*select}*/
@@ -891,5 +874,23 @@ public {/*extract}*/
 			mixin(q{
 				return range.map!(x => x.} ~field~ q{);
 			});
+		}
+}
+public {/*disperse}*/
+	/* split a range of tuples, transverse-wise, 
+		into a tuple of ranges 
+	*/
+	auto disperse (Spaces...)(Zipped!Spaces zipped)
+		{/*...}*/
+			return zipped.spaces.tuple;
+		}
+		unittest {/*...}*/
+			import std.algorithm: equal;
+
+			auto a = [1,2,3];
+			auto b = [4,5,6];
+
+			assert (zip (a,b).disperse[0].equal (a));
+			assert (zip (a,b).disperse[1].equal (b));
 		}
 }

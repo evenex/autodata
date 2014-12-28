@@ -150,14 +150,13 @@ template Sort (alias compare, T...)
 template Match (patterns...)
 	{/*...}*/
 		import std.algorithm: find; // REVIEW how am i handling local vs global imports?
-		import std.array: replace; // REVIEW
 
 		alias Filtered = Filter!(λ!q{(alias pattern) = __traits(compiles, pattern!())}, patterns);
 
 		static if (Filtered.length == 0)
 			static assert (0, 
 				`none of ` ~ patterns.stringof
-				.find (`(`).replace (`(`,``).replace (`)`,``)
+				.find (`(`)
 				~ ` could be matched`
 			);
 

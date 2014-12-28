@@ -769,9 +769,11 @@ void main () // TODO GOAL
 			.flip!`vertical`;
 
 		auto texture = ℝ[0..1].by (ℝ[0..1])
-			.map!((x,y) => Color (0, x^^4, x^^2, 1) * 1)
+			.map!((x,y) => Color (0, x^^4, x^^2) * 1)
 			.grid (256, 256)
 			.Texture;
+
+		std.stdio.stderr.writeln (texture[$/7,$/8]);
 
 		// TEXTURED SHAPE SHADER
 		τ(vertices, tex_coords).vertex_shader!(
@@ -818,7 +820,7 @@ void main () // TODO GOAL
 			}
 		).triangle_fan.output_to (target);
 
-		std.stdio.stderr.writeln (target[0..$, 0]); // REVIEW this should output all blues
+		//std.stdio.stderr.writeln (target[0..$, 0]); // REVIEW this should output all green
 
 		τ(square!float, square!float.scale (2.0f).translate (fvec(0.5))).vertex_shader!(
 			`pos`, `texc_in`, q{

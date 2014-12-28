@@ -180,27 +180,26 @@ struct Color
 
 					normalize;
 				}
-		}
-		public {/*conv}*/
-			Vector!(4, ubyte) opCast ()
-				{/*...}*/
-					return (base * 255).each!(to!ubyte);
-				}
-
 			this (Vector!(4, ubyte) pixel)
 				{/*...}*/
 					base = pixel.each!(to!float);
+					std.stdio.writeln (`ctor ubyte 0 `, pixel);
 
 					base /= 255;
 
 					normalize;
 				}
-
 			this (Vector!(4, float) color)
 				{/*...}*/
 					base = color;
 
 					normalize;
+				}
+		}
+		public {/*cast}*/
+			Vector!(4, ubyte) opCast ()
+				{/*...}*/
+					return (base * 255).each!(to!ubyte);
 				}
 		}
 		public {/*ops}*/
