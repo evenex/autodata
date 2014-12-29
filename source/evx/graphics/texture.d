@@ -17,13 +17,11 @@ private {/*imports}*/
 
 ubyte[4] texel (Color color)
 	{/*...}*/
-		std.stdio.writeln (color, `!!!` );
 		return cast(Vector!(4, ubyte))(color);
 	}
-static if (0) // why is vec4f all fucked up? it doens't implicitly convert to texel... how's it even pass in?
 ubyte[4] texel (Vector!(4, float) color)
 	{/*...}*/
-		return color.each!(to!ubyte);
+		return (color * 255).each!(to!ubyte);
 	}
 
 debug enum out_of_bounds_color = magenta;
@@ -161,8 +159,6 @@ struct Texture
 					else {/*...}*/
 						auto temp = evx.containers.array.array (range.map!texel); // REVIEW control overloads so UFCS possible, too many clash w/ std.array.. probably local import in upstream mixin
 						auto ptr = temp.ptr;
-			pragma(msg, typeof(range.map!texel) , ` || `, Element!(typeof(range.map!texel)), ` || `, Element!(typeof(range.map!texel)).init[0]); //REVIEW how do we get a Mapped!(Vector!(4LU, float), texel)? WTF is it?
-			std.stdio.writeln (ptr[0]);
 					}
 
 					gl.TexSubImage2D (GL_TEXTURE_2D,

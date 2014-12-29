@@ -509,12 +509,6 @@ template fragment_shader (Decl...)
 				auto forward_shader_args ()() {return S (input[0].args);}
 				auto forward_input_args  ()() {return S (input);}
 
-				static if (not (is(typeof(Match!(forward_all_args, forward_shader_args, forward_input_args)))))
-					{/*...}*/
-					pragma(msg, Args);
-					forward_all_args;
-						
-					}
 				return Match!(forward_all_args, forward_shader_args, forward_input_args);
 			}
 	}
@@ -713,8 +707,6 @@ auto ref output_to (S,R,T...)(auto ref S shader, auto ref R target, T args)
 
 		gl.Clear (GL_COLOR_BUFFER_BIT);
 
-		// std.stdio.stderr.writeln (gl.CheckFramebufferStatus (GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE); TODO use this check
-
 		template length (uint i)
 			{/*...}*/
 				auto length ()() if (not (is (typeof(shader.args[i]) == Vector!U, U...)))
@@ -773,8 +765,6 @@ void main () // TODO GOAL
 			.grid (256, 256)
 			.Texture;
 
-		std.stdio.stderr.writeln (texture[$/7,$/8]);
-
 		// TEXTURED SHAPE SHADER
 		τ(vertices, tex_coords).vertex_shader!(
 			`position`, `tex_coords`, q{
@@ -819,8 +809,6 @@ void main () // TODO GOAL
 				gl_FragColor = vec4 (0,1,0,1);
 			}
 		).triangle_fan.output_to (target);
-
-		//std.stdio.stderr.writeln (target[0..$, 0]); // REVIEW this should output all green
 
 		τ(square!float, square!float.scale (2.0f).translate (fvec(0.5))).vertex_shader!(
 			`pos`, `texc_in`, q{

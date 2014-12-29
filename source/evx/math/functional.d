@@ -43,8 +43,6 @@ public {/*map}*/
 					auto map_tuple ()() {return apply (subdomain.expand);}
 					auto map_space ()() {return remap (subdomain);}
 
-					static if (not (is (typeof( Match!(map_point, map_tuple, map_space)))))
-						map_point;
 					return Match!(map_point, map_tuple, map_space);
 				}
 			auto opSlice (size_t d, Args...)(Args args)

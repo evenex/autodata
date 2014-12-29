@@ -183,7 +183,6 @@ struct Color
 			this (Vector!(4, ubyte) pixel)
 				{/*...}*/
 					base = pixel.each!(to!float);
-					std.stdio.writeln (`ctor ubyte 0 `, pixel);
 
 					base /= 255;
 
