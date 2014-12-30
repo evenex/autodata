@@ -6,7 +6,6 @@ private {/*imports}*/
 
 /* forward opCmp (<,>,<=,>=) 
 */
-
 mixin template ComparisonOps (alias member)
 	{/*...}*/
 		static assert (is(typeof(this)), `mixin requires host struct`);

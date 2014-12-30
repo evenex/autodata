@@ -1,9 +1,12 @@
 module evx.operators.range;
 
 /* generate random access range primitives
-	note that the resulting range only qualifies as bidirectional
-	because std.range.isRandomAccessRange does not handle template or non-property range primitives
-	though the range does meet the definition of random access
+
+	This is an extension template meant to be used in a Sub structure.
+
+	Note that, in Phobos, the resulting range will only qualify as bidirectional
+	because std.range.isRandomAccessRange does not handle template or non-property range primitives,
+	although the range does meet the definition of random access as given in D range references.
 */
 template RangeOps ()
 	{/*...}*/

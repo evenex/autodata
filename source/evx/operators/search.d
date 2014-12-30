@@ -1,6 +1,9 @@
 module evx.operators.search;
 
 /* generate an `in` operator from a search function
+
+	Requires:
+		a search function returning a value which is either an lvalue or dereferencable type
 */
 template SearchOps (alias search)
 	{/*...}*/
