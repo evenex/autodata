@@ -41,6 +41,10 @@ enum has_identity (T...) = is (typeof(T[0].identity));
 */
 enum is_enumerable (T...) = is (typeof((){enum x = T[0];}()));
 
+/* test if a type supports comparison operators <, <=, >, >=
+*/
+enum is_comparable (T...) = is (typeof((){auto x = T[0].init; return x < x? x > x? x <= x : x >= x : true;}));
+
 /* test if a symbol refers to a function 
 */
 template is_function (T...)

@@ -1,11 +1,11 @@
 module evx.operators.index;
 
 /* generate an indexing operator from an access function and a set of index limits
-	access must be a non-template function which returns an element of type E
 
-	limits must be aliases to single variables or arrays of two,
-	whose types (or element types, if any are arrays), given in order, 
-	match the argument types for access
+	Requires:
+		LimitOps requirements (the type of the evaluated limit symbol (or its element type, whichever applies) is referred to as the measure type).
+		Access must be a non-template function which returns a non-void value.
+		The measure types must match the access parameter types in order.
 */
 template IndexOps (alias access, limits...)
 	{/*...}*/

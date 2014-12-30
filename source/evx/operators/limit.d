@@ -1,6 +1,13 @@
 module evx.operators.limit;
 
-/* generate $ and ~$ right and left limit operators
+/* generates left and right limit operators (~$ and $)
+
+	Requires:
+		n limit symbols, where n > 0.
+		Each limit symbol evaluates either to some value which admits an ordering (i.e. <. <=, >, >= operators are supported),
+		or to an static array of length 2 whose element type meets the aforementioned critieria.
+
+	This mixin is for internal use; it does nothing on its own.
 */
 template LimitOps (limits...)
 	{/*...}*/
@@ -16,6 +23,9 @@ template LimitOps (limits...)
 
 		static assert (All!(is_const_function, Filter!(is_function, limits)),
 			fullyQualifiedName!(typeof(this)) ~ ` LimitOps: limit functions must be const`
+		);
+		static assert (All!(is_comparable, Map!(ReturnType, Filter!(is_function, limits)), Filter!(Not!is_function, limits)),
+			fullyQualifiedName!(typeof(this)) ~ ` LimitOps: limit types must support comparison (<. >, <=, >=)`
 		);
 
 		auto opDollar (size_t i)()

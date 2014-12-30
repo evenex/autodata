@@ -1,6 +1,12 @@
 module evx.operators.buffer;
 
 /* generate RAII ctor/dtor and move/copy/free assignment operators from allocate and own functions, with TransferOps 
+
+	Requires:
+		TransferOps requirements.
+		The allocate symbol must resolve to a function (which may be a template and/or an overload set)
+		which takes the measure types, in order, as parameters (same as access).
+		After invoking the allocate symbol, the limits of the dataset must be consistent with the parameters passed.
 */
 template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/

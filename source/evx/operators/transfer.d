@@ -1,6 +1,10 @@
 module evx.operators.transfer;
 
 /* generate WriteOps with input bounds checking
+	
+	Requires:
+		WriteOps requirements.
+		Unlike with WriteOps, the element types, dimensionalities, and sizes of the transfer source and target data sets must match.
 */
 template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/

@@ -1,9 +1,18 @@
 module evx.operators.slice;
 
 /* generate slicing operators with IndexOps
-	(optionally) using a set of uninstantiated, parameterless templates to extend the Sub structure
-	templates which resolve to a string upon instantiation will be mixed in as strings
-	otherwise they are mixed in as templates
+
+	Requires:
+		IndexOps requirements.
+		In order to use indexing on sliced structures (referred to as Sub structures), 
+			the measure type must form a group under addition (i.e. + and - operators are supported, and return a value of the measure type)
+
+	Optional:
+		A set of uninstantiated, parameterless templates to extend the Sub structure.
+		Templates which resolve to a string upon instantiation will be mixed in as strings,
+		otherwise they are mixed in as templates.
+		Since symbols defined by string mixins have a higher resolution priority than template mixins,
+		this can be used to gain an additional degree of control over the semantics of the Sub structure.
 */
 template SliceOps (alias access, LimitsAndExtensions...)
 	{/*...}*/

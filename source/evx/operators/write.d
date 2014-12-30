@@ -1,6 +1,17 @@
 module evx.operators.write;
 
-/* generate index assignment from a pull template, with SliceOps 
+/* generate index/slice assignment from a pull template, with SliceOps 
+
+	Requires:
+		SliceOps requirements.
+		The pull symbol should resolve to a function (which may be a template and/or an overload set),
+		which takes a source data object as the first parameter,
+		and the indices and/or intervals of assignment as subsequent parameters.
+
+	Optional:
+		If the source data set defines a "push" primitive which accepts the Sub structure of the target data set as a parameter,
+		then this push will take priority over the pull, in order to enable potentially expensive-to-access source data sets
+		to perform optimized writes.
 */
 template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
