@@ -47,8 +47,8 @@ public {/*map}*/
 				}
 			auto opSlice (size_t d, Args...)(Args args)
 				{/*...}*/
-					auto multi ()() {return TEMPdomain.opSlice!d (args);}
-					auto single ()() if (d == 0) {return TEMPdomain.opSlice (args);}
+					auto multi ()() {return domain.opSlice!d (args);}
+					auto single ()() if (d == 0) {return domain.opSlice (args);}
 					CommonType!Args[2] index ()() {return [args];}
 
 					return Match!(multi, single, index);
