@@ -271,6 +271,7 @@ struct Shader (Parameters...)
 
 					foreach (i, ref arg; args)
 						{/*...}*/
+							pragma(msg, typeof(args), ` → `, Filter!(or!(is_uniform, is_vertex_input), Variables));
 							alias T = Filter!(or!(is_uniform, is_vertex_input), Variables)[i];
 
 							static if (is_texture!T)
@@ -292,6 +293,40 @@ struct Shader (Parameters...)
 				}
 		}
 	}
+
+alias DeclTypes = Filter!(is_type, Decl[0..$-1]);
+alias Identifiers = Filter!(is_string_param, Decl[0..$-1]);
+enum code = Decl[$-1];
+
+template Parse (Vars...)
+	{/*...}*/
+		template GetType (uint i)
+			{/*...}*/
+				alias T = Vars[i];
+
+				static if (is (T == Vector!(n,U), size_t n, U))
+					alias GetType = Type!(n,U);
+
+				else static if (is (Type!(1,T)))
+					alias GetType = Type!(1,T);
+
+				else static assert (0);
+			}
+		alias MakeVar (uint i, StorageClass storage_class) = Variable!(storage_class, GetType!i, Identifiers[i]);
+
+		alias Uniform (uint i) = MakeVar!(i, StorageClass.uniform);
+		alias Attribute (uint i) = MakeVar!(i, StorageClass.vertex_input);
+		alias Smooth (uint i) = MakeVar!(i, StorageClass.vertex_fragment);
+
+		alias Parse = Map!(Pair!().Both!MakeVar, Indexed!Vars);
+	}
+
+		static if (0) // XXX
+		static if (is (DeclTypes[i] == U, U))
+			static assert (is (MakeVar == MakeVar!(i, U)), 
+				`argument type does not match declared type`
+			);
+
 
 unittest {/*codegen}*/
 	alias TestShader = Shader!(
@@ -361,42 +396,6 @@ template vertex_shader (Decl...)
 
 		auto vertex_shader (Input...)(auto ref Input input)
 			{/*...}*/
-				alias DeclTypes = Filter!(is_type, Decl[0..$-1]);
-				alias Identifiers = Filter!(is_string_param, Decl[0..$-1]);
-				enum code = Decl[$-1];
-
-				template Parse (Vars...)
-					{/*...}*/
-						template GetType (Var)
-							{/*...}*/
-								static if (is (Var == Vector!(n,T), size_t n, T))
-									alias GetType = Type!(n, T);
-
-								else static if (is (Type!(1, Var)))
-									alias GetType = Type!(1, Var);
-
-								else static assert (0);
-							}
-
-						template MakeVar (uint i, Var)
-							{/*...}*/
-								static if (is (GetType!Var))
-									alias MakeVar = Variable!(StorageClass.uniform, GetType!Var, Identifiers[i]);
-
-								else static if (is (Element!Var == T, T))
-									alias MakeVar = Variable!(StorageClass.vertex_input, GetType!T, Identifiers[i]);
-
-								else static assert (0);
-
-								static if (is (DeclTypes[i] == U, U))
-									static assert (is (MakeVar == MakeVar!(i, U)), 
-										`argument type does not match declared type`
-									);
-							}
-
-						alias Parse = Map!(Pair!().Both!MakeVar, Indexed!Vars);
-					}
-
 				static if (is (Input[0] == Shader!Sym, Sym...))
 					{/*...}*/
 						static if (is (Input[1]))
@@ -420,24 +419,53 @@ template vertex_shader (Decl...)
 							alias Symbols = Parse!Data;
 							alias Args = Map!(GPUType, Front!Input.Types); // HACK https://issues.dlang.org/show_bug.cgi?id=13883
 						}
+
+						static assert (stage != Stage.fragment, 
+							`tuple arg not valid for fragment shader`
+						);
 					}
-				else {/*...}*/
-					 alias Symbols = Parse!Input;
-					 alias Args = Map!(GPUType, Input);
+				else {/*...}*/ // REFACTOR
+					alias Symbols = Parse!Input;
+					alias Args = Map!(GPUType, Input);
+
+					static assert (stage != Stage.fragment, 
+						`fragment shader must be attached to vertex shader`
+					);
 				}
 
-				alias S = Shader!(Symbols, 
-					Function!(Stage.vertex, code),
+				static if (is (Input[1])) // REFACTOR VERIFY DECLTYPE/AUTOTYPE CONSISTENCY
+					static assert (
+						All!(Pair!().Both!(λ!q{(T, U) = is (T == U)}),
+							Zip!(Input[1..$], DeclTypes[$-(Input.length - 1)..$])
+						)
+					);
+
+				static if (stage == Stage.fragment) // REVIEW
+					{/*...}*/
+						enum is_uniform (uint i) =
+							i > DeclTypes.length - Input.length // tail Decltypes correspond with Inputs, and all Inputs are Uniforms, therefore tail Decltypes are Uniforms
+							|| Contains!(Uniform!i, Input[0].Symbols);
+
+						alias AddlArgs = Cons!( // REVIEW
+							Map!(Uniform, Filter!(is_uniform, Count!DeclTypes)),
+							Map!(Smooth, Filter!(not!is_uniform, Count!DeclTypes)),
+						);
+					}
+
+				alias S = Shader!(
+					Function!(stage, code),
+					Symbols,
+					AddlArgs, // REVIEW
 					Args
 				);
 				
-				auto shader 	()() {return S (input[0].args);}
-				auto shader_etc ()() {return S (input[0].args, input[1..$]);}
-				auto tuple 		()() {return S (input[0].expand);}
-				auto tuple_etc 	()() {return S (input[0].expand, input[1..$]);}
+				auto shader 	 ()() {return S (input[0].args);} // REFACTOR
+				auto shader_etc  ()() {return S (input[0].args, input[1..$]);}
+				auto tuple 		 ()() {return S (input[0].expand);}
+				auto tuple_etc 	 ()() {return S (input[0].expand, input[1..$]);}
 				auto forward_all ()() {return S (input);}
 
-				return Match!(shader_etc, shader, tuple_etc, tuple, forward_all);
+				return Match!(shader_etc, shader, tuple_etc, tuple, forward_all); // REFACTOR
 			}
 	}
 template fragment_shader (Decl...)
@@ -450,66 +478,7 @@ template fragment_shader (Decl...)
 
 		auto fragment_shader (Input...)(auto ref Input input)
 			{/*...}*/
-				alias DeclTypes = Filter!(is_type, Decl[0..$-1]);
-				alias Identifiers = Filter!(is_string_param, Decl[0..$-1]);
-				enum code = Decl[$-1];
-
-				template GetType (uint i)
-					{/*...}*/
-						alias T = DeclTypes[i];
-
-						static if (is (T == Vector!(n,U), size_t n, U))
-							alias GetType = Type!(n,U);
-
-						else alias GetType = Type!(1,T);
-					}
-
-				alias Uniform (uint i) = Variable!(StorageClass.uniform, GetType!i, Identifiers[i]);
-				alias Smooth (uint i) = Variable!(StorageClass.vertex_fragment, GetType!i, Identifiers[i]);
-
-				static if (is (Input[1]))
-					static assert (
-						All!(Pair!().Both!(λ!q{(T, U) = is (T == U)}),
-							Zip!(Input[1..$], DeclTypes[$-(Input.length - 1)..$])
-						)
-					);
-
-				static if (is (Input[0] == Shader!Sym, Sym...))
-					{/*...}*/
-						enum is_uniform (uint i) =
-							i > DeclTypes.length - Input.length // tail Decltypes correspond with Inputs, and all Inputs are Uniforms, therefore tail Decltypes are Uniforms
-							|| Contains!(Uniform!i, Input[0].Symbols);
-
-						static if (is (Input[1]))
-							{/*...}*/
-								alias Symbols = Front!Input.Symbols; // HACK https://issues.dlang.org/show_bug.cgi?id=13883
-								alias Args = Cons!(Front!Input.Args, Map!(GPUType, Input[1..$]));
-							}
-						else {/*...}*/
-							alias Symbols = Front!Input.Symbols; // HACK https://issues.dlang.org/show_bug.cgi?id=13883
-							alias Args = Front!Input.Args;
-						}
-					}
-				else static if (is (Input[0] == Tuple!Data, Data...))
-					{/*...}*/
-						static assert (0, `tuple arg not valid for fragment shader`);
-					}
-				else {/*...}*/
-					static assert (0, `fragment shader must be attached to vertex shader`);
-				}
-
-				alias S = Shader!(Symbols, 
-					Map!(Uniform, Filter!(is_uniform, Count!DeclTypes)),
-					Map!(Smooth, Filter!(not!is_uniform, Count!DeclTypes)),
-					Function!(Stage.fragment, code),
-					Args
-				);
-				
-				auto forward_all_args 	 ()() {return S (input[0].args, input[1..$]);}
-				auto forward_shader_args ()() {return S (input[0].args);}
-				auto forward_input_args  ()() {return S (input);}
-
-				return Match!(forward_all_args, forward_shader_args, forward_input_args);
+				// TODO
 			}
 	}
 
@@ -737,9 +706,11 @@ void main () // TODO GOAL
 		import evx.graphics.display;
 		auto display = new Display;
 
+
 		auto vertices = circle.map!(to!fvec)
 			.enumerate.map!((i,v) => i%2? v : v/4);
 
+static if (0) {/*}*/
 		auto weights = ℕ[0..circle.length].map!(to!float);
 		Color color = red;
 
@@ -782,13 +753,14 @@ void main () // TODO GOAL
 
 		display.render;
 
+} // TEMP
 		import core.thread;
 		Thread.sleep (2.seconds);
 
 		Texture target;
 		target.allocate (256,256);
 
-		static if (0) // BUG variables don't route in this example
+		static if (1) // BUG variables don't route in this example
 			{/*...}*/
 				vertices.vertex_shader!(
 					`pos`, q{
@@ -798,7 +770,9 @@ void main () // TODO GOAL
 					Color, `col`, q{
 						gl_FragColor = col;
 					}
-				)(blue).triangle_fan.output_to (target);
+				)(blue)
+				.triangle_fan
+				.output_to (target);
 			}
 		else τ(vertices).vertex_shader!(
 			`pos`, q{
