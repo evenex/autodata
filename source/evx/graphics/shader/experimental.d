@@ -23,7 +23,7 @@ import evx.graphics.color;
 alias array = evx.containers.array.array; // REVIEW how to exclude std.array.array
 alias join = evx.range.join;
 
-// METACOMPILER SYMBOL STUFF
+// SYMBOL STUFF
 private {/*glsl variables}*/
 	enum StorageClass {vertex_input, vertex_fragment, uniform}
 
@@ -321,13 +321,6 @@ template Parse (Vars...)
 		alias Parse = Map!(Pair!().Both!MakeVar, Indexed!Vars);
 	}
 
-		static if (0) // XXX
-		static if (is (DeclTypes[i] == U, U))
-			static assert (is (MakeVar == MakeVar!(i, U)), 
-				`argument type does not match declared type`
-			);
-
-
 unittest {/*codegen}*/
 	alias TestShader = Shader!(
 		Variable!(StorageClass.vertex_input, Type!(1, bool), `foo`),
@@ -386,9 +379,6 @@ template decl_format_check (Decl...)
 		);
 	}
 
-// A STUPID HACK
-private alias Front (T...) = T[0]; // HACK https://issues.dlang.org/show_bug.cgi?id=13883
-
 // COMPOSABLE SHADER COMPONENTS
 template vertex_shader (Decl...)
 	{/*...}*/
@@ -404,8 +394,8 @@ template vertex_shader (Decl...)
 								alias Args = Cons!(Input[0].Args, Map!(GPUType, Input[1..$]));
 							}
 						else {/*...}*/
-							alias Symbols = Front!Input.Symbols; // HACK https://issues.dlang.org/show_bug.cgi?id=13883
-							alias Args = Front!Input.Args;
+							alias Symbols = Cons!(Input[0].Symbols); // https://issues.dlang.org/show_bug.cgi?id=13883
+							alias Args = Cons!(Input[0].Args);
 						}
 					}
 				else static if (is (Input[0] == Tuple!Data, Data...))
@@ -417,14 +407,14 @@ template vertex_shader (Decl...)
 							}
 						else {/*...}*/
 							alias Symbols = Parse!Data;
-							alias Args = Map!(GPUType, Front!Input.Types); // HACK https://issues.dlang.org/show_bug.cgi?id=13883
+							alias Args = Map!(GPUType, Input[0].Types); // https://issues.dlang.org/show_bug.cgi?id=13883
 						}
 
 						static assert (stage != Stage.fragment, 
 							`tuple arg not valid for fragment shader`
 						);
 					}
-				else {/*...}*/ // REFACTOR
+				else {/*...}*/
 					alias Symbols = Parse!Input;
 					alias Args = Map!(GPUType, Input);
 
@@ -459,13 +449,13 @@ template vertex_shader (Decl...)
 					Args
 				);
 				
-				auto shader 	 ()() {return S (input[0].args);} // REFACTOR
+				auto shader 	 ()() {return S (input[0].args);}
 				auto shader_etc  ()() {return S (input[0].args, input[1..$]);}
 				auto tuple 		 ()() {return S (input[0].expand);}
 				auto tuple_etc 	 ()() {return S (input[0].expand, input[1..$]);}
 				auto forward_all ()() {return S (input);}
 
-				return Match!(shader_etc, shader, tuple_etc, tuple, forward_all); // REFACTOR
+				return Match!(shader_etc, shader, tuple_etc, tuple, forward_all);
 			}
 	}
 template fragment_shader (Decl...)
