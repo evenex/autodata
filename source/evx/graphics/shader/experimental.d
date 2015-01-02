@@ -23,6 +23,42 @@ import evx.graphics.color;
 alias array = evx.containers.array.array; // REVIEW how to exclude std.array.array
 alias join = evx.range.join;
 
+/* Shader Template Compilation Process Description
+
+	upon instantiation of template:
+
+	1) Parsing
+		
+		The last template parameter must be a string containing the body of the shader main function.
+		The preceding parameters form the declaration list.
+		These declarations may consist of interleaved types and identifier strings (a typed declaration list)
+			or the set of identifier strings on their own (an auto declaration list)
+		Fragment shaders do not yet support automatic type deduction, and currently can only use a typed declaration list.
+
+		Parsed variables contain information about their storage class, type, and identifier.
+		Identifiers are always known. Types are known immediately if they are given in a typed declaration list,
+		otherwise they are automatically deduced in the next compilation stage.
+		Storage class is always deduced automatically in the next compilation stage.
+
+	upon invocation of the eponymous function:
+
+	2a) Resolution
+
+		If the type of a variable is known, the storage class deduction rules are as follows:
+			If the identifier can be found in the existing symbol table, the type is verified to match and the variable is resolved. // XXX
+			If the compilation target is the vertex shader stage, then ranges become vertex_input class while PODs become uniform.
+			If the compilation target is the fragment shader stage, then declared variables are split into two lists:
+				The last n variables (where n is the number of function arguments) become uniform.
+				The remaining variables are looked up in the symbol table. If they are not found, they become vertex_fragment.
+
+		If the type of a variable is unknown, the deduction rules are as follows:
+			If the identifier can be found in the existing symbol table, the variable is resolved.
+			If not, 
+				
+	2b) Framing
+*/
+
+
 // SYMBOL STUFF
 private {/*glsl variables}*/
 	enum StorageClass {vertex_input, vertex_fragment, uniform}
@@ -253,10 +289,6 @@ struct Shader (Parameters...)
 						else arg = input[i].gpu_array;
 				}
 
-			enum is_uniform (T) = is (T == Variable!(StorageClass.uniform, U), U...);
-			enum is_vertex_input (T) = is (T == Variable!(StorageClass.vertex_input, U), U...);
-			enum is_texture (T) = is (T == Variable!(StorageClass.uniform, Type!(1, Texture), U), U...);
-
 			void activate ()()
 				in {/*...}*/
 					static assert (Args.length == Filter!(or!(is_uniform, is_vertex_input), Variables).length,
@@ -271,7 +303,6 @@ struct Shader (Parameters...)
 
 					foreach (i, ref arg; args)
 						{/*...}*/
-							pragma(msg, typeof(args), ` → `, Filter!(or!(is_uniform, is_vertex_input), Variables));
 							alias T = Filter!(or!(is_uniform, is_vertex_input), Variables)[i];
 
 							static if (is_texture!T)
@@ -279,6 +310,7 @@ struct Shader (Parameters...)
 									int texture_unit = IndexOf!(T, Filter!(is_texture, Variables));
 
 									gl.uniform (texture_unit, variable_locations[IndexOf!(T, Variables)]);
+
 									arg.bind (texture_unit);
 								}
 							
@@ -291,34 +323,11 @@ struct Shader (Parameters...)
 							else static assert (0);
 						}
 				}
+
+			enum is_uniform (T) = is (T == Variable!(StorageClass.uniform, U), U...);
+			enum is_vertex_input (T) = is (T == Variable!(StorageClass.vertex_input, U), U...);
+			enum is_texture (T) = is (T == Variable!(StorageClass.uniform, Type!(1, Texture), U), U...);
 		}
-	}
-
-alias DeclTypes = Filter!(is_type, Decl[0..$-1]);
-alias Identifiers = Filter!(is_string_param, Decl[0..$-1]);
-enum code = Decl[$-1];
-
-template Parse (Vars...)
-	{/*...}*/
-		template GetType (uint i)
-			{/*...}*/
-				alias T = Vars[i];
-
-				static if (is (T == Vector!(n,U), size_t n, U))
-					alias GetType = Type!(n,U);
-
-				else static if (is (Type!(1,T)))
-					alias GetType = Type!(1,T);
-
-				else static assert (0);
-			}
-		alias MakeVar (uint i, StorageClass storage_class) = Variable!(storage_class, GetType!i, Identifiers[i]);
-
-		alias Uniform (uint i) = MakeVar!(i, StorageClass.uniform);
-		alias Attribute (uint i) = MakeVar!(i, StorageClass.vertex_input);
-		alias Smooth (uint i) = MakeVar!(i, StorageClass.vertex_fragment);
-
-		alias Parse = Map!(Pair!().Both!MakeVar, Indexed!Vars);
 	}
 
 unittest {/*codegen}*/
@@ -379,18 +388,63 @@ template decl_format_check (Decl...)
 		);
 	}
 
+template GetType (T)
+	{/*...}*/
+		static if (is (T == Vector!(n,U), size_t n, U))
+			alias GetType = Type!(n,U);
+
+		else static if (is (Type!(1,T)))
+			alias GetType = Type!(1,T);
+
+		else static assert (0);
+	}
+
+template Uniform (T, string identifier)
+	{/*...}*/
+		alias Uniform () = Variable!(StorageClass.uniform, GetType!T, identifier);
+	}
+template Attribute (R, string identifier)
+	{/*...}*/
+		alias Attribute () = Variable!(StorageClass.vertex_input, GetType!(Element!R), identifier);
+	}
+template Smooth (T, string identifier)
+	{/*...}*/
+		alias Smooth () = Variable!(StorageClass.vertex_fragment, GetType!T, identifier);
+	}
+
 // COMPOSABLE SHADER COMPONENTS
 template vertex_shader (Decl...)
 	{/*...}*/
 		mixin decl_format_check!(Decl[0..$-1]);
 
+		alias DeclTypes = Filter!(is_type, Decl[0..$-1]);
+		alias Identifiers = Filter!(is_string_param, Decl[0..$-1]);
+		enum code = Decl[$-1];
+
 		auto vertex_shader (Input...)(auto ref Input input)
 			{/*...}*/
+				template Lookup (uint i)
+					if (i < Identifiers.length - Input.length)
+					{/*...}*/
+						enum identifier_match (V) = is (V == Variable!(U, Identifiers[i]), U...);
+
+						static if (is (Input[0] == Shader!Sym, Sym...))
+							alias Lookup () = Filter!(identifier_match, Sym)[0];
+						alias Lookup () = Smooth!(DeclTypes[i], Identifiers[i]);
+					}
+				template Infer (uint i)
+					if (i >= Identifiers.length - Input.length)
+					{/*...}*/
+						alias Infer () = Uniform!(DeclTypes[i], Identifiers[i]);
+					}
+
+				alias Parse (uint i) = Match!(Lookup!i, Infer!i);
+
 				static if (is (Input[0] == Shader!Sym, Sym...))
 					{/*...}*/
 						static if (is (Input[1]))
 							{/*...}*/
-								alias Symbols = Cons!(Input[0].Symbols, Parse!(Input[1..$]));
+								alias Symbols = Cons!(Input[0].Symbols, Parse!(Count!Input[1..$]));
 								alias Args = Cons!(Input[0].Args, Map!(GPUType, Input[1..$]));
 							}
 						else {/*...}*/
@@ -398,7 +452,7 @@ template vertex_shader (Decl...)
 							alias Args = Cons!(Input[0].Args);
 						}
 					}
-				else static if (is (Input[0] == Tuple!Data, Data...))
+				else static if (is (Input[0] == Tuple!Data, Data...)) // XXX removal pending http://wiki.dlang.org/DIP32
 					{/*...}*/
 						static if (is (Input[1]))
 							{/*...}*/
@@ -407,7 +461,7 @@ template vertex_shader (Decl...)
 							}
 						else {/*...}*/
 							alias Symbols = Parse!Data;
-							alias Args = Map!(GPUType, Input[0].Types); // https://issues.dlang.org/show_bug.cgi?id=13883
+							alias Args = Map!(GPUType, Input[0].Types);
 						}
 
 						static assert (stage != Stage.fragment, 
@@ -423,14 +477,15 @@ template vertex_shader (Decl...)
 					);
 				}
 
-				static if (is (Input[1])) // REFACTOR VERIFY DECLTYPE/AUTOTYPE CONSISTENCY
-					static assert (
-						All!(Pair!().Both!(λ!q{(T, U) = is (T == U)}),
-							Zip!(Input[1..$], DeclTypes[$-(Input.length - 1)..$])
-						)
-					);
+				static if (is (DeclTypes[0]))
+					static if (is (Input[1])) // REFACTOR VERIFY DECLTYPE/AUTOTYPE CONSISTENCY
+						static assert (
+							All!(Pair!().Both!(λ!q{(T, U) = is (T == U)}),
+								Zip!(Input[1..$], DeclTypes[$-(Input.length - 1)..$])
+							)
+						);
 
-				static if (stage == Stage.fragment) // REVIEW
+				static if (stage == Stage.fragment) // REVIEW parse should handle this somehow
 					{/*...}*/
 						enum is_uniform (uint i) =
 							i > DeclTypes.length - Input.length // tail Decltypes correspond with Inputs, and all Inputs are Uniforms, therefore tail Decltypes are Uniforms
