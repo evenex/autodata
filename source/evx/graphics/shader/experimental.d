@@ -23,7 +23,7 @@ import evx.graphics.color;
 alias array = evx.containers.array.array; // REVIEW how to exclude std.array.array
 alias join = evx.range.join;
 
-/* Shader Template Compilation Process Description
+/* Shader Template Compilation Process Specification
 
 	upon instantiation of template:
 
@@ -44,18 +44,39 @@ alias join = evx.range.join;
 
 	2a) Resolution
 
-		If the type of a variable is known, the storage class deduction rules are as follows:
-			If the identifier can be found in the existing symbol table, the type is verified to match and the variable is resolved. // XXX
+		If the type of a variable is unknown, then the compilation target must be the vertex stage. 
+		Type deduction rules are as follows:
+			If the identifier can be found in the existing symbol table, the variable is resolved.
+			Otherwise the declared variables take the type (or element type, if a range) of the given input argument.
+
+		Once the type of a variable is known, the storage class deduction rules are as follows:
+			If the identifier can be found in the symbol table, the variable is resolved (after verifying type match, if it is given in the declaration list)
 			If the compilation target is the vertex shader stage, then ranges become vertex_input class while PODs become uniform.
 			If the compilation target is the fragment shader stage, then declared variables are split into two lists:
 				The last n variables (where n is the number of function arguments) become uniform.
 				The remaining variables are looked up in the symbol table. If they are not found, they become vertex_fragment.
-
-		If the type of a variable is unknown, the deduction rules are as follows:
-			If the identifier can be found in the existing symbol table, the variable is resolved.
-			If not, 
 				
 	2b) Framing
+
+		Resolved symbols with vertex_input or uniform storage classes are in an ordered, one-to-one correspondence with runtime input arguments.
+		The shader will create member variables to hold each argument, and upload them to the GPU upon activation.
+		These member variables may differ from the type of the given input argument:
+			Ranges will become GPUArrays,
+			GPUArrays, Textures, and other existing GPU resources will become Borrowed,
+			PODs will retain their original type.
+
+	upon initial activation of the shader:
+
+	3) Linking 
+
+		Variables, with their type and storage class known, are linked after shader compilation,
+			and the variable location indices are permanently saved in a global lookup table.
+
+	upon subsequent activations of the shader:
+
+	4) Passing
+
+		The shader uploads its input data (converting from given arguments if necessary) using the global linked variable indices.
 */
 
 
