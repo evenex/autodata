@@ -23,10 +23,6 @@ import evx.graphics.color;
 alias array = evx.containers.array.array; // REVIEW how to exclude std.array.array
 alias join = evx.range.join;
 
-void main ()
-	{/*...}*/
-	}
-
 /* Shader Template Compilation Process Specification
 
 	upon instantiation of template:
@@ -432,16 +428,12 @@ alias aspect_correction = vertex_shader!(`aspect_ratio`, q{
 	gl_Position.xy *= aspect_ratio;
 });
 
-pragma(msg, typeof(vertex_shader!(int, `integer`, q{fuck you})([666]).aspect_correction (2.vec)).vertex_code);
-
 enum is_range (T) = not (is (T == Element!T) || is (T == Vector!V, V...));
 
-template vertex_shader (Decl...)
+template generic_shader (Stage stage, Decl...)
 	{/*...}*/
-		auto vertex_shader (Input...)(auto ref Input input)
+		auto generic_shader (Input...)(auto ref Input input)
 			{/*...}*/
-				enum stage = Stage.vertex; // TEMP
-
 				mixin decl_format_verification!(Decl[0..$-1]);
 
 				enum code = Decl[$-1];
@@ -492,12 +484,20 @@ template vertex_shader (Decl...)
 										Map!(Pair!().Both!Assign, 
 											Zip!(InitialVars, DeclTypes)
 										),
-										Params!()
+										Cons!(
+											Repeat!(InitialVars.length - Params!().length, Unknown),
+											Params!()
+										)
 									)
 								);
 
-								static assert (All!(Map!(Pair!().Both!(λ!q{(T, U) = is (U : T)}), Zip!(DeclTypes, Params!()))),
-									`error: argument type does not match declaration type`
+								static assert (
+									All!(Map!(Pair!().Both!(λ!q{(T, U) = is (U : T)}), 
+										Zip!(
+											DeclTypes[$-Params!().length..$],
+											Params!()
+										)
+									)), `error: argument type does not match declaration type`
 								);
 							}
 						else static if (stage is Stage.vertex)
@@ -621,32 +621,24 @@ template vertex_shader (Decl...)
 			}
 	}
 
-static if (0) {
-
-// COMPOSABLE SHADER COMPONENTS
-template fragment_shader (Decl...)
-	{/*...}*/
-		mixin decl_format_verification!(Decl[0..$-1]);
-
-		static assert (is (Decl[0]) || is(typeof(Decl) == Cons!string),
-			`fragment shader auto type deduction not implemented`
-		);
-
-		auto fragment_shader (Input...)(auto ref Input input)
-			{/*...}*/
-				// TODO
-			}
-	}
-
-// XXX WHEN YOU GET HERE YOU ARE DONE XXX
-
+alias vertex_shader (Decl...) = generic_shader!(Stage.vertex, Decl);
+alias fragment_shader (Decl...) = generic_shader!(Stage.fragment, Decl);
 
 // PROTO RENDERERS
-ref triangle_fan (S)(ref S shader)
+struct ProtoRenderer (S)
 	{/*...}*/
-		shader.mode = S.Mode.t_fan;
+		RenderMode mode;
+		S shader;
 
-		return shader;
+		alias shader this; // TEMP
+	}
+auto triangle_fan (S)(ref S shader)
+	{/*...}*/
+		auto renderer = ProtoRenderer!S (RenderMode.t_fan);
+
+		swap (renderer.shader, shader);
+
+		return renderer;
 	}
 auto triangle_fan (S)(S shader)
 	{/*...}*/
@@ -654,9 +646,7 @@ auto triangle_fan (S)(S shader)
 
 		swap (shader, next);
 
-		next.triangle_fan;
-
-		return next;
+		return next.triangle_fan;
 	}
 
 // OPERATORS
@@ -855,7 +845,7 @@ auto ref output_to (S,R,T...)(auto ref S shader, auto ref R target, T args)
 		return target;
 	}
 
-void unmain () // TODO GOAL
+void main () // TODO GOAL
 	{/*...}*/
 		import evx.graphics.display;
 		auto display = new Display;
@@ -864,7 +854,7 @@ void unmain () // TODO GOAL
 		auto vertices = circle.map!(to!fvec)
 			.enumerate.map!((i,v) => i%2? v : v/4);
 
-static if (0) {/*}*/
+static if (1) {/*}*/
 		auto weights = ℕ[0..circle.length].map!(to!float);
 		Color color = red;
 
@@ -914,7 +904,7 @@ static if (0) {/*}*/
 		Texture target;
 		target.allocate (256,256);
 
-		static if (1) // BUG variables don't route in this example
+		static if (0) // BUG variables don't route in this example
 			{/*...}*/
 				vertices.vertex_shader!(
 					`pos`, q{
@@ -994,7 +984,6 @@ unittest {/*texture transfer}*/
 
 	import core.thread;
 	Thread.sleep (1.seconds);
-}
 }
 
 //////////////////////////////////////////
