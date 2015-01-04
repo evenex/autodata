@@ -23,6 +23,10 @@ import evx.graphics.color;
 alias array = evx.containers.array.array; // REVIEW how to exclude std.array.array
 alias join = evx.range.join;
 
+void main ()
+	{/*...}*/
+	}
+
 /* Shader Template Compilation Process Specification
 
 	upon instantiation of template:
@@ -79,67 +83,104 @@ alias join = evx.range.join;
 		The shader uploads its input data (converting from given arguments if necessary) using the global linked variable indices.
 */
 
+struct Unknown {}
+enum StorageClass {unknown, vertex_input, vertex_fragment, uniform}
+enum Stage {vertex = GL_VERTEX_SHADER, fragment = GL_FRAGMENT_SHADER}
 
-// SYMBOL STUFF
-private {/*glsl variables}*/
-	enum StorageClass {vertex_input, vertex_fragment, uniform}
+struct Variable (
+	string identifier,
+	BaseType = Unknown,
+	SourceType = Unknown,
+	uint vector_dim = 1,
+	StorageClass storage_class = StorageClass.unknown
+)
+	{/*...}*/
+		alias set_base_type (T) = Variable!(identifier, T, SourceType, vector_dim, storage_class);
+		alias set_source_type (T) = Variable!(identifier, BaseType, T, vector_dim, storage_class);
+		alias set_vector_dim (uint n) = Variable!(identifier, BaseType, SourceType, n, storage_class);
+		alias set_storage_class (StorageClass sc) = Variable!(identifier, BaseType, SourceType, vector_dim, sc);
 
-	// TYPE INFO
-	struct Type (uint n, Base)
-		if (Contains!(Base, bool, int, uint, float, double, Texture))
-		{/*...}*/
-			enum decl =	n > 1? (
-				is (Base == float)?
-				`` : Base.stringof[0].to!string
-			) ~ q{vec} ~ n.text
-			: (
-				is (Base == Texture)?
-				q{sampler2D} : Base.stringof
-			);
-		}
+		template declare (Stage stage)
+			{/*...}*/
+				static if (storage_class is StorageClass.uniform)
+					{/*...}*/
+						enum qualifier = q{uniform};
+					}
+				else static if (storage_class is StorageClass.vertex_input)
+					{/*...}*/
+						static if (stage is Stage.vertex)
+							enum qualifier = q{in};
 
-	// SYMBOL
-	struct Variable (StorageClass storage_class, Type, string identifier){}
-}
-private {/*glsl functions}*/
-	enum Stage {vertex = GL_VERTEX_SHADER, fragment = GL_FRAGMENT_SHADER}
+						else static assert (0);
+					}
+				else static if (storage_class is StorageClass.vertex_fragment)
+					{/*...}*/
+						static if (stage is Stage.vertex)
+							enum qualifier = q{out};
 
-	// SYMBOL
-	struct Function (Stage stage, string code){}
-}
+						else static if (stage is Stage.fragment)
+							enum qualifier = q{in};
+
+						else static assert (0);
+					}
+				else static assert (0);
+
+				static if (vector_dim > 1)
+					{/*...}*/
+						enum base = is (BaseType == float)?
+							`` : BaseType.stringof[0].to!string;
+
+						enum type = base ~ q{vec} ~ vector_dim.text;
+					}
+				else static if (is (BaseType == Texture))
+					{/*...}*/
+						enum type = q{sampler2D};
+					}
+				else static if (not (is (BaseType == Unknown)))
+					{/*...}*/
+						enum type = BaseType.stringof;
+					}
+				else static assert (0);
+
+				enum declare = [qualifier, type, identifier].join (` `).to!string ~ `;`;
+			}
+	}
+
+struct Function (Stage stage, string code) {}
 
 // GLOBAL PRECOMPILED PROGRAM LOOKUP
 __gshared GLuint[string] shader_ids;
 
-// PODs → PODs, Arrays → GPUArrays, Resources → Borrowed!Resources
+// PODs → PODs, Subspaces → Subspaces, Arrays → GPUArrays, Resources → Borrowed!Resources
 template GPUType (T)
 	{/*...}*/
-		static if (is (T == GLBuffer!U, U...))
+		static if (is (T == GLBuffer!U, U...) || is (T == Texture))
 			alias GPUType = Borrowed!T;
-		else static if (is (T == Texture))
-			alias GPUType = Borrowed!T;
+
 		else static if (is (typeof(T.init[].source) == GLBuffer!U, U...))
 			alias GPUType = T;
+
 		else static if (is (typeof(T.init.gpu_array) == U, U))
 			alias GPUType = U;
 
 		else alias GPUType = T;
 	}
 
+// THIS BELONGS TO RENDERERS BUT MUST SOMEHOW BE USED UNDER UNIFORM RENDERING API ELSE RISK INCONSISTENCY DOWNSTREAM
+enum RenderMode
+	{/*...}*/
+		point = GL_POINTS,
+		l_strip = GL_LINE_STRIP,
+		l_loop = GL_LINE_LOOP,
+		line = GL_LINES,
+		t_strip = GL_TRIANGLE_STRIP,
+		t_fan = GL_TRIANGLE_FAN,
+		tri = GL_TRIANGLES
+	}
+
 // CONCATTING SHADER PROGRAM BACKEND
 struct Shader (Parameters...)
 	{/*...}*/
-		enum Mode
-			{/*...}*/
-				points = GL_POINTS,
-				l_strip = GL_LINE_STRIP,
-				l_loop = GL_LINE_LOOP,
-				lines = GL_LINES,
-				t_strip = GL_TRIANGLE_STRIP,
-				t_fan = GL_TRIANGLE_FAN,
-				tris = GL_TRIANGLES
-			}
-
 		alias Symbols = NoDuplicates!(Filter!(or!(is_variable, is_function), Parameters));
 		alias Args = Filter!(not!(or!(is_variable, is_function)), Parameters);
 
@@ -157,47 +198,17 @@ struct Shader (Parameters...)
 				{/*...}*/
 					string[] code = [q{#version 440}];
 
-					{/*variables}*/
-						foreach (V; Variables)
-							{/*...}*/
-								static if (is (V == Variable!(storage_class, Type, identifier), 
-									StorageClass storage_class, Type, string identifier
-								)) 
-									{/*...}*/
-										static if (storage_class is StorageClass.vertex_input)
-											{/*...}*/
-												static if (stage is Stage.vertex)
-													enum qual = q{in};
-											}
+					foreach (V; Variables)
+						static if (is (typeof (V.declare!stage)))
+							code ~= V.declare!stage;
 
-										else static if (storage_class is StorageClass.vertex_fragment)
-											{/*...}*/
-												static if (stage is Stage.vertex)
-													enum qual = q{out};
+					code ~= [q{void main ()}, `{`];
 
-												else static if (stage is Stage.fragment)
-													enum qual = q{in};
-											}
+					foreach (F; Functions)
+						static if (is (F == Function!(stage, definition), string definition))
+							code ~= "\t" ~ definition;
 
-										else static if (storage_class is StorageClass.uniform)
-											{/*...}*/
-												enum qual = q{uniform};
-											}
-
-										static if (is (typeof(qual)))
-											code ~= qual ~ ` ` ~ Type.decl ~ ` ` ~ identifier ~ `;`;
-									}
-							}
-					}
-					{/*functions}*/
-						code ~= [q{void main ()}, `{`];
-
-						foreach (F; Functions)
-							static if (is (F == Function!(stage, main), string main))
-								code ~= "\t" ~ main;
-
-						code ~= `}`;
-					}
+					code ~= `}`;
 
 					return code.join ("\n").to!string;
 				}
@@ -277,10 +288,10 @@ struct Shader (Parameters...)
 			void link_variables ()
 				{/*...}*/
 					foreach (i, Var; Variables)
-						static if (is (Var == Variable!(storage_class, T, name),
-							StorageClass storage_class, T, string name
-						))
+						static if (is (Var == Variable!(name, T), string name, T...))
 							{/*...}*/
+								enum storage_class = T[$-1];
+
 								static if (storage_class is StorageClass.uniform)
 									auto bound = variable_locations[i] = gl.GetUniformLocation (program_id, name);
 
@@ -293,14 +304,13 @@ struct Shader (Parameters...)
 								else static assert (0);
 
 								static if (is (typeof(bound)))
-									assert (bound >= 0, T.decl ~ ` ` ~ name ~ ` was not found in the shader (possibly optimized out due to non-use)`);
+									assert (bound >= 0, name ~ ` was not found in the shader (possibly optimized out due to non-use)`);
 							}
 						else static assert (0);
 				}
 		}
 		public {/*runtime}*/
 			Args args;
-			Mode mode;
 
 			this (T...)(auto ref T input)
 				{/*...}*/
@@ -345,22 +355,34 @@ struct Shader (Parameters...)
 						}
 				}
 
-			enum is_uniform (T) = is (T == Variable!(StorageClass.uniform, U), U...);
-			enum is_vertex_input (T) = is (T == Variable!(StorageClass.vertex_input, U), U...);
-			enum is_texture (T) = is (T == Variable!(StorageClass.uniform, Type!(1, Texture), U), U...);
+			enum is_uniform (T) = is (T == T.set_storage_class!(StorageClass.uniform));
+			enum is_vertex_input (T) = is (T == T.set_storage_class!(StorageClass.vertex_input));
+			enum is_texture (T) = is (T == T.set_base_type!Texture);
 		}
 	}
 
 unittest {/*codegen}*/
 	alias TestShader = Shader!(
-		Variable!(StorageClass.vertex_input, Type!(1, bool), `foo`),
-		Variable!(StorageClass.vertex_fragment, Type!(2, double), `bar`),
-		Variable!(StorageClass.uniform, Type!(4, float), `baz`),
+		Variable!`foo`
+			.set_base_type!bool
+			.set_storage_class!(StorageClass.vertex_input),
+		Variable!`bar`
+			.set_base_type!double
+			.set_vector_dim!2
+			.set_storage_class!(StorageClass.vertex_fragment),
+		Variable!`baz`
+			.set_base_type!float
+			.set_vector_dim!4
+			.set_storage_class!(StorageClass.uniform),
 
 		Function!(Stage.vertex, q{glPosition = foo;}),
 		Function!(Stage.fragment, q{glFragColor = baz * vec2 (bar, 0, 1);}),
 
-		Variable!(StorageClass.uniform, Type!(2, float), `ar`),
+		Variable!`ar`
+			.set_base_type!float
+			.set_vector_dim!2
+			.set_storage_class!(StorageClass.uniform),
+
 		Function!(Stage.vertex, q{glPosition *= ar;}),
 	);
 
@@ -395,8 +417,9 @@ unittest {/*codegen}*/
 	);
 }
 
+static if (0) {
 // MAKE SURE ITS A ID LIST OR AN INTERLEAVED DECL LIST
-template decl_format_check (Decl...)
+template decl_format_verification (Decl...)
 	{/*...}*/
 		static assert (
 			All!(is_string_param, Decl)
@@ -417,49 +440,171 @@ template GetType (T)
 		else static if (is (Type!(1,T)))
 			alias GetType = Type!(1,T);
 
-		else static assert (0);
-	}
+		else static if (is (Element!T == U, U))
+			alias GetType = GetType!U;
 
-template Uniform (T, string identifier)
-	{/*...}*/
-		alias Uniform () = Variable!(StorageClass.uniform, GetType!T, identifier);
-	}
-template Attribute (R, string identifier)
-	{/*...}*/
-		alias Attribute () = Variable!(StorageClass.vertex_input, GetType!(Element!R), identifier);
-	}
-template Smooth (T, string identifier)
-	{/*...}*/
-		alias Smooth () = Variable!(StorageClass.vertex_fragment, GetType!T, identifier);
+		else static assert (0);
 	}
 
 // COMPOSABLE SHADER COMPONENTS
 template vertex_shader (Decl...)
 	{/*...}*/
-		mixin decl_format_check!(Decl[0..$-1]);
+		mixin decl_format_verification!(Decl[0..$-1]);
+
+		enum code = Decl[$-1];
 
 		alias DeclTypes = Filter!(is_type, Decl[0..$-1]);
 		alias Identifiers = Filter!(is_string_param, Decl[0..$-1]);
-		enum code = Decl[$-1];
+
+		static if (stage is Stage.fragment)
+			static assert (is (Decl[0]),
+				`Fragment shaders do not yet support automatic type deduction, and currently can only use a typed declaration list.`
+			);
 
 		auto vertex_shader (Input...)(auto ref Input input)
 			{/*...}*/
-				template Lookup (uint i)
-					if (i < Identifiers.length - Input.length)
-					{/*...}*/
-						enum identifier_match (V) = is (V == Variable!(U, Identifiers[i]), U...);
+				// XXX BEGIN TYPE PRECONDITIONING
+				alias PrecType (U) = Select!(
+					not (is (Element!U == U) || is (U == Vector!V, V...)),
+					Element!U[], U
+				);
 
-						static if (is (Input[0] == Shader!Sym, Sym...))
-							alias Lookup () = Filter!(identifier_match, Sym)[0];
-						alias Lookup () = Smooth!(DeclTypes[i], Identifiers[i]);
-					}
-				template Infer (uint i)
-					if (i >= Identifiers.length - Input.length)
+				alias PrecTypes = Map!(PrecType, Input);
+
+				static if (is (DeclTypes[0]))
+					static assert (is (Map!(Element, PrecTypes) == DeclTypes),
+						``// TODO errmsg, inconsistent type declaration
+					);
+				// XXX END
+
+				// XXX FOR FRAG, USE DECLTYPES
+
+				template AssignTypes (Prec...)
 					{/*...}*/
-						alias Infer () = Uniform!(DeclTypes[i], Identifiers[i]);
+						template Assign (T)
+							{/*...}*/
+								static if (is (T == Vector!(n,U), size_t n, U))
+									alias Assign = Type!(n,U);
+
+								else static if (is (Type!(1,T)))
+									alias Assign = Type!(1,T);
+
+								else static if (not (is (Element!T == T)))
+									alias Assign = Assign!(Element!T);
+
+								else static assert (0);
+							}
+
+						alias AssignTypes = Map!(Assign, Prec);
 					}
 
-				alias Parse (uint i) = Match!(Lookup!i, Infer!i);
+				template AssignVertexStorageClass (Prec...)
+					{/*...}*/
+						template Assign (T)
+							{/*...}*/
+								static if (is (T == U[], U))
+									enum Assign = StorageClass.vertex_input;
+
+								else enum Assign = StorageClass.uniform;
+							}
+
+						alias AssignVertexStorageClass = Map!(Assign, Prec);
+					}
+				template AssignFragmentStorageClass (InputPack, SymbolPack, PrecPack)
+					{/*...}*/
+						alias Input = InputPack.Payload;
+						alias Sym = SymbolPack.Payload;
+						alias Prec = PrecPack.Payload;
+
+						template Assign (T)
+							{/*...}*/
+							}
+
+						alias AssignVertexStorageClass = Map!(Assign, Prec);
+					}
+
+				template Resolve (uint i)
+					{/*...}*/
+						template Lookup (string identifier)
+							{/*...}*/
+								enum identifier_match (V) = is (V == Variable!(U, Identifiers[i]), U...);
+
+								static if (is (Input[0] == Shader!Sym, Sym...))
+									alias Lookup = Filter!(identifier_match, Sym)[0];
+								else static assert (0);
+							}
+
+						static if (is (Lookup!(Identifiers[i]) == T, T))
+							{/*...}*/
+								static if (is (T == Variable!V, V...))
+									alias Resolve () = T;
+								else static assert (0);
+
+								//	static if (is (DeclTypes[i]))
+								//		static assert ( TODO verify that the variable has not been redeclared with a different type
+							}
+						else {/*...}*/
+							enum is_attribute_variable (T) = is (Element!T) && not (is (T == Vector!V, V...));
+
+							alias Declared () = DeclTypes[i];
+							alias Deduced () = Select!(is_attribute_variable!(Input[i]), Element!(Input[i]), Input[i]);
+
+							alias RawType = Match!(Declared, Deduced);
+
+							static assert (stage is Stage.vertex,
+								``//TODO errmsg, only vertex can deduce type
+							);
+
+							static if (is (T == Vector!(n,U), size_t n, U))
+								alias Type = .Type!(n,U);
+
+							else static if (is (Type!(1,T)))
+								alias Type = .Type!(1,T);
+
+							else static if (is (Element!T == U, U))
+								alias Type = GetType!U;
+
+							else static assert (0);
+						}
+					}
+				template VerifiedType (uint i)
+					{/*...}*/
+						static if (is (Lookup!(Identifiers[i]) == T, T))
+							static assert (is (T == DeclTypes[i]),
+								`cannot redeclare variable ` ~ T.stringof ~ ` ` ~ Identifiers[i] ~ ` as ` ~ DeclTypes[i].stringof
+							);
+
+						alias VerifiedType () = GetType!(DeclTypes[i]);
+					}
+
+				static if (is (DeclTypes[0]))
+					alias ResolvedTypes = Map!(VerifiedType, Count!Identifiers);
+				else alias ResolvedTypes = Map!(DeducedType, Count!Identifiers);
+
+				template GetStorageClass (uint i)
+					{/*...}*/
+						static if (is (Lookup!(Identifiers[i]) == T, T))
+							{/*...}*/
+								static if (is (T == Variable!(storage_class, U), StorageClass storage_class, U...))
+									enum GetStorageClass = storage_class;
+								else static assert (0);
+							}
+						else static if (stage is Stage.vertex)
+							{/*...}*/
+								static if (is (Element!(Input[i])) && not (is (Input[i] == Vector!T, T...)))
+									enum GetStorageClass = StorageClass.vertex_input;
+								else enum GetStorageClass = StorageClass.uniform;
+							}
+						else static if (stage is Stage.fragment)
+							{/*...}*/
+								static if (i >= Identifiers.length - Input.length)
+									enum StorageClass = StorageClass.uniform;
+								else enum StorageClass = StorageClass.vertex_fragment;
+							}
+						else static assert (0);
+					}
+
+				alias StorageClasses = Map!(GetStorageClass, Count!Identifiers);
 
 				static if (is (Input[0] == Shader!Sym, Sym...))
 					{/*...}*/
@@ -536,7 +681,7 @@ template vertex_shader (Decl...)
 	}
 template fragment_shader (Decl...)
 	{/*...}*/
-		mixin decl_format_check!(Decl[0..$-1]);
+		mixin decl_format_verification!(Decl[0..$-1]);
 
 		static assert (is (Decl[0]) || is(typeof(Decl) == Cons!string),
 			`fragment shader auto type deduction not implemented`
@@ -547,6 +692,8 @@ template fragment_shader (Decl...)
 				// TODO
 			}
 	}
+
+// XXX WHEN YOU GET HERE YOU ARE DONE XXX
 
 // PARTIAL SHADERS
 alias aspect_correction = vertex_shader!(`aspect_ratio`, q{
@@ -767,7 +914,7 @@ auto ref output_to (S,R,T...)(auto ref S shader, auto ref R target, T args)
 		return target;
 	}
 
-void main () // TODO GOAL
+void unmain () // TODO GOAL
 	{/*...}*/
 		import evx.graphics.display;
 		auto display = new Display;
@@ -906,4 +1053,5 @@ unittest {/*texture transfer}*/
 
 	import core.thread;
 	Thread.sleep (1.seconds);
+}
 }

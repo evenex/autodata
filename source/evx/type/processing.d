@@ -168,6 +168,11 @@ alias Instantiate (alias symbol) = symbol!();
 
 alias NoDuplicates = std.typetuple.NoDuplicates;
 
+struct Pack (T...)
+	{/*...}*/
+		alias Payload = Cons!T;
+	}
+
 ////REFACTOR /////////////////////////////
 
 template type_of (T...)
