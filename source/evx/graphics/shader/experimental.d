@@ -406,7 +406,7 @@ template GPUType (T)
 	}
 
 //////////////////////////////////////////
-//////////////////////////////////////////
+// HELPER TRAITS ETC /////////////////////
 //////////////////////////////////////////
 // MAKE SURE ITS A ID LIST OR AN INTERLEAVED DECL LIST
 template decl_format_verification (Decl...)
@@ -421,15 +421,12 @@ template decl_format_verification (Decl...)
 			` or auto typed ("a", "b"...) and cannot be mixed`
 		);
 	}
-
-//////////////////////////////////////////
-// PARTIAL SHADERS
-alias aspect_correction = vertex_shader!(`aspect_ratio`, q{
-	gl_Position.xy *= aspect_ratio;
-});
-
+// DIFFERENTIATE RANGES FROM VECTORS
 enum is_range (T) = not (is (T == Element!T) || is (T == Vector!V, V...));
 
+//////////////////////////////////////////
+// SHADER HELPER FUNCTIONS ///////////////
+//////////////////////////////////////////
 template generic_shader (Stage stage, Decl...)
 	{/*...}*/
 		auto generic_shader (Input...)(auto ref Input input)
@@ -441,107 +438,104 @@ template generic_shader (Stage stage, Decl...)
 				alias DeclTypes = Filter!(is_type, Decl[0..$-1]);
 				alias Identifiers = Filter!(is_string_param, Decl[0..$-1]);
 
-				/////////////////////////////////////////////////////////////////
-
-				template Lookup (string identifier)
+				template ResolvedSymbols ()
 					{/*...}*/
-						enum identifier_match (V) = is (V == Variable!(U, Identifiers[i]), U...);
+						static if (is (Input[0] == Shader!Symbols, Symbols...))
+							{}
 
-						static if (is (Input[0] == Shader!Sym, Sym...))
-							alias Lookup = Filter!(identifier_match, Sym)[0];
-						else static assert (0);
-					}
-
-				/////////////////////////////////////////////////////////////////
-
-				template Params ()
-					{/*...}*/
-						template Expand (T)
+						template Params ()
 							{/*...}*/
-								static if (is (T == Tuple!Data, Data...))
-									alias Expand = Data;
-								else static if (is (T == Shader!Sym, Sym...))
-									alias Expand = Cons!();
-								else alias Expand = T;
-							}
-
-						alias Params = Map!(Expand, Input);
-					}
-
-				/////////////////////////////////////////////////////////////////
-
-				alias InitialVars = Map!(Variable, Identifiers);
-
-				template TypedVars ()
-					{/*...}*/
-						static if (is (DeclTypes[0]))
-							{/*...}*/
-								alias Assign (V, T) = V.set_base_type!T;
-								alias Retain (V, T) = V.set_source_type!T;
-
-								alias TypedVars = Map!(Pair!().Both!Retain,
-									Zip!(
-										Map!(Pair!().Both!Assign, 
-											Zip!(InitialVars, DeclTypes)
-										),
-										Cons!(
-											Repeat!(InitialVars.length - Params!().length, Unknown),
-											Params!()
-										)
-									)
-								);
-
-								static assert (
-									All!(Map!(Pair!().Both!(λ!q{(T, U) = is (U : T)}), 
-										Zip!(
-											DeclTypes[$-Params!().length..$],
-											Params!()
-										)
-									)), `error: argument type does not match declaration type`
-								);
-							}
-						else static if (stage is Stage.vertex)
-							{/*...}*/
-								alias BaseType (T) = Select!(is_range!T, Element!T, T);
-
-								alias Deduce (V, T) = V.set_source_type!T.set_base_type!(BaseType!T);
-
-								alias TypedVars = Map!(Pair!().Both!Deduce, Zip!(InitialVars, Params!()));
-							}
-						else static assert (not (stage is Stage.fragment),
-							`Fragment shaders do not yet support automatic type deduction, and currently can only use a typed declaration list.`
-						);
-					}
-
-				template StoredVars ()
-					{/*...}*/
-						template Assign (V)
-							{/*...}*/
-								static if (stage is Stage.vertex)
+								template Expand (T)
 									{/*...}*/
-										static if (is_range!(V.SourceType))
-											alias Assign = V.set_storage_class!(StorageClass.vertex_input);
-
-										else alias Assign = V.set_storage_class!(StorageClass.uniform);
+										static if (is (T == Tuple!Data, Data...))
+											alias Expand = Data;
+										else static if (is (T == Shader!Sym, Sym...))
+											alias Expand = Cons!();
+										else alias Expand = T;
 									}
-								else static if (stage is Stage.fragment)
-									{/*...}*/
-										static if (not (is (V.SourceType == Unknown)))
-											alias Assign = V.set_storage_class!(StorageClass.uniform);
 
-										else static if (is (Lookup!(V.identifier) == W, W))
-											alias Assign = V.set_storage_class!(W.storage_class);
+								alias Params = Map!(Expand, Input);
+							}
+						template Lookup (string identifier)
+							{/*...}*/
+								enum identifier_match (V) = is (V == Variable!(U, Identifiers[i]), U...);
 
-										else alias Assign = V.set_storage_class!(StorageClass.vertex_fragment);
-									}
+								static if (is (Symbols))
+									alias Lookup = Filter!(identifier_match, Symbols)[0];
 								else static assert (0);
 							}
 
-						alias StoredVars = Map!(Assign, TypedVars!());
-					}
+						template InitialVars ()
+							{/*...}*/
+								alias InitialVars = Map!(Variable, Identifiers);
+							}
+						template TypedVars ()
+							{/*...}*/
+								static if (is (DeclTypes[0]))
+									{/*...}*/
+										alias Assign (V, T) = V.set_base_type!T;
+										alias Retain (V, T) = V.set_source_type!T;
 
-				template ResolvedVars ()
-					{/*...}*/
+										alias TypedVars = Map!(Pair!().Both!Retain,
+											Zip!(
+												Map!(Pair!().Both!Assign, 
+													Zip!(InitialVars!(), DeclTypes)
+												),
+												Cons!(
+													Repeat!(InitialVars!().length - Params!().length, Unknown),
+													Params!()
+												)
+											)
+										);
+
+										static assert (
+											All!(Map!(Pair!().Both!(λ!q{(T, U) = is (U : T)}), 
+												Zip!(
+													DeclTypes[$-Params!().length..$],
+													Params!()
+												)
+											)), `error: argument type does not match declaration type`
+										);
+									}
+								else static if (stage is Stage.vertex)
+									{/*...}*/
+										alias BaseType (T) = Select!(is_range!T, Element!T, T);
+
+										alias Deduce (V, T) = V.set_source_type!T.set_base_type!(BaseType!T);
+
+										alias TypedVars = Map!(Pair!().Both!Deduce, Zip!(InitialVars!(), Params!()));
+									}
+								else static assert (not (stage is Stage.fragment),
+									`Fragment shaders do not yet support automatic type deduction, and currently can only use a typed declaration list.`
+								);
+							}
+						template StoredVars ()
+							{/*...}*/
+								template Assign (V)
+									{/*...}*/
+										static if (stage is Stage.vertex)
+											{/*...}*/
+												static if (is_range!(V.SourceType))
+													alias Assign = V.set_storage_class!(StorageClass.vertex_input);
+
+												else alias Assign = V.set_storage_class!(StorageClass.uniform);
+											}
+										else static if (stage is Stage.fragment)
+											{/*...}*/
+												static if (not (is (V.SourceType == Unknown)))
+													alias Assign = V.set_storage_class!(StorageClass.uniform);
+
+												else static if (is (Lookup!(V.identifier) == W, W))
+													alias Assign = V.set_storage_class!(W.storage_class);
+
+												else alias Assign = V.set_storage_class!(StorageClass.vertex_fragment);
+											}
+										else static assert (0);
+									}
+
+								alias StoredVars = Map!(Assign, TypedVars!());
+							}
+
 						enum is_resolved (V) = not (is (V.BaseType == Unknown) || V.storage_class is StorageClass.unknown);
 
 						template Resolve (V)
@@ -561,7 +555,7 @@ template generic_shader (Stage stage, Decl...)
 								);
 							}
 
-						alias ResolvedVars = Map!(Resolve, StoredVars!());
+						alias ResolvedSymbols = Map!(Resolve, StoredVars!());
 					}
 
 				/////////////////////////////////////////////////////////////////
@@ -570,7 +564,7 @@ template generic_shader (Stage stage, Decl...)
 					{/*...}*/
 						static if (is (Input[1]))
 							{/*...}*/
-								alias Symbols = Cons!(Input[0].Symbols, ResolvedVars!());
+								alias Symbols = Cons!(Input[0].Symbols, ResolvedSymbols!());
 								alias Args = Cons!(Input[0].Args, Map!(GPUType, Input[1..$]));
 							}
 						else {/*...}*/
@@ -586,8 +580,8 @@ template generic_shader (Stage stage, Decl...)
 								alias Args = Map!(GPUType, Cons!(Data, Input[1..$]));
 							}
 						else {/*...}*/
-							alias Symbols = ResolvedVars!();
-							alias Args = Map!(GPUType, Input[0].Types);
+							alias Symbols = ResolvedSymbols!();
+							alias Args = Map!(GPUType, Data);
 						}
 
 						static assert (stage != Stage.fragment, 
@@ -595,7 +589,7 @@ template generic_shader (Stage stage, Decl...)
 						);
 					}
 				else {/*...}*/
-					alias Symbols = ResolvedVars!();
+					alias Symbols = ResolvedSymbols!();
 					alias Args = Map!(GPUType, Input);
 
 					static assert (stage != Stage.fragment, 
@@ -624,7 +618,16 @@ template generic_shader (Stage stage, Decl...)
 alias vertex_shader (Decl...) = generic_shader!(Stage.vertex, Decl);
 alias fragment_shader (Decl...) = generic_shader!(Stage.fragment, Decl);
 
-// PROTO RENDERERS
+//////////////////////////////////////////
+// PARTIAL SHADERS ///////////////////////
+//////////////////////////////////////////
+alias aspect_correction = vertex_shader!(`aspect_ratio`, q{
+	gl_Position.xy *= aspect_ratio;
+});
+
+//////////////////////////////////////////
+// PROTO RENDERERS ///////////////////////
+//////////////////////////////////////////
 struct ProtoRenderer (S)
 	{/*...}*/
 		RenderMode mode;
@@ -850,11 +853,9 @@ void main () // TODO GOAL
 		import evx.graphics.display;
 		auto display = new Display;
 
-
 		auto vertices = circle.map!(to!fvec)
 			.enumerate.map!((i,v) => i%2? v : v/4);
 
-static if (1) {/*}*/
 		auto weights = ℕ[0..circle.length].map!(to!float);
 		Color color = red;
 
@@ -897,36 +898,23 @@ static if (1) {/*}*/
 
 		display.render;
 
-} // TEMP
 		import core.thread;
 		Thread.sleep (2.seconds);
 
 		Texture target;
 		target.allocate (256,256);
 
-		static if (0) // BUG variables don't route in this example
-			{/*...}*/
-				vertices.vertex_shader!(
-					`pos`, q{
-						gl_Position = vec4 (pos, 0, 1);
-					}
-				).fragment_shader!(
-					Color, `col`, q{
-						gl_FragColor = col;
-					}
-				)(blue)
-				.triangle_fan
-				.output_to (target);
-			}
-		else τ(vertices).vertex_shader!(
+		vertices.vertex_shader!(
 			`pos`, q{
 				gl_Position = vec4 (pos, 0, 1);
 			}
 		).fragment_shader!(
-			q{
-				gl_FragColor = vec4 (0,1,0,1);
+			Color, `col`, q{
+				gl_FragColor = col;
 			}
-		).triangle_fan.output_to (target);
+		)(blue)
+		.triangle_fan
+		.output_to (target);
 
 		τ(square!float, square!float.scale (2.0f).translate (fvec(0.5))).vertex_shader!(
 			`pos`, `texc_in`, q{
