@@ -49,7 +49,7 @@ auto triangle_fan (S)(S shader)
 		return next.triangle_fan;
 	}
 
-// OPERATORS
+// RENDERING OPERATORS
 template CanvasOps (alias preprocess, alias setup, alias managed_id = identity)
 	{/*...}*/
 		static assert (is (typeof(preprocess(Shader!().init)) == Shader!Sym, Sym...),
@@ -245,6 +245,24 @@ auto ref output_to (S,R,T...)(auto ref S shader, auto ref R target, T args)
 		return target;
 	}
 
+//////////////////////////////////////////
+// RENDERING /////////////////////////////
+//////////////////////////////////////////
+// THIS BELONGS TO RENDERERS BUT MUST SOMEHOW BE USED UNDER UNIFORM RENDERING API ELSE RISK INCONSISTENCY DOWNSTREAM
+enum RenderMode
+	{/*...}*/
+		point = GL_POINTS,
+		l_strip = GL_LINE_STRIP,
+		l_loop = GL_LINE_LOOP,
+		line = GL_LINES,
+		t_strip = GL_TRIANGLE_STRIP,
+		t_fan = GL_TRIANGLE_FAN,
+		tri = GL_TRIANGLES
+	}
+
+//////////////////////////////////////////
+// MAIN //////////////////////////////////
+//////////////////////////////////////////
 void main () // TODO GOAL
 	{/*...}*/
 		import evx.graphics.display;
@@ -330,17 +348,3 @@ void main () // TODO GOAL
 		Thread.sleep (2.seconds);
 	}
 
-//////////////////////////////////////////
-// RENDERING /////////////////////////////
-//////////////////////////////////////////
-// THIS BELONGS TO RENDERERS BUT MUST SOMEHOW BE USED UNDER UNIFORM RENDERING API ELSE RISK INCONSISTENCY DOWNSTREAM
-enum RenderMode
-	{/*...}*/
-		point = GL_POINTS,
-		l_strip = GL_LINE_STRIP,
-		l_loop = GL_LINE_LOOP,
-		line = GL_LINES,
-		t_strip = GL_TRIANGLE_STRIP,
-		t_fan = GL_TRIANGLE_FAN,
-		tri = GL_TRIANGLES
-	}
