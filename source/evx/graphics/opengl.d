@@ -150,12 +150,11 @@ struct gl
 			in {/*...}*/
 				GLint program, n_uniforms;
 
-				gl.GetIntegerv (GL_CURRENT_PROGRAM, &program);
-				gl.GetProgramiv (program, GL_ACTIVE_UNIFORMS, &n_uniforms);
+				gl.GetIntegerv (GL_CURRENT_PROGRAM, &program); // TODO replace with global gl state call
+				assert (program != 0, `no active program`);
 
-				assert (index < n_uniforms,
-					`uniform location invalid`
-				);
+				gl.GetProgramiv (program, GL_ACTIVE_UNIFORMS, &n_uniforms);
+				assert (index < n_uniforms, `uniform location invalid`);
 
 				char[256] name;
 				GLint sizeof;
@@ -354,6 +353,19 @@ struct gl
 						return error_log.to!string;
 					}
 				else return null;
+			}
+
+		void reset ()
+			{/*...}*/
+				foreach (member; __traits(allMembers, state))
+					{/*...}*/
+						ref variable ()() {return __traits(getMember, state, member);}
+
+						void reset ()() {variable = typeof(variable ()).init;}
+						void pass  ()() {}
+
+						Match!(reset, pass);
+					}
 			}
 
 		private {/*...}*/

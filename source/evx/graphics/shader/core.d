@@ -380,20 +380,24 @@ private {/*generator/compiler/linker}*/
 						assert (not (gl.IsProgram (program_id)));
 					}
 					out {/*...}*/
-						assert (gl.IsProgram (program_id) && program_id != 0,
-							`shader failed to initialize`
+						assert (gl.IsProgram (program_id) && program_id != 0, // BUG the shader ID is still in the global table from a prior context, but is no longer a valid program
+							`shader failed to initialize program ` ~ program_id.text
 						);
 					}
 					body {/*...}*/
 						auto key = [vertex_code, fragment_code].join.filter!(not!isWhite).to!string;
 
 						if (auto id = key in shader_ids)
-							program_id = *id;
-						else {/*...}*/
-							build_program;
+							{/*...}*/
+								program_id = *id;
 
-							shader_ids[key] = program_id;
-						}
+								if (gl.IsProgram (program_id))
+									return;
+							}
+
+						build_program;
+
+						shader_ids[key] = program_id;
 					}
 				void build_program ()
 					{/*...}*/
@@ -408,7 +412,7 @@ private {/*generator/compiler/linker}*/
 						gl.LinkProgram (program_id);
 
 						if (auto error = gl.verify!`Program` (program_id))
-							{assert (0, error);}
+							assert (0, error);
 
 						link_variables;
 

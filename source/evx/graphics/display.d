@@ -28,6 +28,8 @@ class Display
 		~this ()
 			{/*...}*/
 				terminate_glfw;
+
+				gl.reset;
 			}
 
 		private {/*interface}*/
