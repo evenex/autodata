@@ -5,6 +5,7 @@ private {/*...}*/
 	import std.traits;
 
 	import evx.math.logic;
+	import evx.math.vectors;
 	import evx.math.space;
 	import evx.type;
 }
@@ -24,5 +25,9 @@ template Element (R) // TODO deprecate ElementType, substitute Element, watch ou
 
 		alias Element = Match!(Codomain, Standard, Identity);
 	}
+
 alias ElementType = std.range.ElementType; // BUG ICE in template.c when this is replaced with a custom def, can't reproduce using dmd, only dub
+
 alias has_length = std.range.hasLength;
+
+enum is_range (T) = not (is (T == Element!T) || is (T == Vector!V, V...));
