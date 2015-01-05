@@ -408,40 +408,35 @@ template GPUType (T)
 //////////////////////////////////////////
 // HELPER TRAITS ETC /////////////////////
 //////////////////////////////////////////
-// MAKE SURE ITS A ID LIST OR AN INTERLEAVED DECL LIST
-template decl_format_verification (Decl...)
-	{/*...}*/
-		static assert (
-			All!(is_string_param, Decl)
-			|| (
-				All!(is_type, Deinterleave!Decl[0..$/2])
-				&& All!(is_string_param, Deinterleave!Decl[$/2..$])
-			),
-			`shader declarations must either all be explicitly typed (T, "a", U, "b"...)`
-			` or auto typed ("a", "b"...) and cannot be mixed`
-		);
-	}
 // DIFFERENTIATE RANGES FROM VECTORS
 enum is_range (T) = not (is (T == Element!T) || is (T == Vector!V, V...));
 
 //////////////////////////////////////////
 // SHADER HELPER FUNCTIONS ///////////////
 //////////////////////////////////////////
-template generic_shader (Stage stage, Decl...)
+template generate_shader (Stage stage, Decl...)
 	{/*...}*/
-		auto generic_shader (Input...)(auto ref Input input)
+		static assert (
+			All!(is_string_param, Decl[0..$-1])
+			|| (
+				All!(is_type, Deinterleave!(Decl[0..$-1])[0..$/2])
+				&& All!(is_string_param, Deinterleave!(Decl[0..$-1])[$/2..$])
+			),
+			`shader declarations must either all be explicitly typed (T, "a", U, "b"...)`
+			` or auto typed ("a", "b"...) and cannot be mixed`
+		);
+
+		auto generate_shader (Input...)(auto ref Input input)
 			{/*...}*/
-				mixin decl_format_verification!(Decl[0..$-1]);
-
-				enum code = Decl[$-1];
-
-				alias DeclTypes = Filter!(is_type, Decl[0..$-1]);
-				alias Identifiers = Filter!(is_string_param, Decl[0..$-1]);
-
 				template ResolvedSymbols ()
 					{/*...}*/
-						static if (is (Input[0] == Shader!Symbols, Symbols...))
-							{}
+						enum code = Decl[$-1];
+						alias DeclTypes = Filter!(is_type, Decl[0..$-1]);
+						alias Identifiers = Filter!(is_string_param, Decl[0..$-1]);
+
+						static if (is (Input[0] == Shader!S, S...))
+							alias ExistingSymbols = Shader!S.Symbols;
+						else alias ExistingSymbols = Cons!();
 
 						template Params ()
 							{/*...}*/
@@ -460,14 +455,12 @@ template generic_shader (Stage stage, Decl...)
 							{/*...}*/
 								enum identifier_match (V) = is (V == Variable!(U, Identifiers[i]), U...);
 
-								static if (is (Symbols))
-									alias Lookup = Filter!(identifier_match, Symbols)[0];
-								else static assert (0);
+								alias Lookup = Filter!(identifier_match, ExistingSymbols)[0];
 							}
 
-						template InitialVars ()
+						template ParsedVars ()
 							{/*...}*/
-								alias InitialVars = Map!(Variable, Identifiers);
+								alias ParsedVars = Map!(Variable, Identifiers);
 							}
 						template TypedVars ()
 							{/*...}*/
@@ -479,23 +472,24 @@ template generic_shader (Stage stage, Decl...)
 										alias TypedVars = Map!(Pair!().Both!Retain,
 											Zip!(
 												Map!(Pair!().Both!Assign, 
-													Zip!(InitialVars!(), DeclTypes)
+													Zip!(ParsedVars!(), DeclTypes)
 												),
 												Cons!(
-													Repeat!(InitialVars!().length - Params!().length, Unknown),
+													Repeat!(ParsedVars!().length - Params!().length, Unknown),
 													Params!()
 												)
 											)
 										);
 
-										static assert (
-											All!(Map!(Pair!().Both!(λ!q{(T, U) = is (U : T)}), 
-												Zip!(
-													DeclTypes[$-Params!().length..$],
-													Params!()
-												)
-											)), `error: argument type does not match declaration type`
-										);
+										static if (is (Params!()[0]))
+											static assert (
+												All!(Map!(Pair!().Both!(λ!q{(T, U) = is (U : T)}), 
+													Zip!(
+														DeclTypes[$-Params!().length..$],
+														Params!()
+													)
+												)), `error: argument type does not match declaration type`
+											);
 									}
 								else static if (stage is Stage.vertex)
 									{/*...}*/
@@ -503,13 +497,13 @@ template generic_shader (Stage stage, Decl...)
 
 										alias Deduce (V, T) = V.set_source_type!T.set_base_type!(BaseType!T);
 
-										alias TypedVars = Map!(Pair!().Both!Deduce, Zip!(InitialVars!(), Params!()));
+										alias TypedVars = Map!(Pair!().Both!Deduce, Zip!(ParsedVars!(), Params!()));
 									}
 								else static assert (not (stage is Stage.fragment),
 									`Fragment shaders do not yet support automatic type deduction, and currently can only use a typed declaration list.`
 								);
 							}
-						template StoredVars ()
+						template QualifiedVars ()
 							{/*...}*/
 								template Assign (V)
 									{/*...}*/
@@ -533,7 +527,7 @@ template generic_shader (Stage stage, Decl...)
 										else static assert (0);
 									}
 
-								alias StoredVars = Map!(Assign, TypedVars!());
+								alias QualifiedVars = Map!(Assign, TypedVars!());
 							}
 
 						enum is_resolved (V) = not (is (V.BaseType == Unknown) || V.storage_class is StorageClass.unknown);
@@ -555,54 +549,42 @@ template generic_shader (Stage stage, Decl...)
 								);
 							}
 
-						alias ResolvedSymbols = Map!(Resolve, StoredVars!());
-					}
-
-				/////////////////////////////////////////////////////////////////
-
-				static if (is (Input[0] == Shader!Sym, Sym...))
-					{/*...}*/
-						static if (is (Input[1]))
-							{/*...}*/
-								alias Symbols = Cons!(Input[0].Symbols, ResolvedSymbols!());
-								alias Args = Cons!(Input[0].Args, Map!(GPUType, Input[1..$]));
-							}
-						else {/*...}*/
-							alias Symbols = Cons!(Input[0].Symbols); // https://issues.dlang.org/show_bug.cgi?id=13883
-							alias Args = Cons!(Input[0].Args);
-						}
-					}
-				else static if (is (Input[0] == Tuple!Data, Data...)) // XXX removal pending http://wiki.dlang.org/DIP32
-					{/*...}*/
-						static if (is (Input[1]))
-							{/*...}*/
-								alias Symbols = ResolvedTypes!(); // BUG this will miss things in the tuple
-								alias Args = Map!(GPUType, Cons!(Data, Input[1..$]));
-							}
-						else {/*...}*/
-							alias Symbols = ResolvedSymbols!();
-							alias Args = Map!(GPUType, Data);
-						}
-
-						static assert (stage != Stage.fragment, 
-							`tuple arg not valid for fragment shader`
+						alias ResolvedSymbols = Cons!(
+							ExistingSymbols,
+							Function!(stage, code),
+							Map!(Resolve, QualifiedVars!())
 						);
 					}
-				else {/*...}*/
-					alias Symbols = ResolvedSymbols!();
-					alias Args = Map!(GPUType, Input);
+				template FramedArgs ()
+					{/*...}*/
+						static if (is (Input[0] == Shader!Sym, Sym...))
+							{/*...}*/
+								static if (is (Input[1]))
+									alias FramedArgs = Cons!(Input[0].Args, Map!(GPUType, Input[1..$]));
+								else alias FramedArgs = Cons!(Input[0].Args);
+							}
+						else static if (is (Input[0] == Tuple!Data, Data...)) // XXX removal pending http://wiki.dlang.org/DIP32
+							{/*...}*/
+								static if (is (Input[1]))
+									alias FramedArgs = Map!(GPUType, Cons!(Data, Input[1..$]));
+								else alias FramedArgs = Map!(GPUType, Data);
 
-					static assert (stage != Stage.fragment, 
-						`fragment shader must be attached to vertex shader`
-					);
-				}
+								static assert (stage != Stage.fragment, 
+									`tuple arg not valid for fragment shader`
+								);
+							}
+						else {/*...}*/
+							alias FramedArgs = Map!(GPUType, Input);
 
-				/////////////////////////////////////////////////////////////////
+							static assert (stage != Stage.fragment, 
+								`fragment shader must be attached to vertex shader`
+							);
+						}
+					}
 
 				alias S = Shader!(
-					Symbols,
-					Function!(stage, code),
-					Args
+					ResolvedSymbols!(),
+					FramedArgs!()
 				);
 				
 				auto shader 	 ()() {return S (input[0].args);}
@@ -615,8 +597,8 @@ template generic_shader (Stage stage, Decl...)
 			}
 	}
 
-alias vertex_shader (Decl...) = generic_shader!(Stage.vertex, Decl);
-alias fragment_shader (Decl...) = generic_shader!(Stage.fragment, Decl);
+alias vertex_shader (Decl...) = generate_shader!(Stage.vertex, Decl);
+alias fragment_shader (Decl...) = generate_shader!(Stage.fragment, Decl);
 
 //////////////////////////////////////////
 // PARTIAL SHADERS ///////////////////////
