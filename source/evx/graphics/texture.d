@@ -1,6 +1,5 @@
 module evx.graphics.texture;
 
-import evx.graphics.shader;// TEMP
 private {/*imports}*/
 	import std.conv;
 
@@ -226,3 +225,33 @@ struct Texture
 				push (range, [x, x+1], [y, y+1]);
 			}
 	}
+
+unittest {/*texture transfer}*/
+	import evx.graphics.display;
+	import evx.graphics.shader;
+	import evx.graphics.shader.experimental; // TEMP pending renderer module
+	import evx.type;
+
+	scope display = new Display;
+
+	auto vertices = square!float;
+
+	auto tex1 = ℕ[0..100].by (ℕ[0..100]).map!((i,j) => (i+j)%2? red: yellow).Texture;
+	auto tex2 = ℕ[0..50].by (ℕ[0..50]).map!((i,j) => (i+j)%2? blue: green).grid (100,100).Texture;
+
+	assert (tex1[0,0] == yellow);
+
+	tex1[50..75, 25..75] = tex2[0..25, 0..50];
+
+	// TEXTURED SHAPE SHADER
+	Cons!(vertices, tex1).textured_shape_shader // REVIEW Cons only works for symbols, rvalues need to be in tuples... with DIP32, this distinction will be removed (i think)
+	.aspect_correction (display.aspect_ratio)
+	.triangle_fan.output_to (display);
+
+	display.render;
+
+	assert (tex1[0,0] == yellow);
+
+	import core.thread;
+	Thread.sleep (1.seconds);
+}

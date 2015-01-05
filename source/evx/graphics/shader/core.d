@@ -380,7 +380,9 @@ private {/*generator/compiler/linker}*/
 						assert (not (gl.IsProgram (program_id)));
 					}
 					out {/*...}*/
-						assert (gl.IsProgram (program_id) && program_id != 0);
+						assert (gl.IsProgram (program_id) && program_id != 0,
+							`shader failed to initialize`
+						);
 					}
 					body {/*...}*/
 						auto key = [vertex_code, fragment_code].join.filter!(not!isWhite).to!string;

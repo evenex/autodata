@@ -20,13 +20,7 @@ import evx.graphics.texture;
 import evx.graphics.color;
 
 import evx.graphics.shader.core;
-
-//////////////////////////////////////////
-// PARTIAL SHADERS ///////////////////////
-//////////////////////////////////////////
-alias aspect_correction = vertex_shader!(`aspect_ratio`, q{
-	gl_Position.xy *= aspect_ratio;
-});
+import evx.graphics.shader.repo;
 
 //////////////////////////////////////////
 // PROTO RENDERERS ///////////////////////
@@ -254,7 +248,7 @@ auto ref output_to (S,R,T...)(auto ref S shader, auto ref R target, T args)
 void main () // TODO GOAL
 	{/*...}*/
 		import evx.graphics.display;
-		auto display = new Display;
+		scope display = new Display;
 
 		auto vertices = circle.map!(to!fvec)
 			.enumerate.map!((i,v) => i%2? v : v/4);
@@ -335,47 +329,6 @@ void main () // TODO GOAL
 
 		Thread.sleep (2.seconds);
 	}
-
-auto textured_shape_shader (R)(R shape, auto ref Texture texture)
-	{/*...}*/
-		return τ(shape, shape.scale (2).flip!`vertical`).vertex_shader!(
-			`position`, `tex_coords`, q{
-				gl_Position = vec4 (position, 0, 1);
-				frag_tex_coords = (tex_coords + vec2 (1,1))/2;
-			}
-		).fragment_shader!(
-			fvec, `frag_tex_coords`,
-			Texture, `tex`, q{
-				gl_FragColor = texture2D (tex, frag_tex_coords);
-			}
-		)(texture);
-	}
-
-unittest {/*texture transfer}*/
-	import evx.graphics.display;
-	auto display = new Display;
-
-	auto vertices = square!float;
-
-	auto tex1 = ℕ[0..100].by (ℕ[0..100]).map!((i,j) => (i+j)%2? red: yellow).Texture;
-	auto tex2 = ℕ[0..50].by (ℕ[0..50]).map!((i,j) => (i+j)%2? blue: green).grid (100,100).Texture;
-
-	assert (tex1[0,0] == yellow);
-
-	tex1[50..75, 25..75] = tex2[0..25, 0..50];
-
-	// TEXTURED SHAPE SHADER
-	Cons!(vertices, tex1).textured_shape_shader // REVIEW Cons only works for symbols, rvalues need to be in tuples... with DIP32, this distinction will be removed (i think)
-	.aspect_correction (display.aspect_ratio)
-	.triangle_fan.output_to (display);
-
-	display.render;
-
-	assert (tex1[0,0] == yellow);
-
-	import core.thread;
-	Thread.sleep (1.seconds);
-}
 
 //////////////////////////////////////////
 // RENDERING /////////////////////////////
