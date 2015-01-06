@@ -25,16 +25,36 @@ import evx.graphics.shader.repo;
 //////////////////////////////////////////
 // PROTO RENDERERS ///////////////////////
 //////////////////////////////////////////
-struct ProtoRenderer (S)
+enum RenderMode
 	{/*...}*/
-		RenderMode mode;
+		point = GL_POINTS,
+		l_strip = GL_LINE_STRIP,
+		l_loop = GL_LINE_LOOP,
+		line = GL_LINES,
+		t_strip = GL_TRIANGLE_STRIP,
+		t_fan = GL_TRIANGLE_FAN,
+		tri = GL_TRIANGLES
+	}
+struct ArrayRenderer (S)
+	{/*...}*/
+		mixin RenderOps!(draw, shader);
+
 		S shader;
 
-		alias shader this; // TEMP
+		void draw (uint i: 0)()
+			{/*...}*/
+				template length (uint i)
+					{/*...}*/
+						auto length ()() if (not (is (typeof(shader.args[i]) == Vector!U, U...)))
+							{return shader.args[i].length.to!int;}
+					}
+
+				gl.DrawArrays (shader.mode, 0, Match!(Map!(length, Count!(S.Args))));
+			}
 	}
 auto triangle_fan (S)(ref S shader)
 	{/*...}*/
-		auto renderer = ProtoRenderer!S (RenderMode.t_fan);
+		auto renderer = ArrayRenderer!S (RenderMode.t_fan);
 
 		swap (renderer.shader, shader);
 
@@ -59,26 +79,15 @@ template CanvasOps (alias preprocess, alias setup, alias managed_id = identity)
 
 		GLuint framebuffer_id ()
 			{/*...}*/
-				auto managed ()()
-					{/*...}*/
-						return managed_id;
-					}
-				auto unmanaged ()()
-					{/*...}*/
-						if (fbo_id == 0)
-							gl.GenFramebuffers (1, &fbo_id);
+				static if (is (typeof(managed_id.identity)))
+					if (fbo_id == 0)
+						gl.GenFramebuffers (1, &fbo_id);
 
-						return fbo_id;
-					}
+				gl.framebuffer = fbo_id;
 
-				auto ret = Match!(managed, unmanaged); // TEMP return this
+				setup; // REVIEW when to do this?
 
-
-				glBindFramebuffer (GL_FRAMEBUFFER, ret);//TEMP
-
-				setup; // TEMP when to do this?
-
-				return ret;
+				return fbo_id;
 			}
 
 		static if (is (typeof(managed_id.identity)))
@@ -107,6 +116,8 @@ template RenderOps (alias draw, shaders...)
 			);
 		}
 		public {/*rendering}*/
+			RenderMode mode;
+
 			auto ref render_to (T)(auto ref T canvas)
 				{/*...}*/
 					void render (uint i = 0)()
@@ -143,6 +154,44 @@ template RenderOps (alias draw, shaders...)
 		}
 	}
 
+auto check_frambuffer () // TODO REFACTOR this goes somewhere... TODO make specific error messages for all the openGL calls
+	{/*...}*/
+		switch (glCheckFramebufferStatus (GL_FRAMEBUFFER)) 
+			{/*...}*/
+				case GL_FRAMEBUFFER_COMPLETE:
+					return;
+
+				case GL_FRAMEBUFFER_UNDEFINED:
+					assert(0, `target is the default framebuffer, but the default framebuffer does not exist.`);
+
+				case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+					assert(0, `some of the framebuffer attachment points are framebuffer incomplete.`);
+
+				case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+					assert(0, `framebuffer does not have at least one image attached to it.`);
+
+				case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+					assert(0, `value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for some color attachment point(s) named by GL_DRAW_BUFFERi.`);
+
+				case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+					assert(0, `GL_READ_BUFFER is not GL_NONE and the value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for the color attachment point named by GL_READ_BUFFER.`);
+
+				case GL_FRAMEBUFFER_UNSUPPORTED:
+					assert(0, `combination of internal formats of the attached images violates an implementation-dependent set of restrictions.`);
+
+				case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+					assert(0, `value of GL_RENDERBUFFER_SAMPLES is not the same for all attached renderbuffers; or the value of GL_TEXTURE_SAMPLES is the not same for all attached textures; or the attached images are a mix of renderbuffers and textures, the value of GL_RENDERBUFFER_SAMPLES does not match the value of GL_TEXTURE_SAMPLES.`
+						"\n"`or the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not the same for all attached textures; or the attached images are a mix of renderbuffers and textures, the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not GL_TRUE for all attached textures.`
+					);
+
+				case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+					assert(0, `some framebuffer attachment is layered, and some populated attachment is not layered, or all populated color attachments are not from textures of the same target.`);
+
+				default:
+					assert (0, `framebuffer error`);
+			}
+	}
+
 // TO DEPRECATE, GOING INTO RENDEROPS
 auto ref output_to (S,R,T...)(auto ref S shader, auto ref R target, T args)
 	{/*...}*/
@@ -164,47 +213,7 @@ auto ref output_to (S,R,T...)(auto ref S shader, auto ref R target, T args)
 				//glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, target.texture_id, 0); // REVIEW if any of these redundant calls starts impacting performance, there is generally some piece of state that can inform the decision to elide. this state can be maintained in the global gl structure.
 					}
 
-
-
-			auto check () // TODO REFACTOR this goes somewhere... TODO make specific error messages for all the openGL calls
-				{/*...}*/
-					switch (glCheckFramebufferStatus (GL_FRAMEBUFFER)) 
-						{/*...}*/
-							case GL_FRAMEBUFFER_COMPLETE:
-								return;
-
-							case GL_FRAMEBUFFER_UNDEFINED:
-								assert(0, `target is the default framebuffer, but the default framebuffer does not exist.`);
-
-							case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-								assert(0, `some of the framebuffer attachment points are framebuffer incomplete.`);
-
-							case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-								assert(0, `framebuffer does not have at least one image attached to it.`);
-
-							case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
-								assert(0, `value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for some color attachment point(s) named by GL_DRAW_BUFFERi.`);
-
-							case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
-								assert(0, `GL_READ_BUFFER is not GL_NONE and the value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for the color attachment point named by GL_READ_BUFFER.`);
-
-							case GL_FRAMEBUFFER_UNSUPPORTED:
-								assert(0, `combination of internal formats of the attached images violates an implementation-dependent set of restrictions.`);
-
-							case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-								assert(0, `value of GL_RENDERBUFFER_SAMPLES is not the same for all attached renderbuffers; or the value of GL_TEXTURE_SAMPLES is the not same for all attached textures; or the attached images are a mix of renderbuffers and textures, the value of GL_RENDERBUFFER_SAMPLES does not match the value of GL_TEXTURE_SAMPLES.`
-									"\n"`or the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not the same for all attached textures; or the attached images are a mix of renderbuffers and textures, the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not GL_TRUE for all attached textures.`
-								);
-
-							case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
-								assert(0, `some framebuffer attachment is layered, and some populated attachment is not layered, or all populated color attachments are not from textures of the same target.`);
-
-							default:
-								assert (0, `framebuffer error`);
-						}
-				}
-
-		shader.activate;
+		//shader.activate;
 		gl.framebuffer = fboid;
 		//gl.framebuffer = target.framebuffer_id;
 
@@ -212,7 +221,7 @@ auto ref output_to (S,R,T...)(auto ref S shader, auto ref R target, T args)
 			glDrawBuffer (GL_BACK);
 		else glDrawBuffer (GL_COLOR_ATTACHMENT0);
 
-		check;
+		check_framebuffer;
 
 		if (gl.framebuffer != 0)
 			gl.ClearColor (1,0,0,1);
@@ -220,13 +229,6 @@ auto ref output_to (S,R,T...)(auto ref S shader, auto ref R target, T args)
 
 		gl.Clear (GL_COLOR_BUFFER_BIT);
 
-		template length (uint i)
-			{/*...}*/
-				auto length ()() if (not (is (typeof(shader.args[i]) == Vector!U, U...)))
-					{return shader.args[i].length.to!int;}
-			}
-
-		gl.DrawArrays (shader.mode, 0, Match!(Map!(length, Count!(S.Args))));
 
 		// render_target.bind; REVIEW how does this interact with texture.bind, or any other bindable I/O type
 		// render_target.draw (shader.args, args); REVIEW do this, or get length of shader array args? in latter case, how do we pick the draw mode?
@@ -243,21 +245,6 @@ auto ref output_to (S,R,T...)(auto ref S shader, auto ref R target, T args)
 		*/
 
 		return target;
-	}
-
-//////////////////////////////////////////
-// RENDERING /////////////////////////////
-//////////////////////////////////////////
-// THIS BELONGS TO RENDERERS BUT MUST SOMEHOW BE USED UNDER UNIFORM RENDERING API ELSE RISK INCONSISTENCY DOWNSTREAM
-enum RenderMode
-	{/*...}*/
-		point = GL_POINTS,
-		l_strip = GL_LINE_STRIP,
-		l_loop = GL_LINE_LOOP,
-		line = GL_LINES,
-		t_strip = GL_TRIANGLE_STRIP,
-		t_fan = GL_TRIANGLE_FAN,
-		tri = GL_TRIANGLES
 	}
 
 //////////////////////////////////////////
@@ -347,4 +334,3 @@ void main () // TODO GOAL
 
 		Thread.sleep (2.seconds);
 	}
-

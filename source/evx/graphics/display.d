@@ -14,6 +14,7 @@ private {/*imports}*/
 class Display
 	{/*...}*/
 		enum framebuffer_id = 0;
+		// TODO mixin CanvasOps!(...?)
 
 		uvec display_size;
 		GLFWwindow* window;
