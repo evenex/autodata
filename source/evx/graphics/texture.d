@@ -62,7 +62,7 @@ struct Texture
 			}
 
 		mixin BufferOps!(allocate, pull, access, width, height, RangeOps, TextureId);
-		// mixin CanvasOps!(preprocess, setup); TODO
+		mixin CanvasOps!(preprocess, setup);
 
 		void setup ()
 			{/*...}*/

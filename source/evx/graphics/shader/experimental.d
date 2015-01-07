@@ -37,11 +37,10 @@ enum RenderMode
 	}
 struct ArrayRenderer (S)
 	{/*...}*/
-		mixin RenderOps!(draw, shader);
-
+		RenderMode mode;
 		S shader;
 
-		void draw (uint i: 0)()
+		void draw (uint i: 0)() // REVIEW DOC DRAW ISSUES THE DRAW COMMANDS
 			{/*...}*/
 				template length (uint i)
 					{/*...}*/
@@ -49,8 +48,10 @@ struct ArrayRenderer (S)
 							{return shader.args[i].length.to!int;}
 					}
 
-				gl.DrawArrays (shader.mode, 0, Match!(Map!(length, Count!(S.Args))));
+				gl.DrawArrays (mode, 0, Match!(Map!(length, Count!(S.Args))));
 			}
+
+		mixin RenderOps!(draw, shader);
 	}
 auto triangle_fan (S)(ref S shader)
 	{/*...}*/
@@ -70,31 +71,20 @@ auto triangle_fan (S)(S shader)
 	}
 
 // RENDERING OPERATORS
-template CanvasOps (alias preprocess, alias setup, alias managed_id = identity)
+template CanvasOps (alias preprocess, alias managed_id = identity)
 	{/*...}*/
+		import evx.graphics.shader.core;/// TEMP 
 		static assert (is (typeof(preprocess(Shader!().init)) == Shader!Sym, Sym...),
 			`preprocess: Shader → Shader`
+			~ typeof(preprocess(Shader!().init)).stringof
 		);
-		// TODO really the bufferops belong over here, renderops opindex is just for convenience
-
-		GLuint framebuffer_id ()
-			{/*...}*/
-				static if (is (typeof(managed_id.identity)))
-					if (fbo_id == 0)
-						gl.GenFramebuffers (1, &fbo_id);
-
-				gl.framebuffer = fbo_id;
-
-				setup; // REVIEW when to do this?
-
-				return fbo_id;
-			}
+		// TODO make sure this is indexable? like an image or something
 
 		static if (is (typeof(managed_id.identity)))
-			alias fbo_id = managed_id;
-		else GLuint fbo_id;
+			alias framebuffer_id = managed_id;
+		else GLuint framebuffer_id;
 
-		auto attach (S)(S shader)
+		auto attach (S)(auto ref S shader)
 			if (is (S == Shader!Sym, Sym...))
 			{/*...}*/
 				preprocess (shader).activate;
@@ -116,10 +106,22 @@ template RenderOps (alias draw, shaders...)
 			);
 		}
 		public {/*rendering}*/
-			RenderMode mode;
-
-			auto ref render_to (T)(auto ref T canvas)
+			auto ref render_to (T)(auto ref T canvas) // REVIEW DOC RENDER_TO SETS UP AND VERIFIES THE RENDER TARGETS AND CALLS RENDERER DRAW
 				{/*...}*/
+					gl.framebuffer = canvas;
+
+					if (gl.framebuffer == 0)
+						gl.DrawBuffer (GL_BACK);
+					else gl.DrawBuffer (GL_COLOR_ATTACHMENT0);
+
+					{/*TEMP VISUALLY TESTING THE FRAMBUFFER}*/
+						if (gl.framebuffer != 0)
+							gl.ClearColor (1,0,0,1);
+						else gl.ClearColor (0.1,0.1,0.1,1);
+					}
+
+					gl.Clear (GL_COLOR_BUFFER_BIT);
+
 					void render (uint i = 0)()
 						{/*...}*/
 							canvas.attach (shaders[i]);
@@ -128,8 +130,6 @@ template RenderOps (alias draw, shaders...)
 							static if (i+1 < shaders.length)
 								render!(i+1);
 						}
-
-					gl.framebuffer = canvas;
 
 					render;
 
@@ -152,99 +152,6 @@ template RenderOps (alias draw, shaders...)
 					return default_canvas.opIndex (args);
 				}
 		}
-	}
-
-auto check_frambuffer () // TODO REFACTOR this goes somewhere... TODO make specific error messages for all the openGL calls
-	{/*...}*/
-		switch (glCheckFramebufferStatus (GL_FRAMEBUFFER)) 
-			{/*...}*/
-				case GL_FRAMEBUFFER_COMPLETE:
-					return;
-
-				case GL_FRAMEBUFFER_UNDEFINED:
-					assert(0, `target is the default framebuffer, but the default framebuffer does not exist.`);
-
-				case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-					assert(0, `some of the framebuffer attachment points are framebuffer incomplete.`);
-
-				case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-					assert(0, `framebuffer does not have at least one image attached to it.`);
-
-				case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
-					assert(0, `value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for some color attachment point(s) named by GL_DRAW_BUFFERi.`);
-
-				case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
-					assert(0, `GL_READ_BUFFER is not GL_NONE and the value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for the color attachment point named by GL_READ_BUFFER.`);
-
-				case GL_FRAMEBUFFER_UNSUPPORTED:
-					assert(0, `combination of internal formats of the attached images violates an implementation-dependent set of restrictions.`);
-
-				case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-					assert(0, `value of GL_RENDERBUFFER_SAMPLES is not the same for all attached renderbuffers; or the value of GL_TEXTURE_SAMPLES is the not same for all attached textures; or the attached images are a mix of renderbuffers and textures, the value of GL_RENDERBUFFER_SAMPLES does not match the value of GL_TEXTURE_SAMPLES.`
-						"\n"`or the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not the same for all attached textures; or the attached images are a mix of renderbuffers and textures, the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not GL_TRUE for all attached textures.`
-					);
-
-				case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
-					assert(0, `some framebuffer attachment is layered, and some populated attachment is not layered, or all populated color attachments are not from textures of the same target.`);
-
-				default:
-					assert (0, `framebuffer error`);
-			}
-	}
-
-// TO DEPRECATE, GOING INTO RENDEROPS
-auto ref output_to (S,R,T...)(auto ref S shader, auto ref R target, T args)
-	{/*...}*/
-		//GLuint framebuffer_id = 0; // TODO create framebuffer
-		//gl.GenFramebuffers (1, &framebuffer_id); TODO to create a framebuffer
-		//gl.BindFramebuffer (GL_FRAMEBUFFER, framebuffer_id); // TODO to create a framebuffer
-		// gl.FramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, renderedTexture, 0); TODO to set texture output
-		// gl.DrawBuffers TODO set frag outputs to draw to these buffers, if you use this then you'll need to modify the shader program, to add some fragment_output variables
-			GLuint fboid;
-				static if (is (R == Texture))
-					{/*...}*/
-				//target.framebuffer_id;
-				glGenFramebuffers (1, &fboid);
-
-			//	target.allocate (256,256);
-				target = ℕ[0..100].by (ℕ[0..100]).map!(x => yellow).Texture;
-				glBindFramebuffer (GL_FRAMEBUFFER, fboid);//TEMP
-				glFramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, target.texture_id, 0); // REVIEW if any of these redundant calls starts impacting performance, there is generally some piece of state that can inform the decision to elide. this state can be maintained in the global gl structure.
-				//glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, target.texture_id, 0); // REVIEW if any of these redundant calls starts impacting performance, there is generally some piece of state that can inform the decision to elide. this state can be maintained in the global gl structure.
-					}
-
-		//shader.activate;
-		gl.framebuffer = fboid;
-		//gl.framebuffer = target.framebuffer_id;
-
-		if (gl.framebuffer == 0)
-			glDrawBuffer (GL_BACK);
-		else glDrawBuffer (GL_COLOR_ATTACHMENT0);
-
-		check_framebuffer;
-
-		if (gl.framebuffer != 0)
-			gl.ClearColor (1,0,0,1);
-		else gl.ClearColor (0.1,0.1,0.1,1);
-
-		gl.Clear (GL_COLOR_BUFFER_BIT);
-
-
-		// render_target.bind; REVIEW how does this interact with texture.bind, or any other bindable I/O type
-		// render_target.draw (shader.args, args); REVIEW do this, or get length of shader array args? in latter case, how do we pick the draw mode?
-				//glViewport (0,0,1000,1000);
-				glBindFramebuffer (GL_FRAMEBUFFER, 0);//TEMP
-
-		/*
-			init FBO
-			attach tex to FBO
-			bind FBO
-			draw
-			unbind FBO
-			use tex wherever
-		*/
-
-		return target;
 	}
 
 //////////////////////////////////////////
@@ -296,7 +203,7 @@ void main () // TODO GOAL
 			}
 		)(texture)
 		.aspect_correction (display.aspect_ratio)
-		.triangle_fan.output_to (display);
+		.triangle_fan.render_to (display);
 
 		display.render;
 
@@ -316,7 +223,7 @@ void main () // TODO GOAL
 			}
 		)(blue)
 		.triangle_fan
-		.output_to (target);
+		.render_to (target);
 
 		τ(square!float, square!float.scale (2.0f).translate (fvec(0.5))).vertex_shader!(
 			`pos`, `texc_in`, q{
@@ -328,7 +235,7 @@ void main () // TODO GOAL
 			Texture, `tex`, q{
 				gl_FragColor = texture2D (tex, texc);
 			}
-		)(target).triangle_fan.output_to (display);
+		)(target).triangle_fan.render_to (display);
 
 		display.render;
 

@@ -11,11 +11,10 @@ private {/*imports}*/
 	import evx.misc.utils;
 }
 
+import evx.graphics.shader.experimental;// TEMP
+
 class Display
 	{/*...}*/
-		enum framebuffer_id = 0;
-		// TODO mixin CanvasOps!(...?)
-
 		uvec display_size;
 		GLFWwindow* window;
 
@@ -114,20 +113,21 @@ class Display
 				return (1/normalized_dimensions).to!fvec;
 			}
 
-		void attach (S)(S shader) // TODO move this functionality to renderer
+		auto ref preprocess (S)(auto ref S shader)
 			{/*...}*/
-				shader.activate;
-
-				shader.aspect_ratio (aspect_ratio);
+				import evx.graphics.shader;// TEMP
+				return shader.aspect_correction (aspect_ratio);
 			}
 
-		void render ()
+		void render () // REVIEW moved to renderer, change this to show?
 			{/*...}*/
 				glfwPollEvents (); // TODO go to input
 				glfwSwapBuffers (window);
 
-				gl.Clear (GL_COLOR_BUFFER_BIT);
+				gl.Clear (GL_COLOR_BUFFER_BIT); // REVIEW redundant
 			}
+
+		mixin CanvasOps!(preprocess, zero!GLuint);
 
 		static:
 		extern (C) nothrow {/*callbacks}*/

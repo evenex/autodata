@@ -14,6 +14,7 @@ public:
 	import derelict.glfw3.glfw3;
 	import derelict.opengl3.gl3;
 
+//TODO make specific error messages for all the openGL calls
 struct gl
 	{/*...}*/
 		static:
@@ -420,14 +421,71 @@ struct gl
 						}
 					}
 
-					static buffers () {return (&array_buffer)[0..10];} // HACK https://issues.dlang.org/show_bug.cgi?id=13891
-					static framebuffers () {return (&draw_framebuffer)[0..2];} // HACK https://issues.dlang.org/show_bug.cgi?id=13891
-					static textures () {return (&texture_1D)[0..11];} // HACK https://issues.dlang.org/show_bug.cgi?id=13891
+					static buffers ()  // HACK https://issues.dlang.org/show_bug.cgi?id=13891
+						{/*...}*/
+							return (&array_buffer)[0..10];
+						}
+					static framebuffers ()  // HACK https://issues.dlang.org/show_bug.cgi?id=13891
+						{/*...}*/
+							return (&draw_framebuffer)[0..2];
+						}
+					static textures ()  // HACK https://issues.dlang.org/show_bug.cgi?id=13891
+						{/*...}*/
+							return (&texture_1D)[0..11];
+						}
 
 					static framebuffer (GLuint buffer)
-						{return draw_framebuffer = read_framebuffer = buffer;}
+						out {/*...}*/
+							void check_framebuffer ()
+								{/*...}*/
+									switch (gl.CheckFramebufferStatus (GL_FRAMEBUFFER)) 
+										{/*...}*/
+											case GL_FRAMEBUFFER_COMPLETE:
+												return;
+
+											case GL_FRAMEBUFFER_UNDEFINED:
+												assert(0, `target is the default framebuffer, but the default framebuffer does not exist.`);
+
+											case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+												assert(0, `some of the framebuffer attachment points are framebuffer incomplete.`);
+
+											case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+												assert(0, `framebuffer does not have at least one image attached to it.`);
+
+											case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+												assert(0, `value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for some color attachment point(s) named by GL_DRAW_BUFFERi.`);
+
+											case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+												assert(0, `GL_READ_BUFFER is not GL_NONE and the value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for the color attachment point named by GL_READ_BUFFER.`);
+
+											case GL_FRAMEBUFFER_UNSUPPORTED:
+												assert(0, `combination of internal formats of the attached images violates an implementation-dependent set of restrictions.`);
+
+											case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+												assert(0, `value of GL_RENDERBUFFER_SAMPLES is not the same for all attached renderbuffers; or the value of GL_TEXTURE_SAMPLES is the not same for all attached textures; or the attached images are a mix of renderbuffers and textures, the value of GL_RENDERBUFFER_SAMPLES does not match the value of GL_TEXTURE_SAMPLES.`
+													"\n"`or the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not the same for all attached textures; or the attached images are a mix of renderbuffers and textures, the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not GL_TRUE for all attached textures.`
+												);
+
+											case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+												assert(0, `some framebuffer attachment is layered, and some populated attachment is not layered, or all populated color attachments are not from textures of the same target.`);
+
+											default:
+												assert (0, `framebuffer error`);
+										}
+								}
+
+							check_framebuffer;
+						}
+						body {/*...}*/
+							return draw_framebuffer = read_framebuffer = buffer;
+						}
 					static framebuffer ()
-						{return draw_framebuffer == read_framebuffer? draw_framebuffer : 0;}
+						in {/*...}*/
+							assert (draw_framebuffer == read_framebuffer);
+						}
+						body {/*...}*/
+							return draw_framebuffer;
+						}
 				}
 
 			auto call (string name, Args...)(Args args)

@@ -335,7 +335,23 @@ private {/*symbol construction}*/
 private {/*shader program database}*/
 	__gshared GLuint[string] shader_ids;
 }
-private {/*generator/compiler/linker}*/
+private {/*parameter framing}*/
+	// PODs → PODs, Subspaces → Subspaces, Arrays → GPUArrays, Resources → Borrowed!Resources
+	template GPUType (T)
+		{/*...}*/
+			static if (is (T == GLBuffer!U, U...) || is (T == Texture))
+				alias GPUType = Borrowed!T;
+
+			else static if (is (typeof(T.init[].source) == GLBuffer!U, U...))
+				alias GPUType = T;
+
+			else static if (is (typeof(T.init.gpu_array) == U, U))
+				alias GPUType = U;
+
+			else alias GPUType = T;
+		}
+}
+package {/*generator/compiler/linker}*/
 	struct Shader (Parameters...)
 		{/*...}*/
 			alias Symbols = Filter!(or!(is_variable, is_function), Parameters);
@@ -518,22 +534,6 @@ private {/*generator/compiler/linker}*/
 				enum is_vertex_input (V) = V.storage_class is StorageClass.vertex_input;
 				enum is_texture (V) = is (V.BaseType == Texture);
 			}
-		}
-}
-private {/*parameter framing}*/
-	// PODs → PODs, Subspaces → Subspaces, Arrays → GPUArrays, Resources → Borrowed!Resources
-	template GPUType (T)
-		{/*...}*/
-			static if (is (T == GLBuffer!U, U...) || is (T == Texture))
-				alias GPUType = Borrowed!T;
-
-			else static if (is (typeof(T.init[].source) == GLBuffer!U, U...))
-				alias GPUType = T;
-
-			else static if (is (typeof(T.init.gpu_array) == U, U))
-				alias GPUType = U;
-
-			else alias GPUType = T;
 		}
 }
 unittest {/*codegen}*/
