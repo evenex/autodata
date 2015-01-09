@@ -11,6 +11,7 @@ private {/*imports}*/
 	import evx.misc.utils;
 }
 
+import evx.graphics.shader.repo;// TEMP
 import evx.graphics.shader.experimental;// TEMP
 
 class Display
@@ -113,13 +114,8 @@ class Display
 				return (1/normalized_dimensions).to!fvec;
 			}
 
-		auto ref preprocess (S)(auto ref S shader)
+		ref preprocess (S)(ref S shader) // TODO enforce refness
 			{/*...}*/
-				import evx.graphics.shader.repo;// TEMP
-
-				static if (is(S.Args[0]))
-				std.stdio.writeln(`preproc `, __traits(isRef, typeof(shader)), ` `, shader.args[0].length);
-
 				return shader.aspect_correction (aspect_ratio);
 			}
 

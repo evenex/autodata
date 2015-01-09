@@ -23,8 +23,6 @@ ubyte[4] texel (Vector!(4, float) color)
 		return (color * 255).each!(to!ubyte);
 	}
 
-	import evx.misc.utils;
-
 debug enum out_of_bounds_color = magenta;
 else enum out_of_bounds_color = Color ().alpha(0);
 
@@ -92,7 +90,6 @@ struct Texture
 				);
 			}
 			body {/*...}*/
-			mixin(trace!`texture allocate`);
 				free;
 
 				if (width * height == 0)

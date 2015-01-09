@@ -489,8 +489,6 @@ package {/*generator/compiler/linker}*/
 
 				this (T...)(auto ref T input) // REVIEW need to move shader args through so that RAII doesn't strike early
 					{/*...}*/
-					mixin(trace!`Shader ctor`);
-					//foreach (i; Count!T)
 						foreach (i, ref arg; args)
 							static if (is (Args[i] == T[i]))
 								input[i].move (arg);

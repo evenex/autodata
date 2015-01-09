@@ -81,7 +81,7 @@ template CanvasOps (alias preprocess, alias managed_id = identity)
 			alias framebuffer_id = managed_id;
 		else GLuint framebuffer_id;
 
-		void attach (S)(auto ref S shader)
+		void attach (S)(ref S shader)
 			if (is (S == Shader!Sym, Sym...))
 			{/*...}*/
 				preprocess (shader).activate;
