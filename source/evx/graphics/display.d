@@ -114,7 +114,7 @@ class Display
 				return (1/normalized_dimensions).to!fvec;
 			}
 
-		ref preprocess (S)(ref S shader) // TODO enforce refness
+		auto preprocess (S)(ref S shader) // TODO enforce refness
 			{/*...}*/
 				return shader.aspect_correction (aspect_ratio);
 			}

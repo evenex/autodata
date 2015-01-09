@@ -71,7 +71,8 @@ auto triangle_fan (S)(S shader)
 template CanvasOps (alias preprocess, alias managed_id = identity)
 	{/*...}*/
 		import evx.graphics.shader.core;/// TEMP 
-		static assert (is (typeof(preprocess(Shader!().init)) == Shader!Sym, Sym...),
+		static if (0)//REVIEW
+		static assert (is (typeof(preprocess (Shader!().init)) == Shader!Sym, Sym...),
 			`preprocess: Shader → Shader`
 			~ typeof(preprocess(Shader!().init)).stringof
 		);
@@ -84,7 +85,15 @@ template CanvasOps (alias preprocess, alias managed_id = identity)
 		void attach (S)(ref S shader)
 			if (is (S == Shader!Sym, Sym...))
 			{/*...}*/
-				preprocess (shader).activate;
+				import evx.misc.memory : move;
+
+				typeof(preprocess(shader)) prepared;
+				
+				move (preprocess (shader), prepared);
+				
+				prepared.activate;
+
+				shader = S (prepared.args);
 			}
 	}
 
@@ -131,6 +140,7 @@ template RenderOps (alias draw, shaders...)
 
 							assert (Match!(Map!(length, Count!(typeof(shaders[i]).Args))) > 0, `fuck1`);
 							canvas.attach (shaders[i]); // BUG RAII kicks in early here
+							std.stdio.stderr.writeln (typeof(shaders[i]).stringof);
 							assert (Match!(Map!(length, Count!(typeof(shaders[i]).Args))) > 0, `fuck2`);
 
 							draw!i (Match!(Map!(length, Count!(typeof(shaders[i]).Args))));

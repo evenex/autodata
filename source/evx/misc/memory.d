@@ -68,6 +68,25 @@ void move (T)(ref T src, ref T tgt)
 
 		destroy (src);
 	}
+void move (T)(T src, ref T tgt)
+	{/*...}*/
+		src.swap (tgt);
+	}
+
+/* forward an argument, preserving refness xor rvalue-move through stack
+*/
+auto ref forward (T)(auto ref T arg) // REVIEW is this needed
+	{/*...}*/
+		static if (__traits(isRef, arg))
+			return arg;
+		else {/*...}*/
+			T item;
+
+			arg.move (item);
+
+			return item;
+		}
+	}
 
 /* a borrowed resource bypasses RAII And move semantics 
 */
@@ -92,7 +111,6 @@ struct Borrowed (T)
 
 		alias deref this;
 	}
-
 auto borrow (T)(ref T resource)
 	{/*...}*/
 		return Borrowed!T (resource);
