@@ -487,11 +487,15 @@ package {/*generator/compiler/linker}*/
 			public {/*runtime}*/
 				Args args;
 
-				this (T...)(auto ref T input)
+				this (T...)(auto ref T input) // REVIEW need to move shader args through so that RAII doesn't strike early
 					{/*...}*/
+					mixin(trace!`Shader ctor`);
+					//foreach (i; Count!T)
 						foreach (i, ref arg; args)
-							static if (is (Args[i] == T[i]) || is (Args[i] == Borrowed!(T[i])))
-								arg = input[i];
+							static if (is (Args[i] == T[i]))
+								input[i].move (arg);
+							else static if (is (Args[i] == Borrowed!(T[i])))
+								arg = borrow (input[i]);
 							else arg = input[i].gpu_array;
 					}
 
@@ -499,6 +503,11 @@ package {/*generator/compiler/linker}*/
 					in {/*...}*/
 						static assert (Args.length == Filter!(or!(is_uniform, is_vertex_input), Variables).length,
 							Args.stringof ~ ` does not match ` ~ Filter!(or!(is_uniform, is_vertex_input), Variables).stringof
+						);
+					}
+					out {/*...}*/
+						assert (program_id != 0,
+							`shader program failed to initialize`
 						);
 					}
 					body {/*...}*/

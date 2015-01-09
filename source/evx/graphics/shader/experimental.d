@@ -38,26 +38,23 @@ enum RenderMode
 struct ArrayRenderer (S)
 	{/*...}*/
 		RenderMode mode;
-		S shader;
+		S base_shader; // REVIEW due to postproc, this won't wind up getting used!!
 
-		void draw (uint i: 0)() // REVIEW DOC DRAW ISSUES THE DRAW COMMANDS
-			{/*...}*/
-				template length (uint i)
-					{/*...}*/
-						auto length ()() if (not (is (typeof(shader.args[i]) == Vector!U, U...)))
-							{return shader.args[i].length.to!int;}
-					}
-
-				gl.DrawArrays (mode, 0, Match!(Map!(length, Count!(S.Args))));
+		void draw (uint i: 0)(uint n) // REVIEW DOC DRAW ISSUES THE DRAW COMMANDS
+			in {/*...}*/
+				assert (n != 0, `issued empty draw call`);
+			}
+			body {/*...}*/
+				gl.DrawArrays (mode, 0, n);
 			}
 
-		mixin RenderOps!(draw, shader);
+		mixin RenderOps!(draw, base_shader);
 	}
 auto triangle_fan (S)(ref S shader)
 	{/*...}*/
 		auto renderer = ArrayRenderer!S (RenderMode.t_fan);
 
-		swap (renderer.shader, shader);
+		swap (renderer.base_shader, shader);
 
 		return renderer;
 	}
@@ -84,7 +81,7 @@ template CanvasOps (alias preprocess, alias managed_id = identity)
 			alias framebuffer_id = managed_id;
 		else GLuint framebuffer_id;
 
-		auto attach (S)(auto ref S shader)
+		void attach (S)(auto ref S shader)
 			if (is (S == Shader!Sym, Sym...))
 			{/*...}*/
 				preprocess (shader).activate;
@@ -93,16 +90,18 @@ template CanvasOps (alias preprocess, alias managed_id = identity)
 
 template RenderOps (alias draw, shaders...)
 	{/*...}*/
-		static {/*analysis}*/
+		static {/*analysis}*/ // REVIEW
 			enum is_shader (alias s) = is (typeof(s) == Shader!Sym, Sym...);
-			enum rendering_stage_exists (uint i) = is (typeof(draw!i ()) == void);
+			enum rendering_stage_exists (uint i) = is (typeof(draw!i (0)) == void);
 
 			static assert (All!(is_shader, shaders),
 				`shader symbols must resolve to Shaders`
 			);
 			static assert (All!(rendering_stage_exists, Count!shaders),
 				`each given shader symbol must be accompanied by a function `
-				`draw: (uint n)() → void, where n is the index of the associated rendering stage`
+				`draw: (uint i)(uint n) → void, `
+				`where i is the index of the associated rendering stage `
+				`and n is the length of the inputs` // REVIEW this will all go to shit when you introduct element index arrays or god forbid compute shaders
 			);
 		}
 		public {/*rendering}*/
@@ -116,7 +115,7 @@ template RenderOps (alias draw, shaders...)
 
 					{/*TEMP VISUALLY TESTING THE FRAMBUFFER}*/
 						if (gl.framebuffer != 0)
-							gl.ClearColor (1,0,0,1);
+							gl.ClearColor (0,1,0,1);
 						else gl.ClearColor (0.1,0.1,0.1,1);
 					}
 
@@ -124,8 +123,17 @@ template RenderOps (alias draw, shaders...)
 
 					void render (uint i = 0)()
 						{/*...}*/
-							canvas.attach (shaders[i]);
-							draw!i;
+							template length (uint j)
+								{/*...}*/
+									auto length ()() if (not (is (typeof(shaders[i].args[j]) == Vector!U, U...)))
+										{return shaders[i].args[j].length.to!int;}
+								}
+
+							assert (Match!(Map!(length, Count!(typeof(shaders[i]).Args))) > 0, `fuck1`);
+							canvas.attach (shaders[i]); // BUG RAII kicks in early here
+							assert (Match!(Map!(length, Count!(typeof(shaders[i]).Args))) > 0, `fuck2`);
+
+							draw!i (Match!(Map!(length, Count!(typeof(shaders[i]).Args))));
 
 							static if (i+1 < shaders.length)
 								render!(i+1);
@@ -149,7 +157,7 @@ template RenderOps (alias draw, shaders...)
 							render_to (default_canvas);
 						}
 
-					return default_canvas.opIndex (args);
+					return default_canvas.opIndex (args); // REVIEW pull-to-ram will go per-element, unless push is detected via alias this`
 				}
 		}
 	}
@@ -191,7 +199,8 @@ void main () // TODO GOAL
 			.Texture;
 
 		// TEXTURED SHAPE SHADER
-		τ(vertices, tex_coords).vertex_shader!(
+		// TEMP
+		auto test = τ(vertices, tex_coords).vertex_shader!(
 			`position`, `tex_coords`, q{
 				gl_Position = vec4 (position, 0, 1);
 				frag_tex_coords = (tex_coords + vec2 (1,1))/2;
@@ -202,10 +211,12 @@ void main () // TODO GOAL
 				gl_FragColor = texture2D (tex, frag_tex_coords);
 			}
 		)(texture)
-		.aspect_correction (display.aspect_ratio)
-		.triangle_fan.render_to (display);
+		.triangle_fan;
 
-		display.render;
+		pragma(msg, typeof(test));
+		test.render_to (display);// TEMP
+
+		display.show;
 
 		import core.thread;
 		Thread.sleep (2.seconds);
@@ -237,7 +248,7 @@ void main () // TODO GOAL
 			}
 		)(target).triangle_fan.render_to (display);
 
-		display.render;
+		display.show;
 
 		Thread.sleep (2.seconds);
 	}

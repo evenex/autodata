@@ -115,11 +115,15 @@ class Display
 
 		auto ref preprocess (S)(auto ref S shader)
 			{/*...}*/
-				import evx.graphics.shader;// TEMP
+				import evx.graphics.shader.repo;// TEMP
+
+				static if (is(S.Args[0]))
+				std.stdio.writeln(`preproc `, __traits(isRef, typeof(shader)), ` `, shader.args[0].length);
+
 				return shader.aspect_correction (aspect_ratio);
 			}
 
-		void render () // REVIEW moved to renderer, change this to show?
+		void show ()
 			{/*...}*/
 				glfwPollEvents (); // TODO go to input
 				glfwSwapBuffers (window);

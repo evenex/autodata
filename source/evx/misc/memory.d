@@ -4,6 +4,8 @@ private {/*imports}*/
 	import std.algorithm;
 }
 
+import evx.misc.utils;
+
 /* convenience structure for representing structs as byte arrays 
 */
 struct Bytes (T)
@@ -23,6 +25,7 @@ struct Bytes (T)
 
 		this (byte[] that)
 			{/*...}*/
+				mixin(trace!`Bytes ctor`);
 				bytes[] = that;
 			}
 	}

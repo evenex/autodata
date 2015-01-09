@@ -23,6 +23,8 @@ ubyte[4] texel (Vector!(4, float) color)
 		return (color * 255).each!(to!ubyte);
 	}
 
+	import evx.misc.utils;
+
 debug enum out_of_bounds_color = magenta;
 else enum out_of_bounds_color = Color ().alpha(0);
 
@@ -61,6 +63,7 @@ struct Texture
 					}
 			}
 
+		import evx.graphics.shader.experimental;//TEMP 
 		mixin BufferOps!(allocate, pull, access, width, height, RangeOps, TextureId);
 		mixin CanvasOps!(preprocess, setup);
 
@@ -89,6 +92,7 @@ struct Texture
 				);
 			}
 			body {/*...}*/
+			mixin(trace!`texture allocate`);
 				free;
 
 				if (width * height == 0)
@@ -248,7 +252,7 @@ unittest {/*texture transfer}*/
 	.aspect_correction (display.aspect_ratio)
 	.triangle_fan.output_to (display);
 
-	display.render;
+	display.show;
 
 	assert (tex1[0,0] == yellow);
 
