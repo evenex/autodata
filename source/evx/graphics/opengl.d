@@ -105,7 +105,21 @@ struct gl
 									call!`BindTexture` (target, id);
 
 								else static if (name.contains (`framebuffer`))
-									call!`BindFramebuffer` (target, id);
+									{/*...}*/
+										call!`BindFramebuffer` (target, id);
+
+										void render_to_texture ()()
+											{/*...}*/
+												gl.FramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, args[0].texture_id, 0);
+											}
+										void pass ()() {} 
+
+										Match!(render_to_texture, pass);
+
+										if (id == 0)
+											gl.DrawBuffer (GL_BACK);
+										else gl.DrawBuffer (GL_COLOR_ATTACHMENT0);
+									}
 
 								else call!`BindBuffer` (target, id);
 
@@ -322,6 +336,11 @@ struct gl
 				mixin(q{
 					gl.Uniform} ~ n.text ~ U.stringof[0] ~ q{ (index, value.tuple.expand);
 				});
+			}
+
+		void clear ()
+			{/*...}*/
+				gl.Clear (GL_COLOR_BUFFER_BIT);
 			}
 
 		auto verify (string object_type)(GLuint gl_object)

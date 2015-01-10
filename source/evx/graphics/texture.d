@@ -63,13 +63,8 @@ struct Texture
 
 		import evx.graphics.shader.experimental;//TEMP 
 		mixin BufferOps!(allocate, pull, access, width, height, RangeOps, TextureId);
-		mixin CanvasOps!(preprocess, setup);
+		mixin CanvasOps!preprocess; // REVIEW keep id here? REVIEW merge with BufferOps?
 
-		void setup ()
-			{/*...}*/
-				// BUG this is no longer called anywhere
-				gl.FramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texture_id, 0); // REVIEW if any of these redundant calls starts impacting performance, there is generally some piece of state that can inform the decision to elide. this state can be maintained in the global gl structure.
-			}
 		auto ref preprocess (S)(auto ref S shader)
 			{/*...}*/
 				return shader;
@@ -116,6 +111,7 @@ struct Texture
 
 						// TEMP REVIEW canvasops should be responsible for generating framebuffer_ids, unless it is absolved of managing them
 						gl.GenFramebuffers (1, &framebuffer_id);
+						// TODO TODO TODO
 					}
 
 				gl.texture_2D = this;

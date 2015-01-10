@@ -85,11 +85,6 @@ template CanvasOps (alias preprocess, alias managed_id = identity)
 		void attach (S)(ref S shader)
 			if (is (S == Shader!Sym, Sym...))
 			{/*...}*/
-				static if (0)
-					static if (not (is (typeof(managed_id.identity)))) // BUG i am not generating framebuffers before binding, REVIEW when to do this?
-						if (framebuffer_id == 0)
-							gl.GenFramebuffers (1, &framebuffer_id);
-
 				import evx.misc.memory : move; // TEMP
 
 				typeof(preprocess(shader)) prepared;
@@ -121,27 +116,9 @@ template RenderOps (alias draw, shaders...)
 		public {/*rendering}*/
 			auto ref render_to (T)(auto ref T canvas) // REVIEW DOC RENDER_TO SETS UP AND VERIFIES THE RENDER TARGETS AND CALLS RENDERER DRAW
 				{/*...}*/
-					gl.framebuffer = canvas; // 
-				static if (is (typeof(canvas.texture_id))) // HACK
-					{/*...}*/
-				canvas.bind; // TEMP
-				gl.FramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, canvas.texture_id, 0); // REVIEW if any of these redundant calls starts impacting performance, there is generally some piece of state that can inform the decision to elide. this state can be maintained in the global gl structure.
-				//gl.FramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, canvas.texture_id, 0); // REVIEW if any of these redundant calls starts impacting performance, there is generally some piece of state that can inform the decision to elide. this state can be maintained in the global gl structure.
-					}
+					gl.framebuffer = canvas;
 
-					if (gl.framebuffer == 0)
-						gl.DrawBuffer (GL_BACK);
-					else gl.DrawBuffer (GL_COLOR_ATTACHMENT0);
-
-					std.stdio.writeln (canvas.framebuffer_id, ` → `, gl.framebuffer);
-
-					{/*TEMP VISUALLY TESTING THE FRAMBUFFER}*/
-						if (gl.framebuffer != 0)
-							gl.ClearColor (0,1,0,1);
-						else gl.ClearColor (0.1,0.1,0.1,1);
-					}
-
-					gl.Clear (GL_COLOR_BUFFER_BIT);
+					gl.clear;
 
 					void render (uint i = 0)()
 						{/*...}*/
@@ -177,7 +154,7 @@ template RenderOps (alias draw, shaders...)
 							render_to (default_canvas);
 						}
 
-					return default_canvas.opIndex (args); // REVIEW pull-to-ram will go per-element, unless push is detected via alias this`
+					return default_canvas.opIndex (args); // REVIEW pull-to-ram will go per-element, unless push is detected via alias this` - might want to TransferOps this
 				}
 		}
 	}
