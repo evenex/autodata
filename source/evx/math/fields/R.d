@@ -1,4 +1,4 @@
-module evx.math.fields.ℝ;
+module evx.math.fields.reals;
 
 private {/*imports}*/
 	import std.typetuple;
@@ -20,7 +20,7 @@ private {/*imports}*/
 	1. actually the doubles
 */
 
-struct ℝ
+struct Real
 	{/*...}*/
 		static:
 
@@ -33,3 +33,5 @@ struct ℝ
 
 		mixin SliceOps!(access, boundary);
 	}
+
+alias ℝ = Real;

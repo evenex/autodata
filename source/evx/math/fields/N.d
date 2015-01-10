@@ -1,4 +1,4 @@
-module evx.math.fields.ℕ;
+module evx.math.fields.nats;
 
 private {/*imports}*/
 	import std.typetuple;
@@ -20,7 +20,7 @@ private {/*imports}*/
 /* the set¹ of natural numbers 
 	1. actually a subset of cardinality 2⁶⁴
 */
-struct ℕ
+struct Nat
 	{/*...}*/
 		static:
 
@@ -44,3 +44,5 @@ struct ℕ
 		for (auto i = 0; i < 10; ++i)
 			assert (ℕ[0..10][i] == i);
 	}
+
+alias ℕ = Nat; // REVIEW

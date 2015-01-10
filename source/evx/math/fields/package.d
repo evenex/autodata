@@ -1,5 +1,5 @@
 module evx.math.fields;
 
 public:
-import evx.math.fields.ℕ;
-import evx.math.fields.ℝ;
+import evx.math.fields.nats;
+import evx.math.fields.reals;
