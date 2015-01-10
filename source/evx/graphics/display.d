@@ -14,14 +14,19 @@ private {/*imports}*/
 import evx.graphics.shader.repo;// TEMP
 import evx.graphics.shader.experimental;// TEMP
 
-class Display
+class Display // REVIEW mayb with bufferops we can declass this
 	{/*...}*/
 		uvec display_size;
 		GLFWwindow* window;
 
-		this (uvec display_size = uvec(800, 600))
+		void allocate (size_t width, size_t height)
 			{/*...}*/
-				this.display_size = display_size;
+				display_size = uvec (width, height);
+			}
+
+		this (size_t width = 800, size_t height = 600)
+			{/*...}*/
+				allocate (width, height);
 
 				initialize_glfw;
 				initialize_gl;
@@ -32,60 +37,6 @@ class Display
 
 				gl.reset;
 			}
-
-		private {/*interface}*/
-			void initialize_glfw ()
-				{/*...}*/
-					DerelictGLFW3.load ();
-
-					glfwSetErrorCallback (&error_callback);
-
-					auto initialized  = glfwInit ();
-
-					if (not!initialized)
-						assert (0, "glfwInit failed");
-
-					auto dims = display_size;
-					window = glfwCreateWindow (dims.x.to!uint, dims.y.to!uint, ``, null, null);
-
-					if (window is null)
-						assert (0, `window creation failure`);
-
-					glfwMakeContextCurrent (window);
-					glfwSwapInterval (0);
-
-					glfwSetWindowSizeCallback (window, &resize_window_callback);
-					glfwSetFramebufferSizeCallback (window, &resize_framebuffer_callback);
-
-					glfwSetWindowUserPointer (window, cast(void*)this);
-
-					glfwSetWindowTitle (window, text (
-						"evx.graphics.display openGL ",
-						glfwGetWindowAttrib (window, GLFW_CONTEXT_VERSION_MAJOR), '.',
-						glfwGetWindowAttrib (window, GLFW_CONTEXT_VERSION_MINOR)
-					).to_c.expand);
-				}
-			void initialize_gl ()
-				{/*...}*/
-					DerelictGL3.load ();
-					DerelictGL3.reload ();
-
-					debug gl.context_initialized = true; // TODO eventually just open a hidden context if the context doesn't already exist, then let the display pick it up if one ever gets initted
-
-					gl.ClearColor (0.1, 0.1, 0.1, 1.0);
-
-					gl.Enable (GL_BLEND);
-					gl.BlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-				}
-
-			void terminate_glfw ()
-				{/*...}*/
-					if (window !is null)
-						glfwDestroyWindow (window);
-
-					glfwTerminate ();
-				}
-		}
 
 		auto pixel_dimensions ()
 			{/*...}*/

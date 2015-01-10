@@ -32,7 +32,9 @@ struct Texture
 		enum format = GL_RGBA;
 
 		GLuint texture_id;
-		alias texture_id this;
+		alias texture_id this; // REVIEW
+
+		GLuint framebuffer_id;
 
 		size_t width, height;
 
@@ -62,8 +64,13 @@ struct Texture
 			}
 
 		import evx.graphics.shader.experimental;//TEMP 
-		mixin BufferOps!(allocate, pull, access, width, height, RangeOps, TextureId);
-		mixin CanvasOps!preprocess; // REVIEW keep id here? REVIEW merge with BufferOps?
+
+		mixin CanvasOps!(
+			preprocess, framebuffer_id,
+			allocate, pull, access, 
+			width, height,
+			RangeOps, TextureId
+		);
 
 		auto ref preprocess (S)(auto ref S shader)
 			{/*...}*/

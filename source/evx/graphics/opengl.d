@@ -19,7 +19,7 @@ struct gl
 	{/*...}*/
 		static:
 
-		debug bool context_initialized;
+		bool initialized;
 
 		template type (T)
 			{/*...}*/
@@ -36,7 +36,7 @@ struct gl
 
 				enum index = IndexOf!(T, ConversionTable) + 1;
 
-				static if (index > 0)
+				static if (0 < index && index < ConversionTable.length - 1)
 					enum type = ConversionTable[index];
 				else static assert (0, T.stringof ~ ` has no opengl equivalent`);
 			}
@@ -64,14 +64,14 @@ struct gl
 
 								GLuint id = Match!(has_id, is_id);
 
-								if (state.program == id)
+								if (current_context.program == id)
 									return;
 
 								call!`UseProgram` (id);
 
-								state.program = id;
+								current_context.program = id;
 							}
-						else return state.program;
+						else return current_context.program;
 					}
 				auto bind ()()
 					{/*...}*/
@@ -98,7 +98,7 @@ struct gl
 
 								GLuint id = Match!(has_id, is_id);
 
-								if (mixin(q{state.} ~ name) == id)
+								if (mixin(q{current_context.} ~ name) == id)
 									return;
 
 								static if (name.contains (`texture`))
@@ -112,9 +112,9 @@ struct gl
 											{/*...}*/
 												gl.FramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, args[0].texture_id, 0);
 											}
-										void pass ()() {} 
+										void render_to_display ()() {} 
 
-										Match!(render_to_texture, pass);
+										Match!(render_to_texture, render_to_display);
 
 										if (id == 0)
 											gl.DrawBuffer (GL_BACK);
@@ -124,18 +124,18 @@ struct gl
 								else call!`BindBuffer` (target, id);
 
 								mixin(q{
-									state.} ~ name ~ q{ = id;
+									current_context.} ~ name ~ q{ = id;
 								});
 							}
 						else mixin(q{
-							return state.} ~ name ~ q{;
+							return current_context.} ~ name ~ q{;
 						});
 					}
 				auto unbind ()()
 					{/*...}*/
 						static assert (name.contains (`Delete`));
 
-						auto group = mixin(q{state.} ~ name.after (`Delete`).toLower)[];
+						auto group = mixin(q{current_context.} ~ name.after (`Delete`).toLower)[];
 						auto n = args[0];
 						auto ids = args[1];
 
@@ -338,11 +338,6 @@ struct gl
 				});
 			}
 
-		void clear ()
-			{/*...}*/
-				gl.Clear (GL_COLOR_BUFFER_BIT);
-			}
-
 		auto verify (string object_type)(GLuint gl_object)
 			{/*...}*/
 				GLint status;
@@ -375,11 +370,11 @@ struct gl
 				else return null;
 			}
 
-		void reset ()
+		void reset () // REFACTOR → Context?
 			{/*...}*/
-				foreach (member; __traits(allMembers, state))
+				foreach (member; __traits(allMembers, Context))
 					{/*...}*/
-						ref variable ()() {return __traits(getMember, state, member);}
+						ref variable ()() {return __traits(getMember, current_context, member);}
 
 						void reset ()() {variable = typeof(variable ()).init;}
 						void pass  ()() {}
@@ -388,124 +383,222 @@ struct gl
 					}
 			}
 
-		private {/*...}*/
-			struct state
-				{/*...}*/
-					__gshared:
+		void clear () // REFACTOR → Context?
+			{/*...}*/
+				gl.Clear (GL_COLOR_BUFFER_BIT);
+			}
 
-					GLuint program; 
+		class Context
+			{/*...}*/
+				private:
 
-					union {/*buffers}*/
-						static if (0) // BUG https://issues.dlang.org/show_bug.cgi?id=13891
-						GLuint[10] buffers;
-						struct {/*...}*/
-							GLuint 
-							array_buffer,
-							element_array_buffer,
-							copy_read_buffer,
-							copy_write_buffer,
-							pixel_pack_buffer,
-							pixel_unpack_buffer,
-							query_buffer,
-							shader_storage_buffer,
-							transform_feedback_buffer,
-							uniform_buffer;
-						}
+				GLFWwindow* window;
+				GLuint program; 
+
+				union {/*buffers}*/
+					static if (0) // BUG https://issues.dlang.org/show_bug.cgi?id=13891
+					GLuint[10] buffers;
+					struct {/*...}*/
+						GLuint 
+						array_buffer,
+						element_array_buffer,
+						copy_read_buffer,
+						copy_write_buffer,
+						pixel_pack_buffer,
+						pixel_unpack_buffer,
+						query_buffer,
+						shader_storage_buffer,
+						transform_feedback_buffer,
+						uniform_buffer;
 					}
-					union {/*framebuffers}*/
-						static if (0) // BUG https://issues.dlang.org/show_bug.cgi?id=13891
-						GLuint[2] framebuffers;
-						struct {/*...}*/
-							GLuint
-								draw_framebuffer,
-								read_framebuffer;
-						}
-					}
-					union {/*textures}*/
-						static if (0) // BUG https://issues.dlang.org/show_bug.cgi?id=13891
-						GLuint[11] textures;
-						struct {/*...}*/
-							GLuint
-							texture_1D,
-							texture_2D,
-							texture_3D,
-							texture_1D_array,
-							texture_2D_array,
-							texture_rectangle,
-							texture_cube_map,
-							texture_cube_map_array,
-							texture_buffer,
-							texture_2D_multisample,
-							texture_2D_multisample_array;
-						}
-					}
-
-					static buffers ()  // HACK https://issues.dlang.org/show_bug.cgi?id=13891
-						{/*...}*/
-							return (&array_buffer)[0..10];
-						}
-					static framebuffers ()  // HACK https://issues.dlang.org/show_bug.cgi?id=13891
-						{/*...}*/
-							return (&draw_framebuffer)[0..2];
-						}
-					static textures ()  // HACK https://issues.dlang.org/show_bug.cgi?id=13891
-						{/*...}*/
-							return (&texture_1D)[0..11];
-						}
-
-					static framebuffer (GLuint buffer)
-						out {/*...}*/
-							void check_framebuffer ()
-								{/*...}*/
-									switch (gl.CheckFramebufferStatus (GL_FRAMEBUFFER)) 
-										{/*...}*/
-											case GL_FRAMEBUFFER_COMPLETE:
-												return;
-
-											case GL_FRAMEBUFFER_UNDEFINED:
-												assert(0, `target is the default framebuffer, but the default framebuffer does not exist.`);
-
-											case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-												assert(0, `some of the framebuffer attachment points are framebuffer incomplete.`);
-
-											case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-												assert(0, `framebuffer does not have at least one image attached to it.`);
-
-											case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
-												assert(0, `value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for some color attachment point(s) named by GL_DRAW_BUFFERi.`);
-
-											case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
-												assert(0, `GL_READ_BUFFER is not GL_NONE and the value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for the color attachment point named by GL_READ_BUFFER.`);
-
-											case GL_FRAMEBUFFER_UNSUPPORTED:
-												assert(0, `combination of internal formats of the attached images violates an implementation-dependent set of restrictions.`);
-
-											case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-												assert(0, `value of GL_RENDERBUFFER_SAMPLES is not the same for all attached renderbuffers; or the value of GL_TEXTURE_SAMPLES is the not same for all attached textures; or the attached images are a mix of renderbuffers and textures, the value of GL_RENDERBUFFER_SAMPLES does not match the value of GL_TEXTURE_SAMPLES.`
-													"\n"`or the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not the same for all attached textures; or the attached images are a mix of renderbuffers and textures, the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not GL_TRUE for all attached textures.`
-												);
-
-											case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
-												assert(0, `some framebuffer attachment is layered, and some populated attachment is not layered, or all populated color attachments are not from textures of the same target.`);
-
-											default:
-												assert (0, `framebuffer error`);
-										}
-								}
-
-							//check_framebuffer; TEMP
-						}
-						body {/*...}*/
-							return draw_framebuffer = read_framebuffer = buffer;
-						}
-					static framebuffer ()
-						in {/*...}*/
-							assert (draw_framebuffer == read_framebuffer);
-						}
-						body {/*...}*/
-							return draw_framebuffer;
-						}
 				}
+				union {/*framebuffers}*/
+					static if (0) // BUG https://issues.dlang.org/show_bug.cgi?id=13891
+					GLuint[2] framebuffers;
+					struct {/*...}*/
+						GLuint
+							draw_framebuffer,
+							read_framebuffer;
+					}
+				}
+				union {/*textures}*/
+					static if (0) // BUG https://issues.dlang.org/show_bug.cgi?id=13891
+					GLuint[11] textures;
+					struct {/*...}*/
+						GLuint
+						texture_1D,
+						texture_2D,
+						texture_3D,
+						texture_1D_array,
+						texture_2D_array,
+						texture_rectangle,
+						texture_cube_map,
+						texture_cube_map_array,
+						texture_buffer,
+						texture_2D_multisample,
+						texture_2D_multisample_array;
+					}
+				}
+
+				auto buffers ()  // HACK https://issues.dlang.org/show_bug.cgi?id=13891
+					{/*...}*/
+						return (&array_buffer)[0..10];
+					}
+				auto framebuffers ()  // HACK https://issues.dlang.org/show_bug.cgi?id=13891
+					{/*...}*/
+						return (&draw_framebuffer)[0..2];
+					}
+				auto textures ()  // HACK https://issues.dlang.org/show_bug.cgi?id=13891
+					{/*...}*/
+						return (&texture_1D)[0..11];
+					}
+
+				auto framebuffer (GLuint buffer)
+					out {/*...}*/
+						void check_framebuffer ()
+							{/*...}*/
+								switch (gl.CheckFramebufferStatus (GL_FRAMEBUFFER)) 
+									{/*...}*/
+										case GL_FRAMEBUFFER_COMPLETE:
+											return;
+
+										case GL_FRAMEBUFFER_UNDEFINED:
+											assert(0, `target is the default framebuffer, but the default framebuffer does not exist.`);
+
+										case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+											assert(0, `some of the framebuffer attachment points are framebuffer incomplete.`);
+
+										case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+											assert(0, `framebuffer does not have at least one image attached to it.`);
+
+										case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+											assert(0, `value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for some color attachment point(s) named by GL_DRAW_BUFFERi.`);
+
+										case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+											assert(0, `GL_READ_BUFFER is not GL_NONE and the value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for the color attachment point named by GL_READ_BUFFER.`);
+
+										case GL_FRAMEBUFFER_UNSUPPORTED:
+											assert(0, `combination of internal formats of the attached images violates an implementation-dependent set of restrictions.`);
+
+										case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+											assert(0, `value of GL_RENDERBUFFER_SAMPLES is not the same for all attached renderbuffers; or the value of GL_TEXTURE_SAMPLES is the not same for all attached textures; or the attached images are a mix of renderbuffers and textures, the value of GL_RENDERBUFFER_SAMPLES does not match the value of GL_TEXTURE_SAMPLES.`
+												"\n"`or the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not the same for all attached textures; or the attached images are a mix of renderbuffers and textures, the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not GL_TRUE for all attached textures.`
+											);
+
+										case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+											assert(0, `some framebuffer attachment is layered, and some populated attachment is not layered, or all populated color attachments are not from textures of the same target.`);
+
+										default:
+											assert (0, `framebuffer error`);
+									}
+							}
+
+						//check_framebuffer; TEMP
+					}
+					body {/*...}*/
+						return draw_framebuffer = read_framebuffer = buffer;
+					}
+				auto framebuffer ()
+					in {/*...}*/
+						assert (draw_framebuffer == read_framebuffer);
+					}
+					body {/*...}*/
+						return draw_framebuffer;
+					}
+
+				this ()
+					{/*...}*/
+						void initialize_glfw ()
+							{/*...}*/
+								auto dims = display_size.each!(to!uint);
+								window = glfwCreateWindow (dims.x, dims.y, ``, null, null);
+
+								if (window is null)
+									assert (0, `window creation failure`);
+
+								glfwShowWindow (window);
+								glfwHideWindow (window); // 
+
+								glfwMakeContextCurrent (window);
+								glfwSwapInterval (0);
+
+								glfwSetWindowSizeCallback (window, &resize_window_callback);
+								glfwSetFramebufferSizeCallback (window, &resize_framebuffer_callback);
+
+								glfwSetWindowUserPointer (window, cast(void*)this);
+
+								glfwSetWindowTitle (window, text (
+									`evx.graphics.display `,
+									`(openGL `,
+										glfwGetWindowAttrib (window, GLFW_CONTEXT_VERSION_MAJOR),
+										`.`,
+										glfwGetWindowAttrib (window, GLFW_CONTEXT_VERSION_MINOR),
+									`)`
+								).to_c.expand);
+							}
+						void initialize_gl ()
+							{/*...}*/
+								gl.ClearColor (0.1, 0.1, 0.1, 1.0);
+
+								gl.Enable (GL_BLEND);
+								gl.BlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+							}
+					}
+				~this ()
+					{/*...}*/
+						void terminate_glfw ()
+							{/*...}*/
+								if (window !is null)
+									glfwDestroyWindow (window);
+
+								glfwTerminate ();
+							}
+					}
+			}
+
+		auto set_context (Context context)
+			{/*...}*/
+				if (auto found = contexts.find (context))
+					{/*...}*/
+						if (*found is current_context)
+							return current_context;
+
+						*found = current_context;
+						current_context = context;
+
+						glfwMakeContextCurrent (current_context.window);
+						DerelictGL3.reload ();
+
+						return current_context;
+					}
+				else assert (0, `requested openGL context does not exist`);
+			}
+		auto new_context ()
+			{/*...}*/
+				if (not!initialized)
+					{/*...}*/
+						DerelictGL3.load ();
+
+						DerelictGLFW3.load ();
+
+						glfwSetErrorCallback (&error_callback);
+
+						initialized  = glfwInit ();
+
+						assert (initialized, "glfwInit failed");
+					}
+					
+				contexts ~= new Context;
+
+				return set_context (contexts.back);
+			}
+		auto current_context ()
+			{/*...}*/
+				return contexts.front;
+			}
+
+		private {/*...}*/
+			__gshared Context[] contexts;
 
 			auto call (string name, Args...)(Args args)
 				out {/*...}*/

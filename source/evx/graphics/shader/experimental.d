@@ -67,24 +67,27 @@ auto triangle_fan (S)(S shader)
 		return next.triangle_fan;
 	}
 
+// TODO TODO TODO make CanvasOps a superset of BufferOps... probably do the same for RenderOps
 // RENDERING OPERATORS
-template CanvasOps (alias preprocess, alias managed_id = identity)
+template CanvasOps (alias preprocess, alias framebuffer_id, alias allocate, alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
 		import evx.graphics.shader.core;/// TEMP 
-		static if (0)//REVIEW
-		static assert (is (typeof(preprocess (Shader!().init)) == Shader!Sym, Sym...),
-			`preprocess: Shader → Shader`
-			~ typeof(preprocess(Shader!().init)).stringof
-		);
-		// TODO make sure this is indexable? like an image or something
 
-		static if (is (typeof(managed_id.identity)))
-			alias framebuffer_id = managed_id;
-		else GLuint framebuffer_id;
+		static assert (
+			is (typeof((){auto s = Shader!().init; return preprocess (s);}() == Shader!Sym, Sym...))
+			&& not (is (typeof(preprocess (Shader!().init) == Shader!Sym, Sym...))),
+			`preprocess: ref Shader → Shader`
+		);
+		static assert (is (typeof(framebuffer_id.identity) == GLuint),
+			`framebuffer_id must resolve to GLuint`
+		);
 
 		void attach (S)(ref S shader)
 			if (is (S == Shader!Sym, Sym...))
 			{/*...}*/
+				//REVIEW if gl.framebuffer != framebuffer.id?
+				gl.framebuffer = framebuffer.id;
+
 				import evx.misc.memory : move; // TEMP
 
 				typeof(preprocess(shader)) prepared;
@@ -95,6 +98,8 @@ template CanvasOps (alias preprocess, alias managed_id = identity)
 
 				shader = S (prepared.args); // REVIEW all these moves are inefficient, need a system for referencing lvalue resources and passing back rvalue resources... put resource placement control in the hands of the top-level caller
 			}
+
+		mixin BufferOps!(allocate, pull, access, LimitsAndExtensions);
 	}
 
 template RenderOps (alias draw, shaders...)
