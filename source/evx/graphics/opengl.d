@@ -474,7 +474,7 @@ struct gl
 										}
 								}
 
-							check_framebuffer;
+							//check_framebuffer; TEMP
 						}
 						body {/*...}*/
 							return draw_framebuffer = read_framebuffer = buffer;

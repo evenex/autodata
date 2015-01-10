@@ -70,7 +70,7 @@ void move (T)(ref T src, ref T tgt)
 	}
 void move (T)(T src, ref T tgt)
 	{/*...}*/
-		src.swap (tgt);
+		swap (src, tgt);
 	}
 
 /* forward an argument, preserving refness xor rvalue-move through stack

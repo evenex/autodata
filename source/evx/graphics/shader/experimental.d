@@ -85,7 +85,12 @@ template CanvasOps (alias preprocess, alias managed_id = identity)
 		void attach (S)(ref S shader)
 			if (is (S == Shader!Sym, Sym...))
 			{/*...}*/
-				import evx.misc.memory : move;
+				static if (0)
+					static if (not (is (typeof(managed_id.identity)))) // BUG i am not generating framebuffers before binding, REVIEW when to do this?
+						if (framebuffer_id == 0)
+							gl.GenFramebuffers (1, &framebuffer_id);
+
+				import evx.misc.memory : move; // TEMP
 
 				typeof(preprocess(shader)) prepared;
 				
@@ -93,7 +98,7 @@ template CanvasOps (alias preprocess, alias managed_id = identity)
 				
 				prepared.activate;
 
-				shader = S (prepared.args);
+				shader = S (prepared.args); // REVIEW all these moves are inefficient, need a system for referencing lvalue resources and passing back rvalue resources... put resource placement control in the hands of the top-level caller
 			}
 	}
 
@@ -116,11 +121,19 @@ template RenderOps (alias draw, shaders...)
 		public {/*rendering}*/
 			auto ref render_to (T)(auto ref T canvas) // REVIEW DOC RENDER_TO SETS UP AND VERIFIES THE RENDER TARGETS AND CALLS RENDERER DRAW
 				{/*...}*/
-					gl.framebuffer = canvas;
+					gl.framebuffer = canvas; // 
+				static if (is (typeof(canvas.texture_id))) // HACK
+					{/*...}*/
+				canvas.bind; // TEMP
+				gl.FramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, canvas.texture_id, 0); // REVIEW if any of these redundant calls starts impacting performance, there is generally some piece of state that can inform the decision to elide. this state can be maintained in the global gl structure.
+				//gl.FramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, canvas.texture_id, 0); // REVIEW if any of these redundant calls starts impacting performance, there is generally some piece of state that can inform the decision to elide. this state can be maintained in the global gl structure.
+					}
 
 					if (gl.framebuffer == 0)
 						gl.DrawBuffer (GL_BACK);
 					else gl.DrawBuffer (GL_COLOR_ATTACHMENT0);
+
+					std.stdio.writeln (canvas.framebuffer_id, ` → `, gl.framebuffer);
 
 					{/*TEMP VISUALLY TESTING THE FRAMBUFFER}*/
 						if (gl.framebuffer != 0)
@@ -138,10 +151,7 @@ template RenderOps (alias draw, shaders...)
 										{return shaders[i].args[j].length.to!int;}
 								}
 
-							assert (Match!(Map!(length, Count!(typeof(shaders[i]).Args))) > 0, `fuck1`);
-							canvas.attach (shaders[i]); // BUG RAII kicks in early here
-							std.stdio.stderr.writeln (typeof(shaders[i]).stringof);
-							assert (Match!(Map!(length, Count!(typeof(shaders[i]).Args))) > 0, `fuck2`);
+							canvas.attach (shaders[i]);
 
 							draw!i (Match!(Map!(length, Count!(typeof(shaders[i]).Args))));
 
@@ -209,8 +219,7 @@ void main () // TODO GOAL
 			.Texture;
 
 		// TEXTURED SHAPE SHADER
-		// TEMP
-		auto test = τ(vertices, tex_coords).vertex_shader!(
+		τ(vertices, tex_coords).vertex_shader!(
 			`position`, `tex_coords`, q{
 				gl_Position = vec4 (position, 0, 1);
 				frag_tex_coords = (tex_coords + vec2 (1,1))/2;
@@ -221,10 +230,7 @@ void main () // TODO GOAL
 				gl_FragColor = texture2D (tex, frag_tex_coords);
 			}
 		)(texture)
-		.triangle_fan;
-
-		pragma(msg, typeof(test));
-		test.render_to (display);// TEMP
+		.triangle_fan.render_to (display);
 
 		display.show;
 
@@ -234,7 +240,7 @@ void main () // TODO GOAL
 		Texture target;
 		target.allocate (256,256);
 
-		vertices.vertex_shader!(
+		vertices.translate (-0.5.fvec).vertex_shader!(
 			`pos`, q{
 				gl_Position = vec4 (pos, 0, 1);
 			}
@@ -243,10 +249,9 @@ void main () // TODO GOAL
 				gl_FragColor = col;
 			}
 		)(blue)
-		.triangle_fan
-		.render_to (target);
+		.triangle_fan.render_to (target);
 
-		τ(square!float, square!float.scale (2.0f).translate (fvec(0.5))).vertex_shader!(
+		τ(square!float, square!float.translate (fvec(0.5))).vertex_shader!(
 			`pos`, `texc_in`, q{
 				gl_Position = vec4 (pos, 0, 1);
 				texc = texc_in;

@@ -105,6 +105,10 @@ template generate_shader (Stage stage, Decl...)
 
 										alias TypedVars = Map!(Pair!().Both!Deduce, Zip!(ParsedVars!(), Params!()));
 									}
+								else static if (Identifiers.length == 0)
+									{/*...}*/
+										alias TypedVars = Cons!();
+									}
 								else static assert (not (stage is Stage.fragment),
 									`Fragment shaders do not yet support automatic type deduction, and currently can only use a typed declaration list.`
 								);
@@ -337,7 +341,7 @@ private {/*shader program database}*/
 }
 private {/*parameter framing}*/
 	// PODs → PODs, Subspaces → Subspaces, Arrays → GPUArrays, Resources → Borrowed!Resources
-	template GPUType (T)
+	template GPUType (T) // REVIEW Algebraic data type for ref-predicated borrow/move??
 		{/*...}*/
 			static if (is (T == GLBuffer!U, U...) || is (T == Texture))
 				alias GPUType = Borrowed!T;
@@ -487,7 +491,7 @@ package {/*generator/compiler/linker}*/
 			public {/*runtime}*/
 				Args args;
 
-				this (T...)(auto ref T input) // REVIEW need to move shader args through so that RAII doesn't strike early
+				this (T...)(auto ref T input)
 					{/*...}*/
 						foreach (i, ref arg; args)
 							static if (is (Args[i] == T[i]))
