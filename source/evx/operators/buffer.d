@@ -1,6 +1,6 @@
 module evx.operators.buffer;
 
-/* generate RAII ctor/dtor and move/copy/free assignment operators from allocate and own functions, with TransferOps 
+/* generate RAII ctor/dtor and move/copy/free assignment operators from allocate function, with TransferOps 
 
 	Requires:
 		TransferOps requirements.
