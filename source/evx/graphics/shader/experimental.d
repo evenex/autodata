@@ -74,8 +74,8 @@ template CanvasOps (alias preprocess, alias framebuffer_id, alias allocate, alia
 		import evx.graphics.shader.core;/// TEMP 
 
 		static assert (
-			is (typeof((){auto s = Shader!().init; return preprocess (s);}() == Shader!Sym, Sym...))
-			&& not (is (typeof(preprocess (Shader!().init) == Shader!Sym, Sym...))),
+			is (typeof((){auto s = Shader!().init; return preprocess (s);}()) == Shader!Sym, Sym...)
+			&& not (is (typeof(preprocess (Shader!().init)) == Shader!Sym, Sym...)),
 			`preprocess: ref Shader → Shader`
 		);
 		static assert (is (typeof(framebuffer_id.identity) == GLuint),
