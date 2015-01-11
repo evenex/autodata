@@ -48,8 +48,8 @@ struct gl
 				static assert (name.not!contains (`UseProgram`), errmsg!`program`);
 				static assert (name.not!contains (`Bind`), errmsg!(name[4..$].toLower));
 
-				debug assert (context_initialized,
-					`rendering context must exist prior to making any openGL calls`
+				assert (not (this.context is null),
+					`no rendering context available to call ` ~ name
 				);
 			}
 			body {/*...}*/
@@ -64,14 +64,14 @@ struct gl
 
 								GLuint id = Match!(has_id, is_id);
 
-								if (current_context.program == id)
+								if (this.context.program == id)
 									return;
 
 								call!`UseProgram` (id);
 
-								current_context.program = id;
+								this.context.program = id;
 							}
-						else return current_context.program;
+						else return this.context.program;
 					}
 				auto bind ()()
 					{/*...}*/
@@ -87,7 +87,7 @@ struct gl
 											return args[0].texture_id;
 
 										else static if (name.contains (`framebuffer`))
-											return args[0].framebuffer_id;
+											return args[0].framebuffer_id; // REVIEW CanvasOps.bind_canvas???????
 
 										else return args[0].buffer_id;
 									}
@@ -98,7 +98,7 @@ struct gl
 
 								GLuint id = Match!(has_id, is_id);
 
-								if (mixin(q{current_context.} ~ name) == id)
+								if (mixin(q{this.context.} ~ name) == id)
 									return;
 
 								static if (name.contains (`texture`))
@@ -124,18 +124,18 @@ struct gl
 								else call!`BindBuffer` (target, id);
 
 								mixin(q{
-									current_context.} ~ name ~ q{ = id;
+									this.context.} ~ name ~ q{ = id;
 								});
 							}
 						else mixin(q{
-							return current_context.} ~ name ~ q{;
+							return this.context.} ~ name ~ q{;
 						});
 					}
 				auto unbind ()()
 					{/*...}*/
 						static assert (name.contains (`Delete`));
 
-						auto group = mixin(q{current_context.} ~ name.after (`Delete`).toLower)[];
+						auto group = mixin(q{this.context.} ~ name.after (`Delete`).toLower)[];
 						auto n = args[0];
 						auto ids = args[1];
 
@@ -158,6 +158,8 @@ struct gl
 						return call!name (args.to_c.expand);
 					}
 
+				static if (not(is(typeof( Match!(use_program, bind, unbind, forward)))))
+					bind;
 				return Match!(use_program, bind, unbind, forward);
 			}
 
@@ -374,7 +376,7 @@ struct gl
 			{/*...}*/
 				foreach (member; __traits(allMembers, Context))
 					{/*...}*/
-						ref variable ()() {return __traits(getMember, current_context, member);}
+						ref variable ()() {return __traits(getMember, context, member);}
 
 						void reset ()() {variable = typeof(variable ()).init;}
 						void pass  ()() {}
@@ -390,6 +392,81 @@ struct gl
 
 		class Context
 			{/*...}*/
+				this ()
+					{/*...}*/
+						if (not!initialized)
+							{/*...}*/
+								DerelictGL3.load ();
+
+								DerelictGLFW3.load ();
+
+								glfwSetErrorCallback (&error_callback);
+
+								initialized = glfwInit ()? true: false;
+
+								assert (initialized, "glfwInit failed");
+							}
+							
+						contexts ~= this;
+
+						gl.context = this;
+
+						void initialize_glfw_window ()
+							{/*...}*/
+								window = glfwCreateWindow (0, 0, ``, null, null); // REVIEW hidden window???
+
+								if (window is null)
+									assert (0, `window creation failure`);
+
+								glfwShowWindow (window);
+								glfwHideWindow (window); // 
+
+								glfwMakeContextCurrent (window);
+								glfwSwapInterval (0);
+
+								glfwSetWindowSizeCallback (window, &resize_window_callback);
+								glfwSetFramebufferSizeCallback (window, &resize_framebuffer_callback);
+
+								glfwSetWindowUserPointer (window, cast(void*)this);
+
+								glfwSetWindowTitle (window, text (
+									`evx.graphics.display `,
+									`(openGL `,
+										glfwGetWindowAttrib (window, GLFW_CONTEXT_VERSION_MAJOR),
+										`.`,
+										glfwGetWindowAttrib (window, GLFW_CONTEXT_VERSION_MINOR),
+									`)`
+								).to_c.expand);
+							}
+						void initialize_gl ()
+							{/*...}*/
+								gl.ClearColor (0.1, 0.1, 0.1, 1.0);
+
+								gl.Enable (GL_BLEND);
+								gl.BlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+							}
+					}
+				~this ()
+					{/*...}*/
+						void terminate_glfw () // TODO shared static this??
+							{/*...}*/
+								if (window !is null)
+									glfwDestroyWindow (window);
+
+								glfwTerminate ();
+							}
+
+						gl.reset;
+					}
+
+				void framebuffer_swap ()	//REVIEW
+					{/*...}*/
+						gl.clear; // REVIEW
+						glfwSwapBuffers (window);
+					}
+
+				void delegate (size_t width, size_t height) nothrow on_resize; // REVIEW
+
 				private:
 
 				GLFWwindow* window;
@@ -505,96 +582,29 @@ struct gl
 					body {/*...}*/
 						return draw_framebuffer;
 					}
-
-				this ()
-					{/*...}*/
-						void initialize_glfw ()
-							{/*...}*/
-								auto dims = display_size.each!(to!uint);
-								window = glfwCreateWindow (dims.x, dims.y, ``, null, null);
-
-								if (window is null)
-									assert (0, `window creation failure`);
-
-								glfwShowWindow (window);
-								glfwHideWindow (window); // 
-
-								glfwMakeContextCurrent (window);
-								glfwSwapInterval (0);
-
-								glfwSetWindowSizeCallback (window, &resize_window_callback);
-								glfwSetFramebufferSizeCallback (window, &resize_framebuffer_callback);
-
-								glfwSetWindowUserPointer (window, cast(void*)this);
-
-								glfwSetWindowTitle (window, text (
-									`evx.graphics.display `,
-									`(openGL `,
-										glfwGetWindowAttrib (window, GLFW_CONTEXT_VERSION_MAJOR),
-										`.`,
-										glfwGetWindowAttrib (window, GLFW_CONTEXT_VERSION_MINOR),
-									`)`
-								).to_c.expand);
-							}
-						void initialize_gl ()
-							{/*...}*/
-								gl.ClearColor (0.1, 0.1, 0.1, 1.0);
-
-								gl.Enable (GL_BLEND);
-								gl.BlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-							}
-					}
-				~this ()
-					{/*...}*/
-						void terminate_glfw ()
-							{/*...}*/
-								if (window !is null)
-									glfwDestroyWindow (window);
-
-								glfwTerminate ();
-							}
-					}
 			}
-
-		auto set_context (Context context)
+		auto context ()
+			{/*...}*/
+				if (contexts.not!empty)
+					return contexts.front;
+				else return null;
+			}
+		auto context (Context context)
 			{/*...}*/
 				if (auto found = contexts.find (context))
 					{/*...}*/
-						if (*found is current_context)
-							return current_context;
+						if (found.front is context)
+							return context;
 
-						*found = current_context;
-						current_context = context;
+						found.front = this.context;
+						this.context = context;
 
-						glfwMakeContextCurrent (current_context.window);
+						glfwMakeContextCurrent (this.context.window);
 						DerelictGL3.reload ();
 
-						return current_context;
+						return this.context;
 					}
 				else assert (0, `requested openGL context does not exist`);
-			}
-		auto new_context ()
-			{/*...}*/
-				if (not!initialized)
-					{/*...}*/
-						DerelictGL3.load ();
-
-						DerelictGLFW3.load ();
-
-						glfwSetErrorCallback (&error_callback);
-
-						initialized  = glfwInit ();
-
-						assert (initialized, "glfwInit failed");
-					}
-					
-				contexts ~= new Context;
-
-				return set_context (contexts.back);
-			}
-		auto current_context ()
-			{/*...}*/
-				return contexts.front;
 			}
 
 		private {/*...}*/
@@ -642,5 +652,27 @@ struct gl
 							);
 						}
 				}
+
+			extern (C) nothrow {/*callbacks}*/
+				void error_callback (int, const (char)* error)
+					{/*...}*/
+						import std.c.stdio;
+
+						fprintf (stderr, "error glfw: %s\n", error);
+					}
+				void resize_framebuffer_callback (GLFWwindow* window, int width, int height)
+					{/*...}*/
+						gl.Viewport (0, 0, width, height);
+						//try gl.Viewport (0, 0, width, height);
+						//catch (Exception ex) assert (0, ex.msg);
+					}
+				void resize_window_callback (GLFWwindow* window, int width, int height)
+					{/*...}*/
+						auto context = cast(Context) glfwGetWindowUserPointer (window);
+
+						if (context.on_resize !is null)
+							context.on_resize (width, height);
+					}
+			}
 		}
 	}

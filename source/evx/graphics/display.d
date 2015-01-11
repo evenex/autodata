@@ -14,33 +14,42 @@ private {/*imports}*/
 import evx.graphics.shader.repo;// TEMP
 import evx.graphics.shader.experimental;// TEMP
 
-class Display // REVIEW mayb with bufferops we can declass this
+struct Display
 	{/*...}*/
-		uvec display_size;
-		GLFWwindow* window;
+		size_t width, height;
+		gl.Context context; // REVIEW gl. prefix
 
+		auto access (size_t x, size_t y)
+			{/*...}*/
+				// TODO gl.ReadPixels or something
+			}
+		void pull (Args...)(Args)
+			{/*...}*/
+				// TODO use fullscreen card renderer
+			}
 		void allocate (size_t width, size_t height)
 			{/*...}*/
-				display_size = uvec (width, height);
+				this.width = width;
+				this.height = height;
 			}
 
 		this (size_t width = 800, size_t height = 600)
 			{/*...}*/
 				allocate (width, height);
 
-				initialize_glfw;
-				initialize_gl;
+				context = new gl.Context;
+
+				context.on_resize = (size_t width, size_t height)
+					{this.width = width; this.height = height;};
 			}
 		~this ()
 			{/*...}*/
-				terminate_glfw;
-
-				gl.reset;
+				// TODO shut down context
 			}
 
 		auto pixel_dimensions ()
 			{/*...}*/
-				return display_size;
+				return uvec (width, height);
 			}
 		auto pixel_bounds ()
 			{/*...}*/
@@ -73,32 +82,15 @@ class Display // REVIEW mayb with bufferops we can declass this
 		void show ()
 			{/*...}*/
 				glfwPollEvents (); // TODO go to input
-				glfwSwapBuffers (window);
 
-				gl.Clear (GL_COLOR_BUFFER_BIT); // REVIEW redundant
+				context.framebuffer_swap;
 			}
 
-		mixin CanvasOps!(preprocess, zero!GLuint);
-
-		static:
-		extern (C) nothrow {/*callbacks}*/
-			void error_callback (int, const (char)* error)
-				{/*...}*/
-					import std.c.stdio;
-
-					fprintf (stderr, "error glfw: %s\n", error);
-				}
-			void resize_window_callback (GLFWwindow* window, int width, int height)
-				{/*...}*/
-					(cast(Display) glfwGetWindowUserPointer (window))
-						.display_size = uvec (width, height);
-				}
-			void resize_framebuffer_callback (GLFWwindow* window, int width, int height)
-				{/*...}*/
-					try gl.Viewport (0, 0, width, height);
-					catch (Exception ex) assert (0, ex.msg);
-				}
-		}
+		mixin CanvasOps!(
+			preprocess, zero!GLuint, 
+			allocate, pull,
+			access, width, height
+		);
 	}
 
 // TODO compile-time routing generic draw -> renderer through a router containing a list of renderers

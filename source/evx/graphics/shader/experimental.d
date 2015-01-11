@@ -72,11 +72,12 @@ auto triangle_fan (S)(S shader)
 template CanvasOps (alias preprocess, alias framebuffer_id, alias allocate, alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
 		import evx.graphics.shader.core;/// TEMP 
+		import evx.operators;/// TEMP 
 
 		static assert (
-			is (typeof((){auto s = Shader!().init; return preprocess (s);}()) == Shader!Sym, Sym...)
-			&& not (is (typeof(preprocess (Shader!().init)) == Shader!Sym, Sym...)),
-			`preprocess: ref Shader → Shader`
+			is (typeof((){auto s = Shader!().init; return typeof(preprocess (s)).init;}()) == Shader!R, R...)
+			&& not (is (typeof(preprocess (Shader!().init)) == Shader!S, S...)),
+			typeof(this).stringof ~ ` preprocess: ref Shader → Shader`
 		);
 		static assert (is (typeof(framebuffer_id.identity) == GLuint),
 			`framebuffer_id must resolve to GLuint`
@@ -170,7 +171,7 @@ template RenderOps (alias draw, shaders...)
 void main () // TODO GOAL
 	{/*...}*/
 		import evx.graphics.display;
-		scope display = new Display;
+		Display display;
 
 		auto vertices = circle.map!(to!fvec)
 			.enumerate.map!((i,v) => i%2? v : v/4);
