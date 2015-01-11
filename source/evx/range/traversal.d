@@ -12,7 +12,7 @@ private {/*imports}*/
 	import evx.math.sequence;
 	import evx.math.logic;
 	import evx.math.overloads;
-	import evx.math.fields.ℕ;
+	import evx.math.fields.nats;
 }
 
 /* buffer a range to an array 
