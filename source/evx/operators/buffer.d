@@ -20,7 +20,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 			}
 		~this ()
 			{/*...}*/
-				//this = null; // BUG https://issues.dlang.org/show_bug.cgi?id=13886
+				//this = null; // BUG https://issues.dlang.org/show_bug.cgi?id=13886 REVIEW fixed in latest release
 				{/*HACK}*/
 					ParameterTypeTuple!access zeroed;
 
