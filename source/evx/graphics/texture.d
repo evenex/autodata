@@ -72,7 +72,7 @@ struct Texture
 			RangeOps, TextureId
 		);
 
-		auto preprocess (S)(ref S shader)
+		ref preprocess (S)(ref S shader)
 			{/*...}*/
 				return shader;
 			}

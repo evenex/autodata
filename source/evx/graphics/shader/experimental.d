@@ -83,12 +83,14 @@ template CanvasOps (alias preprocess, alias framebuffer_id, alias allocate, alia
 			`framebuffer_id must resolve to GLuint`
 		);
 
+		void setup ()
+			{/*...}*/
+				gl.framebuffer = framebuffer_id;
+				gl.clear;
+			}
 		void attach (S)(ref S shader)
 			if (is (S == Shader!Sym, Sym...))
 			{/*...}*/
-				//REVIEW if gl.framebuffer != framebuffer.id?
-				gl.framebuffer = framebuffer.id;
-
 				import evx.misc.memory : move; // TEMP
 
 				typeof(preprocess(shader)) prepared;
@@ -122,9 +124,7 @@ template RenderOps (alias draw, shaders...)
 		public {/*rendering}*/
 			auto ref render_to (T)(auto ref T canvas) // REVIEW DOC RENDER_TO SETS UP AND VERIFIES THE RENDER TARGETS AND CALLS RENDERER DRAW
 				{/*...}*/
-					gl.framebuffer = canvas;
-
-					gl.clear;
+					canvas.setup;
 
 					void render (uint i = 0)()
 						{/*...}*/
@@ -171,7 +171,7 @@ template RenderOps (alias draw, shaders...)
 void main () // TODO GOAL
 	{/*...}*/
 		import evx.graphics.display;
-		Display display;
+		auto display = Display (800, 600);
 
 		auto vertices = circle.map!(to!fvec)
 			.enumerate.map!((i,v) => i%2? v : v/4);

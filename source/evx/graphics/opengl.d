@@ -81,13 +81,13 @@ struct gl
 
 						static if (is (Args[0]))
 							{/*...}*/
-								auto has_id ()()
+								auto has_id ()() // REVIEW to be removed once all graphics resource bindings are standardized
 									{/*...}*/
 										static if (name.contains (`texture`))
 											return args[0].texture_id;
 
-										else static if (name.contains (`framebuffer`))
-											return args[0].framebuffer_id; // REVIEW CanvasOps.bind_canvas???????
+										else static if (name.contains (`framebuffer`)) // REVIEW CanvasOps will handle this, to be removed..
+											return args[0].framebuffer_id;
 
 										else return args[0].buffer_id;
 									}
@@ -418,8 +418,8 @@ struct gl
 								if (window is null)
 									assert (0, `window creation failure`);
 
-								glfwShowWindow (window);
-								glfwHideWindow (window); // 
+								//glfwShowWindow (window);
+								//glfwHideWindow (window);
 
 								glfwMakeContextCurrent (window);
 								glfwSwapInterval (0);
@@ -607,6 +607,8 @@ struct gl
 				else assert (0, `requested openGL context does not exist`);
 			}
 
+		// REVIEW alias context this?
+
 		private {/*...}*/
 			__gshared Context[] contexts;
 
@@ -615,6 +617,9 @@ struct gl
 					error_check!name (args);
 				}
 				body {/*...}*/
+					try std.stdio.stderr.writeln (name, args);
+					catch (Exception) assert (0, `fuck`);
+
 					mixin (q{
 						return gl} ~ name ~ q{ (args.to_c.expand);
 					});
