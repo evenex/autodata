@@ -22,7 +22,7 @@ struct Sequence (alias f, T)
 				return f (initial, i + bounds.left).to!T;
 			}
 
-		version (all) // TODO pending bugfix
+		version (all) // TODO bugfix issued, update this!!!!!!
 			{/*...}*/
 				auto opIndex (size_t i)
 					{/*...}*/
