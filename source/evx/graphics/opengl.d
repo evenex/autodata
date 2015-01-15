@@ -9,10 +9,10 @@ private {/*imports}*/
 	import evx.type;
 	import evx.math;
 	import evx.range;
-}
-public:
+
 	import derelict.glfw3.glfw3;
 	import derelict.opengl3.gl3;
+}
 
 //TODO make specific error messages for all the openGL calls
 class Context
@@ -1290,1615 +1290,1522 @@ struct gl
 			GL_TEXTURE_BUFFER_BINDING         = 0x8C2A,
 		}
 
-		public {/*CLEARING}*/
-			public {/*GET}*/
-				glClearBufferiv 
-					
-	???
-				glClearBufferuiv 
-					
-	???
-				glClearBufferfv 
-					
-	???
-				glClearBufferfi 
-					
-	???
-			}
-			public {/*SET}*/
-				glClearDepth
-					specify the clear value for the depth buffer
-				glClearStencil
-					specify the clear value for the stencil buffer
-				glClearColor
-					specify clear values for the color buffers
-			}
-			public {/*DO}*/
-				glClear
-					clear buffers to preset values
-			}
-		}
-		public {/*DRAWING}*/
-			public {/*COMMANDS}*/
-				glDrawRangeElements
-					render primitives from array data
-				glMultiDrawArrays
-					render multiple sets of primitives from array data
-				glMultiDrawElements
-					render multiple sets of primitives by specifying indices of array data elements
-				glDrawArraysInstanced
-					draw multiple instances of a range of elements
-				glDrawElementsInstanced
-					draw multiple instances of a set of elements
-				glDrawArrays
-					render primitives from array data
-				glDrawElements
-					render primitives from array data
-			}
-			public {/*TARGET}*/
-				glDrawBuffers, glNamedFramebufferDrawBuffers
-					Specifies a list of color buffers to be drawn into
-			}
-			public {/*MISC}*/
-				glPrimitiveRestartIndex
-					specify the primitive restart index
-				glVertexAttribDivisor
-					modify the rate at which generic vertex attributes advance during instanced rendering
-			}
-		}
-
-		public {/*BLENDING}*/
-			glBlendColor
-				set the blend color
-			glBlendEquation
-				specify the equation used for both the RGB blend equation and the Alpha blend equation
-			glBlendFuncSeparate
-				specify pixel arithmetic for RGB and alpha components separately
-			glBlendEquationSeparate
-				set the RGB blend equation and the alpha blend equation separately
-			glBlendEquationi 
-				
-	???
-			glBlendEquationSeparatei 
-				
-	???
-			glBlendFunci 
-				
-	???
-			glBlendFuncSeparatei 
-				
-	???
-			glBlendFunc
-				specify pixel arithmetic
-		}
-		public {/*STENCIL}*/
-			glStencilOpSeparate
-				set front and/or back stencil test actions
-			glStencilFuncSeparate
-				set front and/or back function and reference value for stencil testing
-			glStencilMaskSeparate
-				control the front and/or back writing of individual bits in the stencil planes
-			glStencilMask
-				control the front and back writing of individual bits in the stencil planes
-			glStencilFunc
-				set front and back function and reference value for stencil testing
-			glStencilOp
-				set front and back stencil test actions
-		}
-		public {/*GENERAL}*/
-			glEnablei 
-				
-	???
-			glDisablei 
-				
-	???
-			glIsEnabledi 
-				
-	???
-			glDisable 
-				
-	???
-			glEnable
-				enable or disable server-side GL capabilities
-			glIsEnabled, glIsEnabledi
-				test whether a capability is enabled
-		}
-		public {/*COLOR}*/
-			glClampColor
-				specify whether data read via glReadPixels should be clamped
-			glColorMask, glColorMaski
-				enable and disable writing of frame buffer color components
-		}
-		public {/*CULLING}*/
-			glCullFace
-				specify whether front- or back-facing facets can be culled
-			glFrontFace
-				define front- and back-facing polygons
-			glScissor
-				define the scissor box
-			glViewport
-				set the viewport
-		}
-		public {/*MISC}*/
-			glLineWidth
-				specify the width of rasterized lines
-			glPointSize
-				specify the diameter of rasterized points
-			glPolygonMode
-				select a polygon rasterization mode
-			glLogicOp
-				specify a logical pixel operation for rendering
-		}
-		public {/*DEPTH}*/
-			glPolygonOffset
-				set the scale and units used to calculate depth values
-			glDepthFunc
-				specify the value used for depth buffer comparisons
-			glDepthMask
-				enable or disable writing into the depth buffer
-			glDepthRange
-				specify mapping of depth values from normalized device coordinates to window coordinates
-		}
-		public {/*TEXTURE}*/
-			public {/*TRANSFER TEXTURE}*/
-				// C → G
-				glTexImage3D
-					specify a three-dimensional texture image
-				glTexSubImage3D, glTextureSubImage3D
-					specify a three-dimensional texture subimage
-				glCopyTexSubImage3D, glCopyTextureSubImage3D
-					copy a three-dimensional texture subimage
-				glTexImage1D
-					specify a one-dimensional texture image
-				glTexImage2D
-					specify a two-dimensional texture image
-				glTexSubImage1D, glTextureSubImage1D
-					specify a one-dimensional texture subimage
-				glTexSubImage2D, glTextureSubImage2D
-					specify a two-dimensional texture subimage
-
-				// C → G COMPRESSED
-				glCompressedTexImage3D
-					specify a three-dimensional texture image in a compressed format
-				glCompressedTexImage2D
-					specify a two-dimensional texture image in a compressed format
-				glCompressedTexImage1D
-					specify a one-dimensional texture image in a compressed format
-				glCompressedTexSubImage3D, glCompressedTextureSubImage3D
-					specify a three-dimensional texture subimage in a compressed format
-				glCompressedTexSubImage2D, glCompressedTextureSubImage2D
-					specify a two-dimensional texture subimage in a compressed format
-				glCompressedTexSubImage1D, glCompressedTextureSubImage1D
-					specify a one-dimensional texture subimage in a compressed
-					format
-
-				// G → C COMPRESSED
-				glGetCompressedTexImage
-					return a compressed texture image
-
-				// G → C
-				glGetTexImage
-					return a texture image
-
-				// G → G
-				glCopyTexImage1D
-					copy pixels into a 1D texture image
-				glCopyTexImage2D
-					copy pixels into a 2D texture image
-				glCopyTexSubImage1D, glCopyTextureSubImage1D
-					copy a one-dimensional texture subimage
-				glCopyTexSubImage2D, glCopyTextureSubImage2D
-					copy a two-dimensional texture subimage
-			}
-			public {/*TEXTURE STATE}*/
-				glActiveTexture
-					select active texture unit
-				glBindTexture
-					bind a named texture to a texturing target
-				glDeleteTextures
-					delete named textures
-				glGenTextures
-					generate texture names
-				glIsTexture
-					determine if a name corresponds to a texture
-			}
-			public {/*PARAMETERS}*/
-				glGetTexParameterfv 
-					
-	???
-				glGetTexParameteriv 
-					
-	???
-				glGetTexLevelParameterfv 
-					
-	???
-				glGetTexLevelParameteriv 
-					
-	???
-				glTexParameterIiv 
-					
-	???
-				glTexParameterIuiv 
-					
-	???
-				glGetTexParameterIiv 
-					
-	???
-				glGetTexParameterIuiv 
-					
-	???
-				glTexParameterf 
-					
-	???
-				glTexParameterfv 
-					
-	???
-				glTexParameteri 
-					
-	???
-				glTexParameteriv 
-					
-	???
-			}
-		}
-		public {/*SAMPLING}*/
-			glSampleCoverage
-				specify multisample coverage parameters
-			glPointParameterf 
-				
-	???
-			glPointParameterfv 
-				
-	???
-			glPointParameteri 
-				
-	???
-			glPointParameteriv 
-				
-	???
-			glMinSampleShading
-				specifies minimum rate at which sample sharing takes place
-		}
-		public {/*QUERY}*/
-			glGenQueries
-				generate query object names
-			glDeleteQueries
-				delete named query objects
-			glIsQuery
-				determine if a name corresponds to a query object
-			glBeginQuery
-				delimit the boundaries of a query object
-			glEndQuery 
-				
-	???
-			glGetQueryiv
-				return parameters of a query object target
-			glGetQueryObjectiv 
-				
-	???
-			glGetQueryObjectuiv 
-				
-	???
-		}
-		public {/*BUFFER}*/
-			public {/*BUFFER STATE CONTROL}*/
-				glBindBuffer
-					bind a named buffer object
-				glDeleteBuffers
-					delete named buffer objects
-				glGenBuffers
-					generate buffer object names
-				glIsBuffer
-					determine if a name corresponds to a buffer object
-			glBindBufferRange
-				bind a range within a buffer object to an indexed buffer target
-			glBindBufferBase
-				bind a buffer object to an indexed buffer target
-			}
-			public {/*BUFFER TRANSFER}*/
-				// C → G
-				glBufferData, glNamedBufferData
-					creates and initializes a buffer object's data
-					store
-				glBufferSubData, glNamedBufferSubData
-					updates a subset of a buffer object's data store
-
-				// G → C
-				glGetBufferSubData, glGetNamedBufferSubData
-					returns a subset of a buffer object's data store
-
-				// G ↔ C
-				glMapBuffer, glMapNamedBuffer
-					map all of a buffer object's data store into the client's address space
-				glUnmapBuffer, glUnmapNamedBuffer
-					release the mapping of a buffer object's data store into the client's address space
-
-				// G → C
-				glGetBufferPointerv, glGetNamedBufferPointerv
-					return the pointer to a mapped buffer object's data store
-			}
-		}
-		public {/*PROGRAM}*/
-			glCreateProgram
-				Creates a program object
-			glCreateShader
-				Creates a shader object
-			glDeleteProgram
-				Deletes a program object
-			glDeleteShader
-				Deletes a shader object
-			// COMPILATION
-			glCompileShader
-				Compiles a shader object
-			glGetProgramiv 
-				
-	???
-			glGetProgramInfoLog
-				Returns the information log for a program object
-			glValidateProgram
-				Validates a program object
-			glGetShaderiv 
-				
-	???
-			glGetShaderInfoLog
-				Returns the information log for a shader object
-			glGetShaderSource
-				Returns the source code string from a shader object
-			glIsProgram
-				Determines if a name corresponds to a program object
-			glIsShader
-				Determines if a name corresponds to a shader object
-			glLinkProgram
-				Links a program object
-			glShaderSource
-				Replaces the source code in a shader object
-			glUseProgram
-				Installs a program object as part of current rendering state
-			// ATTACHMENT
-			glAttachShader
-				Attaches a shader object to a program object
-			glDetachShader
-				Detaches a shader object from a program object to which it is attached
-			glGetAttachedShaders
-				Returns the handles of the shader objects attached to a program object
-		}
-		public {/*SHADER VARIABLES}*/
-			public {/*ATTRIBUTES}*/
-				glBindAttribLocation
-					Associates a generic vertex attribute index with a named attribute variable
-				glDisableVertexAttribArray 
-					
-	???
-				glEnableVertexAttribArray
-					Enable or disable a generic vertex attribute array
-				glGetActiveAttrib
-					Returns information about an active attribute variable for the specified program object
-				glGetAttribLocation
-					Returns the location of an attribute variable
-				glGetVertexAttribdv 
-					
-	???
-				glGetVertexAttribfv 
-					
-	???
-				glGetVertexAttribiv 
-					
-	???
-				glGetVertexAttribPointerv
-					return the address of the specified generic vertex attribute pointer
-				glVertexAttribIPointer 
-					
-	???
-				glGetVertexAttribIiv 
-					
-	???
-				glGetVertexAttribIuiv 
-					
-	???
-				glVertexAttribI1i 
-					
-	???
-				glVertexAttribI2i 
-					
-	???
-				glVertexAttribI3i 
-					
-	???
-				glVertexAttribI4i 
-					
-	???
-				glVertexAttribI1ui 
-					
-	???
-				glVertexAttribI2ui 
-					
-	???
-				glVertexAttribI3ui 
-					
-	???
-				glVertexAttribI4ui 
-					
-	???
-				glVertexAttribI1iv 
-					
-	???
-				glVertexAttribI2iv 
-					
-	???
-				glVertexAttribI3iv 
-					
-	???
-				glVertexAttribI4iv 
-					
-	???
-				glVertexAttribI1uiv 
-					
-	???
-				glVertexAttribI2uiv 
-					
-	???
-				glVertexAttribI3uiv 
-					
-	???
-				glVertexAttribI4uiv 
-					
-	???
-				glVertexAttribI4bv 
-					
-	???
-				glVertexAttribI4sv 
-					
-	???
-				glVertexAttribI4ubv 
-					
-	???
-				glVertexAttribI4usv 
-					
-	???
-			}
-			public {/*UNIFORM}*/
-				glGetActiveUniform
-					Returns information about an active uniform variable for the specified program object
-				glGetUniformLocation
-					Returns the location of a uniform variable
-				glGetUniformfv 
-					
-	???
-				glGetUniformiv 
-					
-	???
-				glUniform1f 
-					
-	???
-				glUniform2f 
-					
-	???
-				glUniform3f 
-					
-	???
-				glUniform4f 
-					
-	???
-				glUniform1i 
-					
-	???
-				glUniform2i 
-					
-	???
-				glUniform4i 
-					
-	???
-				glUniform1fv 
-					
-	???
-				glUniform2fv 
-					
-	???
-				glUniform3fv 
-					
-	???
-				glUniform4fv 
-					
-	???
-				glUniform1iv 
-					
-	???
-				glUniform2iv 
-					
-	???
-				glUniform3iv 
-					
-	???
-				glUniform4iv 
-					
-	???
-				glUniformMatrix2fv 
-					
-	???
-				glUniformMatrix3fv 
-					
-	???
-				glUniformMatrix4fv 
-					
-	???
-				glUniformMatrix2x3fv 
-					
-	???
-				glUniformMatrix3x2fv 
-					
-	???
-				glUniformMatrix2x4fv 
-					
-	???
-				glUniformMatrix4x2fv 
-					
-	???
-				glUniformMatrix3x4fv 
-					
-	???
-				glUniformMatrix4x3fv 
-					
-	???
-				glGetUniformuiv 
-					
-	???
-				glUniform1ui 
-					
-	???
-				glUniform2ui 
-					
-	???
-				glUniform3ui 
-					
-	???
-				glUniform4ui 
-					
-	???
-				glUniform1uiv 
-					
-	???
-				glUniform2uiv 
-					
-	???
-				glUniform3uiv 
-					
-	???
-				glUniform4uiv 
-					
-	???
-			}
-			public {/*OUTPUT}*/
-				glBindFragDataLocation
-					bind a user-defined varying out variable to a fragment shader color number
-				glGetFragDataLocation
-					query the bindings of color numbers to user-defined varying out variables
-			}
-		}
-		public {/*UNKNOWN}*/
-			glGetFloatv 
-				
-	???
-			glGetIntegerv 
-				
-	???
-			glGetString
-				return a string describing the current GL connection
-			glPixelStoref 
-				
-	???
-			glPixelStorei 
-				
-	???
-			glGetBufferParameteriv 
-				
-	???
-			glColorMaski 
-				
-	???
-			glGetBooleani_v 
-				
-	???
-			glGetIntegeri_v 
-				
-	???
-			glGetStringi 
-				
-	???
-			glGetInteger64i_v 
-				
-	???
-			glGetBufferParameteri64v 
-				
-	???
-			glGetnTexImage 
-				
-	???
-			glHint
-				specify implementation-specific hints
-			glGetBooleanv 
-				
-	???
-			glGetDoublev 
-				
-	???
-		}
-		public {/*TRANSFORM FEEDBACK}*/
-			glBeginTransformFeedback
-				start transform feedback operation
-			glEndTransformFeedback 
-				
-	???
-			glTransformFeedbackVaryings
-				specify values to record in transform feedback buffers
-			glGetTransformFeedbackVarying
-				retrieve information about varying variables selected for transform feedback
-		}
-		public {/*CONDITIONAL RENDERING}*/
-			glBeginConditionalRender
-				start conditional rendering
-			glEndConditionalRender 
-				
-	???
-		}
-		public {/*BUFFER ↔ TEXTURE}*/
-			public {/*ATTACHMENT}*/
-				glTexBuffer, glTextureBuffer
-					attach a buffer object's data store to a buffer texture object
-			}
-		}
-		public {/*FRAMEBUFFER}*/
-			public {/*ATTACHMENT}*/
-				glFramebufferTexture
-					attach a level of a texture object as a logical buffer of a framebuffer object
-			}
-			public {/*DEFAULT FBO OPS}*/
-				glDrawBuffer, glNamedFramebufferDrawBuffer
-					specify which color buffers are to be drawn into
-			}
-			public {/*READING}*/
-				glReadBuffer, glNamedFramebufferReadBuffer
-					select a color buffer source for pixels
-				glReadPixels, glReadnPixels
-					read a block of pixels from the frame buffer
-			}
-		}
-		public {/*SYNCHRONIZATION}*/
-			glFinish
-				block until all GL execution is complete
-			glFlush
-				force execution of GL commands in finite time
-		}
-		public {/*ERROR}*/
-			glGetError
-				return error information
-		}
 	}
 
-glIsRenderbuffer
-	determine if a name corresponds to a renderbuffer object
-glBindRenderbuffer
-	bind a renderbuffer to a renderbuffer target
-glDeleteRenderbuffers
-	delete renderbuffer objects
-glGenRenderbuffers
-	generate renderbuffer object names
-glRenderbufferStorage, glNamedRenderbufferStorage
-	establish data storage, format and dimensions of a
-    renderbuffer object's image
-glGetRenderbufferParameteriv 
-	???
-glIsFramebuffer
-	determine if a name corresponds to a framebuffer object
-glBindFramebuffer
-	bind a framebuffer to a framebuffer target
-glDeleteFramebuffers
-	delete framebuffer objects
-glGenFramebuffers
-	generate framebuffer object names
-glCheckFramebufferStatus, glCheckNamedFramebufferStatus
-	check the completeness status of a framebuffer
-glFramebufferTexture1D 
-	???
-glFramebufferTexture2D 
-	???
-glFramebufferTexture3D 
-	???
-glFramebufferRenderbuffer, glNamedFramebufferRenderbuffer
-	attach a renderbuffer as a logical buffer of a framebuffer object
-glGetFramebufferAttachmentParameteriv 
-	???
-glGenerateMipmap, glGenerateTextureMipmap
-	generate mipmaps for a specified texture object
-glBlitFramebuffer, glBlitNamedFramebuffer
-	copy a block of pixels from one framebuffer object to another
-glRenderbufferStorageMultisample, glNamedRenderbufferStorageMultisample
-	establish data storage, format, dimensions and sample count of
-    a renderbuffer object's image
-glFramebufferTextureLayer, glNamedFramebufferTextureLayer
-	attach a single layer of a texture object as a logical buffer of a framebuffer object
+public {/*CLEARING}*/
+	public {/*GET}*/
+		glClearBufferiv 
+			???
+		glClearBufferuiv 
+			???
+		glClearBufferfv 
+			???
+		glClearBufferfi 
+			???
+	}
+	public {/*SET}*/
+		glClearDepth
+			specify the clear value for the depth buffer
+		glClearStencil
+			specify the clear value for the stencil buffer
+		glClearColor
+			specify clear values for the color buffers
+	}
+	public {/*DO}*/
+		glClear
+			clear buffers to preset values
+	}
+}
+public {/*BLENDING}*/
+	glBlendColor
+		set the blend color
+	glBlendEquation
+		specify the equation used for both the RGB blend equation and the Alpha blend equation
+	glBlendFuncSeparate
+		specify pixel arithmetic for RGB and alpha components separately
+	glBlendEquationSeparate
+		set the RGB blend equation and the alpha blend equation separately
+	glBlendEquationi 
+		???
+	glBlendEquationSeparatei 
+		???
+	glBlendFunci 
+		???
+	glBlendFuncSeparatei 
+		???
+	glBlendFunc
+		specify pixel arithmetic
+}
+public {/*STENCIL}*/
+	glStencilOpSeparate
+		set front and/or back stencil test actions
+	glStencilFuncSeparate
+		set front and/or back function and reference value for stencil testing
+	glStencilMaskSeparate
+		control the front and/or back writing of individual bits in the stencil planes
+	glStencilMask
+		control the front and back writing of individual bits in the stencil planes
+	glStencilFunc
+		set front and back function and reference value for stencil testing
+	glStencilOp
+		set front and back stencil test actions
+}
+public {/*GENERAL}*/
+	glEnablei 
+		???
+	glDisablei 
+		???
+	glIsEnabledi 
+		???
+	glDisable 
+		???
+	glEnable
+		enable or disable server-side GL capabilities
+	glIsEnabled, glIsEnabledi
+		test whether a capability is enabled
+}
+public {/*COLOR}*/
+	glClampColor
+		specify whether data read via glReadPixels should be clamped
+	glColorMask, glColorMaski
+		enable and disable writing of frame buffer color components
+}
+public {/*CULLING}*/
+	glCullFace
+		specify whether front- or back-facing facets can be culled
+	glFrontFace
+		define front- and back-facing polygons
+}
+public {/*MISC}*/
+	glLineWidth
+		specify the width of rasterized lines
+	glPointSize
+		specify the diameter of rasterized points
+	glPolygonMode
+		select a polygon rasterization mode
+	glLogicOp
+		specify a logical pixel operation for rendering
+}
+public {/*DEPTH}*/
+	glPolygonOffset
+		set the scale and units used to calculate depth values
+	glDepthFunc
+		specify the value used for depth buffer comparisons
+	glDepthMask
+		enable or disable writing into the depth buffer
+	glDepthRange
+		specify mapping of depth values from normalized device coordinates to window coordinates
+	glDepthRangeArrayv 
+		???
+	glDepthRangeIndexed
+		specify mapping of depth values from normalized device coordinates to window coordinates for a specified viewport
+}
+public {/*UNKNOWN}*/
+	glGetnMapdv 
+		???
+	glGetnMapfv 
+		???
+	glGetnMapiv 
+		???
+	glGetnPixelMapfv 
+		???
+	glGetnPixelMapuiv 
+		???
+	glGetnPixelMapusv 
+		???
+	glGetnPolygonStipple 
+		???
+	glGetnColorTable 
+		???
+	glGetnConvolutionFilter 
+		???
+	glGetnSeparableFilter 
+		???
+	glGetnHistogram 
+		???
+	glGetnMinmax 
+		???
+	glGetnTexImage 
+		???
+	glReadnPixels 
+		???
+	glGetnCompressedTexImage 
+		???
+	glGetnUniformfv 
+		???
+	glGetnUniformiv 
+		???
+	glGetnUniformuiv 
+		???
+	glGetnUniformdv 
+		???
+	glGetFloati_v 
+		???
+	glGetDoublei_v 
+		???
+	glDepthRangef 
+		???
+	glClearDepthf 
+		???
+	glProvokingVertex
+		specifiy the vertex to be used as the source of data for flat shaded varyings
+	glGetMultisamplefv 
+		???
+	glGetFloatv 
+		???
+	glGetIntegerv 
+		???
+	glGetString
+		return a string describing the current GL connection
+	glPixelStoref 
+		???
+	glPixelStorei 
+		???
+	glGetBufferParameteriv 
+		???
+	glColorMaski 
+		???
+	glGetBooleani_v 
+		???
+	glGetIntegeri_v 
+		???
+	glGetStringi 
+		???
+	glGetInteger64i_v 
+		???
+	glGetBufferParameteri64v 
+		???
+	glGetnTexImage 
+		???
+	glHint
+		specify implementation-specific hints
+	glGetBooleanv 
+		???
+	glGetDoublev 
+		???
+	glGetInteger64v 
+		???
+}
+public {/*CONDITIONAL RENDERING}*/
+	glBeginConditionalRender
+		start conditional rendering
+	glEndConditionalRender 
+		???
+}
+public {/*BUFFER ↔ TEXTURE}*/
+	public {/*ATTACHMENT}*/
+		glTexBuffer, glTextureBuffer
+			attach a buffer object's data store to a buffer texture object
+	}
+}
+public {/*RENDERBUFFER}*/
+	glIsRenderbuffer
+		determine if a name corresponds to a renderbuffer object
+	glBindRenderbuffer
+		bind a renderbuffer to a renderbuffer target
+	glDeleteRenderbuffers
+		delete renderbuffer objects
+	glGenRenderbuffers
+		generate renderbuffer object names
+	glRenderbufferStorage, glNamedRenderbufferStorage
+		establish data storage, format and dimensions of a
+		renderbuffer object's image
+	glGetRenderbufferParameteriv 
+		???
+}
+public {/*FRAMEBUFFER}*/
+	public {/*DEFAULT FBO OPS}*/
+		glDrawBuffer, glNamedFramebufferDrawBuffer
+			specify which color buffers are to be drawn into
+	}
+	public {/*READING}*/
+		glReadBuffer, glNamedFramebufferReadBuffer
+			select a color buffer source for pixels
+		glReadPixels, glReadnPixels
+			read a block of pixels from the frame buffer
+	}
+	public {/*BINDING}*/
+		glBindFramebuffer
+			bind a framebuffer to a framebuffer target
+		glDeleteFramebuffers
+			delete framebuffer objects
+		glGenFramebuffers
+			generate framebuffer object names
+	}
+	public {/*QUERY}*/
+		glIsFramebuffer
+			determine if a name corresponds to a framebuffer object
+		glCheckFramebufferStatus, glCheckNamedFramebufferStatus
+			check the completeness status of a framebuffer
+		glGetFramebufferAttachmentParameteriv 
+			???
+	}
+	public {/*TRANSFER}*/
+		glBlitFramebuffer, glBlitNamedFramebuffer
+			copy a block of pixels from one framebuffer object to another
+	}
+	public {/*STORAGE}*/
+		glRenderbufferStorageMultisample, glNamedRenderbufferStorageMultisample
+			establish data storage, format, dimensions and sample count of
+			a renderbuffer object's image
+	}
+	public {/*ATTACHMENT}*/
+		glFramebufferTexture
+			attach a level of a texture object as a logical buffer of a framebuffer object
+		glFramebufferTexture1D 
+			???
+		glFramebufferTexture2D 
+			???
+		glFramebufferTexture3D 
+			???
+		glFramebufferRenderbuffer, glNamedFramebufferRenderbuffer
+			attach a renderbuffer as a logical buffer of a framebuffer object
+		glFramebufferTextureLayer, glNamedFramebufferTextureLayer
+			attach a single layer of a texture object as a logical buffer of a framebuffer object
+	}
+}
+public {/*TRANSFORM FEEDBACK}*/
+	glBeginTransformFeedback
+		start transform feedback operation
+	glEndTransformFeedback 
+		???
+	glTransformFeedbackVaryings
+		specify values to record in transform feedback buffers
+	glGetTransformFeedbackVarying
+		retrieve information about varying variables selected for transform feedback
+	glDrawTransformFeedbackStream
+		render primitives using a count derived from a specifed stream of a transform feedback object
+	glBindTransformFeedback
+		bind a transform feedback object
+	glDeleteTransformFeedbacks
+		delete transform feedback objects
+	glGenTransformFeedbacks
+		reserve transform feedback object names
+	glIsTransformFeedback
+		determine if a name corresponds to a transform feedback object
+	glPauseTransformFeedback
+		pause transform feedback operations
+	glResumeTransformFeedback
+		resume transform feedback operations
+	glDrawTransformFeedback
+		render primitives using a count derived from a transform feedback object
+}
+public {/*PATCH}*/
+	glPatchParameteri 
+		???
+	glPatchParameterfv 
+		???
+}
+public {/*DRAWING}*/
+	public {/*COMMANDS}*/
+		glDrawArraysInstancedBaseInstance
+			draw multiple instances of a range of elements with offset applied to instanced attributes
+		glDrawElementsInstancedBaseInstance
+			draw multiple instances of a set of elements with offset applied to instanced attributes
+		glDrawElementsInstancedBaseVertexBaseInstance
+			render multiple instances of a set of primitives from array data with a per-element offset
+		glDrawTransformFeedbackInstanced
+			render multiple instances of primitives using a count derived from a transform feedback object
+		glDrawTransformFeedbackStreamInstanced
+			render multiple instances of primitives using a count derived from a specifed stream of a transform feedback object
+		glDrawElementsBaseVertex
+			render primitives from array data with a per-element offset
+		glDrawRangeElementsBaseVertex
+			render primitives from array data with a per-element offset
+		glDrawElementsInstancedBaseVertex
+			render multiple instances of a set of primitives from array data with a per-element offset
+		glMultiDrawElementsBaseVertex
+			render multiple sets of primitives by specifying indices of array data elements and an index to apply to each index
+		glDrawRangeElements
+			render primitives from array data
+		glMultiDrawArrays
+			render multiple sets of primitives from array data
+		glMultiDrawElements
+			render multiple sets of primitives by specifying indices of array data elements
+		glDrawArraysInstanced
+			draw multiple instances of a range of elements
+		glDrawElementsInstanced
+			draw multiple instances of a set of elements
+		glDrawArrays
+			render primitives from array data
+		glDrawElements
+			render primitives from array data
+		glDrawArraysIndirect
+			render primitives from array data, taking parameters from memory
+		glDrawElementsIndirect
+			render indexed primitives from array data, taking parameters from memory
+	}
+	public {/*TARGET}*/
+		glDrawBuffers, glNamedFramebufferDrawBuffers
+			Specifies a list of color buffers to be drawn into
+	}
+	public {/*MISC}*/
+		glPrimitiveRestartIndex
+			specify the primitive restart index
+		glVertexAttribDivisor
+			modify the rate at which generic vertex attributes advance during instanced rendering
+	}
+}
+public {/*UNKNOWN SUBROUTINE}*/
+	glGetSubroutineUniformLocation
+		retrieve the location of a subroutine uniform of a given shader stage within a program
+	glGetSubroutineIndex
+		retrieve the index of a subroutine uniform of a given shader stage within a program
+	glGetActiveSubroutineUniformiv 
+		???
+	glGetActiveSubroutineUniformName
+		query the name of an active shader subroutine uniform
+	glGetActiveSubroutineName
+		query the name of an active shader subroutine
+	glUniformSubroutinesuiv 
+		???
+	glGetUniformSubroutineuiv 
+		???
+	glGetProgramStageiv 
+		???
+}
+public {/*UNKNOWN P}*/
+	glVertexP2ui 
+		???
+	glVertexP2uiv 
+		???
+	glVertexP3ui 
+		???
+	glVertexP3uiv 
+		???
+	glVertexP4ui 
+		???
+	glVertexP4uiv 
+		???
+	glTexCoordP1ui 
+		???
+	glTexCoordP1uiv 
+		???
+	glTexCoordP2ui 
+		???
+	glTexCoordP2uiv 
+		???
+	glTexCoordP3ui 
+		???
+	glTexCoordP3uiv 
+		???
+	glTexCoordP4ui 
+		???
+	glTexCoordP4uiv 
+		???
+	glMultiTexCoordP1ui 
+		???
+	glMultiTexCoordP1uiv 
+		???
+	glMultiTexCoordP2ui 
+		???
+	glMultiTexCoordP2uiv 
+		???
+	glMultiTexCoordP3ui 
+		???
+	glMultiTexCoordP3uiv 
+		???
+	glMultiTexCoordP4ui 
+		???
+	glMultiTexCoordP4uiv 
+		???
+	glNormalP3ui 
+		???
+	glNormalP3uiv 
+		???
+	glColorP3ui 
+		???
+	glColorP3uiv 
+		???
+	glColorP4ui 
+		???
+	glColorP4uiv 
+		???
+	glSecondaryColorP3ui 
+		???
+	glSecondaryColorP3uiv 
+		???
+	glVertexAttribP1ui 
+		???
+	glVertexAttribP1uiv 
+		???
+	glVertexAttribP2ui 
+		???
+	glVertexAttribP2uiv 
+		???
+	glVertexAttribP3ui 
+		???
+	glVertexAttribP3uiv 
+		???
+	glVertexAttribP4ui 
+		???
+	glVertexAttribP4uiv 
+		???
+}
+public {/*QUERY}*/
+	glGenQueries
+		generate query object names
+	glDeleteQueries
+		delete named query objects
+	glIsQuery
+		determine if a name corresponds to a query object
+	glBeginQuery
+		delimit the boundaries of a query object
+	glEndQuery 
+		???
+	glGetQueryiv
+		return parameters of a query object target
+	glGetQueryObjectiv 
+		???
+	glGetQueryObjectuiv 
+		???
+	glBeginQueryIndexed, glEndQueryIndexed
+		delimit the boundaries of a query object on an indexed target
+	glEndQueryIndexed 
+		???
+	glGetQueryIndexediv 
+		???
+	glQueryCounter
+		record the GL time into a query object after all previous commands have reached the GL server but have not yet necessarily executed.
+	glGetQueryObjecti64v 
+		???
+	glGetQueryObjectui64v 
+		???
+}
+public {/*UNKNOWN NAMED STRING}*/
+	glNamedString 
+		???
+	glDeleteNamedString 
+		???
+	glCompileShaderInclude 
+		???
+	glIsNamedString 
+		???
+	glGetNamedString 
+		???
+	glGetNamedStringiv 
+		???
+}
+public {/*TEXTURE}*/
+	public {/*TRANSFER TEXTURE}*/
+		// C → G
+		glTexImage3D
+			specify a three-dimensional texture image
+		glTexSubImage3D, glTextureSubImage3D
+			specify a three-dimensional texture subimage
+		glCopyTexSubImage3D, glCopyTextureSubImage3D
+			copy a three-dimensional texture subimage
+		glTexImage1D
+			specify a one-dimensional texture image
+		glTexImage2D
+			specify a two-dimensional texture image
+		glTexSubImage1D, glTextureSubImage1D
+			specify a one-dimensional texture subimage
+		glTexSubImage2D, glTextureSubImage2D
+			specify a two-dimensional texture subimage
 
-glDrawTransformFeedbackStream
-	render primitives using a count derived from a specifed stream of a transform feedback object
-glBeginQueryIndexed, glEndQueryIndexed
-	delimit the boundaries of a query object on an indexed target
-glEndQueryIndexed 
-	???
-glGetQueryIndexediv 
-	???
-glBindTransformFeedback
-	bind a transform feedback object
-glDeleteTransformFeedbacks
-	delete transform feedback objects
-glGenTransformFeedbacks
-	reserve transform feedback object names
-glIsTransformFeedback
-	determine if a name corresponds to a transform feedback object
-glPauseTransformFeedback
-	pause transform feedback operations
-glResumeTransformFeedback
-	resume transform feedback operations
-glDrawTransformFeedback
-	render primitives using a count derived from a transform feedback object
-glPatchParameteri 
-	???
-glPatchParameterfv 
-	???
-glGetSubroutineUniformLocation
-	retrieve the location of a subroutine uniform of a given shader stage within a program
-glGetSubroutineIndex
-	retrieve the index of a subroutine uniform of a given shader stage within a program
-glGetActiveSubroutineUniformiv 
-	???
-glGetActiveSubroutineUniformName
-	query the name of an active shader subroutine uniform
-glGetActiveSubroutineName
-	query the name of an active shader subroutine
-glUniformSubroutinesuiv 
-	???
-glGetUniformSubroutineuiv 
-	???
-glGetProgramStageiv 
-	???
-glUniform1d 
-	???
-glUniform2d 
-	???
-glUniform3d 
-	???
-glUniform4d 
-	???
-glUniform1dv 
-	???
-glUniform2dv 
-	???
-glUniform3dv 
-	???
-glUniform4dv 
-	???
-glUniformMatrix2dv 
-	???
-glUniformMatrix3dv 
-	???
-glUniformMatrix4dv 
-	???
-glUniformMatrix2x3dv 
-	???
-glUniformMatrix2x4dv 
-	???
-glUniformMatrix3x2dv 
-	???
-glUniformMatrix3x4dv 
-	???
-glUniformMatrix4x2dv 
-	???
-glUniformMatrix4x3dv 
-	???
-glGetUniformdv 
-	???
-glDrawArraysIndirect
-	render primitives from array data, taking parameters from memory
-glDrawElementsIndirect
-	render indexed primitives from array data, taking parameters from memory
-glVertexP2ui 
-	???
-glVertexP2uiv 
-	???
-glVertexP3ui 
-	???
-glVertexP3uiv 
-	???
-glVertexP4ui 
-	???
-glVertexP4uiv 
-	???
-glTexCoordP1ui 
-	???
-glTexCoordP1uiv 
-	???
-glTexCoordP2ui 
-	???
-glTexCoordP2uiv 
-	???
-glTexCoordP3ui 
-	???
-glTexCoordP3uiv 
-	???
-glTexCoordP4ui 
-	???
-glTexCoordP4uiv 
-	???
-glMultiTexCoordP1ui 
-	???
-glMultiTexCoordP1uiv 
-	???
-glMultiTexCoordP2ui 
-	???
-glMultiTexCoordP2uiv 
-	???
-glMultiTexCoordP3ui 
-	???
-glMultiTexCoordP3uiv 
-	???
-glMultiTexCoordP4ui 
-	???
-glMultiTexCoordP4uiv 
-	???
-glNormalP3ui 
-	???
-glNormalP3uiv 
-	???
-glColorP3ui 
-	???
-glColorP3uiv 
-	???
-glColorP4ui 
-	???
-glColorP4uiv 
-	???
-glSecondaryColorP3ui 
-	???
-glSecondaryColorP3uiv 
-	???
-glVertexAttribP1ui 
-	???
-glVertexAttribP1uiv 
-	???
-glVertexAttribP2ui 
-	???
-glVertexAttribP2uiv 
-	???
-glVertexAttribP3ui 
-	???
-glVertexAttribP3uiv 
-	???
-glVertexAttribP4ui 
-	???
-glVertexAttribP4uiv 
-	???
-glQueryCounter
-	record the GL time into a query object after all previous commands have reached the GL server but have not yet necessarily executed.
-glGetQueryObjecti64v 
-	???
-glGetQueryObjectui64v 
-	???
-glGenSamplers
-	generate sampler object names
-glDeleteSamplers
-	delete named sampler objects
-glIsSampler
-	determine if a name corresponds to a sampler object
-glBindSampler
-	bind a named sampler to a texturing target
-glSamplerParameteri 
-	???
-glSamplerParameteriv 
-	???
-glSamplerParameterf 
-	???
-glSamplerParameterfv 
-	???
-glSamplerParameterIiv 
-	???
-glSamplerParameterIuiv 
-	???
-glGetSamplerParameteriv 
-	???
-glGetSamplerParameterIiv 
-	???
-glGetSamplerParameterfv 
-	???
-glGetSamplerParameterIuiv 
-	???
-glBindFragDataLocationIndexed
-	bind a user-defined varying out variable to a fragment shader color number and index
-glGetFragDataIndex
-	query the bindings of color indices to user-defined varying out variables
-glNamedString 
-	???
-glDeleteNamedString 
-	???
-glCompileShaderInclude 
-	???
-glIsNamedString 
-	???
-glGetNamedString 
-	???
-glGetNamedStringiv 
-	???
-glMinSampleShading
-	specifies minimum rate at which sample shaing takes place
-glBlendEquationi 
-	???
-glBlendEquationSeparatei 
-	???
-glBlendFunci 
-	???
-glBlendFuncSeparatei 
-	???
-glTexImage2DMultisample
-	establish the data storage, format, dimensions, and number of samples of a multisample texture's image
-glTexImage3DMultisample
-	establish the data storage, format, dimensions, and number of samples of a multisample texture's image
-glGetMultisamplefv 
-	???
-glSampleMaski
-	set the value of a sub-word of the sample mask
-glFenceSync
-	create a new sync object and insert it into the GL command stream
-glIsSync
-	determine if a name corresponds to a sync object
-glDeleteSync
-	delete a sync object
-glClientWaitSync
-	block and wait for a sync object to become signaled
-glWaitSync
-	instruct the GL server to block until the specified sync object becomes signaled
-glGetInteger64v 
-	???
-glGetSynciv 
-	???
-glProvokingVertex
-	specifiy the vertex to be used as the source of data for flat shaded varyings
-glDrawElementsBaseVertex
-	render primitives from array data with a per-element offset
-glDrawRangeElementsBaseVertex
-	render primitives from array data with a per-element offset
-glDrawElementsInstancedBaseVertex
-	render multiple instances of a set of primitives from array data with a per-element offset
-glMultiDrawElementsBaseVertex
-	render multiple sets of primitives by specifying indices of array data elements and an index to apply to each index
-glCopyBufferSubData, glCopyNamedBufferSubData
-	copy all or part of the data store of a buffer object to the data store of another buffer object
-glGetUniformIndices
-	retrieve the index of a named uniform block
-glGetActiveUniformsiv
-	Returns information about several active uniform variables for the specified program object
-glGetActiveUniformName
-	query the name of an active uniform
-glGetUniformBlockIndex
-	retrieve the index of a named uniform block
-glGetActiveUniformBlockiv 
-	???
-glGetActiveUniformBlockName
-	retrieve the name of an active uniform block
-glUniformBlockBinding
-	assign a binding point to an active uniform block
-glBindVertexArray
-	bind a vertex array object
-glDeleteVertexArrays
-	delete vertex array objects
-glGenVertexArrays
-	generate vertex array object names
-glIsVertexArray
-	determine if a name corresponds to a vertex array object
-glMapBufferRange, glMapNamedBufferRange
-	map all or part of a buffer object's data store into the client's address space
-glFlushMappedBufferRange, glFlushMappedNamedBufferRange
-	indicate modifications to a range of a mapped buffer
-glReleaseShaderCompiler
-	release resources consumed by the implementation's shader compiler
-glShaderBinary
-	load pre-compiled shader binaries
-glGetShaderPrecisionFormat
-	retrieve the range and precision for numeric formats supported by the shader compiler
-glDepthRangef 
-	???
-glClearDepthf 
-	???
-glGetProgramBinary
-	return a binary representation of a program object's compiled and linked executable source
-glProgramBinary
-	load a program object with a program binary
-glProgramParameteri 
-	???
-glUseProgramStages
-	bind stages of a program object to a program pipeline
-glActiveShaderProgram
-	set the active program object for a program pipeline object
-glCreateShaderProgramv 
-	???
-glBindProgramPipeline
-	bind a program pipeline to the current context
-glDeleteProgramPipelines
-	delete program pipeline objects
-glGenProgramPipelines
-	reserve program pipeline object names
-glIsProgramPipeline
-	determine if a name corresponds to a program pipeline object
-glGetProgramPipelineiv 
-	???
-glProgramUniform1i 
-	???
-glProgramUniform1iv 
-	???
-glProgramUniform1f 
-	???
-glProgramUniform1fv 
-	???
-glProgramUniform1d 
-	???
-glProgramUniform1dv 
-	???
-glProgramUniform1ui 
-	???
-glProgramUniform1uiv 
-	???
-glProgramUniform2i 
-	???
-glProgramUniform2iv 
-	???
-glProgramUniform2f 
-	???
-glProgramUniform2fv 
-	???
-glProgramUniform2d 
-	???
-glProgramUniform2dv 
-	???
-glProgramUniform2ui 
-	???
-glProgramUniform2uiv 
-	???
-glProgramUniform3i 
-	???
-glProgramUniform3iv 
-	???
-glProgramUniform3f 
-	???
-glProgramUniform3fv 
-	???
-glProgramUniform3d 
-	???
-glProgramUniform3dv 
-	???
-glProgramUniform3ui 
-	???
-glProgramUniform3uiv 
-	???
-glProgramUniform4i 
-	???
-glProgramUniform4iv 
-	???
-glProgramUniform4f 
-	???
-glProgramUniform4fv 
-	???
-glProgramUniform4d 
-	???
-glProgramUniform4dv 
-	???
-glProgramUniform4ui 
-	???
-glProgramUniform4uiv 
-	???
-glProgramUniformMatrix2fv 
-	???
-glProgramUniformMatrix3fv 
-	???
-glProgramUniformMatrix4fv 
-	???
-glProgramUniformMatrix2dv 
-	???
-glProgramUniformMatrix3dv 
-	???
-glProgramUniformMatrix4dv 
-	???
-glProgramUniformMatrix2x3fv 
-	???
-glProgramUniformMatrix3x2fv 
-	???
-glProgramUniformMatrix2x4fv 
-	???
-glProgramUniformMatrix4x2fv 
-	???
-glProgramUniformMatrix3x4fv 
-	???
-glProgramUniformMatrix4x3fv 
-	???
-glProgramUniformMatrix2x3dv 
-	???
-glProgramUniformMatrix3x2dv 
-	???
-glProgramUniformMatrix2x4dv 
-	???
-glProgramUniformMatrix4x2dv 
-	???
-glProgramUniformMatrix3x4dv 
-	???
-glProgramUniformMatrix4x3dv 
-	???
-glValidateProgramPipeline
-	validate a program pipeline object against current GL state
-glGetProgramPipelineInfoLog
-	retrieve the info log string from a program pipeline object
-glVertexAttribL1d 
-	???
-glVertexAttribL2d 
-	???
-glVertexAttribL3d 
-	???
-glVertexAttribL4d 
-	???
-glVertexAttribL1dv 
-	???
-glVertexAttribL2dv 
-	???
-glVertexAttribL3dv 
-	???
-glVertexAttribL4dv 
-	???
-glVertexAttribLPointer 
-	???
-glGetVertexAttribLdv 
-	???
-glViewportArrayv 
-	???
-glViewportIndexedf 
-	???
-glViewportIndexedfv 
-	???
-glScissorArrayv 
-	???
-glScissorIndexed
-	define the scissor box for a specific viewport
-glScissorIndexedv 
-	???
-glDepthRangeArrayv 
-	???
-glDepthRangeIndexed
-	specify mapping of depth values from normalized device coordinates to window coordinates for a specified viewport
-glGetFloati_v 
-	???
-glGetDoublei_v 
-	???
-glCreateSyncFromCLevent 
-	???
-glDebugMessageControl
-	control the reporting of debug messages in a debug context
-glDebugMessageInsert
-	inject an application-supplied message into the debug message queue
-glDebugMessageCallback
-	specify a callback to receive debugging messages from the GL
-glGetDebugMessageLog
-	retrieve messages from the debug message log
-glGetGraphicsResetStatus
-	check if the rendering context has not been lost due to software or hardware issues
-glGetnMapdv 
-	???
-glGetnMapfv 
-	???
-glGetnMapiv 
-	???
-glGetnPixelMapfv 
-	???
-glGetnPixelMapuiv 
-	???
-glGetnPixelMapusv 
-	???
-glGetnPolygonStipple 
-	???
-glGetnColorTable 
-	???
-glGetnConvolutionFilter 
-	???
-glGetnSeparableFilter 
-	???
-glGetnHistogram 
-	???
-glGetnMinmax 
-	???
-glGetnTexImage 
-	???
-glReadnPixels 
-	???
-glGetnCompressedTexImage 
-	???
-glGetnUniformfv 
-	???
-glGetnUniformiv 
-	???
-glGetnUniformuiv 
-	???
-glGetnUniformdv 
-	???
-glDrawArraysInstancedBaseInstance
-	draw multiple instances of a range of elements with offset applied to instanced attributes
-glDrawElementsInstancedBaseInstance
-	draw multiple instances of a set of elements with offset applied to instanced attributes
-glDrawElementsInstancedBaseVertexBaseInstance
-	render multiple instances of a set of primitives from array data with a per-element offset
-glDrawTransformFeedbackInstanced
-	render multiple instances of primitives using a count derived from a transform feedback object
-glDrawTransformFeedbackStreamInstanced
-	render multiple instances of primitives using a count derived from a specifed stream of a transform feedback object
-glGetInternalformativ 
-	???
-glGetActiveAtomicCounterBufferiv
-	retrieve information about the set of active atomic counter buffers for a program
-glBindImageTexture
-	bind a level of a texture to an image unit
-glMemoryBarrier
-	defines a barrier ordering memory transactions
-glTexStorage1D, glTextureStorage1D
-	simultaneously specify storage for all levels of a one-dimensional texture
-glTexStorage2D, glTextureStorage2D
-	simultaneously specify storage for all levels of a two-dimensional or one-dimensional array texture
-glTexStorage3D, glTextureStorage3D
-	simultaneously specify storage for all levels of a three-dimensional, two-dimensional array or cube-map array texture
-glTextureStorage1D 
-	???
-glTextureStorage2D 
-	???
-glTextureStorage3D 
-	???
-glClearBufferData, glClearNamedBufferData
-	fill a buffer object's data store with a fixed value
-glClearBufferSubData, glClearNamedBufferSubData
-	fill all or part of buffer object's data store with a fixed value
-glClearNamedBufferData 
-	???
-glClearNamedBufferSubData 
-	???
-glDispatchCompute
-	launch one or more compute work groups
-glDispatchComputeIndirect
-	launch one or more compute work groups using parameters stored in a buffer
-glCopyImageSubData
-	perform a raw data copy between two images
-glDebugMessageControl
-	control the reporting of debug messages in a debug context
-glDebugMessageInsert
-	inject an application-supplied message into the debug message queue
-glDebugMessageCallback
-	specify a callback to receive debugging messages from the GL
-glGetDebugMessageLog
-	retrieve messages from the debug message log
-glPushDebugGroup
-	push a named debug group into the command stream
-glPopDebugGroup
-	pop the active debug group
-glObjectLabel
-	label a named object identified within a namespace
-glGetObjectLabel
-	retrieve the label of a named object identified within a namespace
-glObjectPtrLabel
-	label a a sync object identified by a pointer
-glGetObjectPtrLabel
-	retrieve the label of a sync object identified by a pointer
-glFramebufferParameteri, glNamedFramebufferParameteri
-	set a named parameter of a framebuffer object
-glGetFramebufferParameteriv 
-	???
-glNamedFramebufferParameteri 
-	???
-glGetNamedFramebufferParameteriv 
-	???
-glGetInternalformati64v 
-	???
-glInvalidateTexSubImage
-	invalidate a region of a texture image
-glInvalidateTexImage
-	invalidate the entirety a texture image
-glInvalidateBufferSubData
-	invalidate a region of a buffer object's data store
-glInvalidateBufferData
-	invalidate the content of a buffer object's data store
-glInvalidateFramebuffer, glInvalidateNamedFramebufferData
-	invalidate the content of some or all of a framebuffer's attachments
-glInvalidateSubFramebuffer, glInvalidateNamedFramebufferSubData
-	invalidate the content of a region of some or all of a framebuffer's attachments
-glMultiDrawArraysIndirect
-	render multiple sets of primitives from array data, taking parameters from memory
-glMultiDrawElementsIndirect
-	render indexed primitives from array data, taking parameters from memory
-glGetProgramInterfaceiv 
-	???
-glGetProgramResourceIndex
-	query the index of a named resource within a program
-glGetProgramResourceName
-	query the name of an indexed resource within a program
-glGetProgramResourceiv 
-	???
-glGetProgramResourceLocation
-	query the location of a named resource within a program
-glGetProgramResourceLocationIndex
-	query the fragment color index of a named variable within a program
-glShaderStorageBlockBinding
-	change an active shader storage block binding
-glTexBufferRange, glTextureBufferRange
-	attach a range of a buffer object's data store to a buffer texture object
-glTextureBufferRange 
-	???
-glTexStorage2DMultisample, glTextureStorage2DMultisample
-	specify storage for a two-dimensional multisample texture
-glTexStorage3DMultisample, glTextureStorage3DMultisample
-	specify storage for a two-dimensional multisample array texture
-glTextureStorage2DMultisample 
-	???
-glTextureStorage3DMultisample 
-	???
-glTextureView
-	initialize a texture as a data alias of another texture's data store
-glBindVertexBuffer, glVertexArrayVertexBuffer
-	bind a buffer to a vertex buffer bind point
-glVertexAttribFormat, glVertexArrayAttribFormat
-	specify the organization of vertex arrays
-glVertexAttribIFormat 
-	???
-glVertexAttribLFormat 
-	???
-glVertexAttribBinding
-	associate a vertex attribute and a vertex buffer binding for a vertex array object
-glVertexBindingDivisor, glVertexArrayBindingDivisor
-	modify the rate at which generic vertex attributes
-    advance
-glVertexArrayBindVertexBuffer 
-	???
-glVertexArrayVertexAttribFormat 
-	???
-glVertexArrayVertexAttribIFormat 
-	???
-glVertexArrayVertexAttribLFormat 
-	???
-glVertexArrayVertexAttribBinding 
-	???
-glVertexArrayVertexBindingDivisor 
-	???
-glBufferStorage, glNamedBufferStorage
-	creates and initializes a buffer object's immutable data
-    store
-glNamedBufferStorage 
-	???
-glClearTexImage
-	fills all a texture image with a constant value
-glClearTexSubImage
-	fills all or part of a texture image with a constant value
-glBindBuffersBase
-	bind one or more buffer objects to a sequence of indexed buffer targets
-glBindBuffersRange
-	bind ranges of one or more buffer objects to a sequence of indexed buffer targets
-glBindTextures
-	bind one or more named textures to a sequence of consecutive texture units
-glBindSamplers
-	bind one or more named sampler objects to a sequence of consecutive sampler units
-glBindImageTextures
-	bind one or more named texture images to a sequence of consecutive image units
-glBindVertexBuffers, glVertexArrayVertexBuffers
-	attach multiple buffer objects to a vertex array object
-glClipControl
-	control clip coordinate to window coordinate behavior
-glMemoryBarrierByRegion 
-	???
-glCreateTransformFeedbacks
-	create transform feedback objects
-glTransformFeedbackBufferBase
-	bind a buffer object to a transform feedback buffer object
-glTransformFeedbackBufferRange
-	bind a range within a buffer object to a transform feedback buffer object
-glGetTransformFeedbackiv 
-	???
-glGetTransformFeedbacki_v 
-	???
-glGetTransformFeedbacki64_v 
-	???
-glCreateBuffers
-	create buffer objects
-glNamedBufferStorage 
-	???
-glNamedBufferData 
-	???
-glNamedBufferSubData 
-	???
-glCopyNamedBufferSubData 
-	???
-glClearNamedBufferData 
-	???
-glClearNamedBufferSubData 
-	???
-glMapNamedBuffer 
-	???
-glMapNamedBufferRange 
-	???
-glUnmapNamedBuffer 
-	???
-glFlushMappedNamedBufferRange 
-	???
-glGetNamedBufferParameteriv 
-	???
-glGetNamedBufferParameteri64v 
-	???
-glGetNamedBufferPointerv 
-	???
-glGetNamedBufferSubData 
-	???
-glCreateFramebuffers
-	create framebuffer objects
-glNamedFramebufferRenderbuffer 
-	???
-glNamedFramebufferParameteri 
-	???
-glNamedFramebufferTexture 
-	???
-glNamedFramebufferTextureLayer 
-	???
-glNamedFramebufferDrawBuffer 
-	???
-glNamedFramebufferDrawBuffers 
-	???
-glNamedFramebufferReadBuffer 
-	???
-glInvalidateNamedFramebufferData 
-	???
-glInvalidateNamedFramebufferSubData 
-	???
-glClearNamedFramebufferiv 
-	???
-glClearNamedFramebufferuiv 
-	???
-glClearNamedFramebufferfv 
-	???
-glClearNamedFramebufferfi 
-	???
-glBlitNamedFramebuffer 
-	???
-glCheckNamedFramebufferStatus 
-	???
-glGetNamedFramebufferParameteriv 
-	???
-glGetNamedFramebufferAttachmentParameteriv 
-	???
-glCreateRenderbuffers
-	create renderbuffer objects
-glNamedRenderbufferStorage 
-	???
-glNamedRenderbufferStorageMultisample 
-	???
-glGetNamedRenderbufferParameteriv 
-	???
-glCreateTextures
-	create texture objects
-glTextureBuffer 
-	???
-glTextureBufferRange 
-	???
-glTextureStorage1D 
-	???
-glTextureStorage2D 
-	???
-glTextureStorage3D 
-	???
-glTextureStorage2DMultisample 
-	???
-glTextureStorage3DMultisample 
-	???
-glTextureSubImage1D 
-	???
-glTextureSubImage2D 
-	???
-glTextureSubImage3D 
-	???
-glCompressedTextureSubImage1D 
-	???
-glCompressedTextureSubImage2D 
-	???
-glCompressedTextureSubImage3D 
-	???
-glCopyTextureSubImage1D 
-	???
-glCopyTextureSubImage2D 
-	???
-glCopyTextureSubImage3D 
-	???
-glTextureParameterf 
-	???
-glTextureParameterfv 
-	???
-glTextureParameteri 
-	???
-glTextureParameterIiv 
-	???
-glTextureParameterIuiv 
-	???
-glTextureParameteriv 
-	???
-glGenerateTextureMipmap 
-	???
-glBindTextureUnit
-	bind an existing texture object to the specified texture unit
-glGetTextureImage 
-	???
-glGetCompressedTextureImage 
-	???
-glGetTextureLevelParameterfv 
-	???
-glGetTextureLevelParameteriv 
-	???
-glGetTextureParameterfv 
-	???
-glGetTextureParameterIiv 
-	???
-glGetTextureParameterIuiv 
-	???
-glGetTextureParameteriv 
-	???
-glCreateVertexArrays
-	create vertex array objects
-glDisableVertexArrayAttrib 
-	???
-glEnableVertexArrayAttrib 
-	???
-glVertexArrayElementBuffer
-	configures element array buffer binding of a vertex array object
-glVertexArrayVertexBuffer 
-	???
-glVertexArrayVertexBuffers 
-	???
-glVertexArrayAttribBinding 
-	???
-glVertexArrayAttribFormat 
-	???
-glVertexArrayAttribIFormat 
-	???
-glVertexArrayAttribLFormat 
-	???
-glVertexArrayBindingDivisor 
-	???
-glGetVertexArrayiv
-	retrieve parameters of a vertex array object
-glGetVertexArrayIndexediv 
-	???
-glGetVertexArrayIndexed64iv 
-	???
-glCreateSamplers
-	create sampler objects
-glCreateProgramPipelines
-	create program pipeline objects
-glCreateQueries
-	create query objects
-glGetQueryBufferObjecti64v 
-	???
-glGetQueryBufferObjectiv 
-	???
-glGetQueryBufferObjectui64v 
-	???
-glGetQueryBufferObjectuiv 
-	???
-glGetTextureSubImage
-	retrieve a sub-region of a texture image from a texture
-    object
-glGetCompressedTextureSubImage
-	retrieve a sub-region of a compressed texture image from a
-    compressed texture object
-glGetGraphicsResetStatus
-	check if the rendering context has not been lost due to software or hardware issues
-glReadnPixels 
-	???
-glGetnUniformfv 
-	???
-glGetnUniformiv 
-	???
-glGetnUniformuiv 
-	???
-glTextureBarrier
-	controls the ordering of reads and writes to rendered fragments across drawing commands
+		// MULTISAMP
+		glTexImage2DMultisample
+			establish the data storage, format, dimensions, and number of samples of a multisample texture's image
+		glTexImage3DMultisample
+			establish the data storage, format, dimensions, and number of samples of a multisample texture's image
+
+		// C → G COMPRESSED
+		glCompressedTexImage3D
+			specify a three-dimensional texture image in a compressed format
+		glCompressedTexImage2D
+			specify a two-dimensional texture image in a compressed format
+		glCompressedTexImage1D
+			specify a one-dimensional texture image in a compressed format
+		glCompressedTexSubImage3D, glCompressedTextureSubImage3D
+			specify a three-dimensional texture subimage in a compressed format
+		glCompressedTexSubImage2D, glCompressedTextureSubImage2D
+			specify a two-dimensional texture subimage in a compressed format
+		glCompressedTexSubImage1D, glCompressedTextureSubImage1D
+			specify a one-dimensional texture subimage in a compressed
+			format
+
+		// G → C COMPRESSED
+		glGetCompressedTexImage
+			return a compressed texture image
+
+		// G → C
+		glGetTexImage
+			return a texture image
+
+		// G → G
+		glCopyTexImage1D
+			copy pixels into a 1D texture image
+		glCopyTexImage2D
+			copy pixels into a 2D texture image
+		glCopyTexSubImage1D, glCopyTextureSubImage1D
+			copy a one-dimensional texture subimage
+		glCopyTexSubImage2D, glCopyTextureSubImage2D
+			copy a two-dimensional texture subimage
+	}
+	public {/*TEXTURE STATE}*/
+		glActiveTexture
+			select active texture unit
+		glBindTexture
+			bind a named texture to a texturing target
+		glDeleteTextures
+			delete named textures
+		glGenTextures
+			generate texture names
+		glIsTexture
+			determine if a name corresponds to a texture
+	}
+	public {/*PARAMETERS}*/
+		glGetTexParameterfv 
+			???
+		glGetTexParameteriv 
+			???
+		glGetTexLevelParameterfv 
+			???
+		glGetTexLevelParameteriv 
+			???
+		glTexParameterIiv 
+			???
+		glTexParameterIuiv 
+			???
+		glGetTexParameterIiv 
+			???
+		glGetTexParameterIuiv 
+			???
+		glTexParameterf 
+			???
+		glTexParameterfv 
+			???
+		glTexParameteri 
+			???
+		glTexParameteriv 
+			???
+	}
+	public {/*MIPMAP}*/
+		glGenerateMipmap, glGenerateTextureMipmap
+			generate mipmaps for a specified texture object
+	}
+}
+public {/*SAMPLING}*/
+	glSampleCoverage
+		specify multisample coverage parameters
+	glPointParameterf 
+		???
+	glPointParameterfv 
+		???
+	glPointParameteri 
+		???
+	glPointParameteriv 
+		???
+	glMinSampleShading
+		specifies minimum rate at which sample shading takes place
+	glGenSamplers
+		generate sampler object names
+	glDeleteSamplers
+		delete named sampler objects
+	glIsSampler
+		determine if a name corresponds to a sampler object
+	glBindSampler
+		bind a named sampler to a texturing target
+	glSamplerParameteri 
+		???
+	glSamplerParameteriv 
+		???
+	glSamplerParameterf 
+		???
+	glSamplerParameterfv 
+		???
+	glSamplerParameterIiv 
+		???
+	glSamplerParameterIuiv 
+		???
+	glGetSamplerParameteriv 
+		???
+	glGetSamplerParameterIiv 
+		???
+	glGetSamplerParameterfv 
+		???
+	glGetSamplerParameterIuiv 
+		???
+	glSampleMaski
+		set the value of a sub-word of the sample mask
+}
+public {/*SYNCHRONIZATION}*/
+	glCreateSyncFromCLevent 
+		???
+	glFinish
+		block until all GL execution is complete
+	glFlush
+		force execution of GL commands in finite time
+	glFenceSync
+		create a new sync object and insert it into the GL command stream
+	glIsSync
+		determine if a name corresponds to a sync object
+	glDeleteSync
+		delete a sync object
+	glClientWaitSync
+		block and wait for a sync object to become signaled
+	glWaitSync
+		instruct the GL server to block until the specified sync object becomes signaled
+	glGetSynciv 
+		???
+}
+public {/*UNIFORM}*/
+	glGetUniformIndices
+		retrieve the index of a named uniform block
+	glGetActiveUniformsiv
+		Returns information about several active uniform variables for the specified program object
+	glGetActiveUniformName
+		query the name of an active uniform
+	glGetUniformBlockIndex
+		retrieve the index of a named uniform block
+	glGetActiveUniformBlockiv 
+		???
+	glGetActiveUniformBlockName
+		retrieve the name of an active uniform block
+	glUniformBlockBinding
+		assign a binding point to an active uniform block
+	glGetActiveUniform
+		Returns information about an active uniform variable for the specified program object
+	glGetUniformLocation
+		Returns the location of a uniform variable
+	glGetUniformfv 
+		???
+	glGetUniformiv 
+		???
+	glUniform1f 
+		???
+	glUniform2f 
+		???
+	glUniform3f 
+		???
+	glUniform4f 
+		???
+	glUniform1i 
+		???
+	glUniform2i 
+		???
+	glUniform4i 
+		???
+	glUniform1fv 
+		???
+	glUniform2fv 
+		???
+	glUniform3fv 
+		???
+	glUniform4fv 
+		???
+	glUniform1iv 
+		???
+	glUniform2iv 
+		???
+	glUniform3iv 
+		???
+	glUniform4iv 
+		???
+	glUniformMatrix2fv 
+		???
+	glUniformMatrix3fv 
+		???
+	glUniformMatrix4fv 
+		???
+	glUniformMatrix2x3fv 
+		???
+	glUniformMatrix3x2fv 
+		???
+	glUniformMatrix2x4fv 
+		???
+	glUniformMatrix4x2fv 
+		???
+	glUniformMatrix3x4fv 
+		???
+	glUniformMatrix4x3fv 
+		???
+	glGetUniformuiv 
+		???
+	glUniform1ui 
+		???
+	glUniform2ui 
+		???
+	glUniform3ui 
+		???
+	glUniform4ui 
+		???
+	glUniform1uiv 
+		???
+	glUniform2uiv 
+		???
+	glUniform3uiv 
+		???
+	glUniform4uiv 
+		???
+	glUniform1d 
+		???
+	glUniform2d 
+		???
+	glUniform3d 
+		???
+	glUniform4d 
+		???
+	glUniform1dv 
+		???
+	glUniform2dv 
+		???
+	glUniform3dv 
+		???
+	glUniform4dv 
+		???
+	glUniformMatrix2dv 
+		???
+	glUniformMatrix3dv 
+		???
+	glUniformMatrix4dv 
+		???
+	glUniformMatrix2x3dv 
+		???
+	glUniformMatrix2x4dv 
+		???
+	glUniformMatrix3x2dv 
+		???
+	glUniformMatrix3x4dv 
+		???
+	glUniformMatrix4x2dv 
+		???
+	glUniformMatrix4x3dv 
+		???
+	glGetUniformdv 
+		???
+}
+public {/*VERTEX ARRAY}*/
+	glBindVertexArray
+		bind a vertex array object
+	glDeleteVertexArrays
+		delete vertex array objects
+	glGenVertexArrays
+		generate vertex array object names
+	glIsVertexArray
+		determine if a name corresponds to a vertex array object
+}
+public {/*BUFFER}*/
+	public {/*BUFFER STATE CONTROL}*/
+		glBindBuffer
+			bind a named buffer object
+		glDeleteBuffers
+			delete named buffer objects
+		glGenBuffers
+			generate buffer object names
+		glIsBuffer
+			determine if a name corresponds to a buffer object
+		glBindBufferRange
+			bind a range within a buffer object to an indexed buffer target
+		glBindBufferBase
+			bind a buffer object to an indexed buffer target
+		glFlushMappedBufferRange, glFlushMappedNamedBufferRange
+			indicate modifications to a range of a mapped buffer
+	}
+	public {/*BUFFER TRANSFER}*/
+		// C → G
+		glBufferData, glNamedBufferData
+			creates and initializes a buffer object's data
+			store
+		glBufferSubData, glNamedBufferSubData
+			updates a subset of a buffer object's data store
+
+		// G → C
+		glGetBufferSubData, glGetNamedBufferSubData
+			returns a subset of a buffer object's data store
+
+		// G ↔ C
+		glMapBuffer, glMapNamedBuffer
+			map all of a buffer object's data store into the client's address space
+		glUnmapBuffer, glUnmapNamedBuffer
+			release the mapping of a buffer object's data store into the client's address space
+		glMapBufferRange, glMapNamedBufferRange
+			map all or part of a buffer object's data store into the client's address space
+
+		// G → C
+		glGetBufferPointerv, glGetNamedBufferPointerv
+			return the pointer to a mapped buffer object's data store
+
+		// G → G
+		glCopyBufferSubData, glCopyNamedBufferSubData
+			copy all or part of the data store of a buffer object to the data store of another buffer object
+	}
+}
+public {/*PROGRAM}*/
+	glGetProgramBinary
+		return a binary representation of a program object's compiled and linked executable source
+	glProgramBinary
+		load a program object with a program binary
+	glProgramParameteri 
+		???
+	glUseProgramStages
+		bind stages of a program object to a program pipeline
+	glActiveShaderProgram
+		set the active program object for a program pipeline object
+	glCreateShaderProgramv 
+		???
+	glBindProgramPipeline
+		bind a program pipeline to the current context
+	glDeleteProgramPipelines
+		delete program pipeline objects
+	glGenProgramPipelines
+		reserve program pipeline object names
+	glIsProgramPipeline
+		determine if a name corresponds to a program pipeline object
+	glGetProgramPipelineiv 
+		???
+	glProgramUniform1i 
+		???
+	glProgramUniform1iv 
+		???
+	glProgramUniform1f 
+		???
+	glProgramUniform1fv 
+		???
+	glProgramUniform1d 
+		???
+	glProgramUniform1dv 
+		???
+	glProgramUniform1ui 
+		???
+	glProgramUniform1uiv 
+		???
+	glProgramUniform2i 
+		???
+	glProgramUniform2iv 
+		???
+	glProgramUniform2f 
+		???
+	glProgramUniform2fv 
+		???
+	glProgramUniform2d 
+		???
+	glProgramUniform2dv 
+		???
+	glProgramUniform2ui 
+		???
+	glProgramUniform2uiv 
+		???
+	glProgramUniform3i 
+		???
+	glProgramUniform3iv 
+		???
+	glProgramUniform3f 
+		???
+	glProgramUniform3fv 
+		???
+	glProgramUniform3d 
+		???
+	glProgramUniform3dv 
+		???
+	glProgramUniform3ui 
+		???
+	glProgramUniform3uiv 
+		???
+	glProgramUniform4i 
+		???
+	glProgramUniform4iv 
+		???
+	glProgramUniform4f 
+		???
+	glProgramUniform4fv 
+		???
+	glProgramUniform4d 
+		???
+	glProgramUniform4dv 
+		???
+	glProgramUniform4ui 
+		???
+	glProgramUniform4uiv 
+		???
+	glProgramUniformMatrix2fv 
+		???
+	glProgramUniformMatrix3fv 
+		???
+	glProgramUniformMatrix4fv 
+		???
+	glProgramUniformMatrix2dv 
+		???
+	glProgramUniformMatrix3dv 
+		???
+	glProgramUniformMatrix4dv 
+		???
+	glProgramUniformMatrix2x3fv 
+		???
+	glProgramUniformMatrix3x2fv 
+		???
+	glProgramUniformMatrix2x4fv 
+		???
+	glProgramUniformMatrix4x2fv 
+		???
+	glProgramUniformMatrix3x4fv 
+		???
+	glProgramUniformMatrix4x3fv 
+		???
+	glProgramUniformMatrix2x3dv 
+		???
+	glProgramUniformMatrix3x2dv 
+		???
+	glProgramUniformMatrix2x4dv 
+		???
+	glProgramUniformMatrix4x2dv 
+		???
+	glProgramUniformMatrix3x4dv 
+		???
+	glProgramUniformMatrix4x3dv 
+		???
+	glValidateProgramPipeline
+		validate a program pipeline object against current GL state
+	glGetProgramPipelineInfoLog
+		retrieve the info log string from a program pipeline object
+	glReleaseShaderCompiler
+		release resources consumed by the implementation's shader compiler
+	glShaderBinary
+		load pre-compiled shader binaries
+	glGetShaderPrecisionFormat
+		retrieve the range and precision for numeric formats supported by the shader compiler
+	glCreateProgram
+		Creates a program object
+	glCreateShader
+		Creates a shader object
+	glDeleteProgram
+		Deletes a program object
+	glDeleteShader
+		Deletes a shader object
+	// COMPILATION
+	glCompileShader
+		Compiles a shader object
+	glGetProgramiv 
+		???
+	glGetProgramInfoLog
+		Returns the information log for a program object
+	glValidateProgram
+		Validates a program object
+	glGetShaderiv 
+		???
+	glGetShaderInfoLog
+		Returns the information log for a shader object
+	glGetShaderSource
+		Returns the source code string from a shader object
+	glIsProgram
+		Determines if a name corresponds to a program object
+	glIsShader
+		Determines if a name corresponds to a shader object
+	glLinkProgram
+		Links a program object
+	glShaderSource
+		Replaces the source code in a shader object
+	glUseProgram
+		Installs a program object as part of current rendering state
+	// ATTACHMENT
+	glAttachShader
+		Attaches a shader object to a program object
+	glDetachShader
+		Detaches a shader object from a program object to which it is attached
+	glGetAttachedShaders
+		Returns the handles of the shader objects attached to a program object
+}
+public {/*SHADER VARIABLES}*/
+	public {/*OUTPUT}*/
+		glBindFragDataLocation
+			bind a user-defined varying out variable to a fragment shader color number
+		glGetFragDataLocation
+			query the bindings of color numbers to user-defined varying out variables
+		glBindFragDataLocationIndexed
+			bind a user-defined varying out variable to a fragment shader color number and index
+		glGetFragDataIndex
+			query the bindings of color indices to user-defined varying out variables
+	}
+}
+public {/*ATTRIBUTES}*/
+	glVertexAttribL1d 
+		???
+	glVertexAttribL2d 
+		???
+	glVertexAttribL3d 
+		???
+	glVertexAttribL4d 
+		???
+	glVertexAttribL1dv 
+		???
+	glVertexAttribL2dv 
+		???
+	glVertexAttribL3dv 
+		???
+	glVertexAttribL4dv 
+		???
+	glVertexAttribLPointer 
+		???
+	glGetVertexAttribLdv 
+		???
+	glBindAttribLocation
+		Associates a generic vertex attribute index with a named attribute variable
+	glDisableVertexAttribArray 
+		???
+	glEnableVertexAttribArray
+		Enable or disable a generic vertex attribute array
+	glGetActiveAttrib
+		Returns information about an active attribute variable for the specified program object
+	glGetAttribLocation
+		Returns the location of an attribute variable
+	glGetVertexAttribdv 
+		???
+	glGetVertexAttribfv 
+		???
+	glGetVertexAttribiv 
+		???
+	glGetVertexAttribPointerv
+		return the address of the specified generic vertex attribute pointer
+	glVertexAttribIPointer 
+		???
+	glGetVertexAttribIiv 
+		???
+	glGetVertexAttribIuiv 
+		???
+	glVertexAttribI1i 
+		???
+	glVertexAttribI2i 
+		???
+	glVertexAttribI3i 
+		???
+	glVertexAttribI4i 
+		???
+	glVertexAttribI1ui 
+		???
+	glVertexAttribI2ui 
+		???
+	glVertexAttribI3ui 
+		???
+	glVertexAttribI4ui 
+		???
+	glVertexAttribI1iv 
+		???
+	glVertexAttribI2iv 
+		???
+	glVertexAttribI3iv 
+		???
+	glVertexAttribI4iv 
+		???
+	glVertexAttribI1uiv 
+		???
+	glVertexAttribI2uiv 
+		???
+	glVertexAttribI3uiv 
+		???
+	glVertexAttribI4uiv 
+		???
+	glVertexAttribI4bv 
+		???
+	glVertexAttribI4sv 
+		???
+	glVertexAttribI4ubv 
+		???
+	glVertexAttribI4usv 
+		???
+}
+public {/*VIEWPORT}*/
+	glViewport
+		set the viewport
+	glViewportArrayv 
+		???
+	glViewportIndexedf 
+		???
+	glViewportIndexedfv 
+		???
+}
+public {/*SCISSOR}*/
+	glScissor
+		define the scissor box
+	glScissorArrayv 
+		???
+	glScissorIndexed
+		define the scissor box for a specific viewport
+	glScissorIndexedv 
+		???
+}
+public {/*ERROR}*/
+	glGetError
+		return error information
+	glDebugMessageControl
+		control the reporting of debug messages in a debug context
+	glDebugMessageInsert
+		inject an application-supplied message into the debug message queue
+	glDebugMessageCallback
+		specify a callback to receive debugging messages from the GL
+	glGetDebugMessageLog
+		retrieve messages from the debug message log
+	glGetGraphicsResetStatus
+		check if the rendering context has not been lost due to software or hardware issues
+}
+	glGetInternalformativ 
+		???
+	glGetActiveAtomicCounterBufferiv
+		retrieve information about the set of active atomic counter buffers for a program
+	glBindImageTexture
+		bind a level of a texture to an image unit
+	glMemoryBarrier
+		defines a barrier ordering memory transactions
+	glTexStorage1D, glTextureStorage1D
+		simultaneously specify storage for all levels of a one-dimensional texture
+	glTexStorage2D, glTextureStorage2D
+		simultaneously specify storage for all levels of a two-dimensional or one-dimensional array texture
+	glTexStorage3D, glTextureStorage3D
+		simultaneously specify storage for all levels of a three-dimensional, two-dimensional array or cube-map array texture
+	glTextureStorage1D 
+		???
+	glTextureStorage2D 
+		???
+	glTextureStorage3D 
+		???
+	glClearBufferData, glClearNamedBufferData
+		fill a buffer object's data store with a fixed value
+	glClearBufferSubData, glClearNamedBufferSubData
+		fill all or part of buffer object's data store with a fixed value
+	glClearNamedBufferData 
+		???
+	glClearNamedBufferSubData 
+		???
+	glDispatchCompute
+		launch one or more compute work groups
+	glDispatchComputeIndirect
+		launch one or more compute work groups using parameters stored in a buffer
+	glCopyImageSubData
+		perform a raw data copy between two images
+	glDebugMessageControl
+		control the reporting of debug messages in a debug context
+	glDebugMessageInsert
+		inject an application-supplied message into the debug message queue
+	glDebugMessageCallback
+		specify a callback to receive debugging messages from the GL
+	glGetDebugMessageLog
+		retrieve messages from the debug message log
+	glPushDebugGroup
+		push a named debug group into the command stream
+	glPopDebugGroup
+		pop the active debug group
+	glObjectLabel
+		label a named object identified within a namespace
+	glGetObjectLabel
+		retrieve the label of a named object identified within a namespace
+	glObjectPtrLabel
+		label a a sync object identified by a pointer
+	glGetObjectPtrLabel
+		retrieve the label of a sync object identified by a pointer
+	glFramebufferParameteri, glNamedFramebufferParameteri
+		set a named parameter of a framebuffer object
+	glGetFramebufferParameteriv 
+		???
+	glNamedFramebufferParameteri 
+		???
+	glGetNamedFramebufferParameteriv 
+		???
+	glGetInternalformati64v 
+		???
+	glInvalidateTexSubImage
+		invalidate a region of a texture image
+	glInvalidateTexImage
+		invalidate the entirety a texture image
+	glInvalidateBufferSubData
+		invalidate a region of a buffer object's data store
+	glInvalidateBufferData
+		invalidate the content of a buffer object's data store
+	glInvalidateFramebuffer, glInvalidateNamedFramebufferData
+		invalidate the content of some or all of a framebuffer's attachments
+	glInvalidateSubFramebuffer, glInvalidateNamedFramebufferSubData
+		invalidate the content of a region of some or all of a framebuffer's attachments
+	glMultiDrawArraysIndirect
+		render multiple sets of primitives from array data, taking parameters from memory
+	glMultiDrawElementsIndirect
+		render indexed primitives from array data, taking parameters from memory
+	glGetProgramInterfaceiv 
+		???
+	glGetProgramResourceIndex
+		query the index of a named resource within a program
+	glGetProgramResourceName
+		query the name of an indexed resource within a program
+	glGetProgramResourceiv 
+		???
+	glGetProgramResourceLocation
+		query the location of a named resource within a program
+	glGetProgramResourceLocationIndex
+		query the fragment color index of a named variable within a program
+	glShaderStorageBlockBinding
+		change an active shader storage block binding
+	glTexBufferRange, glTextureBufferRange
+		attach a range of a buffer object's data store to a buffer texture object
+	glTextureBufferRange 
+		???
+	glTexStorage2DMultisample, glTextureStorage2DMultisample
+		specify storage for a two-dimensional multisample texture
+	glTexStorage3DMultisample, glTextureStorage3DMultisample
+		specify storage for a two-dimensional multisample array texture
+	glTextureStorage2DMultisample 
+		???
+	glTextureStorage3DMultisample 
+		???
+	glTextureView
+		initialize a texture as a data alias of another texture's data store
+	glBindVertexBuffer, glVertexArrayVertexBuffer
+		bind a buffer to a vertex buffer bind point
+	glVertexAttribFormat, glVertexArrayAttribFormat
+		specify the organization of vertex arrays
+	glVertexAttribIFormat 
+		???
+	glVertexAttribLFormat 
+		???
+	glVertexAttribBinding
+		associate a vertex attribute and a vertex buffer binding for a vertex array object
+	glVertexBindingDivisor, glVertexArrayBindingDivisor
+		modify the rate at which generic vertex attributes
+		advance
+	glVertexArrayBindVertexBuffer 
+		???
+	glVertexArrayVertexAttribFormat 
+		???
+	glVertexArrayVertexAttribIFormat 
+		???
+	glVertexArrayVertexAttribLFormat 
+		???
+	glVertexArrayVertexAttribBinding 
+		???
+	glVertexArrayVertexBindingDivisor 
+		???
+	glBufferStorage, glNamedBufferStorage
+		creates and initializes a buffer object's immutable data
+		store
+	glNamedBufferStorage 
+		???
+	glClearTexImage
+		fills all a texture image with a constant value
+	glClearTexSubImage
+		fills all or part of a texture image with a constant value
+	glBindBuffersBase
+		bind one or more buffer objects to a sequence of indexed buffer targets
+	glBindBuffersRange
+		bind ranges of one or more buffer objects to a sequence of indexed buffer targets
+	glBindTextures
+		bind one or more named textures to a sequence of consecutive texture units
+	glBindSamplers
+		bind one or more named sampler objects to a sequence of consecutive sampler units
+	glBindImageTextures
+		bind one or more named texture images to a sequence of consecutive image units
+	glBindVertexBuffers, glVertexArrayVertexBuffers
+		attach multiple buffer objects to a vertex array object
+	glClipControl
+		control clip coordinate to window coordinate behavior
+	glMemoryBarrierByRegion 
+		???
+	glCreateTransformFeedbacks
+		create transform feedback objects
+	glTransformFeedbackBufferBase
+		bind a buffer object to a transform feedback buffer object
+	glTransformFeedbackBufferRange
+		bind a range within a buffer object to a transform feedback buffer object
+	glGetTransformFeedbackiv 
+		???
+	glGetTransformFeedbacki_v 
+		???
+	glGetTransformFeedbacki64_v 
+		???
+	glCreateBuffers
+		create buffer objects
+	glNamedBufferStorage 
+		???
+	glNamedBufferData 
+		???
+	glNamedBufferSubData 
+		???
+	glCopyNamedBufferSubData 
+		???
+	glClearNamedBufferData 
+		???
+	glClearNamedBufferSubData 
+		???
+	glMapNamedBuffer 
+		???
+	glMapNamedBufferRange 
+		???
+	glUnmapNamedBuffer 
+		???
+	glFlushMappedNamedBufferRange 
+		???
+	glGetNamedBufferParameteriv 
+		???
+	glGetNamedBufferParameteri64v 
+		???
+	glGetNamedBufferPointerv 
+		???
+	glGetNamedBufferSubData 
+		???
+	glCreateFramebuffers
+		create framebuffer objects
+	glNamedFramebufferRenderbuffer 
+		???
+	glNamedFramebufferParameteri 
+		???
+	glNamedFramebufferTexture 
+		???
+	glNamedFramebufferTextureLayer 
+		???
+	glNamedFramebufferDrawBuffer 
+		???
+	glNamedFramebufferDrawBuffers 
+		???
+	glNamedFramebufferReadBuffer 
+		???
+	glInvalidateNamedFramebufferData 
+		???
+	glInvalidateNamedFramebufferSubData 
+		???
+	glClearNamedFramebufferiv 
+		???
+	glClearNamedFramebufferuiv 
+		???
+	glClearNamedFramebufferfv 
+		???
+	glClearNamedFramebufferfi 
+		???
+	glBlitNamedFramebuffer 
+		???
+	glCheckNamedFramebufferStatus 
+		???
+	glGetNamedFramebufferParameteriv 
+		???
+	glGetNamedFramebufferAttachmentParameteriv 
+		???
+	glCreateRenderbuffers
+		create renderbuffer objects
+	glNamedRenderbufferStorage 
+		???
+	glNamedRenderbufferStorageMultisample 
+		???
+	glGetNamedRenderbufferParameteriv 
+		???
+	glCreateTextures
+		create texture objects
+	glTextureBuffer 
+		???
+	glTextureBufferRange 
+		???
+	glTextureStorage1D 
+		???
+	glTextureStorage2D 
+		???
+	glTextureStorage3D 
+		???
+	glTextureStorage2DMultisample 
+		???
+	glTextureStorage3DMultisample 
+		???
+	glTextureSubImage1D 
+		???
+	glTextureSubImage2D 
+		???
+	glTextureSubImage3D 
+		???
+	glCompressedTextureSubImage1D 
+		???
+	glCompressedTextureSubImage2D 
+		???
+	glCompressedTextureSubImage3D 
+		???
+	glCopyTextureSubImage1D 
+		???
+	glCopyTextureSubImage2D 
+		???
+	glCopyTextureSubImage3D 
+		???
+	glTextureParameterf 
+		???
+	glTextureParameterfv 
+		???
+	glTextureParameteri 
+		???
+	glTextureParameterIiv 
+		???
+	glTextureParameterIuiv 
+		???
+	glTextureParameteriv 
+		???
+	glGenerateTextureMipmap 
+		???
+	glBindTextureUnit
+		bind an existing texture object to the specified texture unit
+	glGetTextureImage 
+		???
+	glGetCompressedTextureImage 
+		???
+	glGetTextureLevelParameterfv 
+		???
+	glGetTextureLevelParameteriv 
+		???
+	glGetTextureParameterfv 
+		???
+	glGetTextureParameterIiv 
+		???
+	glGetTextureParameterIuiv 
+		???
+	glGetTextureParameteriv 
+		???
+	glCreateVertexArrays
+		create vertex array objects
+	glDisableVertexArrayAttrib 
+		???
+	glEnableVertexArrayAttrib 
+		???
+	glVertexArrayElementBuffer
+		configures element array buffer binding of a vertex array object
+	glVertexArrayVertexBuffer 
+		???
+	glVertexArrayVertexBuffers 
+		???
+	glVertexArrayAttribBinding 
+		???
+	glVertexArrayAttribFormat 
+		???
+	glVertexArrayAttribIFormat 
+		???
+	glVertexArrayAttribLFormat 
+		???
+	glVertexArrayBindingDivisor 
+		???
+	glGetVertexArrayiv
+		retrieve parameters of a vertex array object
+	glGetVertexArrayIndexediv 
+		???
+	glGetVertexArrayIndexed64iv 
+		???
+	glCreateSamplers
+		create sampler objects
+	glCreateProgramPipelines
+		create program pipeline objects
+	glCreateQueries
+		create query objects
+	glGetQueryBufferObjecti64v 
+		???
+	glGetQueryBufferObjectiv 
+		???
+	glGetQueryBufferObjectui64v 
+		???
+	glGetQueryBufferObjectuiv 
+		???
+	glGetTextureSubImage
+		retrieve a sub-region of a texture image from a texture
+		object
+	glGetCompressedTextureSubImage
+		retrieve a sub-region of a compressed texture image from a
+		compressed texture object
+	glGetGraphicsResetStatus
+		check if the rendering context has not been lost due to software or hardware issues
+	glReadnPixels 
+		???
+	glGetnUniformfv 
+		???
+	glGetnUniformiv 
+		???
+	glGetnUniformuiv 
+		???
+	glTextureBarrier
+		controls the ordering of reads and writes to rendered fragments across drawing commands
 
