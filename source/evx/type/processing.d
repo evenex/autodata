@@ -115,18 +115,27 @@ template Zip (T...)
 		alias Zip = Map!(ToPair, Iota!(T.length/2));
 	}
 
-alias Interleave (T...) = Map!(Pair!().Both!Cons, Zip!T);
-	static assert (Interleave!(1,2,3,4,5,6) == Cons!(1,4,2,5,3,6));
-template Deinterleave (T...)
-	if (T.length % 2 == 0)
+template InterleaveNLists (uint n, T...)
+	if (T.length % n == 0)
 	{/*...}*/
-		alias Even = Map!(λ!q{(uint i) = 2*i}, Iota!(T.length/2));
-		alias Odd = Map!(λ!q{(uint i) = i + 1}, Even);
-		alias Get (uint i) = Cons!(T[i]);
+		template Group (uint i)
+			{/*...}*/
+				alias Item (uint j) = Cons!(T[($/n)*j + i]);
 
-		alias Deinterleave = Cons!(Map!(Get, Even, Odd));
+				alias Group = Map!(Item, Iota!n);
+			}
+
+		alias InterleaveNLists = Map!(Group, Iota!(T.length/n));
 	}
-	static assert (Deinterleave!(1,4,2,5,3,6) == Cons!(1,2,3,4,5,6));
+	static assert (InterleaveNLists!(2, 0,1,2,3,4,5) == Cons!(0,3,1,4,2,5));
+	static assert (InterleaveNLists!(3, 0,1,2,3,4,5) == Cons!(0,2,4,1,3,5));
+
+alias DeinterleaveNLists (uint n, T...) = InterleaveNLists!(T.length/n, T);
+	static assert (DeinterleaveNLists!(2, 0,3,1,4,2,5) == Cons!(0,1,2,3,4,5));
+	static assert (DeinterleaveNLists!(3, 0,2,4,1,3,5) == Cons!(0,1,2,3,4,5));
+
+alias Interleave (T...) = InterleaveNLists!(2,T);
+template Deinterleave (T...) = DeinterleaveNLists!(2,T);
 
 template Sort (alias compare, T...)
 	{/*...}*/
