@@ -1,12 +1,18 @@
 module evx.graphics.error;
 
+private {/*imports}*/
+	import std.conv;
+
+	import derelict.opengl3.gl3;
+}
+
 package struct ErrorHandler (Cases...)
 	{/*...}*/
 		private struct Case
 			{/*...}*/
 				GLenum condition;
 				bool delegate()[] errors;
-				string delegate()[] reasons;
+				string [] reasons;
 			}
 		private Case[] cases;
 
@@ -17,12 +23,16 @@ package struct ErrorHandler (Cases...)
 				return this;
 			}
 
-		auto ref opCall (bool delegate() error, string delegate() reason)
+		auto ref opCall (bool delegate() error, string reason)
 			{/*...}*/
 				cases.back.errors ~= error;
 				cases.back.reasons ~= reason;
 
 				return this;
+			}
+		auto ref opCall (string reason)
+			{/*...}*/
+				return this (() => true, reason);
 			}
 
 		~this ()
@@ -35,7 +45,7 @@ package struct ErrorHandler (Cases...)
 							{/*...}*/
 								with (found)
 									foreach (error, reason; zip (errors, reasons))
-										assert (not (error ()), reason ());
+										assert (not (error ()), reason);
 
 								assert (0, found.condition.text ~ `: cause unknown`);
 							}
@@ -51,7 +61,7 @@ package struct ErrorHandler (Cases...)
 							`error/reason lengths mismatch`
 						);
 						assert (
-							not (cases[0..i].contains (
+							not (cases[0..i].contains!(
 								c => c.condition == handled.condition
 							),
 							`condition ` ~ handled.condition.text ~ ` already handled`

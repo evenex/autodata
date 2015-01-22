@@ -341,19 +341,10 @@ struct gl
 
 		auto get (T)(GLenum param)
 			out {/*...}*/
-				switch (glGetError ())
-					{/*...}*/
-						case GL_INVALID_ENUM:
-							assert (0,
-								param.text ~ ` is not an accepted value`
-							);
-						case GL_INVALID_VALUE:
-							assert (0,
-								`index is outside of valid range`
-							);
-						default:
-							assert (0, `unknown error`);
-					}
+				handle (GL_INVALID_ENUM)
+					(param.text ~ ` is not an accepted value`)
+				.handle (GL_INVALID_VALUE)
+					(`index is outside of valid range`);
 			}
 			body {/*...}*/
 				T value;
@@ -383,23 +374,15 @@ struct gl
 				{/*...}*/
 					void enable_vertex_attrib_array (GLuint index)
 						out {/*...}*/
-							switch (glGetError ())
-								{/*...}*/
-									case GL_NO_ERROR:
-										break;
-									case GL_INVALID_OPERATION:
-										assert (is_buffer (gl.array_buffer),
-											`no buffer bound to array buffer`
-										);
-										assert (0, `unknown invalid operation`);
-									case GL_INVALID_VALUE:
-										assert (0, 
-											`index exceeds max vertex attributes `
-											` (` ~ get!int (GL_MAX_VERTEX_ATTRIBS) ~ `)`
-										);
-									default:
-										assert (0, `unknown error`);
-								}
+							handle (GL_INVALID_OPERATION)
+								(() => is_buffer (gl.array_buffer),
+									`no buffer bound to array buffer`
+								)
+							handle (GL_INVALID_VALUE)
+								(
+									`index exceeds max vertex attributes `
+									` (` ~ get!int (GL_MAX_VERTEX_ATTRIBS) ~ `)`
+								);
 						}
 						body {/*...}*/
 							mixin(q{
@@ -414,19 +397,10 @@ struct gl
 		public {/*enable}*/
 			void enable (GLenum capability)
 				out {/*...}*/
-					switch (glGetError ())
-						{/*...}*/
-							case GL_INVALID_ENUM:
-								assert (0,
-									capability.text ~ ` is not a GL capability`
-								);
-							case GL_INVALID_VALUE:
-								assert (0,
-									`index exceeds the maximum for ` ~ capability.text
-								);
-							default:
-								assert (0, `unknown error`);
-						}
+					handle (GL_INVALID_ENUM)
+						(capability.text ~ ` is not a GL capability`)
+					handle (GL_INVALID_VALUE)
+						(`index exceeds the maximum for ` ~ capability.text);
 				}
 				body {/*...}*/
 					glEnable (capability);
@@ -435,16 +409,11 @@ struct gl
 		public {/*blending}*/
 			void blend_func (GLenum source_factor, GLenum target_factor)
 				out {/*...}*/
-					switch (glGetError ())
-						{/*...}*/
-							case GL_INVALID_ENUM:
-								assert (0,
-									source_factor.text ~ ` or ` ~ target_factor.text
-									~ ` is not an accepted blending factor enum`
-								);
-							default:
-								assert (0, `unknown error`);
-						}
+					handle (GL_INVALID_ENUM)
+						(
+							source_factor.text ~ ` or ` ~ target_factor.text
+							~ ` is not an accepted blending factor enum`
+						);
 				}
 				body {/*...}*/
 					glBlendFunc (source_factor, target_factor);
@@ -453,19 +422,10 @@ struct gl
 		public {/*clear}*/
 			void clear (GLenum mask)
 				out {/*...}*/
-					switch (glGetError ())
-						{/*...}*/
-							case GL_INVALID_VALUE:
-								assert (0,
-									`mask contains set bits other than defined mask bits`
-								);
-							case GL_INVALID_OPERATION:
-								assert (0,
-									`executed during immediate mode`
-								);
-							default:
-								assert (0, `unknown error`);
-						}
+					handle (GL_INVALID_VALUE)
+						(`mask contains set bits other than defined mask bits`)
+					.handle (GL_INVALID_OPERATION)
+						(`executed during immediate mode`);
 				}
 				body {/*...}*/
 					glClear (mask);
@@ -490,15 +450,8 @@ struct gl
 		public {/*framebuffer}*/
 			auto check_framebuffer_status (GLenum target)
 				out {/*...}*/
-					switch (glGetError ())
-						{/*...}*/
-							case GL_INVALUD_ENUM:
-								assert (0,
-									target.text ~ `is not a valid framebuffer target`
-								);
-							default:
-								assert (0, `unknown error`);
-						}
+					handle (GL_INVALUD_ENUM)
+						(target.text ~ `is not a valid framebuffer target`);
 				}
 				body {/*...}*/
 					return gl.CheckFramebufferStatus (GL_FRAMEBUFFER);
@@ -506,19 +459,13 @@ struct gl
 
 			void framebuffer_texture (Glenum target, GLenum attachment, GLuint texture, GLint level)
 				out {/*...}*/
-					switch (glGetError ())
-						{/*...}*/
-							case GL_INVALID_ENUM:
-								assert (0, `target is not one of the accepted tokens`);
-							case GL_INVALID_OPERATION:
-								if (get!int (target) == 0)
-									assert (0,
-										`0 is bound to ` ~ target.text
-									);
-								else assert (0,
-									`texture is not compatible with texture target`
-								);
-						}
+					handle (GL_INVALID_ENUM)
+						(`target is not one of the accepted tokens`)
+					.handle (GL_INVALID_OPERATION)
+						(() => get!int (target) == 0,
+							`0 is bound to ` ~ target.text
+						)
+						(`texture is not compatible with texture target`);
 				}
 				body {/*...}*/
 					glFramebufferTexture (target, attachment, texture, level);
@@ -527,17 +474,10 @@ struct gl
 		public {/*fragment output}*/
 			void draw_buffer (GLenum buffer_target)
 				out {/*..}*/
-					switch (glGetError ())
-						{/*...}*/
-							case GL_INVALID_ENUM:
-								assert (0,
-									buffer_target.text ~ ` is not an accepted buffer target`
-								);
-							case GL_INVALID_OPERATION:
-								assert (0,
-									`the buffer indicated by ` ~ buffer_target.text ~ ` does not exist`
-								);
-						}
+					handle (GL_INVALID_ENUM)
+						(buffer_target.text ~ ` is not an accepted buffer target`)
+					.handle (GL_INVALID_OPERATION)
+						(`the buffer indicated by ` ~ buffer_target.text ~ ` does not exist`);
 				}
 				body {/*...}*/
 					glDrawBuffer (buffer_target);
@@ -546,19 +486,14 @@ struct gl
 		public {/*program}*/
 			auto get_program_param (GLuint program, GLenum param)
 				out {/*...}*/
-					switch (glGetError ())
-						{/*...}*/
-							case GL_INVALID_ENUM:
-								assert (0,
-									param.text ~ ` is not an accepted value`
-								);
-							case GL_INVALID_VALUE:
-								goto case;
-							case GL_INVALID_OPERATION:
-								assert (0,
-									program.text ~ ` is not a valid program`
-								);
-						}
+					string program_error_msg = program.text ~ ` is not a valid program`
+
+					handle (GL_INVALID_ENUM)
+						(param.text ~ ` is not an accepted value`)
+					handle (GL_INVALID_VALUE)
+						(program_error_msg)
+					handle (GL_INVALID_OPERATION)
+						(program_error_msg);
 				}
 				body {/*...}*/
 					int value;
@@ -580,23 +515,42 @@ struct gl
 				}
 		}
 		public {/*uniforms}*/
+			// REFACTOR this is old-style introspection
+			// REFACTOR to interface-based introspection
+			// TODO start with all the latest introspection tools,
+			//		then build up an internal verificaton API from there
+			//		then use that to aid structural planning
+			//		and error tracing
+			//		then build out the planned structures
+			//		then preplan the bridge to functional layer
+			//		and finalize the intermediate structures towards that
+			//		then we can build structural/dataflow top layer
+			/*
+					REFACTOR
+						
+					opengl api
+					error handling
+					shader introspection
+					shader compilation
+					resource management
+					resource interop
+					graphics/compute pipeline chaining
+					pipeline/resource interop (hidden allocation glue layer)
+			*/
+
 			debug auto get_active_uniform (GLuint program, GLuint index)
 				out {/*...}*/
-					switch (glGetError ())
-						{/*...}*/
-							case GL_INVALID_VALUE:
-								goto case;
-							case GL_INVALID_OPERATION:
-								assert (0,
-									program.text ~ ` is not a valid program`
-								);
-							case GL_INVALID_VALUE:
-								assert (0,
-									index.text ~ ` exceeds number of program uniforms (` ~ get_program_param (program, GL_ACTIVE_UNIFORMS).text ~ `)`
-								);
-							default:
-								assert (0, `unknown error`);
-						}
+					string invalid_program = `program ` ~ program.text ~ ` is not a valid program`;
+
+					handle (GL_INVALID_VALUE)
+						(invalid_program)
+					.handle (GL_INVALID_OPERATION)
+						(invalid_program)
+					.handle (GL_INVALID_VALUE)
+						(
+							index.text ~ ` exceeds number of program uniforms`
+							` (` ~ get_program_param (program, GL_ACTIVE_UNIFORMS).text ~ `)`
+						);
 				}
 				body {/*...}*/
 					struct UniformInfo
@@ -622,10 +576,7 @@ struct gl
 				}
 			debug auto get_uniform_location (GLuint program, string name)
 				out {/*...}*/
-					switch (glGetError ())
-						{/*...}*/
-							// TODO
-						}
+					// TODO
 				}
 				body {/*...}*/
 					return glGetUniformLocation (program, name.to_c.expand);
