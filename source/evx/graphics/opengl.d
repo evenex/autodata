@@ -12,6 +12,8 @@ private {/*imports}*/
 
 	import derelict.glfw3.glfw3;
 	import derelict.opengl3.gl3;
+
+	import evx.graphics.error;
 }
 
 //TODO make specific error messages for all the openGL calls
@@ -665,55 +667,37 @@ struct gl
 						(location, value);
 				}
 
-			struct ErrorHandler (Cases...)
-				{/*...}*/
-					struct Case (Value...)
-						{/*...}*/
-							bool delegate()[] conditions;
-							string delegate()[] reasons;
-
-							void check ()
-								{/*...}*/
-									foreach (condition, reason; zip (conditions, reasons))
-										if (condition ())
-											assert (0, reason ());
-								}
-						}
-				}
 			// TODO separate direct uniform call from lib-specialized calls
 			void uniform (string suffix, T...)(GLint location, T args)
 				out {/*...}*/
 					auto info = get_active_uniform (current_program, location);
 
-					mixin( // TODO graphics.error
-						handle!GL_INVALID_OPERATION
-							(() => is_program (current_program), 
-								() => `there is no current program object.`
-							)
-							(() => info.size == suffix.extract_number.to!int, 
-								() => `the size of the uniform variable declared in the shader `
-								`(` ~ info.text ~ `) `
-								`does not match the size indicated by the glUniform command`
-							)
-							(() => suffix[0] == GLTypeTable[info.type][0],
-								() => `glUniform` ~ suffix ~ ` is used to load mismatching type ` ~ info.text
-							)
-							(() => location == get_uniform_location (program, info.name),
-								() =>`location ` ~ location.text ~ ` is an invalid uniform location for the current program object`
-							)
-						.handle!GL_INVALID_VALUE
-							(() => count < 0, 
-								() = `count is less than 0.`
-							)
-						.handle!GL_INVALID_OPERATION
-							(() => count > 1 && info.type != ARRAY_STANDIN,
-								() => `count is greater than 1 and the indicated uniform variable is not an array variable.`
-							)
-							(() => info.type == SAMPLER_STANDIN && suffix != `1i` && suffix != `1iv`,
-								() => `a sampler is loaded using a command other than glUniform1i and glUniform1iv.`
-							)
-						.end
-					);
+					handle (GL_INVALID_OPERATION)
+						(() => is_program (current_program), 
+							() => `there is no current program object.`
+						)
+						(() => info.size == suffix.extract_number.to!int, 
+							() => `the size of the uniform variable declared in the shader `
+							`(` ~ info.text ~ `) `
+							`does not match the size indicated by the glUniform command`
+						)
+						(() => suffix[0] == GLTypeTable[info.type][0],
+							() => `glUniform` ~ suffix ~ ` is used to load mismatching type ` ~ info.text
+						)
+						(() => location == get_uniform_location (program, info.name),
+							() =>`location ` ~ location.text ~ ` is an invalid uniform location for the current program object`
+						)
+					.handle (GL_INVALID_VALUE)
+						(() => count < 0, 
+							() = `count is less than 0.`
+						)
+					.handle (GL_INVALID_OPERATION)
+						(() => count > 1 && info.type != ARRAY_STANDIN,
+							() => `count is greater than 1 and the indicated uniform variable is not an array variable.`
+						)
+						(() => info.type == SAMPLER_STANDIN && suffix != `1i` && suffix != `1iv`,
+							() => `a sampler is loaded using a command other than glUniform1i and glUniform1iv.`
+						);
 				}
 				body {/*...}*/
 					mixin(q{
