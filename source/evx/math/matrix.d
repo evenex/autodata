@@ -1,6 +1,17 @@
+module evx.math.matrix;
 
-struct Matrix (uint rows, uint cols, T)
+private {/*imports}*/
+	import std.conv;
+
+	import evx.operators;
+	import evx.math.geometry; // REFACTOR dot product will be refactored
+}
+
+struct Matrix (uint n_rows, uint n_cols, T)
 	{/*...}*/
+		enum rows = n_rows;
+		enum cols = n_cols;
+
 		T[rows*cols] data;
 
 		auto ref access (size_t i, size_t j)
@@ -36,7 +47,7 @@ struct Matrix (uint rows, uint cols, T)
 
 		mixin TransferOps!(pull, access, rows, cols);
 
-		auto opBinary (uint y, uint x, U)(Matrix!(y,x,U) matrix)
+		auto opBinary (uint y, uint x, U)(Matrix!(y,x,U) B)
 			in {/*...}*/
 				static assert (
 					cols == y,
@@ -44,11 +55,22 @@ struct Matrix (uint rows, uint cols, T)
 					`(`
 						~ rows.text ~ `×` ~ cols.text
 						~ ` · `
-						~ y.text ~ `×` ~ x.text ~
+						~ B.rows.text ~ `×` ~ B.cols.text ~
 					`)`
 				);
 			}
 			body {/*...}*/
-				// TODO matrix multiplication
+				alias A = this;
+
+				Matrix!(A.rows, B.cols, typeof(A[0,0] * B[0,0]))
+					C;
+
+				foreach (row; 0..C.rows)
+					foreach (col; 0..C.cols)
+						C[row,col] = A[row, 0..$].dot (B[0..$, col]);
+
+				return C;
 			}
 	}
+
+	// TODO submatrix, determinant, linear equations, cast, etc etc

@@ -15,6 +15,130 @@ private {/*imports}*/
 }
 
 //TODO make specific error messages for all the openGL calls
+// TODO Type ↔ GLenum ↔ GLSLType
+
+struct GLTypeTable
+	{/*...}*/
+		public {/*list}*/
+			alias List = Cons!(
+				GL_FLOAT, `float`,
+				GL_FLOAT_VEC2, `vec2`,
+				GL_FLOAT_VEC3, `vec3`,
+				GL_FLOAT_VEC4, `vec4`,
+				GL_DOUBLE, `double`,
+				GL_DOUBLE_VEC2, `dvec2`,
+				GL_DOUBLE_VEC3, `dvec3`,
+				GL_DOUBLE_VEC4, `dvec4`,
+				GL_INT, `int`,
+				GL_INT_VEC2, `ivec2`,
+				GL_INT_VEC3, `ivec3`,
+				GL_INT_VEC4, `ivec4`,
+				GL_UNSIGNED_INT, `uint`,
+				GL_UNSIGNED_INT_VEC2, `uvec2`,
+				GL_UNSIGNED_INT_VEC3, `uvec3`,
+				GL_UNSIGNED_INT_VEC4, `uvec4`,
+				GL_BOOL, `bool`,
+				GL_BOOL_VEC2, `bvec2`,
+				GL_BOOL_VEC3, `bvec3`,
+				GL_BOOL_VEC4, `bvec4`,
+				GL_FLOAT_MAT2, `mat2`,
+				GL_FLOAT_MAT3, `mat3`,
+				GL_FLOAT_MAT4, `mat4`,
+				GL_FLOAT_MAT2x3, `mat2x3`,
+				GL_FLOAT_MAT2x4, `mat2x4`,
+				GL_FLOAT_MAT3x2, `mat3x2`,
+				GL_FLOAT_MAT3x4, `mat3x4`,
+				GL_FLOAT_MAT4x2, `mat4x2`,
+				GL_FLOAT_MAT4x3, `mat4x3`,
+				GL_DOUBLE_MAT2, `dmat2`,
+				GL_DOUBLE_MAT3, `dmat3`,
+				GL_DOUBLE_MAT4, `dmat4`,
+				GL_DOUBLE_MAT2x3, `dmat2x3`,
+				GL_DOUBLE_MAT2x4, `dmat2x4`,
+				GL_DOUBLE_MAT3x2, `dmat3x2`,
+				GL_DOUBLE_MAT3x4, `dmat3x4`,
+				GL_DOUBLE_MAT4x2, `dmat4x2`,
+				GL_DOUBLE_MAT4x3, `dmat4x3`,
+				GL_SAMPLER_1D, `sampler1D`,
+				GL_SAMPLER_2D, `sampler2D`,
+				GL_SAMPLER_3D, `sampler3D`,
+				GL_SAMPLER_CUBE, `samplerCube`,
+				GL_SAMPLER_1D_SHADOW, `sampler1DShadow`,
+				GL_SAMPLER_2D_SHADOW, `sampler2DShadow`,
+				GL_SAMPLER_1D_ARRAY, `sampler1DArray`,
+				GL_SAMPLER_2D_ARRAY, `sampler2DArray`,
+				GL_SAMPLER_1D_ARRAY_SHADOW, `sampler1DArrayShadow`,
+				GL_SAMPLER_2D_ARRAY_SHADOW, `sampler2DArrayShadow`,
+				GL_SAMPLER_2D_MULTISAMPLE, `sampler2DMS`,
+				GL_SAMPLER_2D_MULTISAMPLE_ARRAY, `sampler2DMSArray`,
+				GL_SAMPLER_CUBE_SHADOW, `samplerCubeShadow`,
+				GL_SAMPLER_BUFFER, `samplerBuffer`,
+				GL_SAMPLER_2D_RECT, `sampler2DRect`,
+				GL_SAMPLER_2D_RECT_SHADOW, `sampler2DRectShadow`,
+				GL_INT_SAMPLER_1D, `isampler1D`,
+				GL_INT_SAMPLER_2D, `isampler2D`,
+				GL_INT_SAMPLER_3D, `isampler3D`,
+				GL_INT_SAMPLER_CUBE, `isamplerCube`,
+				GL_INT_SAMPLER_1D_ARRAY, `isampler1DArray`,
+				GL_INT_SAMPLER_2D_ARRAY, `isampler2DArray`,
+				GL_INT_SAMPLER_2D_MULTISAMPLE, `isampler2DMS`,
+				GL_INT_SAMPLER_2D_MULTISAMPLE_ARRAY, `isampler2DMSArray`,
+				GL_INT_SAMPLER_BUFFER, `isamplerBuffer`,
+				GL_INT_SAMPLER_2D_RECT, `isampler2DRect`,
+				GL_UNSIGNED_INT_SAMPLER_1D, `usampler1D`,
+				GL_UNSIGNED_INT_SAMPLER_2D, `usampler2D`,
+				GL_UNSIGNED_INT_SAMPLER_3D, `usampler3D`,
+				GL_UNSIGNED_INT_SAMPLER_CUBE, `usamplerCube`,
+				GL_UNSIGNED_INT_SAMPLER_1D_ARRAY, `usampler2DArray`,
+				GL_UNSIGNED_INT_SAMPLER_2D_ARRAY, `usampler2DArray`,
+				GL_UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE, `usampler2DMS`,
+				GL_UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE_ARRAY, `usampler2DMSArray`,
+				GL_UNSIGNED_INT_SAMPLER_BUFFER, `usamplerBuffer`,
+				GL_UNSIGNED_INT_SAMPLER_2D_RECT, `usampler2DRect`,
+				GL_IMAGE_1D, `image1D`,
+				GL_IMAGE_2D, `image2D`,
+				GL_IMAGE_3D, `image3D`,
+				GL_IMAGE_2D_RECT, `image2DRect`,
+				GL_IMAGE_CUBE, `imageCube`,
+				GL_IMAGE_BUFFER, `imageBuffer`,
+				GL_IMAGE_1D_ARRAY, `image1DArray`,
+				GL_IMAGE_2D_ARRAY, `image2DArray`,
+				GL_IMAGE_2D_MULTISAMPLE, `image2DMS`,
+				GL_IMAGE_2D_MULTISAMPLE_ARRAY, `image2DMSArray`,
+				GL_INT_IMAGE_1D, `iimage1D`,
+				GL_INT_IMAGE_2D, `iimage2D`,
+				GL_INT_IMAGE_3D, `iimage3D`,
+				GL_INT_IMAGE_2D_RECT, `iimage2DRect`,
+				GL_INT_IMAGE_CUBE, `iimageCube`,
+				GL_INT_IMAGE_BUFFER, `iimageBuffer`,
+				GL_INT_IMAGE_1D_ARRAY, `iimage1DArray`,
+				GL_INT_IMAGE_2D_ARRAY, `iimage2DArray`,
+				GL_INT_IMAGE_2D_MULTISAMPLE, `iimage2DMS`,
+				GL_INT_IMAGE_2D_MULTISAMPLE_ARRAY, `iimage2DMSArray`,
+				GL_UNSIGNED_INT_IMAGE_1D, `uimage1D`,
+				GL_UNSIGNED_INT_IMAGE_2D, `uimage2D`,
+				GL_UNSIGNED_INT_IMAGE_3D, `uimage3D`,
+				GL_UNSIGNED_INT_IMAGE_2D_RECT, `uimage2DRect`,
+				GL_UNSIGNED_INT_IMAGE_CUBE, `uimageCube`,
+				GL_UNSIGNED_INT_IMAGE_BUFFER, `uimageBuffer`,
+				GL_UNSIGNED_INT_IMAGE_1D_ARRAY, `uimage1DArray`,
+				GL_UNSIGNED_INT_IMAGE_2D_ARRAY, `uimage2DArray`,
+				GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE, `uimage2DMS`,
+				GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_ARRAY, `uimage2DMSArray`,
+				GL_UNSIGNED_INT_ATOMIC_COUNTER, `atomic_uint`,
+			);
+		}
+
+		alias Enums = Deinterleave!List[0..$/2];
+		alias Typenames = Deinterleave!List[$/2..$];
+
+		enum translate (GLenum type) = Typenames[IndexOf!(type, Enums)];
+		enum translate (string type) = Enums[IndexOf!(type, Typenames)];
+
+		static opIndex (GLenum type) {return [Typenames][[Enums].countUntil (type).length];}
+		static opIndex (string type) {return [Enums][[Typenames].countUntil (type).length];}
+	}
+
 class Context
 	{/*...}*/
 		this ()
@@ -208,437 +332,1033 @@ class Context
 				return draw_framebuffer;
 			}
 	}
+
 struct gl
 	{/*...}*/
 		static:
 
-		Context context;
-
-		template type (T)
-			{/*...}*/
-				alias ConversionTable = Cons!(
-					byte,   GL_BYTE,
-					ubyte,  GL_UNSIGNED_BYTE,
-					short,  GL_SHORT,
-					ushort, GL_UNSIGNED_SHORT,
-					int,    GL_INT,
-					uint,   GL_UNSIGNED_INT,
-					float,  GL_FLOAT,
-					double, GL_DOUBLE,
-				);
-
-				enum index = IndexOf!(T, ConversionTable) + 1;
-
-				static if (0 < index && index < ConversionTable.length - 1)
-					enum type = ConversionTable[index];
-				else static assert (0, T.stringof ~ ` has no opengl equivalent`);
-			}
-
-		auto opDispatch (string name, Args...)(auto ref Args args)
-			in {/*...}*/
-				enum errmsg (string target) = `set gl.` ~ target ~ ` = ` ~ target ~ ` id or an object containing a ` ~ target ~ `_id instead`;
-
-				static assert (name.not!contains (`UseProgram`), errmsg!`program`);
-				static assert (name.not!contains (`Bind`), errmsg!(name[4..$].toLower));
-
-				assert (not (this.context is null),
-					`no rendering context available to call ` ~ name
-				);
+		auto get (T)(GLenum param)
+			out {/*...}*/
+				switch (glGetError ())
+					{/*...}*/
+						case GL_INVALID_ENUM:
+							assert (0,
+								param.text ~ ` is not an accepted value`
+							);
+						case GL_INVALID_VALUE:
+							assert (0,
+								`index is outside of valid range`
+							);
+						default:
+							assert (0, `unknown error`);
+					}
 			}
 			body {/*...}*/
-				auto use_program ()()
-					{/*...}*/
-						static assert (name == `program`);
+				T value;
 
-						static if (is (Args[0]))
-							{/*...}*/
-								auto has_id ()() {return args[0].program_id;}
-								auto is_id ()() {return args[0];}
-
-								GLuint id = Match!(has_id, is_id);
-
-								if (this.context.program == id)
-									return;
-
-								call!`UseProgram` (id);
-
-								this.context.program = id;
-							}
-						else return this.context.program;
-					}
-				auto bind_buffer ()()
-					{/*...}*/
-						static assert (name != `program`);
-
-						enum target = mixin(q{GL_} ~ name.toUpper);
-
-						static if (is (Args[0]))
-							{/*...}*/
-								auto has_id ()() // REVIEW to be removed once all graphics resource bind_bufferings are standardized
-									{/*...}*/
-										static if (name.contains (`texture`))
-											return args[0].texture_id;
-
-										else static if (name.contains (`framebuffer`)) // REVIEW CanvasOps will handle this, to be removed..
-											return args[0].framebuffer_id;
-
-										else return args[0].buffer_id;
-									}
-								auto is_id ()()
-									{/*...}*/
-										return args[0];
-									}
-
-								GLuint id = Match!(has_id, is_id);
-
-								if (mixin(q{this.context.} ~ name) == id)
-									return;
-
-								static if (name.contains (`texture`))
-									call!`BindTexture` (target, id);
-
-								else static if (name.contains (`framebuffer`))
-									{/*...}*/
-										call!`BindFramebuffer` (target, id);
-
-										void render_to_texture ()()
-											{/*...}*/
-												gl.FramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, args[0].texture_id, 0);
-											}
-										void render_to_display ()() {} 
-
-										Match!(render_to_texture, render_to_display);
-
-										if (id == 0)
-											gl.DrawBuffer (GL_BACK);
-										else gl.DrawBuffer (GL_COLOR_ATTACHMENT0);
-									}
-
-								else call!`BindBuffer` (target, id);
-
-								mixin(q{
-									this.context.} ~ name ~ q{ = id;
-								});
-							}
-						else mixin(q{
-							return this.context.} ~ name ~ q{;
-						});
-					}
-				auto unbind_buffer ()()
-					{/*...}*/
-						static assert (name.contains (`Delete`));
-
-						auto buffer_group = mixin(q{this.context.} ~ name.after (`Delete`).toLower)[];
-						auto n = args[0];
-						auto ids = args[1];
-
-						foreach (id; ids[0..n])
-							{/*...}*/
-								auto result = buffer_group[].find (id);
-
-								if (result.empty)
-									continue;
-								else result.front = 0;
-							}
-
-						call!name (args);
-					}
-				auto forward_to_gl ()()
-					{/*...}*/
-						static if (name.contains (`Delete`))
-							static assert (name.contains (`Program`) || name.contains (`Shader`));
-
-						return call!name (args.to_c.expand);
-					}
-
-				return Match!(use_program, bind_buffer, unbind_buffer, forward_to_gl);
-			}
-
-		void reset ()
-			{/*...}*/
-				destroy (context);
-			}
-
-		void uniform (T)(T value, GLuint index = 0)
-			in {/*...}*/
-				GLint program, n_uniforms;
-
-				gl.GetIntegerv (GL_CURRENT_PROGRAM, &program); // TODO replace with global gl state call
-				assert (program != 0, `no active program`);
-
-				gl.GetProgramiv (program, GL_ACTIVE_UNIFORMS, &n_uniforms);
-				assert (index < n_uniforms, `uniform location invalid`);
-
-				char[256] name;
-				GLint sizeof;
-				GLenum type;
-				GLint length;
-
-				gl.GetActiveUniform (program, index, name.length.to!int, &length, &sizeof, &type, name.ptr);
-
-				auto uniform_type (T)()
-					{/*...}*/
-						import evx.graphics.texture;//TEMP circular dep
-
-						alias ConversionTable = Cons!(
-							float, `FLOAT`,
-							double, `DOUBLE`,
-							int, `INT`,
-							uint, `UNSIGNED_INT`,
-							bool, `BOOL`,
-						);
-
-						static if (is (T == Vector!(n,U), uint n, U))
-							enum components = `_VEC` ~ n.text;
-						else {/*...}*/
-							enum components = ``;
-							alias U = T;
-						}
-							
-						static if (Contains!(U, ConversionTable))
-							mixin(q{
-								return GL_} ~ ConversionTable[IndexOf!(U, ConversionTable) + 1] ~ components ~ q{;
-							});
-						else return -1;
-					}
-				auto uniform_call (GLenum type)
-					{/*...}*/
-						return [
-							-1: `unknown type`,
-
-							GL_FLOAT: `float`,
-							GL_FLOAT_VEC2: `vec2`,
-							GL_FLOAT_VEC3: `vec3`,
-							GL_FLOAT_VEC4: `vec4`,
-							GL_DOUBLE: `double`,
-							GL_DOUBLE_VEC2: `dvec2`,
-							GL_DOUBLE_VEC3: `dvec3`,
-							GL_DOUBLE_VEC4: `dvec4`,
-							GL_INT: `int`,
-							GL_INT_VEC2: `ivec2`,
-							GL_INT_VEC3: `ivec3`,
-							GL_INT_VEC4: `ivec4`,
-							GL_UNSIGNED_INT: `uint`,
-							GL_UNSIGNED_INT_VEC2: `uvec2`,
-							GL_UNSIGNED_INT_VEC3: `uvec3`,
-							GL_UNSIGNED_INT_VEC4: `uvec4`,
-							GL_BOOL: `bool`,
-							GL_BOOL_VEC2: `bvec2`,
-							GL_BOOL_VEC3: `bvec3`,
-							GL_BOOL_VEC4: `bvec4`,
-							GL_FLOAT_MAT2: `mat2`,
-							GL_FLOAT_MAT3: `mat3`,
-							GL_FLOAT_MAT4: `mat4`,
-							GL_FLOAT_MAT2x3: `mat2x3`,
-							GL_FLOAT_MAT2x4: `mat2x4`,
-							GL_FLOAT_MAT3x2: `mat3x2`,
-							GL_FLOAT_MAT3x4: `mat3x4`,
-							GL_FLOAT_MAT4x2: `mat4x2`,
-							GL_FLOAT_MAT4x3: `mat4x3`,
-							GL_DOUBLE_MAT2: `dmat2`,
-							GL_DOUBLE_MAT3: `dmat3`,
-							GL_DOUBLE_MAT4: `dmat4`,
-							GL_DOUBLE_MAT2x3: `dmat2x3`,
-							GL_DOUBLE_MAT2x4: `dmat2x4`,
-							GL_DOUBLE_MAT3x2: `dmat3x2`,
-							GL_DOUBLE_MAT3x4: `dmat3x4`,
-							GL_DOUBLE_MAT4x2: `dmat4x2`,
-							GL_DOUBLE_MAT4x3: `dmat4x3`,
-							GL_SAMPLER_1D: `sampler1D`,
-							GL_SAMPLER_2D: `sampler2D`,
-							GL_SAMPLER_3D: `sampler3D`,
-							GL_SAMPLER_CUBE: `samplerCube`,
-							GL_SAMPLER_1D_SHADOW: `sampler1DShadow`,
-							GL_SAMPLER_2D_SHADOW: `sampler2DShadow`,
-							GL_SAMPLER_1D_ARRAY: `sampler1DArray`,
-							GL_SAMPLER_2D_ARRAY: `sampler2DArray`,
-							GL_SAMPLER_1D_ARRAY_SHADOW: `sampler1DArrayShadow`,
-							GL_SAMPLER_2D_ARRAY_SHADOW: `sampler2DArrayShadow`,
-							GL_SAMPLER_2D_MULTISAMPLE: `sampler2DMS`,
-							GL_SAMPLER_2D_MULTISAMPLE_ARRAY: `sampler2DMSArray`,
-							GL_SAMPLER_CUBE_SHADOW: `samplerCubeShadow`,
-							GL_SAMPLER_BUFFER: `samplerBuffer`,
-							GL_SAMPLER_2D_RECT: `sampler2DRect`,
-							GL_SAMPLER_2D_RECT_SHADOW: `sampler2DRectShadow`,
-							GL_INT_SAMPLER_1D: `isampler1D`,
-							GL_INT_SAMPLER_2D: `isampler2D`,
-							GL_INT_SAMPLER_3D: `isampler3D`,
-							GL_INT_SAMPLER_CUBE: `isamplerCube`,
-							GL_INT_SAMPLER_1D_ARRAY: `isampler1DArray`,
-							GL_INT_SAMPLER_2D_ARRAY: `isampler2DArray`,
-							GL_INT_SAMPLER_2D_MULTISAMPLE: `isampler2DMS`,
-							GL_INT_SAMPLER_2D_MULTISAMPLE_ARRAY: `isampler2DMSArray`,
-							GL_INT_SAMPLER_BUFFER: `isamplerBuffer`,
-							GL_INT_SAMPLER_2D_RECT: `isampler2DRect`,
-							GL_UNSIGNED_INT_SAMPLER_1D: `usampler1D`,
-							GL_UNSIGNED_INT_SAMPLER_2D: `usampler2D`,
-							GL_UNSIGNED_INT_SAMPLER_3D: `usampler3D`,
-							GL_UNSIGNED_INT_SAMPLER_CUBE: `usamplerCube`,
-							GL_UNSIGNED_INT_SAMPLER_1D_ARRAY: `usampler2DArray`,
-							GL_UNSIGNED_INT_SAMPLER_2D_ARRAY: `usampler2DArray`,
-							GL_UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE: `usampler2DMS`,
-							GL_UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE_ARRAY: `usampler2DMSArray`,
-							GL_UNSIGNED_INT_SAMPLER_BUFFER: `usamplerBuffer`,
-							GL_UNSIGNED_INT_SAMPLER_2D_RECT: `usampler2DRect`,
-							GL_IMAGE_1D: `image1D`,
-							GL_IMAGE_2D: `image2D`,
-							GL_IMAGE_3D: `image3D`,
-							GL_IMAGE_2D_RECT: `image2DRect`,
-							GL_IMAGE_CUBE: `imageCube`,
-							GL_IMAGE_BUFFER: `imageBuffer`,
-							GL_IMAGE_1D_ARRAY: `image1DArray`,
-							GL_IMAGE_2D_ARRAY: `image2DArray`,
-							GL_IMAGE_2D_MULTISAMPLE: `image2DMS`,
-							GL_IMAGE_2D_MULTISAMPLE_ARRAY: `image2DMSArray`,
-							GL_INT_IMAGE_1D: `iimage1D`,
-							GL_INT_IMAGE_2D: `iimage2D`,
-							GL_INT_IMAGE_3D: `iimage3D`,
-							GL_INT_IMAGE_2D_RECT: `iimage2DRect`,
-							GL_INT_IMAGE_CUBE: `iimageCube`,
-							GL_INT_IMAGE_BUFFER: `iimageBuffer`,
-							GL_INT_IMAGE_1D_ARRAY: `iimage1DArray`,
-							GL_INT_IMAGE_2D_ARRAY: `iimage2DArray`,
-							GL_INT_IMAGE_2D_MULTISAMPLE: `iimage2DMS`,
-							GL_INT_IMAGE_2D_MULTISAMPLE_ARRAY: `iimage2DMSArray`,
-							GL_UNSIGNED_INT_IMAGE_1D: `uimage1D`,
-							GL_UNSIGNED_INT_IMAGE_2D: `uimage2D`,
-							GL_UNSIGNED_INT_IMAGE_3D: `uimage3D`,
-							GL_UNSIGNED_INT_IMAGE_2D_RECT: `uimage2DRect`,
-							GL_UNSIGNED_INT_IMAGE_CUBE: `uimageCube`,
-							GL_UNSIGNED_INT_IMAGE_BUFFER: `uimageBuffer`,
-							GL_UNSIGNED_INT_IMAGE_1D_ARRAY: `uimage1DArray`,
-							GL_UNSIGNED_INT_IMAGE_2D_ARRAY: `uimage2DArray`,
-							GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE: `uimage2DMS`,
-							GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_ARRAY: `uimage2DMSArray`,
-							GL_UNSIGNED_INT_ATOMIC_COUNTER: `atomic_uint`,
-						][type];
-					}
-
-				if (type != GL_SAMPLER_2D)
-					assert (type == uniform_type!T,
-						`attempted to upload ` ~ T.stringof ~ ` to uniform ` ~ uniform_call (type) ~ ` ` ~ name[0..length]
-						~ `, use ` ~ uniform_call (type) ~ ` instead.`
-					);
-				else assert (is (T == int),
-					`texture sampler uniform must bind a texture unit index, not a ` ~ T.stringof
-				);
-			}
-			body {/*...}*/
 				static if (is (T == Vector!(n,U), uint n, U))
 					{}
-				else {/*...}*/
-					enum n = 1;
-					alias U = T;
+				else alias U = T;
+
+				static if (is (U == bool))
+					enum t_str = `Boolean`;
+				else static if (is (U == int))
+					enum t_str = `Integer`;
+				else static if (is (U == float))
+					enum t_str = `Float`;
+				else static if (is (U == double))
+					enum t_str = `Double`;
+				else static assert (0, `glGet ` ~ T.stringof ~ ` not implemented`);
+
+				mixin(q{glGet} ~ t_str ~ q{v (param, cast(U*)&value);});
+
+				return value;
+			}
+
+		public {/*vertex_attrib_array}*/
+			template switch_vertex_attrib_array (string polarity)
+				if (polarity == `Enable` || polarity == `Disable`)
+				{/*...}*/
+					void enable_vertex_attrib_array (GLuint index)
+						out {/*...}*/
+							switch (glGetError ())
+								{/*...}*/
+									case GL_NO_ERROR:
+										break;
+									case GL_INVALID_OPERATION:
+										assert (is_buffer (gl.array_buffer),
+											`no buffer bound to array buffer`
+										);
+										assert (0, `unknown invalid operation`);
+									case GL_INVALID_VALUE:
+										assert (0, 
+											`index exceeds max vertex attributes `
+											` (` ~ get!int (GL_MAX_VERTEX_ATTRIBS) ~ `)`
+										);
+									default:
+										assert (0, `unknown error`);
+								}
+						}
+						body {/*...}*/
+							mixin(q{
+								gl} ~ polarity ~ q{VertexAttribArray (index);
+							});
+						}
 				}
 
-				mixin(q{
-					gl.Uniform} ~ n.text ~ U.stringof[0] ~ q{ (index, value.tuple.expand);
-				});
-			}
-
-		auto verify (string object_type)(GLuint gl_object)
-			{/*...}*/
-				GLint status;
-
-				const string glGet_iv = q{glGet} ~object_type~ q{iv};
-				const string glGet_InfoLog = q{glGet} ~object_type~ q{InfoLog};
-				const string glStatus = object_type == `Shader`? `COMPILE`:`LINK`;
-
-				mixin(q{
-					} ~glGet_iv~ q{ (gl_object, GL_} ~glStatus~ q{_STATUS, &status);
-				});
-
-				if (status == GL_FALSE) 
-					{/*error}*/
-						GLchar[] error_log; 
-						GLsizei log_length;
-
-						mixin(q{
-							} ~glGet_iv~ q{(gl_object, GL_INFO_LOG_LENGTH, &log_length);
-						});
-
-						error_log.length = log_length;
-
-						mixin (q{
-							} ~glGet_InfoLog~ q{(gl_object, log_length, null, error_log.ptr);
-						});
-
-						return error_log.to!string;
-					}
-				else return null;
-			}
-
-		private {/*...}*/
-			auto call (string name, Args...)(Args args)
+			alias enable_vertex_attrib_array = switch_vertex_attrib_array!`Enable`;
+			alias disable_vertex_attrib_array = switch_vertex_attrib_array!`Disable`;
+		}
+		public {/*enable}*/
+			void enable (GLenum capability)
 				out {/*...}*/
-					error_check!name (args);
+					switch (glGetError ())
+						{/*...}*/
+							case GL_INVALID_ENUM:
+								assert (0,
+									capability.text ~ ` is not a GL capability`
+								);
+							case GL_INVALID_VALUE:
+								assert (0,
+									`index exceeds the maximum for ` ~ capability.text
+								);
+							default:
+								assert (0, `unknown error`);
+						}
 				}
 				body {/*...}*/
-					mixin (q{
-						return gl} ~ name ~ q{ (args.to_c.expand);
+					glEnable (capability);
+				}
+		}
+		public {/*blending}*/
+			void blend_func (GLenum source_factor, GLenum target_factor)
+				out {/*...}*/
+					switch (glGetError ())
+						{/*...}*/
+							case GL_INVALID_ENUM:
+								assert (0,
+									source_factor.text ~ ` or ` ~ target_factor.text
+									~ ` is not an accepted blending factor enum`
+								);
+							default:
+								assert (0, `unknown error`);
+						}
+				}
+				body {/*...}*/
+					glBlendFunc (source_factor, target_factor);
+				}
+		}
+		public {/*clear}*/
+			void clear (GLenum mask)
+				out {/*...}*/
+					switch (glGetError ())
+						{/*...}*/
+							case GL_INVALID_VALUE:
+								assert (0,
+									`mask contains set bits other than defined mask bits`
+								);
+							case GL_INVALID_OPERATION:
+								assert (0,
+									`executed during immediate mode`
+								);
+							default:
+								assert (0, `unknown error`);
+						}
+				}
+				body {/*...}*/
+					glClear (mask);
+				}
+
+			void clear_color (Color color)
+				{/*...}*/
+					with (color) 
+						glClearColor (r,g,b,a);
+				}
+			auto clear_color ()
+				{/*...}*/
+					return Color (get!fvec (GL_COLOR_CLEAR_VALUE));
+				}
+		}
+		public {/*buffer}*/
+			bool is_buffer (GLuint buffer_id)
+				{/*...}*/
+					return glIsBuffer (buffer_id);
+				}
+		}
+		public {/*framebuffer}*/
+			auto check_framebuffer_status (GLenum target)
+				out {/*...}*/
+					switch (glGetError ())
+						{/*...}*/
+							case GL_INVALUD_ENUM:
+								assert (0,
+									target.text ~ `is not a valid framebuffer target`
+								);
+							default:
+								assert (0, `unknown error`);
+						}
+				}
+				body {/*...}*/
+					return gl.CheckFramebufferStatus (GL_FRAMEBUFFER);
+				}
+
+			void framebuffer_texture (Glenum target, GLenum attachment, GLuint texture, GLint level)
+				out {/*...}*/
+					switch (glGetError ())
+						{/*...}*/
+							case GL_INVALID_ENUM:
+								assert (0, `target is not one of the accepted tokens`);
+							case GL_INVALID_OPERATION:
+								if (get!int (target) == 0)
+									assert (0,
+										`0 is bound to ` ~ target.text
+									);
+								else assert (0,
+									`texture is not compatible with texture target`
+								);
+						}
+				}
+				body {/*...}*/
+					glFramebufferTexture (target, attachment, texture, level);
+				}
+		}
+		public {/*fragment output}*/
+			void draw_buffer (GLenum buffer_target)
+				out {/*..}*/
+					switch (glGetError ())
+						{/*...}*/
+							case GL_INVALID_ENUM:
+								assert (0,
+									buffer_target.text ~ ` is not an accepted buffer target`
+								);
+							case GL_INVALID_OPERATION:
+								assert (0,
+									`the buffer indicated by ` ~ buffer_target.text ~ ` does not exist`
+								);
+						}
+				}
+				body {/*...}*/
+					glDrawBuffer (buffer_target);
+				}
+		}
+		public {/*program}*/
+			auto get_program_param (GLuint program, GLenum param)
+				out {/*...}*/
+					switch (glGetError ())
+						{/*...}*/
+							case GL_INVALID_ENUM:
+								assert (0,
+									param.text ~ ` is not an accepted value`
+								);
+							case GL_INVALID_VALUE:
+								goto case;
+							case GL_INVALID_OPERATION:
+								assert (0,
+									program.text ~ ` is not a valid program`
+								);
+						}
+				}
+				body {/*...}*/
+					int value;
+
+					glGetProgramiv (program, param, &value);
+
+					return value;
+				}
+
+			auto current_program ()
+				{/*...}*/
+					return get!int (GL_CURRENT_PROGRAM);
+				}
+
+			auto is_program (GLuint program)
+				{/*...}*/
+					// TODO Errchk
+					return glIsProgram (program);
+				}
+		}
+		public {/*uniforms}*/
+			debug auto get_active_uniform (GLuint program, GLuint index)
+				out {/*...}*/
+					switch (glGetError ())
+						{/*...}*/
+							case GL_INVALID_VALUE:
+								goto case;
+							case GL_INVALID_OPERATION:
+								assert (0,
+									program.text ~ ` is not a valid program`
+								);
+							case GL_INVALID_VALUE:
+								assert (0,
+									index.text ~ ` exceeds number of program uniforms (` ~ get_program_param (program, GL_ACTIVE_UNIFORMS).text ~ `)`
+								);
+							default:
+								assert (0, `unknown error`);
+						}
+				}
+				body {/*...}*/
+					struct UniformInfo
+						{/*...}*/
+							GLenum type;
+							GLint size;
+							string name;
+
+							const toString ()
+								{/*...}*/
+									return [GLTypeTable.translate[type], name].join (` `).to!string;
+								}
+						}
+
+					char[256] name;
+					GLint size;
+					GLenum type;
+					GLint length;
+
+					glGetActiveUniform (program, index, name.length.to!int, &length, &size, &type, name.ptr);
+
+					return UniformInfo (type, sizeof, name[0..length].to!string);
+				}
+			debug auto get_uniform_location (GLuint program, string name)
+				out {/*...}*/
+					switch (glGetError ())
+						{/*...}*/
+							// TODO
+						}
+				}
+				body {/*...}*/
+					return glGetUniformLocation (program, name.to_c.expand);
+				}
+
+			template uniform_type_suffix (T)
+				{/*...}*/
+					static if (is (T == uint))
+						enum type = `ui`;
+					else static if (is (T == int))
+						enum type = `i`;
+					else static if (is (T == float))
+						enum type = `f`;
+					else static assert (0);
+
+					enum uniform_type_suffix = type;
+				}
+
+			// TODO GL/GLSL type/enum/string lookup database
+			// REVIEW maybe move library-specialized uniforms out of here to a separate middle layer
+			void uniform (uint m, uint n, T)(GLint location, Matrix!(m,n,T) matrix)
+				{/*...}*/
+					enum size = m == n? m.text : n.text ~ `x` ~ m.text; 
+					enum count = 1;
+					enum transpose = GL_TRUE;
+
+					uniform!(size ~ `fv`)
+						(location, count, transpose, matrix.ptr);
+				}
+			void uniform (uint n, T)(GLint location, Vector!(n,T) vector)
+				{/*...}*/
+					uniform!(n.text ~ uniform_type_suffix!T)
+						(location, value.tuple.expand); // REVIEW how to rewrite with DIP32?
+				}
+			void uniform (T)(GLint location, T value)
+				if (Contains!(T, uint, int, float))
+				{/*...}*/
+					uniform!(`1` ~ uniform_type_suffix!T)
+						(location, value);
+				}
+
+			struct ErrorHandler (Cases...)
+				{/*...}*/
+					struct Case (Value...)
+						{/*...}*/
+							bool delegate()[] conditions;
+							string delegate()[] reasons;
+
+							void check ()
+								{/*...}*/
+									foreach (condition, reason; zip (conditions, reasons))
+										if (condition ())
+											assert (0, reason ());
+								}
+						}
+				}
+			// TODO separate direct uniform call from lib-specialized calls
+			void uniform (string suffix, T...)(GLint location, T args)
+				out {/*...}*/
+					auto info = get_active_uniform (current_program, location);
+
+					mixin( // TODO graphics.error
+						handle!GL_INVALID_OPERATION
+							(() => is_program (current_program), 
+								() => `there is no current program object.`
+							)
+							(() => info.size == suffix.extract_number.to!int, 
+								() => `the size of the uniform variable declared in the shader `
+								`(` ~ info.text ~ `) `
+								`does not match the size indicated by the glUniform command`
+							)
+							(() => suffix[0] == GLTypeTable[info.type][0],
+								() => `glUniform` ~ suffix ~ ` is used to load mismatching type ` ~ info.text
+							)
+							(() => location == get_uniform_location (program, info.name),
+								() =>`location ` ~ location.text ~ ` is an invalid uniform location for the current program object`
+							)
+						.handle!GL_INVALID_VALUE
+							(() => count < 0, 
+								() = `count is less than 0.`
+							)
+						.handle!GL_INVALID_OPERATION
+							(() => count > 1 && info.type != ARRAY_STANDIN,
+								() => `count is greater than 1 and the indicated uniform variable is not an array variable.`
+							)
+							(() => info.type == SAMPLER_STANDIN && suffix != `1i` && suffix != `1iv`,
+								() => `a sampler is loaded using a command other than glUniform1i and glUniform1iv.`
+							)
+						.end
+					);
+				}
+				body {/*...}*/
+					mixin(q{
+						glUniform} ~ suffix ~ q{ (location, args);
 					});
 				}
 
-			void error_check (string name, Args...) (Args args)
-				{/*...}*/
-					GLenum error;
+			void _checked_uniform (T)(T value, GLint location)
+				in {/*...}*/
+					assert (current_program != 0,
+						`no active program`
+					);
+					assert (get_program_param (program, GL_ACTIVE_UNIFORMS) < n_uniforms,
+						`uniform location invalid`
+					);
 
-					while ((error = glGetError ()) != GL_NO_ERROR)
+					GLenum type;
+					int sizeof;
+					string name;
+
+					get_active_uniform (program, location, type, length, sizeof, name);
+
+					auto uniform_type (T)()
 						{/*...}*/
-							string error_msg;
+							alias ConversionTable = Cons!(
+								float,	`FLOAT`,
+								double, `DOUBLE`,
+								int, 	`INT`,
+								uint, 	`UNSIGNED_INT`,
+								bool, 	`BOOL`,
+							);
 
-							final switch (error)
+							static if (is (T == Vector!(n,U), uint n, U))
+								enum components = `_VEC` ~ n.text;
+							else static if (is (T == Matrix!(m,n,U), uint m, uint n, U))
+								enum components = `_MAT` ~ m.text ~ (m == n? `` : `x` ~ n.text);
+							else {/*...}*/
+								enum components = ``;
+								alias U = T;
+							}
+								
+							static if (Contains!(U, ConversionTable))
+								mixin(q{
+									return GL_} ~ ConversionTable[IndexOf!(U, ConversionTable) + 1] ~ components ~ q{;
+								});
+							else return -1;
+						}
+					auto uniform_call (GLenum type)
+						{/*...}*/
+							return [
+								-1: `unknown type`,
+
+								GL_FLOAT: `float`,
+								GL_FLOAT_VEC2: `vec2`,
+								GL_FLOAT_VEC3: `vec3`,
+								GL_FLOAT_VEC4: `vec4`,
+								GL_DOUBLE: `double`,
+								GL_DOUBLE_VEC2: `dvec2`,
+								GL_DOUBLE_VEC3: `dvec3`,
+								GL_DOUBLE_VEC4: `dvec4`,
+								GL_INT: `int`,
+								GL_INT_VEC2: `ivec2`,
+								GL_INT_VEC3: `ivec3`,
+								GL_INT_VEC4: `ivec4`,
+								GL_UNSIGNED_INT: `uint`,
+								GL_UNSIGNED_INT_VEC2: `uvec2`,
+								GL_UNSIGNED_INT_VEC3: `uvec3`,
+								GL_UNSIGNED_INT_VEC4: `uvec4`,
+								GL_BOOL: `bool`,
+								GL_BOOL_VEC2: `bvec2`,
+								GL_BOOL_VEC3: `bvec3`,
+								GL_BOOL_VEC4: `bvec4`,
+								GL_FLOAT_MAT2: `mat2`,
+								GL_FLOAT_MAT3: `mat3`,
+								GL_FLOAT_MAT4: `mat4`,
+								GL_FLOAT_MAT2x3: `mat2x3`,
+								GL_FLOAT_MAT2x4: `mat2x4`,
+								GL_FLOAT_MAT3x2: `mat3x2`,
+								GL_FLOAT_MAT3x4: `mat3x4`,
+								GL_FLOAT_MAT4x2: `mat4x2`,
+								GL_FLOAT_MAT4x3: `mat4x3`,
+								GL_DOUBLE_MAT2: `dmat2`,
+								GL_DOUBLE_MAT3: `dmat3`,
+								GL_DOUBLE_MAT4: `dmat4`,
+								GL_DOUBLE_MAT2x3: `dmat2x3`,
+								GL_DOUBLE_MAT2x4: `dmat2x4`,
+								GL_DOUBLE_MAT3x2: `dmat3x2`,
+								GL_DOUBLE_MAT3x4: `dmat3x4`,
+								GL_DOUBLE_MAT4x2: `dmat4x2`,
+								GL_DOUBLE_MAT4x3: `dmat4x3`,
+								GL_SAMPLER_1D: `sampler1D`,
+								GL_SAMPLER_2D: `sampler2D`,
+								GL_SAMPLER_3D: `sampler3D`,
+								GL_SAMPLER_CUBE: `samplerCube`,
+								GL_SAMPLER_1D_SHADOW: `sampler1DShadow`,
+								GL_SAMPLER_2D_SHADOW: `sampler2DShadow`,
+								GL_SAMPLER_1D_ARRAY: `sampler1DArray`,
+								GL_SAMPLER_2D_ARRAY: `sampler2DArray`,
+								GL_SAMPLER_1D_ARRAY_SHADOW: `sampler1DArrayShadow`,
+								GL_SAMPLER_2D_ARRAY_SHADOW: `sampler2DArrayShadow`,
+								GL_SAMPLER_2D_MULTISAMPLE: `sampler2DMS`,
+								GL_SAMPLER_2D_MULTISAMPLE_ARRAY: `sampler2DMSArray`,
+								GL_SAMPLER_CUBE_SHADOW: `samplerCubeShadow`,
+								GL_SAMPLER_BUFFER: `samplerBuffer`,
+								GL_SAMPLER_2D_RECT: `sampler2DRect`,
+								GL_SAMPLER_2D_RECT_SHADOW: `sampler2DRectShadow`,
+								GL_INT_SAMPLER_1D: `isampler1D`,
+								GL_INT_SAMPLER_2D: `isampler2D`,
+								GL_INT_SAMPLER_3D: `isampler3D`,
+								GL_INT_SAMPLER_CUBE: `isamplerCube`,
+								GL_INT_SAMPLER_1D_ARRAY: `isampler1DArray`,
+								GL_INT_SAMPLER_2D_ARRAY: `isampler2DArray`,
+								GL_INT_SAMPLER_2D_MULTISAMPLE: `isampler2DMS`,
+								GL_INT_SAMPLER_2D_MULTISAMPLE_ARRAY: `isampler2DMSArray`,
+								GL_INT_SAMPLER_BUFFER: `isamplerBuffer`,
+								GL_INT_SAMPLER_2D_RECT: `isampler2DRect`,
+								GL_UNSIGNED_INT_SAMPLER_1D: `usampler1D`,
+								GL_UNSIGNED_INT_SAMPLER_2D: `usampler2D`,
+								GL_UNSIGNED_INT_SAMPLER_3D: `usampler3D`,
+								GL_UNSIGNED_INT_SAMPLER_CUBE: `usamplerCube`,
+								GL_UNSIGNED_INT_SAMPLER_1D_ARRAY: `usampler2DArray`,
+								GL_UNSIGNED_INT_SAMPLER_2D_ARRAY: `usampler2DArray`,
+								GL_UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE: `usampler2DMS`,
+								GL_UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE_ARRAY: `usampler2DMSArray`,
+								GL_UNSIGNED_INT_SAMPLER_BUFFER: `usamplerBuffer`,
+								GL_UNSIGNED_INT_SAMPLER_2D_RECT: `usampler2DRect`,
+								GL_IMAGE_1D: `image1D`,
+								GL_IMAGE_2D: `image2D`,
+								GL_IMAGE_3D: `image3D`,
+								GL_IMAGE_2D_RECT: `image2DRect`,
+								GL_IMAGE_CUBE: `imageCube`,
+								GL_IMAGE_BUFFER: `imageBuffer`,
+								GL_IMAGE_1D_ARRAY: `image1DArray`,
+								GL_IMAGE_2D_ARRAY: `image2DArray`,
+								GL_IMAGE_2D_MULTISAMPLE: `image2DMS`,
+								GL_IMAGE_2D_MULTISAMPLE_ARRAY: `image2DMSArray`,
+								GL_INT_IMAGE_1D: `iimage1D`,
+								GL_INT_IMAGE_2D: `iimage2D`,
+								GL_INT_IMAGE_3D: `iimage3D`,
+								GL_INT_IMAGE_2D_RECT: `iimage2DRect`,
+								GL_INT_IMAGE_CUBE: `iimageCube`,
+								GL_INT_IMAGE_BUFFER: `iimageBuffer`,
+								GL_INT_IMAGE_1D_ARRAY: `iimage1DArray`,
+								GL_INT_IMAGE_2D_ARRAY: `iimage2DArray`,
+								GL_INT_IMAGE_2D_MULTISAMPLE: `iimage2DMS`,
+								GL_INT_IMAGE_2D_MULTISAMPLE_ARRAY: `iimage2DMSArray`,
+								GL_UNSIGNED_INT_IMAGE_1D: `uimage1D`,
+								GL_UNSIGNED_INT_IMAGE_2D: `uimage2D`,
+								GL_UNSIGNED_INT_IMAGE_3D: `uimage3D`,
+								GL_UNSIGNED_INT_IMAGE_2D_RECT: `uimage2DRect`,
+								GL_UNSIGNED_INT_IMAGE_CUBE: `uimageCube`,
+								GL_UNSIGNED_INT_IMAGE_BUFFER: `uimageBuffer`,
+								GL_UNSIGNED_INT_IMAGE_1D_ARRAY: `uimage1DArray`,
+								GL_UNSIGNED_INT_IMAGE_2D_ARRAY: `uimage2DArray`,
+								GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE: `uimage2DMS`,
+								GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_ARRAY: `uimage2DMSArray`,
+								GL_UNSIGNED_INT_ATOMIC_COUNTER: `atomic_uint`,
+							][type];
+						}
+
+					static if (is (typeof(uniform_type!T)))
+						{/*...}*/
+							if (type == -1)
+								assert (0, T.stringof ~ ` does not convert to any known GLSL type`);
+							else if (type != GL_SAMPLER_2D)
 								{/*...}*/
-									case GL_INVALID_ENUM:
-										error_msg = "GL_INVALID_ENUM";
-										break;
-									case GL_INVALID_VALUE:
-										error_msg = "GL_INVALID_VALUE";
-										break;
-									case GL_INVALID_OPERATION:
-										error_msg = "GL_INVALID_OPERATION";
-										break;
-									case GL_INVALID_FRAMEBUFFER_OPERATION:
-										error_msg = "GL_INVALID_FRAMEBUFFER_OPERATION";
-										break;
-									case GL_OUT_OF_MEMORY:
-										error_msg = "GL_OUT_OF_MEMORY";
-										break;
+									else assert (type == uniform_type!T,
+										`attempted to upload ` ~ T.stringof ~ ` to uniform ` ~ uniform_call (type) ~ ` ` ~ name[0..length]
+										~ `, use ` ~ uniform_call (type) ~ ` instead.`
+									);
 								}
-
-							assert (0, `OpenGL error ` ~error.text~ `: ` ~error_msg~ "\n"
-								`    calling gl` ~function_call_to_string!name (args)
+							else assert (is (T == int),
+								`texture sampler uniform must bind a texture unit index, not a ` ~ T.stringof
 							);
 						}
+					else static assert (0, T.stringof ~ ` is currently unsupported`);
 				}
+				body {/*...}*/
+					static if (is (T == Matrix!(m,n,U), uint m, uint n, U))
+						{/*...}*/
+							static assert (is (U == float));
 
-			extern (C) nothrow {/*callbacks}*/
-				void error_callback (int, const (char)* error)
-					{/*...}*/
-						import std.c.stdio;
+							static if (m == n)
+								enum dims = `Matrix` ~ m.text;
+							else enum dims = `Matrix` ~ m.text ~ `x` ~ n.text;
 
-						fprintf (stderr, "error glfw: %s\n", error);
-					}
-				void resize_framebuffer_callback (GLFWwindow* window, int width, int height)
-					{/*...}*/
-						gl.Viewport (0, 0, width, height);
-						//try gl.Viewport (0, 0, width, height);
-						//catch (Exception ex) assert (0, ex.msg);
-					}
-				void resize_window_callback (GLFWwindow* window, int width, int height)
-					{/*...}*/
-						auto context = cast(Context) glfwGetWindowUserPointer (window);
+							enum transposed = GL_TRUE; // REVIEW i think my matrices are transposed according to openGL
 
-						if (context.on_resize !is null)
-							context.on_resize (width, height);
+							mixin(q{
+								glUniform} ~ dims ~ q{fv (location, 1, transposed, value.ptr);
+							});
+						}
+					else {/*...}*/
+						static if (is (T == Vector!(n,U), uint n, U))
+							{}
+						else {/*...}*/
+							enum n = 1;
+							alias U = T;
+						}
+
+						static if (is (U == uint))
+							enum type = `ui`;
+						else static if (is (U == int))
+							enum type = `i`;
+						else static if (is (U == float))
+							enum type = `f`;
+						
+						mixin(q{
+							glUniform} ~ n.text ~ type ~ q{ (location, value.tuple.expand);
+						});
 					}
-			}
+				}
 		}
 
+
 		///////////////////////
+		private {/*///////// ↓ OLD ↓ /////////////////}*/
+			Context context;
+
+			template type (T)
+				{/*...}*/
+					alias ConversionTable = Cons!(
+						byte,   GL_BYTE,
+						ubyte,  GL_UNSIGNED_BYTE,
+						short,  GL_SHORT,
+						ushort, GL_UNSIGNED_SHORT,
+						int,    GL_INT,
+						uint,   GL_UNSIGNED_INT,
+						float,  GL_FLOAT,
+						double, GL_DOUBLE,
+					);
+
+					enum index = IndexOf!(T, ConversionTable) + 1;
+
+					static if (0 < index && index < ConversionTable.length - 1)
+						enum type = ConversionTable[index];
+					else static assert (0, T.stringof ~ ` has no opengl equivalent`);
+				}
+
+			auto opDispatch (string name, Args...)(auto ref Args args)
+				in {/*...}*/
+					enum errmsg (string target) = `set gl.` ~ target ~ ` = ` ~ target ~ ` id or an object containing a ` ~ target ~ `_id instead`;
+
+					static assert (name.not!contains (`UseProgram`), errmsg!`program`);
+					static assert (name.not!contains (`Bind`), errmsg!(name[4..$].toLower));
+
+					assert (not (this.context is null),
+						`no rendering context available to call ` ~ name
+					);
+				}
+				body {/*...}*/
+					auto use_program ()()
+						{/*...}*/
+							static assert (name == `program`);
+
+							static if (is (Args[0]))
+								{/*...}*/
+									auto has_id ()() {return args[0].program_id;}
+									auto is_id ()() {return args[0];}
+
+									GLuint id = Match!(has_id, is_id);
+
+									if (this.context.program == id)
+										return;
+
+									call!`UseProgram` (id);
+
+									this.context.program = id;
+								}
+							else return this.context.program;
+						}
+					auto bind_buffer ()()
+						{/*...}*/
+							static assert (name != `program`);
+
+							enum target = mixin(q{GL_} ~ name.toUpper);
+
+							static if (is (Args[0]))
+								{/*...}*/
+									auto has_id ()() // REVIEW to be removed once all graphics resource bind_bufferings are standardized
+										{/*...}*/
+											static if (name.contains (`texture`))
+												return args[0].texture_id;
+
+											else static if (name.contains (`framebuffer`)) // REVIEW CanvasOps will handle this, to be removed..
+												return args[0].framebuffer_id;
+
+											else return args[0].buffer_id;
+										}
+									auto is_id ()()
+										{/*...}*/
+											return args[0];
+										}
+
+									GLuint id = Match!(has_id, is_id);
+
+									if (mixin(q{this.context.} ~ name) == id)
+										return;
+
+									static if (name.contains (`texture`))
+										call!`BindTexture` (target, id);
+
+									else static if (name.contains (`framebuffer`))
+										{/*...}*/
+											call!`BindFramebuffer` (target, id);
+
+											void render_to_texture ()()
+												{/*...}*/
+													gl.FramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, args[0].texture_id, 0);
+												}
+											void render_to_display ()() {} 
+
+											Match!(render_to_texture, render_to_display);
+
+											if (id == 0)
+												gl.DrawBuffer (GL_BACK);
+											else gl.DrawBuffer (GL_COLOR_ATTACHMENT0);
+										}
+
+									else call!`BindBuffer` (target, id);
+
+									mixin(q{
+										this.context.} ~ name ~ q{ = id;
+									});
+								}
+							else mixin(q{
+								return this.context.} ~ name ~ q{;
+							});
+						}
+					auto unbind_buffer ()()
+						{/*...}*/
+							static assert (name.contains (`Delete`));
+
+							auto buffer_group = mixin(q{this.context.} ~ name.after (`Delete`).toLower)[];
+							auto n = args[0];
+							auto ids = args[1];
+
+							foreach (id; ids[0..n])
+								{/*...}*/
+									auto result = buffer_group[].find (id);
+
+									if (result.empty)
+										continue;
+									else result.front = 0;
+								}
+
+							call!name (args);
+						}
+					auto forward_to_gl ()()
+						{/*...}*/
+							static if (name.contains (`Delete`))
+								static assert (name.contains (`Program`) || name.contains (`Shader`));
+
+							return call!name (args.to_c.expand);
+						}
+
+					return Match!(use_program, bind_buffer, unbind_buffer, forward_to_gl);
+				}
+
+			void reset ()
+				{/*...}*/
+					destroy (context);
+				}
+
+			void uniform (T)(T value, GLuint index = 0)
+				in {/*...}*/
+					GLint program, n_uniforms;
+
+					gl.GetIntegerv (GL_CURRENT_PROGRAM, &program); // TODO replace with global gl state call
+					assert (program != 0, `no active program`);
+
+					gl.GetProgramiv (program, GL_ACTIVE_UNIFORMS, &n_uniforms);
+					assert (index < n_uniforms, `uniform location invalid`);
+
+					char[256] name;
+					GLint sizeof;
+					GLenum type;
+					GLint length;
+
+					gl.GetActiveUniform (program, index, name.length.to!int, &length, &sizeof, &type, name.ptr);
+
+					auto uniform_type (T)()
+						{/*...}*/
+							import evx.graphics.texture;//TEMP circular dep
+
+							alias ConversionTable = Cons!(
+								float, `FLOAT`,
+								double, `DOUBLE`,
+								int, `INT`,
+								uint, `UNSIGNED_INT`,
+								bool, `BOOL`,
+							);
+
+							static if (is (T == Vector!(n,U), uint n, U))
+								enum components = `_VEC` ~ n.text;
+							else {/*...}*/
+								enum components = ``;
+								alias U = T;
+							}
+								
+							static if (Contains!(U, ConversionTable))
+								mixin(q{
+									return GL_} ~ ConversionTable[IndexOf!(U, ConversionTable) + 1] ~ components ~ q{;
+								});
+							else return -1;
+						}
+					auto uniform_call (GLenum type)
+						{/*...}*/
+							return [
+								-1: `unknown type`,
+
+								GL_FLOAT: `float`,
+								GL_FLOAT_VEC2: `vec2`,
+								GL_FLOAT_VEC3: `vec3`,
+								GL_FLOAT_VEC4: `vec4`,
+								GL_DOUBLE: `double`,
+								GL_DOUBLE_VEC2: `dvec2`,
+								GL_DOUBLE_VEC3: `dvec3`,
+								GL_DOUBLE_VEC4: `dvec4`,
+								GL_INT: `int`,
+								GL_INT_VEC2: `ivec2`,
+								GL_INT_VEC3: `ivec3`,
+								GL_INT_VEC4: `ivec4`,
+								GL_UNSIGNED_INT: `uint`,
+								GL_UNSIGNED_INT_VEC2: `uvec2`,
+								GL_UNSIGNED_INT_VEC3: `uvec3`,
+								GL_UNSIGNED_INT_VEC4: `uvec4`,
+								GL_BOOL: `bool`,
+								GL_BOOL_VEC2: `bvec2`,
+								GL_BOOL_VEC3: `bvec3`,
+								GL_BOOL_VEC4: `bvec4`,
+								GL_FLOAT_MAT2: `mat2`,
+								GL_FLOAT_MAT3: `mat3`,
+								GL_FLOAT_MAT4: `mat4`,
+								GL_FLOAT_MAT2x3: `mat2x3`,
+								GL_FLOAT_MAT2x4: `mat2x4`,
+								GL_FLOAT_MAT3x2: `mat3x2`,
+								GL_FLOAT_MAT3x4: `mat3x4`,
+								GL_FLOAT_MAT4x2: `mat4x2`,
+								GL_FLOAT_MAT4x3: `mat4x3`,
+								GL_DOUBLE_MAT2: `dmat2`,
+								GL_DOUBLE_MAT3: `dmat3`,
+								GL_DOUBLE_MAT4: `dmat4`,
+								GL_DOUBLE_MAT2x3: `dmat2x3`,
+								GL_DOUBLE_MAT2x4: `dmat2x4`,
+								GL_DOUBLE_MAT3x2: `dmat3x2`,
+								GL_DOUBLE_MAT3x4: `dmat3x4`,
+								GL_DOUBLE_MAT4x2: `dmat4x2`,
+								GL_DOUBLE_MAT4x3: `dmat4x3`,
+								GL_SAMPLER_1D: `sampler1D`,
+								GL_SAMPLER_2D: `sampler2D`,
+								GL_SAMPLER_3D: `sampler3D`,
+								GL_SAMPLER_CUBE: `samplerCube`,
+								GL_SAMPLER_1D_SHADOW: `sampler1DShadow`,
+								GL_SAMPLER_2D_SHADOW: `sampler2DShadow`,
+								GL_SAMPLER_1D_ARRAY: `sampler1DArray`,
+								GL_SAMPLER_2D_ARRAY: `sampler2DArray`,
+								GL_SAMPLER_1D_ARRAY_SHADOW: `sampler1DArrayShadow`,
+								GL_SAMPLER_2D_ARRAY_SHADOW: `sampler2DArrayShadow`,
+								GL_SAMPLER_2D_MULTISAMPLE: `sampler2DMS`,
+								GL_SAMPLER_2D_MULTISAMPLE_ARRAY: `sampler2DMSArray`,
+								GL_SAMPLER_CUBE_SHADOW: `samplerCubeShadow`,
+								GL_SAMPLER_BUFFER: `samplerBuffer`,
+								GL_SAMPLER_2D_RECT: `sampler2DRect`,
+								GL_SAMPLER_2D_RECT_SHADOW: `sampler2DRectShadow`,
+								GL_INT_SAMPLER_1D: `isampler1D`,
+								GL_INT_SAMPLER_2D: `isampler2D`,
+								GL_INT_SAMPLER_3D: `isampler3D`,
+								GL_INT_SAMPLER_CUBE: `isamplerCube`,
+								GL_INT_SAMPLER_1D_ARRAY: `isampler1DArray`,
+								GL_INT_SAMPLER_2D_ARRAY: `isampler2DArray`,
+								GL_INT_SAMPLER_2D_MULTISAMPLE: `isampler2DMS`,
+								GL_INT_SAMPLER_2D_MULTISAMPLE_ARRAY: `isampler2DMSArray`,
+								GL_INT_SAMPLER_BUFFER: `isamplerBuffer`,
+								GL_INT_SAMPLER_2D_RECT: `isampler2DRect`,
+								GL_UNSIGNED_INT_SAMPLER_1D: `usampler1D`,
+								GL_UNSIGNED_INT_SAMPLER_2D: `usampler2D`,
+								GL_UNSIGNED_INT_SAMPLER_3D: `usampler3D`,
+								GL_UNSIGNED_INT_SAMPLER_CUBE: `usamplerCube`,
+								GL_UNSIGNED_INT_SAMPLER_1D_ARRAY: `usampler2DArray`,
+								GL_UNSIGNED_INT_SAMPLER_2D_ARRAY: `usampler2DArray`,
+								GL_UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE: `usampler2DMS`,
+								GL_UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE_ARRAY: `usampler2DMSArray`,
+								GL_UNSIGNED_INT_SAMPLER_BUFFER: `usamplerBuffer`,
+								GL_UNSIGNED_INT_SAMPLER_2D_RECT: `usampler2DRect`,
+								GL_IMAGE_1D: `image1D`,
+								GL_IMAGE_2D: `image2D`,
+								GL_IMAGE_3D: `image3D`,
+								GL_IMAGE_2D_RECT: `image2DRect`,
+								GL_IMAGE_CUBE: `imageCube`,
+								GL_IMAGE_BUFFER: `imageBuffer`,
+								GL_IMAGE_1D_ARRAY: `image1DArray`,
+								GL_IMAGE_2D_ARRAY: `image2DArray`,
+								GL_IMAGE_2D_MULTISAMPLE: `image2DMS`,
+								GL_IMAGE_2D_MULTISAMPLE_ARRAY: `image2DMSArray`,
+								GL_INT_IMAGE_1D: `iimage1D`,
+								GL_INT_IMAGE_2D: `iimage2D`,
+								GL_INT_IMAGE_3D: `iimage3D`,
+								GL_INT_IMAGE_2D_RECT: `iimage2DRect`,
+								GL_INT_IMAGE_CUBE: `iimageCube`,
+								GL_INT_IMAGE_BUFFER: `iimageBuffer`,
+								GL_INT_IMAGE_1D_ARRAY: `iimage1DArray`,
+								GL_INT_IMAGE_2D_ARRAY: `iimage2DArray`,
+								GL_INT_IMAGE_2D_MULTISAMPLE: `iimage2DMS`,
+								GL_INT_IMAGE_2D_MULTISAMPLE_ARRAY: `iimage2DMSArray`,
+								GL_UNSIGNED_INT_IMAGE_1D: `uimage1D`,
+								GL_UNSIGNED_INT_IMAGE_2D: `uimage2D`,
+								GL_UNSIGNED_INT_IMAGE_3D: `uimage3D`,
+								GL_UNSIGNED_INT_IMAGE_2D_RECT: `uimage2DRect`,
+								GL_UNSIGNED_INT_IMAGE_CUBE: `uimageCube`,
+								GL_UNSIGNED_INT_IMAGE_BUFFER: `uimageBuffer`,
+								GL_UNSIGNED_INT_IMAGE_1D_ARRAY: `uimage1DArray`,
+								GL_UNSIGNED_INT_IMAGE_2D_ARRAY: `uimage2DArray`,
+								GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE: `uimage2DMS`,
+								GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_ARRAY: `uimage2DMSArray`,
+								GL_UNSIGNED_INT_ATOMIC_COUNTER: `atomic_uint`,
+							][type];
+						}
+
+					if (type != GL_SAMPLER_2D)
+						assert (type == uniform_type!T,
+							`attempted to upload ` ~ T.stringof ~ ` to uniform ` ~ uniform_call (type) ~ ` ` ~ name[0..length]
+							~ `, use ` ~ uniform_call (type) ~ ` instead.`
+						);
+					else assert (is (T == int),
+						`texture sampler uniform must bind a texture unit index, not a ` ~ T.stringof
+					);
+				}
+				body {/*...}*/
+					static if (is (T == Vector!(n,U), uint n, U))
+						{}
+					else {/*...}*/
+						enum n = 1;
+						alias U = T;
+					}
+
+					mixin(q{
+						gl.Uniform} ~ n.text ~ U.stringof[0] ~ q{ (index, value.tuple.expand);
+					});
+				}
+
+			auto verify (string object_type)(GLuint gl_object)
+				{/*...}*/
+					GLint status;
+
+					const string glGet_iv = q{glGet} ~object_type~ q{iv};
+					const string glGet_InfoLog = q{glGet} ~object_type~ q{InfoLog};
+					const string glStatus = object_type == `Shader`? `COMPILE`:`LINK`;
+
+					mixin(q{
+						} ~glGet_iv~ q{ (gl_object, GL_} ~glStatus~ q{_STATUS, &status);
+					});
+
+					if (status == GL_FALSE) 
+						{/*error}*/
+							GLchar[] error_log; 
+							GLsizei log_length;
+
+							mixin(q{
+								} ~glGet_iv~ q{(gl_object, GL_INFO_LOG_LENGTH, &log_length);
+							});
+
+							error_log.length = log_length;
+
+							mixin (q{
+								} ~glGet_InfoLog~ q{(gl_object, log_length, null, error_log.ptr);
+							});
+
+							return error_log.to!string;
+						}
+					else return null;
+				}
+
+			private {/*...}*/
+				auto call (string name, Args...)(Args args)
+					out {/*...}*/
+						error_check!name (args);
+					}
+					body {/*...}*/
+						mixin (q{
+							return gl} ~ name ~ q{ (args.to_c.expand);
+						});
+					}
+
+				void error_check (string name, Args...) (Args args)
+					{/*...}*/
+						GLenum error;
+
+						while ((error = glGetError ()) != GL_NO_ERROR)
+							{/*...}*/
+								string error_msg;
+
+								final switch (error)
+									{/*...}*/
+										case GL_INVALID_ENUM:
+											error_msg = "GL_INVALID_ENUM";
+											break;
+										case GL_INVALID_VALUE:
+											error_msg = "GL_INVALID_VALUE";
+											break;
+										case GL_INVALID_OPERATION:
+											error_msg = "GL_INVALID_OPERATION";
+											break;
+										case GL_INVALID_FRAMEBUFFER_OPERATION:
+											error_msg = "GL_INVALID_FRAMEBUFFER_OPERATION";
+											break;
+										case GL_OUT_OF_MEMORY:
+											error_msg = "GL_OUT_OF_MEMORY";
+											break;
+									}
+
+								assert (0, `OpenGL error ` ~error.text~ `: ` ~error_msg~ "\n"
+									`    calling gl` ~function_call_to_string!name (args)
+								);
+							}
+					}
+
+				extern (C) nothrow {/*callbacks}*/
+					void error_callback (int, const (char)* error)
+						{/*...}*/
+							import std.c.stdio;
+
+							fprintf (stderr, "error glfw: %s\n", error);
+						}
+					void resize_framebuffer_callback (GLFWwindow* window, int width, int height)
+						{/*...}*/
+							gl.Viewport (0, 0, width, height);
+							//try gl.Viewport (0, 0, width, height);
+							//catch (Exception ex) assert (0, ex.msg);
+						}
+					void resize_window_callback (GLFWwindow* window, int width, int height)
+						{/*...}*/
+							auto context = cast(Context) glfwGetWindowUserPointer (window);
+
+							if (context.on_resize !is null)
+								context.on_resize (width, height);
+						}
+				}
+			}
+		}
 		///////////////////////
 		///////////////////////
 	}
+
+// gl
 
 enum {/*TODO organize enums - GL_TEXTURE_2D, GL_READ_COPY_BUFFER, GL_COMPUTE_SHADER, ETC}*/
 	// OpenGL 1.1

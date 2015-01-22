@@ -79,13 +79,13 @@ auto unit (V)(V v)
 
 /* dot product 
 */
-auto dot (U, V)(U u, V v) 
-	if (is_vector_like!V)
+auto dot (U, V)(U u, V v) // REFACTOR this is an algebraic op, not geometric
+	if (is_vector_like!V) // TODO All
 	{/*...}*/
 		return (u*v)[].sum;
 	}
 auto dot (U, V)(U u, V v) 
-	if (is_input_range!V)
+	if (is_input_range!V) // TODO All?
 	{/*...}*/
 		return u[].zip (v[])
 			.map!((a,b) => a*b)
