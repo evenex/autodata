@@ -36,10 +36,10 @@ struct GLBuffer (T, alias target, alias usage)
 					alias U = T;
 				}
 
-				mixin(bind_call) = buffer_id; // REVIEW entire codebase: how many places can we reduce the mixins to a little blip like this?
+				mixin(bind_call) = buffer_id;
 
 				gl.VertexAttribPointer (
-					index, n, gl.type!U, 
+					index, n, gl.type_enum!U, 
 					GL_FALSE, 0, null
 				);
 			}
@@ -97,7 +97,7 @@ struct GLBuffer (T, alias target, alias usage)
 					auto i = slice.left, j = slice.right;
 				else auto i = slice, j = slice + 1;
 
-				gl.copy_read_buffer = this;
+				gl.copy_read_buffer = this.buffer_id;
 
 				gl.GetBufferSubData (GL_COPY_READ_BUFFER, gl_slice (i,j).expand, target);
 			}
@@ -159,10 +159,11 @@ auto gpu_array (R)(R range)
 	{/*...}*/
 		return GPUArray!(ElementType!R)(range);
 	}
+	static if (0)
 	unittest {/*...}*/
-		import evx.graphics.display;//		import evx.graphics.display;
-		import evx.math;//		import evx.math.sequence;
-		import evx.containers;//		import evx.containers.m_array;
+		import evx.graphics.display;
+		import evx.math;
+		import evx.containers;
 
 		scope display = new Display;
 

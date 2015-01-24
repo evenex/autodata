@@ -8,6 +8,7 @@ private {/*imports}*/
 
 	import evx.graphics.opengl;
 	import evx.graphics.color;
+	import evx.graphics.operators;
 
 	import evx.math;
 
@@ -47,7 +48,7 @@ struct Texture
 
 				gl.ActiveTexture (target);
 
-				gl.texture_2D = this;
+				gl.texture_2D = this.texture_id;
 			}
 
 		template TextureId ()
@@ -62,8 +63,6 @@ struct Texture
 						return vector (bounds[0].left, bounds[1].left);
 					}
 			}
-
-		import evx.graphics.shader.experimental;//TEMP 
 
 		mixin CanvasOps!(
 			preprocess, framebuffer_id,
@@ -102,7 +101,7 @@ struct Texture
 					{/*...}*/
 						gl.GenTextures (1, &texture_id);
 
-						gl.texture_2D = this;
+						gl.texture_2D = texture_id;
 
 						gl.TexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 						gl.TexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -121,13 +120,13 @@ struct Texture
 						// TODO TODO TODO
 					}
 
-				gl.texture_2D = this;
+				gl.texture_2D = texture_id;
 
 				gl.TexImage2D (GL_TEXTURE_2D, 
 					base_mip_level,
 					format,
 					width.to!int, height.to!int, 0,
-					format, gl.type!ubyte, null
+					format, gl.type_enum!ubyte, null
 				);
 
 				this.width = width;
@@ -203,7 +202,7 @@ struct Texture
 
 						gl.GetTexImage (GL_TEXTURE_2D,
 							base_mip_level,
-							format, gl.type!ubyte,
+							format, gl.type_enum!ubyte,
 							ptr
 						);
 					}
