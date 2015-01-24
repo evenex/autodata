@@ -135,7 +135,7 @@ alias DeinterleaveNLists (uint n, T...) = InterleaveNLists!(T.length/n, T);
 	static assert (DeinterleaveNLists!(3, 0,2,4,1,3,5) == Cons!(0,1,2,3,4,5));
 
 alias Interleave (T...) = InterleaveNLists!(2,T);
-template Deinterleave (T...) = DeinterleaveNLists!(2,T);
+alias Deinterleave (T...) = DeinterleaveNLists!(2,T);
 
 template Sort (alias compare, T...)
 	{/*...}*/
