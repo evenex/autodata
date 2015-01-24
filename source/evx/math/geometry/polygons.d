@@ -184,10 +184,10 @@ auto rotate (T, U = ElementType!(ElementType!T), V = ElementType!T)(T geometry, 
 		return geometry.map!(v => (v-c).rotate (θ) + c);
 	}
 	unittest {/*...}*/
-		import std.algorithm;
-
+		static if (0)
 		foreach (v; [vec(0,1), vec(0,2), vec(3,9)].rotate (12))
-			assert (not!any (v.each!isNaN[]));
+			assert (not!any (v.each!isNaN[])); // BUG each(v) cannot be sliced with []
+
 	}
 
 /* scale a polygon without moving its centroid 
