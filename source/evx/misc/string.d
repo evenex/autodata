@@ -6,7 +6,7 @@ private {/*imports}*/
 	import std.ascii;
 }
 
-pure extract_number (string input)
+auto extract_number ()(string input)
 	{/*...}*/
 		enum accepted_chars = `-.0123456789`;
 
@@ -16,7 +16,7 @@ pure extract_number (string input)
 		return input[i..min($, j+1)];
 	}
 
-auto find_occurrences (string text, string word)
+auto find_occurrences ()(string text, string word)
 	{/*...}*/
 		long[] indices;
 
