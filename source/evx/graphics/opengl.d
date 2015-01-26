@@ -207,7 +207,6 @@ struct gl
 							glfwTerminate ();
 						}
 
-					if (0)
 					terminate_glfw;
 				}
 		}
