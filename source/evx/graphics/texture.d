@@ -33,8 +33,6 @@ struct Texture
 		enum format = GL_RGBA;
 
 		GLuint texture_id;
-		alias texture_id this; // REVIEW
-
 		GLuint framebuffer_id;
 
 		size_t width, height;
@@ -65,7 +63,7 @@ struct Texture
 			}
 
 		mixin CanvasOps!(
-			preprocess, framebuffer_id,
+			preprocess, framebuffer_id, texture_id,
 			allocate, pull, access, 
 			width, height,
 			RangeOps, TextureId
@@ -85,6 +83,7 @@ struct Texture
 
 				return value;
 			 }
+
 		void allocate (size_t width, size_t height)
 			in {/*...}*/
 				assert ((width == 0) == (height == 0), 
@@ -115,10 +114,12 @@ struct Texture
 							`failed to create texture ` ~ texture_id.text
 						);
 
-						// TEMP REVIEW canvasops should be responsible for generating framebuffer_ids, unless it is absolved of managing them
+						assert (framebuffer_id == 0);
+
 						gl.GenFramebuffers (1, &framebuffer_id);
-						// TODO TODO TODO
 					}
+
+				auto previous_texture = gl.texture_2D;
 
 				gl.texture_2D = texture_id;
 
@@ -129,16 +130,18 @@ struct Texture
 					format, gl.type_enum!ubyte, null
 				);
 
+				gl.texture_2D = previous_texture;
+
 				this.width = width;
 				this.height = height;
-
-				gl.texture_2D = 0;
 			}
 		void free ()
 			{/*...}*/
 				gl.DeleteTextures (1, &texture_id);
+				gl.DeleteFramebuffers (1, &framebuffer_id);
 
 				texture_id = 0;
+				framebuffer_id = 0;
 				width = 0;
 				height = 0;
 			}
@@ -171,7 +174,7 @@ struct Texture
 						base_mip_level,
 						xs.left.to!int, ys.left.to!int,
 						xs.width.to!int, ys.width.to!int,
-						format, gl.type!ubyte, ptr
+						format, gl.type_enum!ubyte, ptr
 					);
 				}
 			}
