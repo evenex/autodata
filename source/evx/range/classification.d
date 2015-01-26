@@ -5,7 +5,7 @@ private {/*...}*/
 	import std.traits;
 
 	import evx.math.logic;
-	import evx.math.vectors;
+	import evx.math.vector;
 	import evx.math.space;
 	import evx.type;
 }
