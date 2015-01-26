@@ -41,6 +41,10 @@ size_t count (alias criteria = exists => true, R)(R range)
 		return count;
 	}
 
+/* count the number of elements in an input_range until a given element is found 
+*/
+alias count_until = std.algorithm.countUntil;
+
 /* verify that the declared length of a range is its true length 
 */
 debug void verify_length (R)(R range)
