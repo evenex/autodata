@@ -19,7 +19,7 @@ private {/*imports}*/
 	import evx.math.arithmetic;
 	import evx.math.functional;
 	import evx.math.constants;
-	import evx.math.vectors;
+	import evx.math.vector;
 	import evx.math.statistics;
 }
 

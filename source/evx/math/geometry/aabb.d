@@ -12,7 +12,7 @@ private {/*imports}*/
 
 	import evx.math.algebra;
 	import evx.math.functional;
-	import evx.math.vectors;
+	import evx.math.vector;
 	import evx.math.ordinal;
 	import evx.math.overloads;
 	import evx.math.logic;
