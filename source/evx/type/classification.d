@@ -29,6 +29,10 @@ alias is_integral = isIntegral;
 */
 alias is_floating_point = isFloatingPoint;
 
+/* test if a type is unsigned
+*/
+alias is_unsigned = isUnsigned;
+
 /* test if a type is implicitly convertible to another
 */
 alias is_implicitly_convertible = isImplicitlyConvertible;
