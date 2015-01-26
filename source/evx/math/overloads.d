@@ -1,7 +1,7 @@
 module evx.math.overloads;
 
 private {/*imports}*/
-	import evx.math.vectors;
+	import evx.math.vector;
 }
 
 public: import std.math: cos, sin, SQRT2;
