@@ -165,7 +165,7 @@ auto gpu_array (R)(R range)
 		import evx.math;
 		import evx.containers;
 
-		scope display = new Display;
+		auto display = Display (800, 600);
 
 		auto vram = ℕ[0..999].map!(to!int).gpu_array; // copies data from ram to gpu
 		assert (vram[0..10] == [0,1,2,3,4,5,6,7,8,9]);

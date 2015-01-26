@@ -412,7 +412,11 @@ package {/*generator/compiler/linker}*/
 								program_id = *id;
 
 								if (gl.IsProgram (program_id))
-									return;
+									{/*...}*/
+										link_variables;
+
+										return;
+									}
 							}
 
 						build_program;
@@ -473,7 +477,7 @@ package {/*generator/compiler/linker}*/
 						foreach (i, Var; Variables)
 							{/*...}*/
 								static if (Var.storage_class is StorageClass.uniform)
-									auto bound = variable_locations[i] = gl.GetUniformLocation (program_id, Var.identifier);
+									auto bound = variable_locations[i] = gl.GetUniformLocation (program_id, Var.identifier.to_c.expand);
 
 								else static if (Var.storage_class is StorageClass.vertex_input)
 									auto bound = variable_locations[i] = gl.GetAttribLocation (program_id, Var.identifier.to_c.expand);

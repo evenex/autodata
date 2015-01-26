@@ -199,7 +199,6 @@ struct gl
 				}
 			shared static ~this ()
 				{/*...}*/
-				import evx.graphics.display;
 					void terminate_glfw ()
 						{/*...}*/
 							if (window !is null)
@@ -315,7 +314,7 @@ struct gl
 					return UniformInfo (type, size, name[0..length].to!string);
 				}
 
-			void uniform (T)(T value, GLuint index = 0)
+			void uniform (T)(T value, GLuint index)
 				in {/*...}*/
 					assert (program != 0, `no active program`);
 
@@ -439,7 +438,7 @@ struct gl
 					if (variable.type != GL_SAMPLER_2D)
 						assert (variable.type == gl.type_enum!T,
 							`attempted to upload ` ~ T.stringof ~ ` to uniform ` ~ variable.text
-							~ `, use ` ~ GLTypeTable[variable.type] ~ ` instead.`
+							~ ` at location ` ~ index.text
 						);
 					else assert (is (T == int),
 						`texture sampler uniform must bind a texture unit index, not a ` ~ T.stringof

@@ -4,6 +4,7 @@ private {/*imports}*/
 	import std.conv;
 
 	import evx.graphics.opengl;
+	import evx.graphics.color;
 	import evx.graphics.operators;
 
 	import evx.math;
@@ -30,8 +31,6 @@ struct Display
 				this.height = height;
 
 				gl.window_size (width, height);
-
-				std.stdio.stderr.writeln (width, ` × `, height);
 
 				if (width * height == 0)
 					gl.on_resize = null;
@@ -85,6 +84,15 @@ struct Display
 			{/*...}*/
 				gl.clear;
 				gl.swap_buffers;
+			}
+
+		void background (Color color)
+			{/*...}*/
+				gl.clear_color = color;
+			}
+		auto background ()
+			{/*...}*/
+				return gl.clear_color;
 			}
 
 		mixin CanvasOps!(

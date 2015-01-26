@@ -242,7 +242,7 @@ unittest {/*texture transfer}*/
 	import evx.graphics.shader.experimental; // TEMP pending renderer module
 	import evx.type;
 
-	scope display = new Display;
+	auto display = Display (800, 600);
 
 	auto vertices = square!float;
 
@@ -255,10 +255,9 @@ unittest {/*texture transfer}*/
 
 	// TEXTURED SHAPE SHADER
 	Cons!(vertices, tex1).textured_shape_shader // REVIEW Cons only works for symbols, rvalues need to be in tuples... with DIP32, this distinction will be removed (i think)
-	.aspect_correction (display.aspect_ratio)
-	.triangle_fan.output_to (display);
+	.triangle_fan.render_to (display);
 
-	display.show;
+	display.post;
 
 	assert (tex1[0,0] == yellow);
 
