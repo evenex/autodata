@@ -77,8 +77,7 @@ void main () // TODO GOAL
 	{/*...}*/
 		import evx.graphics.display;
 
-		auto display = Display (800, 600); // BUG this kills GLFW somehow
-	static if (0) {/*}*/
+		auto display = Display (800, 600);
 
 		auto vertices = circle.map!(to!fvec)
 			.enumerate.map!((i,v) => i%2? v : v/4);
@@ -156,5 +155,4 @@ void main () // TODO GOAL
 		display.post;
 
 		Thread.sleep (2.seconds);
-	}
 	}

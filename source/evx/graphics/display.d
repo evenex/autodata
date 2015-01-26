@@ -33,8 +33,10 @@ struct Display
 
 				std.stdio.stderr.writeln (width, ` × `, height);
 
-				gl.on_resize = (size_t width, size_t height)
-					{this.width = width; this.height = height;};
+				if (width * height == 0)
+					gl.on_resize = null;
+				else gl.on_resize = (size_t w, size_t h)
+					{this.width = w; this.height = h;};
 			}
 
 		this (size_t width = 800, size_t height = 600)
