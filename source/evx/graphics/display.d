@@ -31,15 +31,10 @@ struct Display
 
 				gl.window_size (width, height);
 
+				std.stdio.stderr.writeln (width, ` × `, height);
+
 				gl.on_resize = (size_t width, size_t height)
 					{this.width = width; this.height = height;};
-
-				gl.show_window;
-			}
-		void free ()
-			{/*...}*/
-				gl.hide_window;
-				gl.on_resize = null;
 			}
 
 		this (size_t width = 800, size_t height = 600)
@@ -50,11 +45,6 @@ struct Display
 			}
 			body {/*...}*/
 				allocate (width, height);
-
-				gl.on_resize = (size_t width, size_t height)
-					{this.width = width; this.height = height;};
-
-				gl.show_window;
 			}
 
 		auto pixel_dimensions ()

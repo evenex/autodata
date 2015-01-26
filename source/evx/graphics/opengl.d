@@ -199,6 +199,7 @@ struct gl
 				}
 			shared static ~this ()
 				{/*...}*/
+				import evx.graphics.display;
 					void terminate_glfw ()
 						{/*...}*/
 							if (window !is null)
@@ -462,15 +463,12 @@ struct gl
 		package {/*window control}*/
 			void window_size (size_t width, size_t height)
 				{/*...}*/
-					glfwSetWindowSize (window, width.to!int, height.to!int);
-				}
-			void show_window ()
-				{/*...}*/
-					glfwShowWindow (window);
-				}
-			void hide_window ()
-				{/*...}*/
-					glfwHideWindow (window);
+					if (width * height == 0)
+						glfwHideWindow (window);
+					else {/*...}*/
+						glfwSetWindowSize (window, width.to!int, height.to!int);
+						glfwShowWindow (window);
+					}
 				}
 			void swap_buffers ()
 				{/*...}*/

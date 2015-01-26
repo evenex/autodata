@@ -134,6 +134,15 @@ public {/*debug}*/
 				scope (success) std.stdio.stderr.writeln (}`"` ~ name ~ q{ ok}`"`q{);
 			};
 		}
+
+	void dout (string msg)()
+		{/*...}*/
+			import std.c.stdio;
+
+			fprintf (stderr, msg);
+			fprintf (stderr, "\n");
+			fflush (stderr);
+		}
 }
 public {/*UDA tags}*/
 	/* for non-const sections or members in a series of consts 
