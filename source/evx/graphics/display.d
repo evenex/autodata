@@ -82,7 +82,6 @@ struct Display
 
 		void post ()
 			{/*...}*/
-				gl.clear;
 				gl.swap_buffers;
 			}
 

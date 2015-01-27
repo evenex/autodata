@@ -400,7 +400,7 @@ package {/*generator/compiler/linker}*/
 						assert (not (gl.IsProgram (program_id)));
 					}
 					out {/*...}*/
-						assert (gl.IsProgram (program_id) && program_id != 0, // BUG the shader ID is still in the global table from a prior context, but is no longer a valid program
+						assert (gl.IsProgram (program_id) && program_id != 0,
 							`shader failed to initialize program ` ~ program_id.text
 						);
 					}

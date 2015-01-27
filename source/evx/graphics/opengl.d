@@ -17,6 +17,8 @@ private {/*imports}*/
 }
 public import derelict.opengl3.gl3;
 
+static if (0) version = GL_TRACE;
+
 struct GLTypeTable
 	{/*...}*/
 		public {/*list}*/
@@ -173,10 +175,10 @@ struct gl
 							if (window is null)
 								assert (0, `window creation failure`);
 
-							glfwHideWindow (window);
-
 							glfwMakeContextCurrent (window);
 							glfwSwapInterval (0);
+
+							glfwHideWindow (window);
 
 							glfwSetWindowSizeCallback (window, &resize_window_callback);
 							glfwSetFramebufferSizeCallback (window, &resize_framebuffer_callback);
@@ -468,6 +470,8 @@ struct gl
 						glfwSetWindowSize (window, width.to!int, height.to!int);
 						glfwShowWindow (window);
 					}
+
+					resize_framebuffer_callback (null, width.to!int, height.to!int);
 				}
 			void swap_buffers ()
 				{/*...}*/
@@ -488,11 +492,9 @@ struct gl
 
 					fprintf (stderr, "error glfw: %s\n", error);
 				}
-			void resize_framebuffer_callback (GLFWwindow* window, int width, int height)
+			void resize_framebuffer_callback (GLFWwindow*, int width, int height)
 				{/*...}*/
 					glViewport (0, 0, width, height);
-					//try gl.Viewport (0, 0, width, height);
-					//catch (Exception ex) assert (0, ex.msg);
 				}
 			void resize_window_callback (GLFWwindow*, int width, int height)
 				{/*...}*/
@@ -508,12 +510,27 @@ struct gl
 							error_check!name (args);
 						}
 						body {/*...}*/
+							version (GL_TRACE)
+								{/*...}*/
+									import std.stdio;
+
+									stderr.write (name, ` `);
+									
+									foreach (arg; args)
+										static if (is(typeof(*arg) : const(char)))
+											stderr.write (arg.to!string, ` `);
+										else static if (is (typeof (*arg)))
+											stderr.write (*arg, ` `);
+										else stderr.write (arg, ` `);
+
+										stderr.write ("\n");
+								}
+
 							mixin (q{
 								return gl} ~ name ~ q{ (args.to_c.expand);
 							});
 						}
 				}
-
 		}
 		private {/*binding points}*/
 			void set_binding (string target)(GLuint id)
