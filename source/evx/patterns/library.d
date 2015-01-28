@@ -58,10 +58,10 @@ mixin template DynamicLibrary ()
 			{/*...}*/
 				enum generic_error = `call to ` ~op~ ` (` ~CArgs.stringof~ `) failed to compile`;
 
-				static if (__traits(compiles, mixin(q{ParameterTypeTuple!(} ~op~ q{)})))
+				static if (__traits(compiles, mixin(q{Parameters!(} ~op~ q{)})))
 					{/*enum error}*/
 						mixin(q{
-							alias Params = ParameterTypeTuple!(} ~op~ q{);
+							alias Params = Parameters!(} ~op~ q{);
 						});
 
 						static if (not(is(CArgs == Params)))

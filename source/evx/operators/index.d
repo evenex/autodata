@@ -17,9 +17,10 @@ template IndexOps (alias access, limits...)
 			import evx.operators.error;
 			import evx.math.intervals;
 			import evx.misc.overload;
+			import evx.type;
 		}
 
-		auto ref ReturnType!access opIndex (ParameterTypeTuple!access selected)
+		auto ref ReturnType!access opIndex (Parameters!access selected)
 			in {/*...}*/
 				version (all)
 					{/*error messages}*/
@@ -30,7 +31,7 @@ template IndexOps (alias access, limits...)
 
 						enum type_error = error_header ~ `limit base types must match access parameter types`
 						`: ` ~ Map!(ExprType, limits).stringof
-						~ ` !→ ` ~ ParameterTypeTuple!access.stringof;
+						~ ` !→ ` ~ Parameters!access.stringof;
 
 						auto bounds_inverted_error (LimitType)(LimitType limit) 
 							{return error_header ~ `bounds inverted! ` ~ limit.left.text ~ ` > ` ~ limit.right.text;}
@@ -41,7 +42,7 @@ template IndexOps (alias access, limits...)
 
 				foreach (i, limit; limits)
 					{/*type check}*/
-						static assert  (limits.length == ParameterTypeTuple!access.length,
+						static assert  (limits.length == Parameters!access.length,
 							type_error
 						);
 
@@ -51,11 +52,11 @@ template IndexOps (alias access, limits...)
 							);
 
 						static if (is (LimitType))
-							static assert (is (ParameterTypeTuple!access[i] == LimitType),
+							static assert (is (Parameters!access[i] == LimitType),
 								type_error
 							);
 
-						else static assert (is (ParameterTypeTuple!access[i] == Unqual!(typeof(limit.identity))), 
+						else static assert (is (Parameters!access[i] == Unqual!(typeof(limit.identity))), 
 							type_error
 						);
 					}

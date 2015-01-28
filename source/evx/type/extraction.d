@@ -40,5 +40,7 @@ template collect_members (T, alias attribute)
 
 static alias ExprType (alias symbol) = typeof(symbol.identity);
 
+alias Parameters = ParameterTypeTuple;
+
 // TODO DEPRECATE:
 

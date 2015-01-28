@@ -129,7 +129,7 @@ struct Join (R)
 
 					if (at_separator)
 						return separator[i];
-					else return ranges[j][i]; // BUG what if empty range?
+					else return ranges[j][i];
 				}
 			void popFront ()
 				{/*...}*/
@@ -184,6 +184,12 @@ auto join (R, S = ElementType!R)(R ranges, S separator = S.init)
 
 		assert (A.join.equal ([1,2,3,4,5,6]));
 		assert (A.join ([0]).equal ([1, 2, 0, 3, 4, 0, 5, 6]));
+
+		int[] u = [1,2,3];
+		int[] v = [];
+		int[] w = [4,5];
+
+		assert ([u,v,w].join.equal ([1,2,3,4,5]));
 	}
 
 /* traverse a range with elements rotated left by some number of positions 

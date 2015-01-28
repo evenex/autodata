@@ -11,45 +11,29 @@ private {/*import}*/
 
 struct Array (T, uint dimensions = 1)
 	{/*...}*/
-		struct Base // BUG https://issues.dlang.org/show_bug.cgi?id=13860
+		T[] data;
+
+		ref array () {return this;} // REVIEW HACK, to get around some kind of builtin .array thing that conflicts with UFCS array
+		auto ptr () {return data.ptr;}
+
+		Repeat!(dimensions, size_t) lengths;
+
+		auto length (uint d)() const
 			{/*...}*/
-				T[] data;
+				return lengths[d];
+			}
+		ref access (Repeat!(dimensions, size_t) index)
+			{/*...}*/
+				size_t offset = 0;
+				size_t stride = 1;
 
-				Repeat!(dimensions, size_t) lengths;
-
-				auto length (uint d)() const
+				foreach (i; Iota!dimensions)
 					{/*...}*/
-						return lengths[d];
+						offset += index[i] * stride;
+						stride *= length!i;
 					}
 
-				ref access (Repeat!(dimensions, size_t) index)
-					{/*...}*/
-						size_t offset = 0;
-						size_t stride = 1;
-
-						foreach (i; Iota!dimensions)
-							{/*...}*/
-								offset += index[i] * stride;
-								stride *= length!i;
-							}
-
-						return data[offset];
-					}
-			}
-
-		Base base;
-		alias base this;
-
-		auto ref array () {return this;} // REVIEW HACK, to get around some kind of builtin .array thing that conflicts with UFCS array
-		auto ptr () {return base.data.ptr;}
-
-		auto length (size_t d = 0)() const
-			{/*...}*/
-				return base.length!d;
-			}
-		ref access (Repeat!(dimensions, size_t) point)
-			{/*...}*/
-				return base.access (point);
+				return data[offset];
 			}
 		void pull (S, U...)(S space, U region)
 			if (U.length == dimensions)
@@ -78,7 +62,7 @@ struct Array (T, uint dimensions = 1)
 						size_t offset = 0;
 						size_t stride = 1;
 
-						foreach (i, length; base.lengths)
+						foreach (i, length; lengths)
 							{/*...}*/
 								offset += (bounds[i].left + index[i]) * stride;
 								stride *= length;
@@ -103,7 +87,7 @@ struct Array (T, uint dimensions = 1)
 								return index[i];
 							}
 
-						base.data[offset] = space[
+						data[offset] = space[
 							Map!(get_index,
 								Map!(Pair!().First!Identity,
 									Filter!(Pair!().Second!Identity,
@@ -118,8 +102,8 @@ struct Array (T, uint dimensions = 1)
 			}
 		void allocate (Repeat!(dimensions, size_t) lengths)
 			{/*...}*/
-				base.data = new T[only (lengths).product];
-				base.lengths = lengths;
+				data = new T[only (lengths).product];
+				this.lengths = lengths;
 			}
 
 		mixin BufferOps!(allocate, pull, access, Map!(length, Iota!dimensions), RangeOps);
@@ -136,7 +120,7 @@ struct Array (T, uint dimensions = 1)
 		auto y = Array!(int, 2)();
 		y.allocate (5,5);
 
-		assert (y.base.data == [
+		assert (y.data == [
 			0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0,
@@ -147,7 +131,7 @@ struct Array (T, uint dimensions = 1)
 		y[0..$, 0] = [1,2,3,4,5];
 		y[0, 0..$] = [1,2,3,4,5];
 
-		assert (y.base.data == [
+		assert (y.data == [
 			1, 2, 3, 4, 5,
 			2, 0, 0, 0, 0,
 			3, 0, 0, 0, 0,
@@ -159,7 +143,7 @@ struct Array (T, uint dimensions = 1)
 
 		y[2..4, 2..4] = z[];
 
-		assert (y.base.data == [
+		assert (y.data == [
 			1, 2, 3, 4, 5,
 			2, 0, 0, 0, 0,
 			3, 0, 1, 2, 0,
@@ -202,8 +186,8 @@ auto array_view (T, U...)(T* ptr, U dims)
 	{/*...}*/
 		Array!(T, U.length) array;
 
-		array.base.data = ptr[0..dims.product];
-		array.base.lengths = dims;
+		array.data = ptr[0..dims.product];
+		array.lengths = dims;
 
 		return array;
 	}

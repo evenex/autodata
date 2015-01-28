@@ -11,7 +11,6 @@ template CanvasOps (alias preprocess, alias framebuffer_id, alias attachment_id,
 			import evx.graphics.shader;
 		}
 
-		static if (0) // BUG FUCK WHAT
 		static assert (
 			is (typeof((){auto s = Shader!().init; return typeof(preprocess (s)).init;}()) == Shader!R, R...)
 			&& not (is (typeof(preprocess (Shader!().init)) == Shader!S, S...)),

@@ -15,25 +15,22 @@ private {/*imports}*/
 
 struct Grid (Space)
 	{/*...}*/
-		struct Base
+		Space space;
+		Repeat!(dimensionality!Space, size_t) lengths;
+
+		Element!Space access (typeof(lengths) point)
 			{/*...}*/
-				Space space;
-				Repeat!(dimensionality!Space, size_t) lengths;
+				auto domain_transform (uint d)() {return space.limit!d.left + point[d] * space.limit!d.width / lengths[d];}
 
-				Element!Space access (typeof(lengths) point)
-					{/*...}*/
-						auto domain_transform (uint d)() {return space.limit!d.left + point[d] * space.limit!d.width / lengths[d];}
-
-						return space[Map!(domain_transform, Count!(typeof(point)))];
-					}
-
-				size_t[2] limit (uint d)() const
-					{/*...}*/
-						return [0, lengths[d]];
-					}
+				return space[Map!(domain_transform, Count!(typeof(point)))];
 			}
 
-		mixin Patch!(Base, 13860);
+		size_t[2] limit (uint d)() const
+			{/*...}*/
+				return [0, lengths[d]];
+			}
+
+		mixin SliceOps!(access, Map!(limit, Iota!(dimensionality!Space)), RangeOps);
 	}
 auto grid (S, T...)(S space, T cells)
 	{/*...}*/

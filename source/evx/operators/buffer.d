@@ -20,15 +20,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 			}
 		~this ()
 			{/*...}*/
-				//this = null; // BUG https://issues.dlang.org/show_bug.cgi?id=13886 REVIEW fixed in latest release
-				{/*HACK}*/
-					ParameterTypeTuple!access zeroed;
-
-					foreach (ref size; zeroed)
-						size = zero!(typeof(size));
-
-					allocate (zeroed);
-				}
+				this = null;
 			}
 		@disable this (this);
 
@@ -51,29 +43,29 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 
 				static if (is (typeof(space.limit!0)))
 					{/*...}*/
-						foreach (i, LimitType; ParameterTypeTuple!access)
+						foreach (i, LimitType; Parameters!access)
 							static assert (is (typeof(space.limit!i.left) : LimitType),
 								cannot_assign_error ~ ` (dimension or type mismatch)`
 							);
 
-						static assert (not (is (typeof(space.limit!(ParameterTypeTuple!access.length)))),
+						static assert (not (is (typeof(space.limit!(Parameters!access.length)))),
 							cannot_assign_error ~ `(` ~ S.stringof ~ ` has too many dimensions)`
 						);
 					}
 				else static if (is (typeof(space.length)) && not (is (typeof(this[selected].limit!1))))
 					{/*...}*/
-						static assert (is (typeof(space.length.identity) : ParameterTypeTuple!access[0]),
+						static assert (is (typeof(space.length.identity) : Parameters!access[0]),
 							cannot_assign_error ~ ` (length is incompatible)`
 						);
 					}
 				else static assert (0, cannot_assign_error);
 			}
 			body {/*...}*/
-				ParameterTypeTuple!access size;
+				Parameters!access size;
 
 				auto read_limits ()()
 					{/*...}*/
-						foreach (i; Count!(ParameterTypeTuple!access))
+						foreach (i; Count!(Parameters!access))
 							size[i] = space.limit!i.width;
 					}
 				auto read_length ()()
@@ -91,11 +83,11 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 			}
 		ref opAssign (typeof(null))
 			out {/*...}*/
-				foreach (i, T; ParameterTypeTuple!access)
+				foreach (i, T; Parameters!access)
 					assert (this[].limit!i.width == zero!T);
 			}
 			body {/*...}*/
-				ParameterTypeTuple!access zeroed;
+				Parameters!access zeroed;
 
 				foreach (ref size; zeroed)
 					size = zero!(typeof(size));

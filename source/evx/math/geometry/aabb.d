@@ -350,7 +350,7 @@ auto into_bounding_box_of (R,S)(auto ref R inner, auto ref S outer)
 			 ex_c = exterior.center;
 		auto s = exterior.dimensions / interior.dimensions; // BUG was immutable
 
-		return inner.map!(v => (v - in_c) * s + ex_c); // REVIEW [] operator for priming ranges
+		return inner.map!(v => (v - in_c) * s + ex_c);
 	}
 	unittest {/*...}*/
 		import evx.math;

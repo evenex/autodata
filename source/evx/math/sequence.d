@@ -22,69 +22,8 @@ struct Sequence (alias f, T)
 				return f (initial, i + bounds.left).to!T;
 			}
 
-		version (all) // TODO bugfix issued, update this!!!!!!
-			{/*...}*/
-				auto opIndex (size_t i)
-					{/*...}*/
-						return access (i);
-					}
-				auto opIndex (size_t[2] slice)
-					{/*...}*/
-						auto t = this;
-
-						t.bounds.left += slice.left;
-						t.bounds.right = t.bounds.left + slice.width;
-
-						return t;
-					}
-				auto opIndex ()
-					{/*...}*/
-						return this;
-					}
-				size_t[2] opSlice (size_t d: 0)(size_t i, size_t j)
-					{/*...}*/
-						return [i,j];
-					}
-				auto front ()
-					{/*...}*/
-						return this[0];
-					}
-				auto back ()
-					{/*...}*/
-						return this[$-1];
-					}
-				auto opDollar ()
-					{/*...}*/
-						return length;
-					}
-				auto popFront ()
-					{/*...}*/
-						bounds.left++;
-					}
-				auto popBack ()
-					{/*...}*/
-						bounds.right--;
-					}
-				auto empty ()
-					{/*...}*/
-						return length == 0;
-					}
-				@property save ()
-					{/*...}*/
-						return this;
-					}
-				bool opEquals (R)(R range)
-					{/*...}*/
-						return evx.range.equal (save, range);
-					}
-				@property length () const
-					{/*...}*/
-						return bounds.width;
-					}
-			}
-
-		//mixin SliceOps!(access, bounds, RangeOps);// BUG https://issues.dlang.org/show_bug.cgi?id=13861
-	//	mixin RangeOps;
+		mixin SliceOps!(access, bounds, RangeOps);
+		mixin RangeOps;
 	}
 
 /* build a sequence from an index-based generating function and an initial value 

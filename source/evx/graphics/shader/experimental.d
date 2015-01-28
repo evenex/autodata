@@ -79,7 +79,7 @@ void main () // TODO GOAL
 
 		auto display = Display (800, 600);
 
-		display.background (grey); // TEMP
+		display.background = grey;
 
 		auto vertices = circle.map!(to!fvec)
 			.enumerate.map!((i,v) => i%2? v : v/4);
@@ -127,10 +127,10 @@ void main () // TODO GOAL
 
 		import core.thread;
 		Thread.sleep (2.seconds);
-		display.background (white); // TEMP
+		display.background = white; // TEMP
 
 		Texture target;
-		target.allocate (256,256);
+		target.allocate (256, 256);
 
 		vertices.translate (-0.5.fvec).vertex_shader!(
 			`pos`, q{

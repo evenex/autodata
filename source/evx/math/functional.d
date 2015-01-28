@@ -739,62 +739,59 @@ public {/*zip}*/
 public {/*by}*/
 	struct Product (Spaces...)
 		{/*...}*/
-			struct Base
+			alias Offsets = Scan!(Sum, Map!(dimensionality, Spaces));
+
+			Spaces spaces;
+
+			auto limit (size_t d)() const
 				{/*...}*/
-					alias Offsets = Scan!(Sum, Map!(dimensionality, Spaces));
+					mixin LambdaCapture;
 
-					Spaces spaces;
+					alias LimitOffsets = Offsets[0..$ - Filter!(λ!q{(int i) = d < i}, Offsets).length + 1];
+						
+					enum i = LimitOffsets.length - 1;
+					enum d = LimitOffsets[0] - 1;
 
-					auto limit (size_t d)() const
-						{/*...}*/
-							mixin LambdaCapture;
+					size_t[2] get_length ()() if (d == 0) {return [0, spaces[i].length];}
+					auto get_limit ()() {return spaces[i].limit!d;}
 
-							alias LimitOffsets = Offsets[0..$ - Filter!(λ!q{(int i) = d < i}, Offsets).length + 1];
-								
-							enum i = LimitOffsets.length - 1;
-							enum d = LimitOffsets[0] - 1;
-
-							size_t[2] get_length ()() if (d == 0) {return [0, spaces[i].length];}
-							auto get_limit ()() {return spaces[i].limit!d;}
-
-							return Match!(get_limit, get_length);
-						}
-
-					auto access (Map!(Coords, Spaces) point)
-						in {/*...}*/
-							static assert (typeof(point).length >= Spaces.length,
-								`could not deduce coordinate type for ` ~ Spaces.stringof
-							);
-						}
-						body {/*...}*/
-							template projection (size_t i)
-								{/*...}*/
-									auto π_i ()() {return spaces[i][point[0..Offsets[i]]];}
-									auto π_n ()() {return spaces[i][point[Offsets[i-1]..Offsets[i]]];}
-
-									alias projection = Match!(π_i, π_n);
-								}
-
-							Map!(Λ!q{(alias π) = typeof(π.identity)}, 
-								Map!(projection, Count!Spaces)
-							) mapped;
-
-							foreach (i; Count!Spaces)
-								mapped[i] = projection!i;
-
-							union Cast
-								{/*...}*/
-									typeof(mapped.tuple) input;
-
-									Tuple!(RepresentationTypeTuple!(typeof(input)))
-										flattened;
-								}
-
-							return Cast (mapped.tuple).flattened;
-						}
+					return Match!(get_limit, get_length);
 				}
 
-			mixin Patch!(Base, 13860);
+			auto access (Map!(Coords, Spaces) point)
+				in {/*...}*/
+					static assert (typeof(point).length >= Spaces.length,
+						`could not deduce coordinate type for ` ~ Spaces.stringof
+					);
+				}
+				body {/*...}*/
+					template projection (size_t i)
+						{/*...}*/
+							auto π_i ()() {return spaces[i][point[0..Offsets[i]]];}
+							auto π_n ()() {return spaces[i][point[Offsets[i-1]..Offsets[i]]];}
+
+							alias projection = Match!(π_i, π_n);
+						}
+
+					Map!(Λ!q{(alias π) = typeof(π.identity)}, 
+						Map!(projection, Count!Spaces)
+					) mapped;
+
+					foreach (i; Count!Spaces)
+						mapped[i] = projection!i;
+
+					union Cast
+						{/*...}*/
+							typeof(mapped.tuple) input;
+
+							Tuple!(RepresentationTypeTuple!(typeof(input)))
+								flattened;
+						}
+
+					return Cast (mapped.tuple).flattened;
+				}
+
+			mixin SliceOps!(access, Map!(limit, Count!(Parameters!access)), RangeOps);
 		}
 
 	auto by (S,R)(S left, R right)

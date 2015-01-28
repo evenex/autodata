@@ -17,10 +17,10 @@ module evx.operators.slice;
 template SliceOps (alias access, LimitsAndExtensions...)
 	{/*...}*/
 		private {/*imports}*/
-			import std.typetuple;
 			import evx.operators.index;
 			import evx.math.logic; // REVIEW for Any, does Any belong in logic?
 			import evx.type;
+
 			alias Identity = evx.type.processing.Identity;
 		}
 		public:
@@ -134,7 +134,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 				}
 		}
 		public {/*opSlice}*/
-			alias Parameter (int i) = ParameterTypeTuple!access[i];
+			alias Parameter (int i) = Parameters!access[i];
 
 			Parameter!d[2] opSlice (size_t d)(Parameter!d i, Parameter!d j)
 				{/*...}*/
@@ -157,7 +157,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 					public {/*limits}*/
 						auto limit (size_t dim)() const
 							{/*...}*/
-								static if (is (TypeTuple!(typeof(this.origin.identity)) == ParameterTypeTuple!access))
+								static if (is (Cons!(typeof(this.origin.identity)) == Parameters!access))
 									{/*...}*/
 										auto boundary = unity!(typeof(bounds[Dimensions[dim]]));
 
@@ -267,7 +267,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 							}
 					}
 					public {/*opSlice}*/
-						alias Parameter (int i) = ParameterTypeTuple!access[(Dimensions[i])];
+						alias Parameter (int i) = Parameters!access[(Dimensions[i])];
 
 						Parameter!d[2] opSlice (size_t d)(Parameter!d i, Parameter!d j)
 							{/*...}*/

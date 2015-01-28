@@ -125,15 +125,9 @@ auto flip (string direction, T)(T geometry)
 				import evx.math;//				import evx.math.geometry.aabb;
 
 				assert (not (square.flip!`vertical`.equal (square)));
-				assert (equal (
-					square.flip!`vertical`.bounding_box[],
-					square.bounding_box[]
-				));  // BUG was:
-				/*assert (square.flip!`vertical`.bounding_box[]
+				assert (square.flip!`vertical`.bounding_box[]
 					.equal (square.bounding_box[])
 				);
-					but UFCS fails... says Error: template std.algorithm.equal cannot deduce function from argument types !()(Sub!0)... wtf? non-UFCS rewrite works
-				*/
 
 				assert (not (square.flip!`horizontal`.equal (square)));
 				assert (equal (
@@ -184,9 +178,8 @@ auto rotate (T, U = ElementType!(ElementType!T), V = ElementType!T)(T geometry, 
 		return geometry.map!(v => (v-c).rotate (θ) + c);
 	}
 	unittest {/*...}*/
-		static if (0)
 		foreach (v; [vec(0,1), vec(0,2), vec(3,9)].rotate (12))
-			assert (not!any (v.each!isNaN[])); // BUG each(v) cannot be sliced with []
+			assert (not!any (v.each!isNaN[]));
 
 	}
 
