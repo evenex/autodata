@@ -9,10 +9,7 @@ import evx.misc.tuple;
 import evx.misc.utils;
 import evx.misc.memory;
 
-import std.typecons;
-import std.conv;
-import std.string;
-import std.ascii;
+import std.conv: to;
 
 import evx.graphics.opengl;
 import evx.graphics.buffer;
@@ -96,9 +93,8 @@ void main () // TODO GOAL
 				Color, `frag_color`,
 				float, `frag_alpha`, q{
 				gl_FragColor = vec4 (frag_color.rgb, frag_alpha);
-			}).triangle_fan;
+			}).triangle_fan;//.array;
 
-		//);//.array; TODO
 		//static assert (is (typeof(weight_map) == Array!(Color, 2))); TODO
 
 		auto tex_coords = circle.map!(to!fvec)
