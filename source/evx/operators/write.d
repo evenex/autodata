@@ -17,6 +17,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
 		private {/*imports}*/
 			import evx.operators.slice;
+			import evx.type;
 		}
 
 		auto opIndexAssign (S, Selected...)(S space, Selected selected)
@@ -33,17 +34,12 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 				);
 			}
 			body {/*...}*/
-				static if (is (typeof(space.push (this[selected]))))
-					{/*...}*/
-						space.push (this[selected]);
-					}
-				else static if (Selected.length > 0)
-					{/*...}*/
-						static if (is (typeof(&access (selected))))
-							access (selected) = space;
-						else pull (space, selected);
-					}
-				else pull (space, this[].bounds);
+				void push_selected ()() {space[].push (this[selected]);}
+				void access_assign ()() {access (selected) = space;}
+				void pull_selected ()() {pull (space, selected);}
+				void pull_complete ()() {pull (space, this[].bounds);}
+
+				Match!(push_selected, access_assign, pull_selected, pull_complete);
 
 				return this[selected];
 			}
@@ -96,6 +92,11 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 							}
 
 						return source.opIndexAssign (space, selection);
+					}
+
+				auto push (S)(S space)
+					{/*...}*/
+						return source.push (space, this[].bounds);
 					}
 			}
 
@@ -169,7 +170,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 						return data[i];
 					}
 
-				template PushExtension ()
+				template PushExtension () // TODO this should be default
 					{/*...}*/
 						void push (R)(auto ref R range)
 							{/*...}*/

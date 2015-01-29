@@ -77,7 +77,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 
 				allocate (size);
 
-				pull (space, this[].bounds);
+				this[] = space;
 
 				return this;
 			}
