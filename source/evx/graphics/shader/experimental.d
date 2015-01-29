@@ -84,7 +84,7 @@ void main () // TODO GOAL
 		auto weights = ℕ[0..circle.length].map!(to!float);
 		Color color = red;
 
-		auto weight_map = evx.containers.array.array (τ(vertices, weights, color)
+		auto weight_map = τ(vertices, weights, color)
 			.vertex_shader!(`position`, `weight`, `base_color`, q{
 				gl_Position = vec4 (position, 0, 1);
 				frag_color = vec4 (base_color.rgb, weight);
@@ -93,11 +93,9 @@ void main () // TODO GOAL
 				Color, `frag_color`,
 				float, `frag_alpha`, q{
 				gl_FragColor = vec4 (frag_color.rgb, frag_alpha);
-			}).triangle_fan[]);
+			}).triangle_fan[].array;
 
-		pragma(msg, typeof(evx.containers.array.array (weight_map[])));
-
-		//static assert (is (typeof(weight_map) == Array!(Color, 2))); TODO
+		static assert (is (typeof(weight_map) == Array!(Color, 2)));
 
 		auto tex_coords = circle.map!(to!fvec)
 			.flip!`vertical`;
