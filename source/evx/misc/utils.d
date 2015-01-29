@@ -231,7 +231,7 @@ debug (profiler) {/*}*/
 	string profiler (string name = q{profiler})()
 		{/*...}*/
 			return q{
-				import evx.utils: Profiler;
+				import evx.misc.utils: Profiler;
 
 				auto } ~name~ q{ = Profiler.begin;
 				scope (success) } ~name~ q{.end (Profiler.ExitStatus.success);
