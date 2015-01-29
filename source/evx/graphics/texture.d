@@ -246,14 +246,19 @@ unittest {/*texture transfer}*/
 
 	auto vertices = square!float;
 
-	auto tex1 = ℕ[0..100].by (ℕ[0..100]).map!((i,j) => (i+j)%2? red: yellow).Texture;
-	auto tex2 = ℕ[0..50].by (ℕ[0..50]).map!((i,j) => (i+j)%2? blue: green).grid (100,100).Texture;
+	auto tex1 = ℕ[0..100].by (ℕ[0..100])
+		.map!((i,j) => (i+j)%2? red: yellow)
+		.Texture;
 
 	assert (tex1[0,0] == yellow);
 
+	auto tex2 = ℕ[0..50].by (ℕ[0..50])
+		.map!((i,j) => (i+j)%2? blue: green)
+		.grid (100,100)
+		.Texture;
+
 	tex1[50..75, 25..75] = tex2[0..25, 0..50];
 
-	// TEXTURED SHAPE SHADER
 	Cons!(vertices, tex1).textured_shape_shader // REVIEW Cons only works for symbols, rvalues need to be in tuples... with DIP32, this distinction will be removed (i think)
 	.triangle_fan.render_to (display);
 
