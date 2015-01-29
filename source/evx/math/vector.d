@@ -110,7 +110,7 @@ struct Vector (size_t n, Component = double)
 				}
 		}
 		public {/*ops}*/
-			auto opUnary (string op)()
+			auto opUnary (string op)() const
 				if (op.length == 1)
 				{/*...}*/
 					static if (op == `+`)
@@ -127,7 +127,7 @@ struct Vector (size_t n, Component = double)
 						}
 					else static assert (0, op~ ` not yet implemented for vectors`);
 				}
-			ref opUnary (string op)()
+			auto ref opUnary (string op)()
 				if (op.length == 2)
 				{/*...}*/
 					mixin(q{
@@ -137,7 +137,7 @@ struct Vector (size_t n, Component = double)
 					return this;
 				}
 
-			auto opBinary (string op, V)(V that)
+			auto opBinary (string op, V)(V that) const
 				if (is_vector_like!V)
 				{/*...}*/
 					auto lhs = this;
@@ -145,7 +145,7 @@ struct Vector (size_t n, Component = double)
 
 					mixin(vector_arithmetic!(op, n-1, ArgType.vector, ArgType.vector));
 				}
-			auto opBinary (string op, T)(T that)
+			auto opBinary (string op, T)(T that) const
 				if (not (is_vector_like!T))
 				{/*...}*/
 					auto lhs = this;
@@ -154,7 +154,7 @@ struct Vector (size_t n, Component = double)
 					mixin(vector_arithmetic!(op, n-1, ArgType.vector, ArgType.scalar));
 				}
 
-			auto opBinaryRight (string op, V)(V that)
+			auto opBinaryRight (string op, V)(V that) const
 				if (is_vector_like!V)
 				{/*...}*/
 					auto lhs = vector (that);
@@ -162,7 +162,7 @@ struct Vector (size_t n, Component = double)
 
 					mixin(vector_arithmetic!(op, n-1, ArgType.vector, ArgType.vector));
 				}
-			auto opBinaryRight (string op, T)(T that)
+			auto opBinaryRight (string op, T)(T that) const
 				if (not (is_vector_like!T))
 				{/*...}*/
 					alias lhs = that;
