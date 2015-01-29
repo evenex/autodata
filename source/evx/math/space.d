@@ -41,12 +41,14 @@ template Coords (Space)
 		alias Coords = Map!(Coord, Iota!(dimensionality!(Space)));
 	}
 
-auto volume (S)(S space) // TODO doc and unittest
+auto volume (S)(auto ref S space) // TODO doc and unittest
 	{/*...}*/
-		static if (dimensionality!S == 1 && is (typeof(space.length)))
+		static if (dimensionality!S == 0)
+			return volume (space[]);
+		else static if (dimensionality!S == 1 && is (typeof(space.length)))
 			return space.length;
 		else {/*...}*/
-			Map!(Element, typeof(space.bounds)) measures;
+			Coords!S measures;
 
 			foreach (i, ref measure; measures)
 				measure = space.bounds[i].width;
