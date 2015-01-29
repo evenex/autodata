@@ -6,6 +6,7 @@ private {/*imports}*/
 	import std.string;
 
 	import evx.operators;
+	import evx.containers;
 	import evx.misc.tuple;
 
 	import evx.graphics.opengl;
@@ -48,7 +49,7 @@ struct GLBuffer (T, alias target, alias usage)
 			{/*...}*/
 				T value;
 
-				push (&value, interval (i, i+1));
+				push ((&value).array_view (1), interval (i, i+1));
 
 				return value;
 			}
@@ -91,7 +92,7 @@ struct GLBuffer (T, alias target, alias usage)
 				}
 			}
 
-		auto push (U)(T* target, U slice)
+		auto push (R,U)(R range, U slice) // TODO ensure this path is taken for write-to-pointer'd space
 			{/*...}*/
 				static if (is (U == V[2], V))
 					auto i = slice.left, j = slice.right;
@@ -99,7 +100,22 @@ struct GLBuffer (T, alias target, alias usage)
 
 				gl.copy_read_buffer = this.buffer_id;
 
-				gl.GetBufferSubData (GL_COPY_READ_BUFFER, gl_slice (i,j).expand, target);
+				void write_data (T* ptr)
+					{/*...}*/
+						gl.GetBufferSubData (GL_COPY_READ_BUFFER, gl_slice (i,j).expand, ptr);
+					}
+
+				static if (is (typeof(range.ptr) == T*))
+					write_data (range.ptr);
+				else {/*convert}*/
+					Array!T temp;
+
+					temp.allocate (slice.width);
+
+					write_data (temp.ptr);
+
+					range[] = temp[].map!(to!(Element!R));
+				}
 			}
 
 		void allocate (size_t length)
