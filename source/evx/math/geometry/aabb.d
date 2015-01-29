@@ -344,11 +344,11 @@ auto align_to (T)(Box!T box, Alignment alignment, Vector!(2, T) position)
 auto into_bounding_box_of (R,S)(auto ref R inner, auto ref S outer)
 	if (All!(is_geometric, R,S))
 	{/*...}*/
-		auto interior = inner.bounding_box, // BUG was immutable
+		auto interior = inner.bounding_box,
 			 exterior = outer.bounding_box;
-		auto in_c = interior.center,  // BUG was immutable
+		auto in_c = interior.center,
 			 ex_c = exterior.center;
-		auto s = exterior.dimensions / interior.dimensions; // BUG was immutable
+		auto s = exterior.dimensions / interior.dimensions;
 
 		return inner.map!(v => (v - in_c) * s + ex_c);
 	}
