@@ -39,7 +39,7 @@ struct Texture
 
 		void bind (GLuint index = 0)
 			in {/*...}*/
-				assert (gl.IsTexture (texture_id), `cannot bind uninitialized texture`);
+				assert (gl.IsTexture (texture_id), `cannot bind uninitialized texture ` ~ texture_id.text);
 			}
 			body {/*...}*/
 				auto target = GL_TEXTURE0 + index;
