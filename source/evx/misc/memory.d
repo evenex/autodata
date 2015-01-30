@@ -26,11 +26,7 @@ struct Bytes (T)
 /* convert values into bytes, or references into byte views 
 */
 auto bytes (T)(ref T x)
-	out (result)
-		{/*...}*/
-			std.stdio.stderr.writeln (T.stringof, ` `, result.length);
-		}
-	body {/*...}*/
+	{/*...}*/
 		return (*cast(Bytes!T*)&x)[];
 	}
 auto bytes (T)(T x)
