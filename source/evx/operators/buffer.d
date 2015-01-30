@@ -11,9 +11,14 @@ module evx.operators.buffer;
 template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
 		private {/*imports}*/
+			import evx.type;
 			import evx.operators.transfer;
 		}
 
+		this (Parameters!allocate dimensions)
+			{/*...}*/
+				allocate (dimensions);
+			}
 		this (S)(auto ref S space)
 			{/*...}*/
 				this = space;

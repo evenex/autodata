@@ -38,16 +38,6 @@ struct Display
 					{this.width = w; this.height = h;};
 			}
 
-		this (size_t width = 800, size_t height = 600)
-			in {/*...}*/
-				assert (gl.on_resize == null,
-					`only one display supported`
-				);
-			}
-			body {/*...}*/
-				allocate (width, height);
-			}
-
 		auto pixel_dimensions ()
 			{/*...}*/
 				return uvec (width, height);
@@ -75,7 +65,7 @@ struct Display
 				return (1/normalized_dimensions).to!fvec;
 			}
 
-		auto preprocess (S)(ref S shader) // TODO enforce refness
+		auto preprocess (S)(ref S shader)
 			{/*...}*/
 				return shader.aspect_correction (aspect_ratio);
 			}
