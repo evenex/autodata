@@ -73,19 +73,19 @@ void move (T)(T src, ref T tgt)
 		swap (src, tgt);
 	}
 
-/* forward an argument, preserving refness xor rvalue-move through stack
+/* forward an argument, as lvalue or rvalue reference 
 */
-auto ref forward (T)(auto ref T arg) // REVIEW is this needed
+template forward (alias symbol)
 	{/*...}*/
-		static if (__traits(isRef, arg))
-			return arg;
-		else {/*...}*/
-			T item;
-
-			arg.move (item);
-
-			return item;
-		}
+		static if (__traits(isRef, symbol))
+			alias forward = symbol;
+		else auto forward ()
+			{/*...}*/
+				typeof(symbol) value;
+				move (symbol, value);
+				
+				return value;
+			}
 	}
 
 /* a borrowed resource bypasses RAII And move semantics 
