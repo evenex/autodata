@@ -2,6 +2,7 @@ module evx.misc.memory;
 
 private {/*imports}*/
 	import std.algorithm;
+	import std.conv;
 }
 
 /* convenience structure for representing structs as byte arrays 
@@ -11,7 +12,7 @@ struct Bytes (T)
 		byte[T.sizeof] data;
 		alias data this;
 
-		auto ref bytes ()
+		auto bytes ()
 			{/*...}*/
 				return data[];
 			}
@@ -20,17 +21,16 @@ struct Bytes (T)
 			{/*...}*/
 				return bytes[].equal (that[]);
 			}
-
-		this (byte[] that)
-			{/*...}*/
-				bytes[] = that;
-			}
 	}
 
 /* convert values into bytes, or references into byte views 
 */
 auto bytes (T)(ref T x)
-	{/*...}*/
+	out (result)
+		{/*...}*/
+			std.stdio.stderr.writeln (T.stringof, ` `, result.length);
+		}
+	body {/*...}*/
 		return (*cast(Bytes!T*)&x)[];
 	}
 auto bytes (T)(T x)
@@ -41,7 +41,12 @@ auto bytes (T)(T x)
 /* byte-by-byte copy, circumventing all ctors/dtors/assign 
 */
 void blit (byte[] src, byte[] tgt)
-	{/*...}*/
+	in {/*...}*/
+		assert (src.length == tgt.length,
+			src.length.text ~ ` != ` ~ tgt.length.text
+		);
+	}
+	body {/*...}*/
 		src.copy (tgt);
 	}
 void blit (T)(ref T src, ref T tgt)
@@ -102,6 +107,8 @@ struct Borrowed (T)
 		auto ref opAssign (ref T resource)
 			{/*...}*/
 				ptr = &resource;
+
+				return this;
 			}
 
 		ref deref ()
