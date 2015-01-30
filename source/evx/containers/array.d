@@ -157,7 +157,7 @@ struct Array (T, uint dimensions = 1)
 auto array (S)(S space)
 	{/*...}*/
 		static assert (dimensionality!S > 0,
-			S.stringof ~ ` has 0 dimensions`
+			S.stringof ~ ` has 0 dimensions; if it is a container, try passing a slice [] instead`
 		);
 
 		static if (is (typeof(S == Array!(Element!S, dimensionality!S))))
