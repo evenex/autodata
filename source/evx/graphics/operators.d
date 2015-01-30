@@ -64,6 +64,7 @@ template RenderOps (alias draw, shaders...)
 	{/*...}*/
 		private {/*imports}*/
 			import evx.operators;
+			import evx.misc.memory;
 
 			import evx.graphics.opengl;
 			import evx.graphics.shader;
@@ -106,23 +107,7 @@ template RenderOps (alias draw, shaders...)
 
 					render;
 
-					return canvas;
-				}
-		}
-		public {/*convenience}*/
-			Texture default_canvas;
-
-			alias default_canvas this;
-
-			auto opIndex (Args...)(Args args)
-				{/*...}*/
-					if (default_canvas.volume == 0)
-						{/*...}*/
-							default_canvas.allocate (256, 256); // REVIEW where to get default resolution?
-							render_to (default_canvas);
-						}
-
-					return default_canvas.opIndex (args); // REVIEW pull-to-ram will go per-element, unless push is detected via alias this` - might want to TransferOps this
+					return forward!canvas;
 				}
 		}
 	}
