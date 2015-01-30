@@ -97,13 +97,14 @@ void main () // TODO GOAL
 				gl_FragColor = vec4 (frag_color.rgb, frag_alpha);
 			})
 			.triangle_fan
-			.render_to (Texture (256, 256))[]
+			.render_to (Texture (256, 256))
 			[].array;
 
 		static assert (is (typeof(weight_map) == Array!(Color, 2)));
 
-		auto tempT = weight_map[].Texture; // TEMP cant pass rval... yet
-		textured_shape_shader (square (1.1f), tempT).triangle_fan.render_to (display); // BUG passing circle instead of vertices makes nonsensical error
+		textured_shape_shader (square (1.1f), weight_map[].Texture) // BUG losing the texture by the time we try to render
+			.triangle_fan
+			.render_to (display); // BUG passing circle instead of vertices makes nonsensical error
 		display.post;
 		import core.thread;
 		Thread.sleep (2.seconds);

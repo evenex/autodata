@@ -203,8 +203,6 @@ template generate_shader (Stage stage, Decl...)
 				auto tuple_etc 	 ()() {return S (input[0].expand, input[1..$]);}
 				auto forward_all ()() {return S (input);}
 
-				static if(not(is(typeof(Match!(shader_etc, shader, tuple_etc, tuple, forward_all)))))
-					tuple_etc;// tuple, forward_all)))))
 				return Match!(shader_etc, shader, tuple_etc, tuple, forward_all);
 			}
 	}
