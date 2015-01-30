@@ -175,7 +175,7 @@ auto gpu_array (R)(R range)
 	{/*...}*/
 		return GPUArray!(ElementType!R)(range);
 	}
-	static if (0)
+	static if (0) // TEMP
 	unittest {/*...}*/
 		import evx.graphics.display;
 		import evx.math;
