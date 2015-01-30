@@ -81,21 +81,32 @@ void main () // TODO GOAL
 		auto vertices = circle.map!(to!fvec)
 			.enumerate.map!((i,v) => i%2? v : v/4);
 
-		auto weights = ℕ[0..circle.length].map!(to!float);
+		auto weights = ℕ[0..circle.length]
+			.map!(i => float (i)/circle.length);
+
 		Color color = red;
 
 		auto weight_map = τ(vertices, weights, color)
 			.vertex_shader!(`position`, `weight`, `base_color`, q{
 				gl_Position = vec4 (position, 0, 1);
-				frag_color = vec4 (base_color.rgb, weight);
+				frag_color = base_color;
 				frag_alpha = weight;
 			}).fragment_shader!(
 				Color, `frag_color`,
 				float, `frag_alpha`, q{
 				gl_FragColor = vec4 (frag_color.rgb, frag_alpha);
-			}).triangle_fan[].array;
+			})
+			.triangle_fan
+			.render_to (Texture (256, 256))[]
+			[].array;
 
 		static assert (is (typeof(weight_map) == Array!(Color, 2)));
+
+		auto tempT = weight_map[].Texture; // TEMP cant pass rval... yet
+		textured_shape_shader (square (1.1f), tempT).triangle_fan.render_to (display); // BUG passing circle instead of vertices makes nonsensical error
+		display.post;
+		import core.thread;
+		Thread.sleep (2.seconds);
 
 		auto tex_coords = circle.map!(to!fvec)
 			.flip!`vertical`;
@@ -117,11 +128,10 @@ void main () // TODO GOAL
 				gl_FragColor = texture2D (tex, frag_tex_coords);
 			}
 		)(texture)
-		.triangle_fan.render_to (display);
+		.triangle_fan.render_to (display); // TODO renderer.render_to (target) → target[] = renderer && target[] = source[] ↔ source.card_shader.render_to (target)
 
 		display.post;
 
-		import core.thread;
 		Thread.sleep (2.seconds);
 		display.background = white; // TEMP
 
