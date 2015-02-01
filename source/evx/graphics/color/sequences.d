@@ -6,7 +6,7 @@ private {/*imports}*/
 	import evx.graphics.color.core;
 }
 
-auto rainbow (size_t length)
+auto rainbow (size_t length = 7)
 	{/*...}*/
 		return ℕ[0..length]
 			.map!(i => i * 360.0/length)
