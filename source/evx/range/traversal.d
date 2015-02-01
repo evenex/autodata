@@ -3,7 +3,6 @@ module evx.range.traversal; // REFACTOR construction and traversal or adaptors o
 private {/*imports}*/
 	import std.range;
 	import std.algorithm;
-	import std.array;
 	import std.conv;
 
 	import evx.range.classification;
@@ -14,10 +13,6 @@ private {/*imports}*/
 	import evx.math.overloads;
 	import evx.math.fields.nats;
 }
-
-/* buffer a range to an array 
-*/
-alias array = std.array.array;
 
 /* construct a range from a repeated value 
 */
