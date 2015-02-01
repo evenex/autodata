@@ -1,12 +1,17 @@
 module evx.type.introspection;
 
 private {/*imports}*/
+	import std.traits;
 	import std.range;
 	import std.typetuple;
 
 	import evx.math.logic;
 	import evx.type.classification;
 }
+
+/* get the fully qualified name of a type, including its containing module 
+*/
+alias full_name = fullyQualifiedName;
 
 /* test if type has a field with a given type and name 
 */

@@ -11,6 +11,8 @@ private {/*import}*/
 
 // TODO doc and organize, REFACTOR to metafunctional
 
+alias Unqual = std.traits.Unqual;
+
 alias Identity (T...) = T[0];
 
 alias Cons = TypeTuple;
