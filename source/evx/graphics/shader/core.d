@@ -15,6 +15,8 @@ private {/*imports}*/
 	import evx.graphics.opengl;
 	import evx.graphics.buffer;
 	import evx.graphics.texture;
+
+	import evx.misc.commoninterface;
 }
 
 alias vertex_shader (Decl...) = generate_shader!(Stage.vertex, Decl);
@@ -196,13 +198,15 @@ template generate_shader (Stage stage, Decl...)
 					ResolvedSymbols!(),
 					FramedArgs!()
 				);
-				
-				auto shader 	 ()() {return S (input[0].args);}
-				auto shader_etc  ()() {return S (input[0].args, input[1..$]);}
-				auto tuple 		 ()() {return S (input[0].expand);}
-				auto tuple_etc 	 ()() {return S (input[0].expand, input[1..$]);}
-				auto forward_all ()() {return S (input);}
 
+				auto shader 	 ()() {return S (input[0].args);}
+				auto shader_etc  ()() {return S (input[0].args, forward2!(input[1..$]));}
+				auto tuple 		 ()() {return S (input[0].expand);}
+				auto tuple_etc 	 ()() {return S (input[0].expand, forward2!(input[1..$]));}
+				auto forward_all ()() {return S (input);} // BUG https://issues.dlang.org/show_bug.cgi?id=14096
+
+				static if (not(is(typeof( Match!(shader_etc, shader, tuple_etc, tuple, forward_all)))))
+					tuple;
 				return Match!(shader_etc, shader, tuple_etc, tuple, forward_all);
 			}
 	}
@@ -342,15 +346,15 @@ private {/*parameter framing}*/
 	template GPUType (T) // REVIEW Algebraic data type for ref-predicated borrow/move??
 		{/*...}*/
 			static if (is (T == GLBuffer!U, U...) || is (T == Texture))
-				alias GPUType = Borrowed!T;
+				alias GPUType = CommonInterface!(T, Borrowed!T);
 
-			else static if (is (typeof(T.init[].source) == GLBuffer!U, U...))
+			else static if (is (typeof(T.init[].source) == GLBuffer!U, U...) || is (typeof(gl.type_enum!T)))
 				alias GPUType = T;
 
-			else static if (is (typeof(T.init.gpu_array) == U, U))
-				alias GPUType = U;
+			else static if (is (typeof(T.init.gpu_array) == GPUArray, GPUArray))
+				alias GPUType = GPUArray;
 
-			else alias GPUType = T;
+			else static assert (0);
 		}
 }
 package {/*generator/compiler/linker}*/
@@ -498,9 +502,11 @@ package {/*generator/compiler/linker}*/
 						foreach (i, ref arg; args)
 							static if (is (Args[i] == T[i]))
 								input[i].move (arg);
-							else static if (is (Args[i] == Borrowed!(T[i])))
+							else static if (not (is (Args[i] == CommonInterface!U, U...)))
+								arg = input[i].gpu_array;
+							else static if (__traits(isRef, input[i]))
 								arg = borrow (input[i]);
-							else arg = input[i].gpu_array;
+							else input[i].move (cast(T[i]) arg);
 					}
 
 				void activate ()()
