@@ -1,7 +1,7 @@
 module evx.graphics.texture;
 
 private {/*imports}*/
-	import std.conv;
+	import std.conv: to, text;
 
 	import evx.operators;
 	import evx.containers;
@@ -11,13 +11,15 @@ private {/*imports}*/
 	import evx.graphics.operators;
 
 	import evx.math;
-
-	alias array = evx.containers.array.array; // REVIEW namespace clash
 }
 
 ubyte[4] texel (Color color)
 	{/*...}*/
-		return cast(Vector!(4, ubyte))(color);
+		return color.vector.texel;
+	}
+ubyte[4] texel (float[4] color)
+	{/*...}*/
+		return color.vector.texel;
 	}
 ubyte[4] texel (Vector!(4, float) color)
 	{/*...}*/
@@ -166,7 +168,7 @@ struct Texture
 					static if (is (typeof(vector (*range.ptr)) == Vector!(4, ubyte)))
 						auto ptr = range.ptr;
 					else {/*...}*/
-						auto temp = evx.containers.array.array (range.map!texel); // REVIEW control overloads so UFCS possible, too many clash w/ std.array.. probably local import in upstream mixin
+						auto temp = range.map!texel.array;
 						auto ptr = temp.ptr;
 					}
 

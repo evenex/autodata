@@ -2,7 +2,6 @@ module evx.graphics.buffer;
 
 private {/*imports}*/
 	import std.conv;
-	import std.array;
 	import std.string;
 
 	import evx.operators;
@@ -60,7 +59,12 @@ struct GLBuffer (T, alias target, alias usage)
 					auto i = slice.left, j = slice.right;
 				else auto i = slice, j = slice + 1;
 
-				if (j-i == 0) // REVIEW should i be checking for this at the operator level? that would require a volume function
+				/*
+					zero-length condition can't be tested for at the operator level
+					because, in general, coords may not have arithmetic-compatible types,
+					therefore a volume function isn't necessarily well-defined
+				*/
+				if (j-i == 0)
 					return;
 
 				static if (is (typeof(*R.source) == GLBuffer!(T,S), S...))
@@ -77,8 +81,7 @@ struct GLBuffer (T, alias target, alias usage)
 						auto ptr = range.ptr;
 					else static if (is (typeof(range.map!(to!T))))
 						{/*...}*/
-							scope array = range.map!(to!T).array;
-
+							auto array = range.map!(to!T).array;
 							auto ptr = array.ptr;
 						}
 					else {/*...}*/
