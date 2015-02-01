@@ -4,6 +4,7 @@ private {/*imports}*/
 	import std.conv;
 	import std.math;
 	
+	import evx.type;
 	import evx.range;
 	import evx.misc.memory;
 
@@ -35,15 +36,19 @@ auto square (T = double)(T side = unity!T, Vector!(2,T) center = zero!(Vector!(2
 		return [V(1,1), V(-1,1), V(-1,-1), V(1,-1)]
 			.map!(v => v*side/2 + center);
 	}
-template circle (uint samples = 24)
+template circle (uint samples = 24) // REVIEW we can do square!float, so why not circle!float? samples.
 	{/*...}*/
 		auto circle (T = double)(T radius = unity!T, Vector!(2,T) center = zero!(Vector!(2,T)))
 			in {/*...}*/
-				assert (radius > zero!T, "circle radius (" ~radius.text~ ") must be positive");
+				assert (radius > zero!T, `circle radius (` ~ radius.text ~ `) must be positive`);
 			}
 			body {/*...}*/
+				static if (is_floating_point!T)
+					alias U = T;
+				else alias U = double;
+
 				return ℕ[0..samples].map!(i => 2*π*i/samples) 
-					.map!(t => vector (cos(t), sin(t)))
+					.map!(t => Vector!(2,U)(cos(t), sin(t)))
 					.map!(v => radius*v + center);
 			}
 	}
