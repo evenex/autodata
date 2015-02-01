@@ -10,8 +10,7 @@ module evx.operators.index;
 template IndexOps (alias access, limits...)
 	{/*...}*/
 		private {/*imports}*/
-			import std.conv;
-			import std.traits;
+			import std.conv: text;
 
 			import evx.operators.limit;
 			import evx.operators.error;

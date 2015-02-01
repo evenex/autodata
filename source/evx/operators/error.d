@@ -4,8 +4,8 @@ package template StandardErrorMessages ()
 	{/*...}*/
 		alias Element (T) = ElementType!(Select!(is (T == U[2], U), T, T[2]));
 
-		static if (__traits(compiles, fullyQualifiedName!(typeof(this))))
-			enum error_header = fullyQualifiedName!(typeof(this)) ~ `: `;
+		static if (__traits(compiles, full_name!(typeof(this))))
+			enum error_header = full_name!(typeof(this)) ~ `: `;
 
 		else enum error_header = typeof(this).stringof ~ `: `;
 

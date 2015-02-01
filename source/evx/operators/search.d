@@ -8,15 +8,15 @@ module evx.operators.search;
 template SearchOps (alias search)
 	{/*...}*/
 		private {/*import}*/
-			import std.traits;
+			import evx.type;
 		}
 
-		auto opBinaryRight (string op: `in`)(ParameterTypeTuple!search query)
+		auto opBinaryRight (string op: `in`)(Parameters!search query)
 			in {/*...}*/
 				void dereference (T)(T q){auto p = *q;}
 				void address (T)(ref T q){auto p = &q;}
 
-				enum error_header = fullyQualifiedName!(typeof(this)) ~ `: `;
+				enum error_header = full_name!(typeof(this)) ~ `: `;
 
 				static assert (query.length == 1,
 					error_header
@@ -35,7 +35,6 @@ template SearchOps (alias search)
 			}
 	}
 	unittest {/*...}*/
-		import std.algorithm: find;
 		import evx.range;
 
 		static struct ByPtr

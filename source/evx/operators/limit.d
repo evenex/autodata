@@ -12,8 +12,6 @@ module evx.operators.limit;
 template LimitOps (limits...)
 	{/*...}*/
 		private {/*imports}*/
-			import std.traits;
-
 			import evx.type;
 			import evx.range;
 
@@ -22,10 +20,10 @@ template LimitOps (limits...)
 		}
 
 		static assert (All!(is_const_function, Filter!(is_function, limits)),
-			fullyQualifiedName!(typeof(this)) ~ ` LimitOps: limit functions must be const`
+			full_name!(typeof(this)) ~ ` LimitOps: limit functions must be const`
 		);
 		static assert (All!(is_comparable, Map!(ReturnType, Filter!(is_function, limits)), Filter!(Not!is_function, limits)),
-			fullyQualifiedName!(typeof(this)) ~ ` LimitOps: limit types must support comparison (<. >, <=, >=)`
+			full_name!(typeof(this)) ~ ` LimitOps: limit types must support comparison (<. >, <=, >=)`
 		);
 
 		auto opDollar (size_t i)()

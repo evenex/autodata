@@ -17,6 +17,8 @@ module evx.operators.slice;
 template SliceOps (alias access, LimitsAndExtensions...)
 	{/*...}*/
 		private {/*imports}*/
+			import std.conv: to;
+
 			import evx.operators.index;
 			import evx.math.logic; // REVIEW for Any, does Any belong in logic?
 			import evx.type;

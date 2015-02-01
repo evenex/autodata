@@ -16,7 +16,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 			in {/*...}*/
 				version (all)
 					{/*error messages}*/
-						enum error_header = fullyQualifiedName!(typeof(this)) ~ `: `;
+						enum error_header = full_name!(typeof(this)) ~ `: `;
 
 						enum type_mismatch_error = error_header
 							~ `cannot transfer ` ~ S.stringof ~ ` to `
@@ -35,7 +35,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 					{}
 				else static if (is (typeof(source.limit!0)))
 					{/*...}*/
-						void dimensions_check (uint i = 0)
+						void dimensions_check (uint i = 0)()
 							{/*...}*/
 								static if (is (typeof(source.limit!i)) || is (typeof(this[selected].limit!i)))
 									{/*...}*/
@@ -274,8 +274,8 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 
 		error (z[0..2, 0..3] = y[0..3, 0..2]);
 		error (z[0..2, 0] = y[0, 1..2]);
-		assert (not (is (typeof( (z[0..2, 0..3] = y[0..3, 1])))));
-		assert (not (is (typeof( (z[1, 0..3] = y[0..3, 0..2])))));
+		static assert (not (is (typeof( (z[0..2, 0..3] = y[0..3, 1])))));
+		static assert (not (is (typeof( (z[1, 0..3] = y[0..3, 0..2])))));
 
 		static struct FloatingPoint
 			{/*...}*/

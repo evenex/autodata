@@ -40,7 +40,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 			}
 		ref opAssign (S)(S space)
 			in {/*...}*/
-				enum error_header = fullyQualifiedName!(typeof(this)) ~ `: `;
+				enum error_header = full_name!(typeof(this)) ~ `: `;
 
 				enum cannot_assign_error = error_header
 					~ `cannot assign ` ~ S.stringof ~

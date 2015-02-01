@@ -37,7 +37,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 				void push_selected ()() {space[].push (this[selected]);}
 				void access_assign ()() {access (selected) = space;}
 				void pull_selected ()() {pull (space, selected);}
-				void pull_complete ()() {pull (space, this[].bounds);}
+				void pull_complete ()() if (Selected.length == 0) {pull (space, this[].bounds);}
 
 				Match!(push_selected, access_assign, pull_selected, pull_complete);
 
@@ -103,10 +103,11 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 		mixin SliceOps!(access, LimitsAndExtensions, SubWriteOps);
 	}
 	unittest {/*...}*/
+		import std.conv: to, text;
+
 		import evx.math;
 		import evx.misc.test;
 		import evx.range;
-		import std.conv;
 
 		static struct Basic
 			{/*...}*/
@@ -170,15 +171,17 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 						return data[i];
 					}
 
-				template PushExtension () // TODO this should be default
+				template PushExtension ()
 					{/*...}*/
-						void push (R)(auto ref R range)
-							{/*...}*/
-								auto ptr = range.ptr;
+						enum PushExtension = q{
+							void push (R)(auto ref R range)
+								{/*...}*/
+									auto ptr = range.ptr;
 
-								foreach (i; 0..range.length)
-									ptr[i] = 2;
-							}
+									foreach (i; 0..range.length)
+										ptr[i] = 2;
+								}
+						};
 					}
 
 				mixin WriteOps!(pull, access, length, PushExtension);
