@@ -7,6 +7,7 @@ private {/*imports}*/
 
 	import evx.math;
 	import evx.range;
+	import evx.type;
 }
 
 struct Color
@@ -196,9 +197,13 @@ struct Color
 				}
 		}
 		public {/*cast}*/
-			Vector!(4, ubyte) opCast ()
+			V opCast (V)()
 				{/*...}*/
-					return (base * 255).each!(to!ubyte);
+					static if (is (V == Vector!(4,T), T : long))
+						{}
+					else static assert (0);
+
+					return (base * T.max).each!(to!T);
 				}
 		}
 		public {/*ops}*/
