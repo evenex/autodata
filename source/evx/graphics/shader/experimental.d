@@ -1,84 +1,93 @@
 module evx.graphics.shader.experimental;
 
-import evx.range;
-import evx.math;
-import evx.type;
-import evx.containers;
+private {/*import}*/
+	import evx.range;
+	import evx.math;
+	import evx.type;
+	import evx.containers;
 
-import evx.misc.tuple;
-import evx.misc.utils;
-import evx.misc.memory;
+	import evx.misc.tuple;
+	import evx.misc.utils;
+	import evx.misc.memory;
 
-import std.conv: to;
+	import std.conv: to;
 
-import evx.graphics.opengl;
-import evx.graphics.buffer;
-import evx.graphics.texture;
-import evx.graphics.color;
+	import evx.graphics.opengl;
+	import evx.graphics.buffer;
+	import evx.graphics.texture;
+	import evx.graphics.color;
 
-import evx.graphics.shader.core;
-import evx.graphics.shader.repo;
+	import evx.graphics.shader.core;
+	import evx.graphics.shader.repo;
+}
+public {/*PROTO RENDERERS}*/
+	enum RenderMode
+		{/*...}*/
+			point = GL_POINTS,
+			l_strip = GL_LINE_STRIP,
+			l_loop = GL_LINE_LOOP,
+			line = GL_LINES,
+			t_strip = GL_TRIANGLE_STRIP,
+			t_fan = GL_TRIANGLE_FAN,
+			tri = GL_TRIANGLES
+		}
+	struct ArrayRenderer (S)
+		{/*...}*/
+			RenderMode mode;
+			S base_shader; // REVIEW due to postproc, this won't wind up getting used!!
 
-//////////////////////////////////////////
-// PROTO RENDERERS ///////////////////////
-//////////////////////////////////////////
-enum RenderMode
-	{/*...}*/
-		point = GL_POINTS,
-		l_strip = GL_LINE_STRIP,
-		l_loop = GL_LINE_LOOP,
-		line = GL_LINES,
-		t_strip = GL_TRIANGLE_STRIP,
-		t_fan = GL_TRIANGLE_FAN,
-		tri = GL_TRIANGLES
-	}
-struct ArrayRenderer (S)
-	{/*...}*/
-		RenderMode mode;
-		S base_shader; // REVIEW due to postproc, this won't wind up getting used!!
+			void draw (uint i: 0)(uint n) // REVIEW DOC DRAW ISSUES THE DRAW COMMANDS
+				in {/*...}*/
+					assert (n != 0, `issued empty draw call`);
+				}
+				body {/*...}*/
+					gl.DrawArrays (mode, 0, n);
+				}
 
-		void draw (uint i: 0)(uint n) // REVIEW DOC DRAW ISSUES THE DRAW COMMANDS
-			in {/*...}*/
-				assert (n != 0, `issued empty draw call`);
-			}
-			body {/*...}*/
-				gl.DrawArrays (mode, 0, n);
-			}
+			mixin RenderOps!(draw, base_shader);
+		}
+	auto triangle_fan (S)(ref S shader)
+		{/*...}*/
+			auto renderer = ArrayRenderer!S (RenderMode.t_fan);
 
-		mixin RenderOps!(draw, base_shader);
-	}
-auto triangle_fan (S)(ref S shader)
-	{/*...}*/
-		auto renderer = ArrayRenderer!S (RenderMode.t_fan);
+			swap (renderer.base_shader, shader);
 
-		swap (renderer.base_shader, shader);
+			return renderer;
+		}
+	auto triangle_fan (S)(S shader)
+		{/*...}*/
+			S next;
 
-		return renderer;
-	}
-auto triangle_fan (S)(S shader)
-	{/*...}*/
-		S next;
+			swap (shader, next);
 
-		swap (shader, next);
-
-		return next.triangle_fan;
-	}
+			return next.triangle_fan;
+		}
+}
 
 	//TEMP
 	import evx.graphics.operators;
 
 //////////////////////////////////////////
-// MAIN //////////////////////////////////
+// DEMO //////////////////////////////////
 //////////////////////////////////////////
-void main () // TODO GOAL
+void demo () // TODO various texture sizes
 	{/*...}*/
 		import evx.graphics.display;
 
 		auto display = Display (800, 600);
 
+		void preview ()
+			{/*...}*/
+				import core.thread;
+
+				display.post;
+
+				Thread.sleep (2.seconds);
+			}
+
 		display.background = grey;
 
-		auto vertices = circle.map!(to!fvec)
+		auto vertices = circle (1.0f)
 			.enumerate.map!((i,v) => i%2? v : v/4);
 
 		auto weights = ℕ[0..circle.length]
@@ -96,18 +105,16 @@ void main () // TODO GOAL
 				float, `frag_alpha`, q{
 				gl_FragColor = vec4 (frag_color.rgb, frag_alpha);
 			})
-			.triangle_fan
-			.render_to (Texture (256, 256))
+			.triangle_fan.render_to (Texture (256, 256))
 			[].array;
 
 		static assert (is (typeof(weight_map) == Array!(Color, 2)));
 
-		textured_shape_shader (square (1.1f), weight_map[].Texture) // BUG losing the texture by the time we try to render
+		textured_shape_shader (circle, weight_map[].Texture)
 			.triangle_fan
-			.render_to (display); // BUG passing circle instead of vertices makes nonsensical error
-		display.post;
-		import core.thread;
-		Thread.sleep (2.seconds);
+			.render_to (display);
+
+		preview;
 
 		auto tex_coords = circle.map!(to!fvec)
 			.flip!`vertical`;
@@ -117,7 +124,6 @@ void main () // TODO GOAL
 			.grid (256, 256)
 			.Texture;
 
-		// TEXTURED SHAPE SHADER
 		τ(vertices, tex_coords).vertex_shader!(
 			`position`, `tex_coords`, q{
 				gl_Position = vec4 (position, 0, 1);
@@ -129,12 +135,11 @@ void main () // TODO GOAL
 				gl_FragColor = texture2D (tex, frag_tex_coords);
 			}
 		)(texture)
-		.triangle_fan.render_to (display); // TODO renderer.render_to (target) → target[] = renderer && target[] = source[] ↔ source.card_shader.render_to (target)
+		.triangle_fan.render_to (display);
 
-		display.post;
+		preview;
 
-		Thread.sleep (2.seconds);
-		display.background = white; // TEMP
+		display.background = white;
 
 		Texture target;
 		target.allocate (256, 256);
@@ -160,9 +165,36 @@ void main () // TODO GOAL
 			Texture, `tex`, q{
 				gl_FragColor = texture2D (tex, texc);
 			}
-		)(target).triangle_fan.render_to (display);
+		)(target)
+		.triangle_fan.render_to (display);
 
-		display.post;
+		preview;
+	}
+
+auto card ()(auto ref Texture texture)
+	{/*...}*/
+		return textured_shape_shader (square!float.scale (2), forward!texture).triangle_fan;
+	}
+
+auto extrude (S,T)(S space, T length) // TODO T is integral for now, later i need a general way to change coordinate types
+	{/*...}*/
+		return space.by (ℕ[0..length])
+			.map!((e,_) => e);
+	}
+
+void main ()
+	{/*...}*/
+		import evx.graphics.display;
+		import core.thread;
+
+		auto color_test = rainbow (256)
+			.extrude (256)
+			.Texture;
+
+		auto display = Display (512, 512);
+
+		color_test.card.render_to (display);
+		display.post; // BUG sometimes screen is blank
 
 		Thread.sleep (2.seconds);
 	}
