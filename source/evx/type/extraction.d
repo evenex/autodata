@@ -9,6 +9,7 @@ private {/*imports}*/
 	import evx.math.algebra;
 	import evx.type.classification;
 	import evx.type.introspection;
+	import evx.type.processing;
 }
 
 /* extract an array of identifiers for members of T which match the given UDA tag 
@@ -38,7 +39,14 @@ template collect_members (T, alias attribute)
 		static assert (collect_members!(Test, Tag) == [`x`, `y`]);
 	}
 
-static alias ExprType (alias symbol) = typeof(symbol.identity);
+template ExprType (alias symbol)
+	{/*...}*/
+		 alias Identity  () = typeof(symbol.identity);
+		 alias Resolved  () = typeof(symbol ());
+		 alias Forwarded () = typeof(symbol);
+
+		 alias ExprType = Match!(Identity, Resolved, Forwarded);
+	}
 
 alias Parameters = std.traits.ParameterTypeTuple;
 alias ReturnType = std.traits.ReturnType;
