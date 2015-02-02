@@ -6,9 +6,13 @@ private {/*imports}*/
 	import evx.graphics.opengl;
 	import evx.graphics.color;
 	import evx.graphics.operators;
+	import evx.graphics.shader;
+	import evx.graphics.texture;
 
+	import evx.type;
 	import evx.math;
 	import evx.range;
+	import evx.containers;
 
 	import evx.misc.utils;
 }
@@ -19,11 +23,68 @@ struct Display
 
 		auto access (size_t x, size_t y)
 			{/*...}*/
-				// TODO gl.ReadPixels or something
+				Color color;
+
+				push ((&color).array_view (1, 1), x, y);
+
+				return color;
 			}
-		void pull (Args...)(Args)
+		void pull (S, Selected...)(S space, Selected selected)
 			{/*...}*/
-				// TODO use fullscreen card renderer
+				gl.framebuffer = 0;
+				
+				static if (is (S == Texture))
+					alias texture = space;
+				else auto texture = space.Texture;
+				
+				square!float.scale (1.0f).translate (zero!fvec) // TODO scale is tricky... its relative to the display size
+					.textured_shape_shader (texture).render_to (this); // TODO card should have scalable geometry
+			}
+		void push (S, Selected...)(S space, Selected selected)
+			in {/*...}*/
+				alias AcceptedTargets = Cons!(Color, Vector!(4, float), float[4]);
+
+				static assert (IndexOf!(Element!S, AcceptedTargets) >= 0);
+			}
+			body {/*...}*/
+				alias AcceptedTargets = Cons!(Color, Vector!(4, float), float[4]);
+
+				gl.framebuffer = 0;
+				
+				GLint origin (uint dim)()
+					{/*...}*/
+						static if (is (Selected[dim] == size_t[2]))
+							return selected[dim].left;
+
+						else static if (is (Selected[dim] == size_t))
+							return selected[dim].to!int;
+
+						else static assert (0);
+					}
+				GLsizei span (uint dim)()
+					{/*...}*/
+						static if (is (Selected[dim] == size_t[2]))
+							return selected[dim].width;
+
+						else static if (is (Selected[dim] == size_t))
+							return 1;
+
+						else static assert (0);
+					}
+
+				static if (IndexOf!(typeof(*space.ptr), AcceptedTargets) >= 0)
+					{/*...}*/
+						auto ptr = space.ptr;
+					}
+				else {/*...}*/
+					auto array = space.array;
+					auto ptr = array.ptr;
+				}
+
+				gl.ReadPixels (Map!(origin, Iota!2), Map!(span, Iota!2), GL_RGBA, GL_FLOAT, ptr);
+
+				static if (is (typeof(array.ptr)))
+					space[] = array[];
 			}
 		void allocate (size_t width, size_t height)
 			{/*...}*/
