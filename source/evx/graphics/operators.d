@@ -43,7 +43,7 @@ template CanvasOps (alias preprocess, alias framebuffer_id, alias attachment_id,
 
 				gl.clear;
 			}
-		void attach (S)(ref S shader)
+		void attach (S)(auto ref S shader)
 			if (is (S == Shader!Sym, Sym...))
 			{/*...}*/
 				import evx.misc.memory : move; // TEMP
@@ -71,7 +71,7 @@ template RenderOps (alias draw, shaders...)
 		}
 
 		static {/*analysis}*/ // REVIEW
-			enum is_shader (alias s) = is (typeof(s) == Shader!Sym, Sym...);
+			enum is_shader (alias s) = is (ExprType!(s) == Shader!Sym, Sym...);
 			enum rendering_stage_exists (uint i) = is (typeof(draw!i (0)) == void);
 
 			static assert (All!(is_shader, shaders),
@@ -79,7 +79,7 @@ template RenderOps (alias draw, shaders...)
 			);
 			static assert (All!(rendering_stage_exists, Count!shaders),
 				`each given shader symbol must be accompanied by a function `
-				`draw: (uint i)(uint n) ¿ void, `
+				`draw: (uint i)(uint n) → void, `
 				`where i is the index of the associated rendering stage `
 				`and n is the length of the inputs` // REVIEW this will all go to shit when you introduct element index arrays or god forbid compute shaders
 			);
@@ -99,7 +99,7 @@ template RenderOps (alias draw, shaders...)
 
 							canvas.attach (shaders[i]);
 
-							draw!i (Match!(Map!(length, Count!(typeof(shaders[i]).Args))));
+							draw!i (Match!(Map!(length, Count!(ExprType!(shaders[i]).Args))));
 
 							static if (i+1 < shaders.length)
 								render!(i+1);
