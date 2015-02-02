@@ -25,6 +25,8 @@ template IndexOps (alias access, limits...)
 					{/*error messages}*/
 						enum error_header = typeof(this).stringof ~ `: `;
 
+						enum element_type_error = error_header ~ `access primitive must return a non-void value`;
+
 						enum array_error = error_header ~ `limit types must be singular or arrays of two`
 						`: ` ~ Map!(ExprType, limits).stringof;
 
@@ -38,6 +40,10 @@ template IndexOps (alias access, limits...)
 						auto out_of_bounds_error (LimitType, U)(LimitType arg, U limit) 
 							{return error_header ~ `bounds exceeded! ` ~ arg.text ~ ` not in ` ~ limit.text;}
 					}
+
+				static assert (not (is (ReturnType!access == void)), 
+					element_type_error
+				);
 
 				foreach (i, limit; limits)
 					{/*type check}*/
