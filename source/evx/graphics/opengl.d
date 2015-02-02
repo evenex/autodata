@@ -472,6 +472,11 @@ struct gl
 					}
 
 					resize_framebuffer_callback (null, width.to!int, height.to!int);
+
+					/* HACK if a draw command comes too soon after a resize, it gets dropped, for unknown reasons.
+					*/
+					import core.thread;
+					Thread.sleep (50.msecs);
 				}
 			void swap_buffers ()
 				{/*...}*/
