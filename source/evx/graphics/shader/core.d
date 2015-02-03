@@ -9,8 +9,8 @@ private {/*imports}*/
 	import evx.type;
 	import evx.math;
 	import evx.range;
-	import evx.misc.memory;
-	import evx.misc.utils;
+	import evx.utils.memory;
+	import evx.misc.utils; // REFACTOR
 
 	import evx.graphics.opengl;
 	import evx.graphics.buffer;

@@ -10,9 +10,11 @@ mixin template TypeUniqueId (uint bit = 0)
 
 		struct Id
 			{/*...}*/
-				static auto create ()
+				static auto opCall ()
 					{/*...}*/
-						return typeof(this) (++generator);
+						typeof(this) new_id = {id : ++generator};
+
+						return new_id;
 					}
 
 				private {/*data}*/

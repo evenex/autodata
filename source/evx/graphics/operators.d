@@ -46,7 +46,7 @@ template CanvasOps (alias preprocess, alias framebuffer_id, alias attachment_id,
 		void attach (S)(auto ref S shader)
 			if (is (S == Shader!Sym, Sym...))
 			{/*...}*/
-				import evx.misc.memory : move; // TEMP
+				import evx.utils.memory : move; // TEMP
 
 				typeof(preprocess(shader)) prepared;
 				
@@ -64,7 +64,7 @@ template RenderOps (alias draw, shaders...)
 	{/*...}*/
 		private {/*imports}*/
 			import evx.operators;
-			import evx.misc.memory;
+			import evx.utils.memory;
 
 			import evx.graphics.opengl;
 			import evx.graphics.shader;

@@ -8,7 +8,8 @@ private {/*import}*/
 
 	import evx.misc.tuple;
 	import evx.misc.utils;
-	import evx.misc.memory;
+
+	import evx.utils.memory;
 
 	import std.conv: to;
 
@@ -182,7 +183,7 @@ auto extrude (S,T)(S space, T length) // TODO T is integral for now, later i nee
 			.map!((e,_) => e);
 	}
 
-void main ()
+static if (0) void main ()
 	{/*...}*/
 		import evx.graphics.display;
 		import core.thread;

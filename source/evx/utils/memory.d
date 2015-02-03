@@ -1,8 +1,10 @@
-module evx.misc.memory;
+module evx.utils.memory;
 
 private {/*imports}*/
 	import std.algorithm;
 	import std.conv;
+
+	import evx.math.logic;
 }
 
 /* convenience structure for representing structs as byte arrays 
@@ -72,6 +74,8 @@ void move (T)(ref T src, ref T tgt)
 void move (T)(T src, ref T tgt)
 	{/*...}*/
 		swap (src, tgt);
+
+		T.init.bytes.blit (src.bytes); // REVIEW commit msg: fixed latent rvalue move bug
 	}
 
 /* forward an argument, as lvalue or rvalue reference 
@@ -100,7 +104,7 @@ template forward2 (Aliases...) // BUG https://issues.dlang.org/show_bug.cgi?id=1
 		alias forward2 = Map!(f, Count!Aliases);
 	}
 
-/* a borrowed resource bypasses RAII And move semantics 
+/* a borrowed resource bypasses RAII and move semantics 
 */
 struct Borrowed (T)
 	{/*...}*/
@@ -129,3 +133,71 @@ auto borrow (T)(ref T resource)
 	{/*...}*/
 		return Borrowed!T (resource);
 	}
+
+/* overwrite an lvalue with an initialized state, bypassing RAII 
+*/
+void neutralize (T)(ref T target)
+	{/*...}*/
+		T.init.move (target);
+	}
+
+unittest {/*stacked mixin postblit}*/
+		static bool one, two;
+
+		template CopyOne ()
+			{/*...}*/
+				this (this)
+					{/*...}*/
+						one = true;
+					}
+			}
+		template CopyTwo ()
+			{/*...}*/
+				this (this)
+					{/*...}*/
+						two = true;
+					}
+			}
+
+		static struct Test
+			{/*...}*/
+				mixin CopyOne;
+				mixin CopyTwo;
+			}
+
+		Test t1;
+
+		auto t2 = t1;
+
+		assert (one && two);
+	}
+unittest {/*stacked mixin dtors}*/
+	static bool one, two;
+
+	template DtorOne ()
+		{/*...}*/
+			~this ()
+				{/*...}*/
+					one = true;
+				}
+		}
+	template DtorTwo ()
+		{/*...}*/
+			~this ()
+				{/*...}*/
+					two = true;
+				}
+		}
+
+	static struct Test
+		{/*...}*/
+			mixin DtorOne;
+			mixin DtorTwo;
+		}
+
+	{/*test scope}*/
+		Test test;
+	}
+
+	assert (one && two);
+}

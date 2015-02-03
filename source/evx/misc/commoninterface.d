@@ -39,7 +39,7 @@ struct CommonInterface (Types...)
 
 		auto ref opAssign (T)(auto ref T value)
 			{/*...}*/
-				import evx.misc.memory;
+				import evx.utils.memory;
 
 				current = IndexOf!(T, Types);
 

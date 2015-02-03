@@ -4,7 +4,7 @@ private {/*imports}*/
 	import evx.math;
 	import evx.range;
 	import evx.misc.tuple;
-	import evx.misc.memory;
+	import evx.utils.memory;
 
 	import evx.graphics.shader;
 	import evx.graphics.texture;

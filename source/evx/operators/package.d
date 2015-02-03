@@ -10,3 +10,4 @@ import evx.operators.search;
 import evx.operators.range;
 import evx.operators.comparison;
 import evx.operators.iteration;
+import evx.operators.forward;

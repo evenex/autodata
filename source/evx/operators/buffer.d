@@ -15,30 +15,32 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 			import evx.operators.transfer;
 		}
 
-		this (Parameters!allocate dimensions)
+		this (Parameters!allocate dimensions) // XXX INTEROP SYNTAX
 			{/*...}*/
 				allocate (dimensions);
 			}
-		this (S)(auto ref S space)
+		this (S)(auto ref S space) // XXX INTEROP SYNTAX
 			{/*...}*/
 				this = space;
 			}
-		~this ()
+
+		~this () // XXX RESOURCE MANAGEMENT STRATEGY - SIMPLE RAII
 			{/*...}*/
 				this = null;
 			}
-		@disable this (this);
 
-		ref opAssign ()(auto ref typeof(this) space)
+		@disable this (this); // XXX RESOURCE MANAGEMENT STRATEGY - UNIQUE RESOURCE (MOVE ONLY)
+		ref opAssign ()(auto ref typeof(this) space) // XXX RESOURCE MANAGEMENT STRATEGY - UNIQUE RESOURCE (MOVE ONLY)
 			{/*...}*/
-				import evx.misc.memory;
+				import evx.utils.memory;
 
 				if (&space != &this)
 					space.move (this);
 
 				return this;
 			}
-		ref opAssign (S)(S space)
+
+		ref opAssign (S)(S space) // XXX INTEROP SYNTAX
 			in {/*...}*/
 				enum error_header = full_name!(typeof(this)) ~ `: `;
 
@@ -46,9 +48,17 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 					~ `cannot assign ` ~ S.stringof ~
 					` to ` ~ typeof(this).stringof;
 
+				enum parameter_mismatch_error = error_header
+					~ `access parameters ` ~ Parameters!access.stringof ~
+					` do not match allocate parameters ` ~ Parameters!allocate.stringof;
+
+				static assert (is (Parameters!allocate == Parameters!access),
+					parameter_mismatch_error
+				);
+
 				static if (is (typeof(space.limit!0)))
 					{/*...}*/
-						foreach (i, LimitType; Parameters!access)
+						foreach (i, LimitType; Parameters!allocate)
 							static assert (is (typeof(space.limit!i.left) : LimitType),
 								cannot_assign_error ~ ` (dimension or type mismatch)`
 							);
@@ -59,14 +69,14 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 					}
 				else static if (is (typeof(space.length)) && not (is (typeof(this[selected].limit!1))))
 					{/*...}*/
-						static assert (is (typeof(space.length.identity) : Parameters!access[0]),
+						static assert (is (typeof(space.length.identity) : Parameters!allocate[0]),
 							cannot_assign_error ~ ` (length is incompatible)`
 						);
 					}
 				else static assert (0, cannot_assign_error);
 			}
 			body {/*...}*/
-				Parameters!access size;
+				Parameters!allocate size;
 
 				auto read_limits ()()
 					{/*...}*/
@@ -86,7 +96,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 
 				return this;
 			}
-		ref opAssign (typeof(null))
+		ref opAssign (typeof(null)) // XXX INTEROP SYNTAX
 			out {/*...}*/
 				foreach (i, T; Parameters!access)
 					assert (this[].limit!i.width == zero!T);
