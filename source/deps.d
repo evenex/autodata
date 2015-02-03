@@ -88,7 +88,7 @@ class Module
 					.name (source.module_name)
 					.is_package (source.is_package);
 
-				this.id = Id.create;
+				this.id = Id ();
 
 				foreach (import_name; source.imports)
 					if (this.imports.contains (import_name))
