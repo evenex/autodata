@@ -3,8 +3,8 @@ module evx.graphics.shader.repo;
 private {/*imports}*/
 	import evx.math;
 	import evx.range;
+	import evx.memory;
 	import evx.misc.tuple;
-	import evx.utils.memory;
 
 	import evx.graphics.shader;
 	import evx.graphics.texture;
@@ -14,7 +14,7 @@ alias aspect_correction = vertex_shader!(`aspect_ratio`, q{
 	gl_Position.xy *= aspect_ratio;
 });
 
-auto textured_shape_shader (R)(R shape, auto ref Texture texture)
+auto textured_shape_shader (R, T)(R shape, auto ref T texture)
 	{/*...}*/
 		static if (is (Element!R == Vector!(2,float)))
 			alias draw_shape = shape;
@@ -30,5 +30,5 @@ auto textured_shape_shader (R)(R shape, auto ref Texture texture)
 			Texture, `tex`, q{
 				gl_FragColor = texture2D (tex, frag_tex_coords);
 			}
-		)(forward!texture);
+		)(texture);
 	}

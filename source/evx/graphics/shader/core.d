@@ -9,8 +9,8 @@ private {/*imports}*/
 	import evx.type;
 	import evx.math;
 	import evx.range;
-	import evx.utils.memory;
-	import evx.misc.utils; // REFACTOR
+	import evx.memory;
+	import evx.misc.utils; // XXX
 
 	import evx.graphics.opengl;
 	import evx.graphics.buffer;
@@ -18,6 +18,9 @@ private {/*imports}*/
 
 	import evx.misc.commoninterface;
 }
+
+enum glsl_version = 440;
+alias Managed = Lifetime.Shared;
 
 alias vertex_shader (Decl...) = generate_shader!(Stage.vertex, Decl);
 alias fragment_shader (Decl...) = generate_shader!(Stage.fragment, Decl);
@@ -205,8 +208,6 @@ template generate_shader (Stage stage, Decl...)
 				auto tuple_etc 	 ()() {return S (input[0].expand, forward2!(input[1..$]));}
 				auto forward_all ()() {return S (input);} // BUG https://issues.dlang.org/show_bug.cgi?id=14096
 
-				static if (not(is(typeof( Match!(shader_etc, shader, tuple_etc, tuple, forward_all)))))
-					tuple;
 				return Match!(shader_etc, shader, tuple_etc, tuple, forward_all);
 			}
 	}
@@ -234,10 +235,11 @@ private:
 
 	2a) Resolution
 
-		If the type of a variable is unknown, then the compilation target must be the vertex stage. 
+		Currently, if the type of a variable is unknown, then the compilation target must be the vertex stage. 
+
 		Type deduction rules are as follows:
-			If the identifier can be found in the existing symbol table, the variable is resolved.
-			Otherwise the declared variables take the type (or element type, if a range) of the given input argument.
+			If the identifier can be found in the existing symbol table, the variable is resolved and the process skips to stage 2b.
+			Otherwise the declared variables take the type (or element type, if a range) of the input argument given at the same index.
 
 		Once the type of a variable is known, the storage class deduction rules are as follows:
 			If the identifier can be found in the symbol table, the variable is resolved (after verifying type match, if it is given in the declaration list)
@@ -251,20 +253,33 @@ private:
 		Resolved symbols with vertex_input or uniform storage classes are in an ordered, one-to-one correspondence with runtime input arguments.
 		The shader will create member variables to hold each argument, and upload them to the GPU upon activation.
 		These member variables may differ from the type of the given input argument:
-			Ranges will become GPUArrays,
-			GPUArrays, Textures, and other existing GPU resources will become Borrowed,
+			GPUArrays, Textures, and other existing GPU resources will retain their full type if they are managed.
+			Unmanaged resources will be wrapped in the Management functor.
+			Ranges will become Managed!GPUArrays,
 			PODs will retain their original type.
+
+	optionally:
+
+	3) Concatenation
+
+		Two resolved and framed shaders may be combined into a new shader, 
+		which concatenates the shader code where applicable
+		and merges input argument lists.
 
 	upon initial activation of the shader:
 
-	3) Linking 
+	4) Compilation
+		
+		All vertex and fragment shader stages are compiled into a single shader program.
+
+	5) Linking 
 
 		Variables, with their type and storage class known, are linked after shader compilation,
 			and the variable location indices are permanently saved in a global lookup table.
 
 	upon subsequent activations of the shader:
 
-	4) Passing
+	6) Passing
 
 		The shader uploads its input data (converting from given arguments if necessary) using the global linked variable indices.
 */
@@ -342,19 +357,28 @@ private {/*shader program database}*/
 	__gshared GLuint[string] shader_ids;
 }
 private {/*parameter framing}*/
-	// PODs → PODs, Subspaces → Subspaces, Arrays → GPUArrays, Resources → Borrowed!Resources
-	template GPUType (T) // REVIEW Algebraic data type for ref-predicated borrow/move??
+	template GPUType (T)
 		{/*...}*/
-			static if (is (T == GLBuffer!U, U...) || is (T == Texture))
-				alias GPUType = CommonInterface!(T, Borrowed!T);
+			static if (
+				is (InitialType!T == GLBuffer!U, U...) 
+				|| is (InitialType!T == Texture)
+			)
+				{/*...}*/
+					static if (is (InitialType!T == T))
+						alias GPUType = Managed!T;
+					else alias GPUType = T;
+				}
 
-			else static if (is (typeof(T.init[].source) == GLBuffer!U, U...) || is (typeof(gl.type_enum!T)))
+			else static if (
+				is (typeof(gl.type_enum!T))
+				|| is (Source!T == GLBuffer!U, U...)
+			)
 				alias GPUType = T;
 
 			else static if (is (typeof(T.init.gpu_array) == GPUArray, GPUArray))
-				alias GPUType = GPUArray;
+				alias GPUType = Managed!GPUArray;
 
-			else static assert (0);
+			else static assert (0, T.stringof ~ ` has no GPUType` ~ typeof(T.init.gpu_array).stringof);
 		}
 }
 package {/*generator/compiler/linker}*/
@@ -375,7 +399,7 @@ package {/*generator/compiler/linker}*/
 
 				static string shader_code (Stage stage)()
 					{/*...}*/
-						string[] code = [q{#version 440}];
+						string[] code = [q{#version } ~ glsl_version.text];
 
 						foreach (V; Variables)
 							static if (is (typeof (V.declare!stage)))
@@ -499,14 +523,35 @@ package {/*generator/compiler/linker}*/
 
 				this (T...)(auto ref T input)
 					{/*...}*/
-						foreach (i, ref arg; args)
-							static if (is (Args[i] == T[i]))
-								input[i].move (arg);
-							else static if (not (is (Args[i] == CommonInterface!U, U...)))
-								arg = input[i].gpu_array;
-							else static if (__traits(isRef, input[i]))
-								arg = borrow (input[i]);
-							else input[i].move (cast(T[i]) arg);
+						void initialize (uint i)()
+							{/*...}*/
+								void own    ()() {args[i].own (input[i]);}
+								void assign ()() {args[i] = input[i];}
+
+								pragma(msg, `init `, Args[i].stringof, ` ← `, T[i].stringof);
+								static if (is (typeof(own ())))
+									{/*...}*/
+									pragma(msg, `	owned`);
+									}
+								static if (is (typeof(assign())))
+									{/*...}*/
+									pragma(msg, `	assigned`);
+									}
+
+								Match!(own, assign);
+							}
+
+						foreach (i; Count!Args)
+							initialize!i;
+					}
+
+				auto opBinary (string op: `~`, Params...)(Shader!Params shader)
+					{/*...}*/
+						return Shader!(Parameters, Params)(args, shader.args);
+					}
+				auto ref opBinary (string op: `~`)(typeof(null))
+					{/*...}*/
+						return this;
 					}
 
 				void activate ()()

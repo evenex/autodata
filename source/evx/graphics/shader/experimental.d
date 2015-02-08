@@ -5,11 +5,10 @@ private {/*import}*/
 	import evx.math;
 	import evx.type;
 	import evx.containers;
+	import evx.memory;
 
 	import evx.misc.tuple;
 	import evx.misc.utils;
-
-	import evx.utils.memory;
 
 	import std.conv: to;
 
@@ -47,21 +46,9 @@ public {/*PROTO RENDERERS}*/
 
 			mixin RenderOps!(draw, base_shader);
 		}
-	auto triangle_fan (S)(ref S shader)
-		{/*...}*/
-			auto renderer = ArrayRenderer!S (RenderMode.t_fan);
-
-			swap (renderer.base_shader, shader);
-
-			return renderer;
-		}
 	auto triangle_fan (S)(S shader)
 		{/*...}*/
-			S next;
-
-			swap (shader, next);
-
-			return next.triangle_fan;
+			return ArrayRenderer!S (RenderMode.t_fan, shader);
 		}
 }
 
@@ -71,7 +58,7 @@ public {/*PROTO RENDERERS}*/
 //////////////////////////////////////////
 // DEMO //////////////////////////////////
 //////////////////////////////////////////
-void demo () // TODO various texture sizes
+void main () // TODO various texture sizes
 	{/*...}*/
 		import evx.graphics.display;
 
@@ -172,9 +159,9 @@ void demo () // TODO various texture sizes
 		preview;
 	}
 
-auto card ()(auto ref Texture texture)
+auto card (T)(auto ref T texture)
 	{/*...}*/
-		return textured_shape_shader (square!float.scale (2), forward!texture).triangle_fan;
+		return textured_shape_shader (square!float.scale (2), texture).triangle_fan;
 	}
 
 auto extrude (S,T)(S space, T length) // TODO T is integral for now, later i need a general way to change coordinate types
@@ -183,18 +170,21 @@ auto extrude (S,T)(S space, T length) // TODO T is integral for now, later i nee
 			.map!((e,_) => e);
 	}
 
-static if (0) void main ()
+void umain ()
 	{/*...}*/
 		import evx.graphics.display;
 		import core.thread;
 
-		auto color_test = rainbow (256)
+		auto hsv_map = rainbow (256)
 			.extrude (256)
+		//	.by (ℝ.closed[0..1].grid (256)) // REVIEW how best to include 1.0? should be in R b/c we could do R.closed[0..1][1] 
+			// ℝ[0..1].closed_interval (256)) would work, implementation is straightforward (like grid but with width/(length-1) instead of width/length
+			//.map!((color, x) => color.lightness (x))
 			.Texture;
 
 		auto display = Display (512, 512);
 
-		color_test.card.render_to (display);
+		hsv_map.card.render_to (display);
 		display.post; // BUG sometimes screen is blank
 
 		Thread.sleep (2.seconds);
