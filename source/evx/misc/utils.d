@@ -126,12 +126,12 @@ public {/*debug}*/
 			else return `???`;
 		}
 
-	static string trace (string name)()
+	static string trace (string name = __FUNCTION__)()
 		{/*...}*/
 			return q{
-				std.stdio.stderr.writeln (}`"` ~ name ~ `"`q{);
-				scope (failure) std.stdio.stderr.writeln (}`"` ~ name ~ q{ fail}`"`q{);
-				scope (success) std.stdio.stderr.writeln (}`"` ~ name ~ q{ ok}`"`q{);
+				std.stdio.stderr.writeln (}"`" ~ name ~ "`"q{);
+				scope (failure) std.stdio.stderr.writeln (}"`" ~ name ~ q{ fail}"`"q{);
+				scope (success) std.stdio.stderr.writeln (}"`" ~ name ~ q{ ok}"`"q{);
 			};
 		}
 
@@ -143,17 +143,6 @@ public {/*debug}*/
 			fprintf (stderr, "\n");
 			fflush (stderr);
 		}
-}
-public {/*UDA tags}*/
-	/* for non-const sections or members in a series of consts 
-		will not override const label (const:)
-	*/
-	enum vary;
-
-	/* for non-pure sections or functions in a series of pures 
-		will not override pure label (pure:)
-	*/
-	enum imp;
 }
 debug (profiler) {/*}*/
 	/* write information about the thread environment to the output 
