@@ -773,22 +773,7 @@ public {/*by}*/
 							alias projection = Match!(π_i, π_n);
 						}
 
-					Map!(Λ!q{(alias π) = typeof(π.identity)}, 
-						Map!(projection, Count!Spaces)
-					) mapped;
-
-					foreach (i; Count!Spaces)
-						mapped[i] = projection!i;
-
-					union Cast
-						{/*...}*/
-							typeof(mapped.tuple) input;
-
-							Tuple!(RepresentationTypeTuple!(typeof(input)))
-								flattened;
-						}
-
-					return Cast (mapped.tuple).flattened;
+					return Map!(projection, Count!Spaces).tuple;
 				}
 
 			mixin SliceOps!(access, Map!(limit, Count!(Parameters!access)), RangeOps);
