@@ -36,13 +36,13 @@ mixin template TypeUniqueId (uint bit = 0)
 			}
 	}
 	unittest {
-		debug {/*TypeUniqueId.create cannot be made pure}*/
+		debug {/*TypeUniqueId () cannot be made pure}*/
 			struct Test { mixin TypeUniqueId; }
 
-			auto x = Test.Id.create;
+			auto x = Test.Id ();
 
 			assert (x == x);
-			assert (x != Test.Id.create);
-			assert (Test.Id.create != Test.Id.create);
+			assert (x != Test.Id ());
+			assert (Test.Id () != Test.Id ());
 		}
 	}
