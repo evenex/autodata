@@ -1,5 +1,8 @@
 module evx.operators.write;
 
+static if (0) // TEMP
+version = enable_rejected_transfer_warning;
+
 /* generate index/slice assignment from a pull template, with SliceOps 
 
 	Requires:
@@ -46,14 +49,24 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 
 		template SubWriteOps ()
 			{/*...}*/
-				auto ref opIndexAssign (S, Selected...)(S space, Selected selected)
+				auto ref opIndexAssign (S, string file = __FILE__, int line = __LINE__, Selected...)(S space, Selected selected)
 					in {/*...}*/
 						this[selected];
 
 						static if (not (
 							is (typeof(source.opIndexAssign (space, selected))) 
 							|| is (typeof(source.opIndexAssign (space, this[].bounds))),
-						)) pragma(msg, `warning: rejected assignment of `, S, ` to `, typeof(this), `[`, Selected ,`]`);
+						))
+							{/*...}*/
+								static if (is (typeof(*space.source) == Src, Src))
+									enum from = Src.stringof ~ `.` ~ S.stringof;
+								else enum from = S.stringof;
+
+								version (enable_rejected_transfer_warning)
+									pragma(msg, `warning: rejected transfer of `, from, ` to `, Source, `.`, typeof(this), `[`, Selected ,`]`,
+										` at `, file, `:`, line
+									);
+							}
 					}
 					body {/*...}*/
 						static if (Selected.length > 0)
