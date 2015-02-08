@@ -1,6 +1,7 @@
 module evx.operators.buffer;
 
-/* generate RAII ctor/dtor and move/copy/free assignment operators from allocate function, with TransferOps 
+/* generate RAII ctor/dtor and copy/free assignment operators from allocate function, with TransferOps 
+	move/copy semantics are customizable via composition with lifetime templates
 
 	Requires:
 		TransferOps requirements.
@@ -15,32 +16,28 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 			import evx.operators.transfer;
 		}
 
-		this (Parameters!allocate dimensions) // XXX INTEROP SYNTAX
+		this (Parameters!allocate dimensions)
 			{/*...}*/
 				allocate (dimensions);
 			}
-		this (S)(auto ref S space) // XXX INTEROP SYNTAX
+		this (S)(auto ref S space)
 			{/*...}*/
 				this = space;
 			}
-
-		~this () // XXX RESOURCE MANAGEMENT STRATEGY - SIMPLE RAII
+		~this ()
 			{/*...}*/
 				this = null;
 			}
 
-		@disable this (this); // XXX RESOURCE MANAGEMENT STRATEGY - UNIQUE RESOURCE (MOVE ONLY)
-		ref opAssign ()(auto ref typeof(this) space) // XXX RESOURCE MANAGEMENT STRATEGY - UNIQUE RESOURCE (MOVE ONLY)
+		ref opAssign ()(auto ref this space)
 			{/*...}*/
-				import evx.utils.memory;
+				import evx.memory.transfer; // REVIEW
 
-				if (&space != &this)
-					space.move (this);
+				space.blit (this);
 
 				return this;
 			}
-
-		ref opAssign (S)(S space) // XXX INTEROP SYNTAX
+		ref opAssign (S)(S space)
 			in {/*...}*/
 				enum error_header = full_name!(typeof(this)) ~ `: `;
 
@@ -90,13 +87,15 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 
 				Match!(read_limits, read_length);
 
+				// REVIEW deallocate here, to be on safe side?
+
 				allocate (size);
 
 				this[] = space;
 
 				return this;
 			}
-		ref opAssign (typeof(null)) // XXX INTEROP SYNTAX
+		ref opAssign (typeof(null))
 			out {/*...}*/
 				foreach (i, T; Parameters!access)
 					assert (this[].limit!i.width == zero!T);
@@ -116,6 +115,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 	}
 	unittest {/*...}*/
 		import evx.math;
+		import evx.utils; // REVIEW this module has to do with resource lifetime management
 		import std.conv;
 
 		static struct Basic
@@ -185,77 +185,98 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 		// x is independent of y
 		assert (x.length == 25);
 
-		 // direct assignment (not slice) changes ownership
-		y = x;
-		assert (x.length == 0);
-		assert (y.length == 25);
-
-		// RAII
+		// buffers are deallocated upon going out of scope
 		Basic.destroyed = false;
 		{/*...}*/
 			Basic z = N;
 		}
 		assert (Basic.destroyed);
 
+		// direct assignment (not slice) produces a shallow copy. if care is not taken, this will eventually cause multiple deallocation.
+		// BufferOps does not attempt to manage lifetimes in order that the internal implementation or a top-level wrapper can define a management strategy
+		y = x;
+		assert (x.length == 25);
+		assert (y.length == 25);
+
+
+		// buffers which have been shallow-copied run the risk of having their information going out of sync when one is destroyed
 		Basic.destroyed = false;
-
-		// changing ownership prevents premature destruction of data
 		Basic z;
-		{/*...}*/
-			Basic w = N;
-
-			z = w;
-			
-			assert (z.length);
-		}
-		assert (not (Basic.destroyed));
-		assert (z.length);
-
-		// to avoid double free, copying a buffer is not allowed
-		auto f ()(Basic a)
-			{/*...}*/
-				Basic x = a;
-
-				return x;
-			}
-		assert (not (is (typeof(f (z)))));
-
-		auto g ()(ref Basic a)
-			{/*...}*/
-				Basic x = a;
-
-				return x;
-			}
-		assert (not (is (typeof(g (z)))));
-
-		auto h ()(Basic a)
-			{return a;}
-		assert (not (is (typeof(h (z)))));
-
-		auto φ ()(ref Basic a)
-			{return a;}
-		assert (not (is (typeof(h (z)))));
-
-		// passing by reference is allowed
-		ref γ ()(ref Basic a)
-			{return a;}
-		z = γ (z);
-		assert (not (Basic.destroyed));
-		assert (z.length);
-
-		// transferring ownership is allowed
-		auto χ ()(ref Basic a)
-			{/*...}*/
-				Basic x;
-
-				x = a;
-
-				return x;
-			}
-		z = χ (z);
-		assert (not (Basic.destroyed));
-		assert (z.length);
-
-		z = null;
+		Basic w = N;
+		z = w;
+		assert (w.length == 25);
+		assert (z.length == 25);
+		w = null;
 		assert (Basic.destroyed);
+		assert (w.length == 0);
+		assert (z.length == 25);
+		z = null;
+		assert (z.length == 0);
+
+		// to control deallocation, a resource management strategy may be defined by the host struct.
+		struct MoveOnly
+			{/*...}*/
+				int[] data;
+				auto length () const {return data.length;}
+				static bool destroyed;
+
+				void allocate (size_t length)
+					{/*...}*/
+						if (length == 0 && this.length != 0)
+							destroyed = true;
+							
+						data.length = length;
+					}
+
+				auto pull (int x, size_t i)
+					{/*...}*/
+						data[i] = x;
+					}
+				auto pull (R)(R range, size_t[2] limits)
+					{/*...}*/
+						foreach (i, j; enumerate (ℕ[limits.left..limits.right]))
+							data[j] = range[i];
+					}
+
+				ref access (size_t i)
+					{/*...}*/
+						return data[i];
+					}
+
+				mixin BufferOps!(allocate, pull, access, length) buffer_ops;
+
+				// prevent copying
+				@disable this (this);
+
+				// overload assignment to enable move semantics
+				auto ref opAssign ()(auto ref this that)
+					{/*...}*/
+						if (&this != &that)
+							that.move (this);
+
+						return this;
+					}
+				auto ref opAssign (S)(S space)
+					{/*...}*/
+						return buffer_ops.opAssign (space);
+					}
+			}
+		MoveOnly a, b;
+		a = N;
+		assert (a.length == 25);
+		b = a;
+		assert (b.length == 25);
+		assert (a.length == 0);
+		b = null;
+		assert (b.length == 0);
+
+		// alternatively, this can be accomplished through the use of lifetime management wrappers
+		Lifetime.Unique!Basic c, d;
+		c = N;
+		assert (c.length == 25);
+		d = c;
+		assert (d.length == 25);
+		assert (c.length == 0);
+		d = null;
+		assert (d.length == 0);
 	}
