@@ -1,6 +1,10 @@
 module evx.graphics.operators;
 
-
+// REVIEW forwarding semantics are sealed within these 2 templates, should be ok to use
+// we CAN guarantee that Canvas.preprocess will take by ref, but CANNOT that Render.shaders will be refs
+// OR we can guarantee that preprocess is a shader stage
+//	we won't pay for compile/link if we dont activate it separately
+//	so we can just chain them and activate
 template CanvasOps (alias preprocess, alias framebuffer_id, alias attachment_id, alias allocate, alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
 		private {/*imports}*/
@@ -12,9 +16,9 @@ template CanvasOps (alias preprocess, alias framebuffer_id, alias attachment_id,
 		}
 
 		static assert (
-			is (typeof((){auto s = Shader!().init; return typeof(preprocess (s)).init;}()) == Shader!R, R...)
-			&& not (is (typeof(preprocess (Shader!().init)) == Shader!S, S...)),
-			typeof(this).stringof ~ ` preprocess: ref Shader → Shader`
+			is (ExprType!preprocess == Shader!Sym, Sym...)
+			|| is (ExprType!preprocess == typeof(null)),
+			typeof(this).stringof ~ ` preprocess stage must be shader or null`
 		);
 		static assert (is (typeof(framebuffer_id.identity) == GLuint),
 			`framebuffer_id must resolve to GLuint`
@@ -46,15 +50,7 @@ template CanvasOps (alias preprocess, alias framebuffer_id, alias attachment_id,
 		void attach (S)(auto ref S shader)
 			if (is (S == Shader!Sym, Sym...))
 			{/*...}*/
-				import evx.utils.memory : move; // TEMP
-
-				typeof(preprocess(shader)) prepared;
-				
-				move (preprocess (shader), prepared);
-				
-				prepared.activate;
-
-				shader = S (prepared.args); // REVIEW all these moves are inefficient, need a system for referencing lvalue resources and passing back rvalue resources... put resource placement control in the hands of the top-level caller
+				(shader ~ preprocess).activate; // REVIEW assume simple RAII? moves are cheap for these reference wrapper types
 			}
 
 		mixin BufferOps!(allocate, pull, access, LimitsAndExtensions);
@@ -64,13 +60,13 @@ template RenderOps (alias draw, shaders...)
 	{/*...}*/
 		private {/*imports}*/
 			import evx.operators;
-			import evx.utils.memory;
+			import evx.memory;
 
 			import evx.graphics.opengl;
 			import evx.graphics.shader;
 		}
 
-		static {/*analysis}*/ // REVIEW
+		static {/*analysis}*/
 			enum is_shader (alias s) = is (ExprType!(s) == Shader!Sym, Sym...);
 			enum rendering_stage_exists (uint i) = is (typeof(draw!i (0)) == void);
 
@@ -85,7 +81,7 @@ template RenderOps (alias draw, shaders...)
 			);
 		}
 		public {/*rendering}*/
-			auto ref render_to (T)(auto ref T canvas) // REVIEW DOC RENDER_TO SETS UP AND VERIFIES THE RENDER TARGETS AND CALLS RENDERER DRAW
+			auto ref render_to (Canvas)(auto ref Canvas canvas) // REVIEW DOC RENDER_TO SETS UP AND VERIFIES THE RENDER TARGETS AND CALLS RENDERER DRAW
 				{/*...}*/
 					canvas.setup;
 
@@ -107,7 +103,7 @@ template RenderOps (alias draw, shaders...)
 
 					render;
 
-					return forward!canvas;
+					return forward!canvas; // REVIEW this bypasses the lack of a copy constructor, would wrapped types provide an alternative solution?
 				}
 		}
 	}
