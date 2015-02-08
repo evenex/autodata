@@ -54,7 +54,7 @@ struct Display
 				GLint origin (uint dim)()
 					{/*...}*/
 						static if (is (Selected[dim] == size_t[2]))
-							return selected[dim].left;
+							return selected[dim].left.to!int;
 
 						else static if (is (Selected[dim] == size_t))
 							return selected[dim].to!int;
@@ -126,9 +126,9 @@ struct Display
 				return (1/normalized_dimensions).to!fvec;
 			}
 
-		auto preprocess (S)(ref S shader)
+		auto preprocess ()
 			{/*...}*/
-				return shader.aspect_correction (aspect_ratio);
+				return aspect_correction (aspect_ratio);
 			}
 
 		void post ()
