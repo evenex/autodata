@@ -6,7 +6,7 @@ private {/*imports}*/
 	
 	import evx.type;
 	import evx.range;
-	import evx.utils.memory;
+	import evx.memory;
 
 	import evx.math.geometry.vectors;
 	import evx.math.geometry.traits;
