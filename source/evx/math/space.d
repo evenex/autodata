@@ -41,6 +41,8 @@ template Coords (Space)
 		alias Coords = Map!(Coord, Iota!(dimensionality!(Space)));
 	}
 
+alias Source (T) = typeof(T.init[].source);
+
 auto volume (S)(auto ref S space) // TODO doc and unittest
 	{/*...}*/
 		static if (dimensionality!S == 0)
