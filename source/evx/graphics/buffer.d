@@ -15,7 +15,7 @@ private {/*imports}*/
 }
 
 struct GLBuffer (T, alias target, alias usage)
-	if (is (typeof(target) == GLenum) && is (typeof(usage) == GLenum))
+	if (is (typeof(target) == GLenum) && is (typeof(usage) == GLenum) && is (typeof(gl.type_enum!T)))
 	{/*...}*/
 		private enum bind_call = q{gl.} ~ __traits(identifier, target)[3..$].toLower;
 
