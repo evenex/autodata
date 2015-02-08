@@ -65,16 +65,11 @@ struct Texture
 			}
 
 		mixin CanvasOps!(
-			preprocess, framebuffer_id, texture_id,
+			null, framebuffer_id, texture_id,
 			allocate, pull, access, 
 			width, height,
 			RangeOps, TextureId
 		);
-
-		ref preprocess (S)(ref S shader)
-			{/*...}*/
-				return shader;
-			}
 
 		Color access (size_t x, size_t y)
 			 {/*...}*/
