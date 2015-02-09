@@ -1,7 +1,7 @@
 {
 	"name": "engine_vX",
 	"description": "TCR engine prototype 10",
-	"copyright": "Copyright © 2014, evenex",
+	"copyright": "Copyright © 2015, evenex",
 	"authors": ["evenex"],
 	"dependencies": {
 		"derelict-glfw3": "~master",
