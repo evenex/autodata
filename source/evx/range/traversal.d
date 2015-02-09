@@ -4,6 +4,7 @@ private {/*imports}*/
 	import std.range;
 	import std.algorithm;
 	import std.conv;
+	import std.array;
 
 	import evx.range.classification;
 	import evx.range.primitives;
@@ -13,6 +14,10 @@ private {/*imports}*/
 	import evx.math.overloads;
 	import evx.math.fields.nats;
 }
+
+/* cache a range in a D array
+*/
+alias cache = std.array.array;
 
 /* construct a range from a repeated value 
 */
