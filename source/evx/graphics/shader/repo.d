@@ -20,15 +20,16 @@ auto textured_shape_shader (R, T)(R shape, auto ref T texture)
 			alias draw_shape = shape;
 		else auto draw_shape = shape.map!(to!(Vector!(2,float)));
 
-		return τ(draw_shape, draw_shape.flip!`vertical`).vertex_shader!( // REVIEW texture coord scaling? definitely a BUG now, proper scaling seems to depend on the shape... thats a big problem
-			`position`, `tex_coords`, q{
-				gl_Position = vec4 (position, 0, 1);
-				frag_tex_coords = (tex_coords + vec2 (1,1))/2;
-			}
-		).fragment_shader!(
-			fvec, `frag_tex_coords`,
-			Texture, `tex`, q{
-				gl_FragColor = texture2D (tex, frag_tex_coords);
-			}
-		)(texture);
+		return τ(draw_shape, draw_shape.flip!`vertical`.into_bounding_box_of (square (2.0f)))
+			.vertex_shader!(
+				`position`, `tex_coords`, q{
+					gl_Position = vec4 (position, 0, 1);
+					frag_tex_coords = (tex_coords + vec2 (1,1))/2;
+				}
+			).fragment_shader!(
+				fvec, `frag_tex_coords`,
+				Texture, `tex`, q{
+					gl_FragColor = texture2D (tex, frag_tex_coords);
+				}
+			)(texture);
 	}
