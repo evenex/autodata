@@ -600,15 +600,39 @@ public {/*zip}*/
 				}
 			auto length ()() const
 				{/*...}*/
-					return spaces[0].length; // REVIEW get the space that has a length, might not be the first one
+					template get_length (uint i)
+						{/*...}*/
+							auto get_length ()()
+								{/*...}*/
+									return spaces[i].length;
+								}
+						}
+
+					return Match!(Map!(get_length, Count!Spaces));
 				}
 			auto limit (size_t i)() const
 				{/*...}*/
-					return spaces[0].limit!i; // REVIEW get the space that has a limit, might not be the first one
+					template get_limit (uint j)
+						{/*...}*/
+							auto get_limit ()()
+								{/*...}*/
+									return spaces[j].limit!i;
+								}
+						}
+
+					return Match!(Map!(get_limit, Count!Spaces));
 				}
 			auto limit ()() const
 				{/*...}*/
-					 return spaces[0].limit; // REVIEW get the space that has a limit, might not be the first one
+					template get_limit (uint j)
+						{/*...}*/
+							auto get_limit ()()
+								{/*...}*/
+									return spaces[j].limit;
+								}
+						}
+
+					return Match!(Map!(get_limit, Count!Spaces));
 				}
 
 			invariant ()
@@ -773,7 +797,7 @@ public {/*by}*/
 							alias projection = Match!(π_i, π_n);
 						}
 
-					return Map!(projection, Count!Spaces).tuple;
+					return Map!(projection, Count!Spaces).tuple.flatten;
 				}
 
 			mixin SliceOps!(access, Map!(limit, Count!(Parameters!access)), RangeOps);
