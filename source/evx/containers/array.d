@@ -13,11 +13,15 @@ struct Array (T, uint dimensions = 1)
 	{/*...}*/
 		T[] data;
 
-		ref array () {return this;} // REVIEW HACK, to get around some kind of builtin .array thing that conflicts with UFCS array
-		auto ptr () {return data.ptr;}
+		inout ptr () {return data.ptr;}
 
 		Repeat!(dimensions, size_t) lengths;
 
+		auto length ()() const
+			if (dimensions == 1)
+			{/*...}*/
+				return length!0;
+			}
 		auto length (uint d)() const
 			{/*...}*/
 				return lengths[d];
