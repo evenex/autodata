@@ -12,12 +12,13 @@ private {/*imports}*/
 	import evx.graphics;
 	import evx.patterns;
 	import evx.misc.string;
+	import evx.misc.utils;
 	import evx.range;
 	import evx.math;
 
 	alias enumerate = evx.range.enumerate;
 	alias map = evx.math.functional.map;
-	alias zip = evx.math.functional.zip;
+	alias zip = std.algorithm.zip;
 	alias reduce = evx.math.functional.reduce;
 	alias filter = evx.math.functional.filter;
 	alias sum = evx.math.arithmetic.sum;
@@ -307,6 +308,8 @@ version (generate_dependency_graph) void main ()
 
 			foreach (mod; modules)
 				{/*...}*/
+					std.stdio.stderr.writeln (`analyzing module ` ~ mod.name);
+
 					void write_node_property (string property)
 						{/*...}*/
 							dot_file ~= "\t" ~mod.dot.node ~ property~ `;` "\n";
@@ -321,10 +324,16 @@ version (generate_dependency_graph) void main ()
 						}
 
 					foreach (dep; mod.imported_modules)
-						if (dep.has_cyclic_dependencies)
-							dot_file ~= dep.connect_to (mod, `[color="#ff0000"]`);
-						else dot_file ~= dep.connect_to (mod, `[color="` ~dep.color.value (0.5).text~ `", penwidth=4, arrowsize=2]`);
+						{/*...}*/
+							std.stdio.stderr.writeln ("\t"`processing dependency ` ~ dep.name);
+
+							if (dep.has_cyclic_dependencies)
+								dot_file ~= dep.connect_to (mod, `[color="#ff0000"]`);
+							else dot_file ~= dep.connect_to (mod, `[color="` ~dep.color.value (0.5).text~ `", penwidth=4, arrowsize=2]`);
+						}
 				}
+
+			std.stdio.stderr.writeln (`marking cycles`);
 
 			dot_file ~= modules.map!(mod => mod.find_minimal_cycle)
 				.filter!(not!empty)
@@ -333,6 +342,8 @@ version (generate_dependency_graph) void main ()
 				.array.reduce!concatenate (``);
 			
 			dot_file ~= `}`;
+
+			std.stdio.stderr.writeln (`done`);
 
 			File (`temp.dot`, `w`).write (dot_file);
 		}
