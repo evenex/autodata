@@ -159,9 +159,16 @@ void demo () // TODO various texture sizes
 		preview;
 	}
 
-auto card (T)(auto ref T texture)
+auto card (T)(auto ref T texture, vec position = 0.vec, vec dimensions = 2.vec)
 	{/*...}*/
-		return textured_shape_shader (square!float.scale (2), texture).triangle_fan;
+		return textured_shape_shader (
+			square!float.scale (dimensions).translate (position),
+			(){/*...}*/
+				static if (__traits(isRef, texture) && is (InitialType!T == T))
+					return borrow (texture);
+				else return texture;
+			}()
+		).triangle_fan;
 	}
 
 auto extrude (S,T)(S space, T length) // TODO T is integral for now, later i need a general way to change coordinate types
@@ -170,20 +177,26 @@ auto extrude (S,T)(S space, T length) // TODO T is integral for now, later i nee
 			.map!((e,_) => e);
 	}
 
-static if (0)
 void main ()
 	{/*...}*/
 		import evx.graphics.display;
 		import core.thread;
 
-		auto hsv_map = rainbow (512).by (ℝ[0..1].grid (256))
+		auto hsv_map = rainbow (256).by (ℝ[0..1].grid (256))
 			.map!((color, x) => color.value (1-x))
 			.Texture;
 
 		auto display = Display (512, 512);
 
-		hsv_map.card.render_to (display);
-		display.post;
+		void preview ()
+			{/*...}*/
+				display.post;
+				Thread.sleep (50.msecs);
+			}
 
-		Thread.sleep (2.seconds);
+		foreach_reverse (x; ℝ[0..2].grid (100)[])
+			{/*...}*/
+				hsv_map.card (0.vec, x.vec).render_to (display);
+				preview;
+			}
 	}
