@@ -86,20 +86,30 @@ struct Array (T, uint dimensions = 1)
 
 				while (index[$-1] < bounds[$-1].width)
 					{/*...}*/
-						auto get_index (size_t i)()
+						void indexed ()()
 							{/*...}*/
-								return index[i];
+								auto get_index (size_t i)()
+									{/*...}*/
+										return index[i];
+									}
+
+								data[offset] = space[
+									Map!(get_index,
+										Map!(Pair!().First!Identity,
+											Filter!(Pair!().Second!Identity,
+												Indexed!open
+											)
+										)
+									).tuple.expand
+								];
+							}
+						void input_range ()()
+							{/*...}*/
+								data[offset] = space.front;
+								space.popFront;
 							}
 
-						data[offset] = space[
-							Map!(get_index,
-								Map!(Pair!().First!Identity,
-									Filter!(Pair!().Second!Identity,
-										Indexed!open
-									)
-								)
-							).tuple.expand
-						];
+						Match!(indexed, input_range);
 
 						advance;
 					}
