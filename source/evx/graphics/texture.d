@@ -237,7 +237,8 @@ struct Texture
 unittest {/*texture transfer}*/
 	import evx.graphics.display;
 	import evx.graphics.shader;
-	import evx.graphics.shader.experimental; // TEMP pending renderer module
+	import evx.graphics.renderer;
+	import evx.memory;
 	import evx.type;
 
 	auto display = Display (800, 600);
@@ -257,7 +258,7 @@ unittest {/*texture transfer}*/
 
 	tex1[50..75, 25..75] = tex2[0..25, 0..50];
 
-	Cons!(vertices, tex1).textured_shape_shader // REVIEW Cons only works for symbols, rvalues need to be in tuples... with DIP32, this distinction will be removed (i think)
+	textured_shape_shader (vertices, tex1)
 	.triangle_fan.render_to (display);
 
 	display.post;
