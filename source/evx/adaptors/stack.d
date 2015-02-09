@@ -24,12 +24,15 @@ struct Stack (R)
 			}
 		auto capacity ()(size_t n)
 			{/*...}*/
+				void allocate ()() {base.allocate (n);}
+				void set_length ()() {base.length = n;}
+
 				if (capacity >= n)
 					return;
 
 				if (length > 0)
 					assert (0, `cannot reserve memory for ` ~R.stringof~ ` when it contains data`);
-				else base.length = n;
+				else Match!(allocate, set_length);
 			}
 
 		auto ref access (size_t i)
@@ -37,14 +40,21 @@ struct Stack (R)
 				return base[i];
 			}
 
-		void pull (R)(R range, size_t i, size_t j)
+		void pull (R)(R range, size_t i)
 			{/*...}*/
+				pull (range, i, i+1);
+			}
+		void pull (R)(R range, size_t[2] interval)
+			{/*...}*/
+				auto i = interval.left, j = interval.right;
+
 				foreach (k; i..j)
 					base[k] = range[k-i];
 			}
 
 		/* push */
 		auto opOpAssign (string op : `~`, S)(S range)
+			if (not (is (S : Element!R)))
 			in {/*...}*/
 				assert (this.length + range.length <= this.capacity);
 			}
@@ -55,7 +65,8 @@ struct Stack (R)
 
 				base[start.._length] = range;
 			}
-		auto opOpAssign (string op : `~`)(ElementType!R element)
+		auto opOpAssign (string op : `~`, T)(T element)
+			if (is (T : Element!R))
 			{/*...}*/
 				++_length;
 
