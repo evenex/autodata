@@ -97,6 +97,8 @@ struct Display
 					gl.on_resize = null;
 				else gl.on_resize = (size_t w, size_t h)
 					{this.width = w; this.height = h;};
+
+				background = black;
 			}
 
 		auto pixel_dimensions ()
