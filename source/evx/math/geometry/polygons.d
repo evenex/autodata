@@ -191,8 +191,8 @@ auto rotate (T, U = ElementType!(ElementType!T), V = ElementType!T)(T geometry, 
 
 /* scale a polygon without moving its centroid 
 */
-auto scale (T1, T2)(T1 geometry, T2 scale)
-	if (is_geometric!T1 && __traits(compiles, geometry.front * scale))
+auto scale (T, U)(T geometry, U scale)
+	if (is_geometric!T && __traits(compiles, geometry.front * scale))
 	{/*...}*/
 		auto c = geometry.mean;
 		auto s = scale;
