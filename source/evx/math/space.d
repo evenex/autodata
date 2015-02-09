@@ -58,3 +58,10 @@ auto volume (S)(auto ref S space) // TODO doc and unittest
 			return product (measures);
 		}
 	}
+
+auto extrude (S,R)(S space, R extrusion) // REVIEW space construction
+	if (dimensionality!R == 1)
+	{/*...}*/
+		return space.by (extrusion)
+			.map!((e,_) => e);
+	}
