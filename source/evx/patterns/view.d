@@ -5,6 +5,8 @@ private {/*import}*/
 	import evx.type;
 }
 
+// REVIEW this is very OOP, better to use FRP. probably kill this when i figure out how
+
 mixin template View (alias target, Invalidators, Refreshers)
 	if (is (Invalidators: InvalidateOn!T, T...) && is (Refreshers: RefreshOn!U, U...))
 	{/*...}*/
