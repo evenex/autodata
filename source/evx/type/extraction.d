@@ -87,6 +87,3 @@ template InitialType (T)
 
 alias Parameters = std.traits.ParameterTypeTuple;
 alias ReturnType = std.traits.ReturnType;
-
-// TODO DEPRECATE:
-
