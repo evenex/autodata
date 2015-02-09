@@ -8,7 +8,7 @@
 		"derelict-gl3"  : "~master",
 		"derelict-ft"  	: "~master",
 	},
-	"versions": ["generate_dependency_graph"],
+	"_versions": ["generate_dependency_graph"],
 	"libs": ["GL", "freetype-gl", "freetype", "GLEW"],
 	"targetType": "executable",
 	"buildRequirements": ["disallowDeprecations"],
