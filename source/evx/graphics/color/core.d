@@ -284,6 +284,13 @@ struct Color
 						r = c, g = 0, b = x;
 
 					this[0..3] += m;
+
+					normalize;
 				}
+		}
+		invariant () {/*...}*/
+			assert (this[].all!(c => c.between (0.0, 1.0)),
+				`color is not normalized! ` ~ this.text
+			);
 		}
 	}
