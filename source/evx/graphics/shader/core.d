@@ -15,8 +15,6 @@ private {/*imports}*/
 	import evx.graphics.opengl;
 	import evx.graphics.buffer;
 	import evx.graphics.texture;
-
-	import evx.misc.commoninterface;
 }
 
 enum glsl_version = 440;
@@ -527,16 +525,6 @@ package {/*generator/compiler/linker}*/
 							{/*...}*/
 								void own    ()() {args[i].own (input[i]);}
 								void assign ()() {args[i] = input[i];}
-
-								pragma(msg, `init `, Args[i].stringof, ` ← `, T[i].stringof);
-								static if (is (typeof(own ())))
-									{/*...}*/
-									pragma(msg, `	owned`);
-									}
-								static if (is (typeof(assign())))
-									{/*...}*/
-									pragma(msg, `	assigned`);
-									}
 
 								Match!(own, assign);
 							}

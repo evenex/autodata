@@ -58,7 +58,7 @@ public {/*PROTO RENDERERS}*/
 //////////////////////////////////////////
 // DEMO //////////////////////////////////
 //////////////////////////////////////////
-void main () // TODO various texture sizes
+void demo () // TODO various texture sizes
 	{/*...}*/
 		import evx.graphics.display;
 
@@ -170,22 +170,20 @@ auto extrude (S,T)(S space, T length) // TODO T is integral for now, later i nee
 			.map!((e,_) => e);
 	}
 
-void umain ()
+static if (0)
+void main ()
 	{/*...}*/
 		import evx.graphics.display;
 		import core.thread;
 
-		auto hsv_map = rainbow (256)
-			.extrude (256)
-		//	.by (ℝ.closed[0..1].grid (256)) // REVIEW how best to include 1.0? should be in R b/c we could do R.closed[0..1][1] 
-			// ℝ[0..1].closed_interval (256)) would work, implementation is straightforward (like grid but with width/(length-1) instead of width/length
-			//.map!((color, x) => color.lightness (x))
+		auto hsv_map = rainbow (512).by (ℝ[0..1].grid (256))
+			.map!((color, x) => color.value (1-x))
 			.Texture;
 
 		auto display = Display (512, 512);
 
 		hsv_map.card.render_to (display);
-		display.post; // BUG sometimes screen is blank
+		display.post;
 
 		Thread.sleep (2.seconds);
 	}

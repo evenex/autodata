@@ -11,6 +11,7 @@ private {/*imports}*/
 	import evx.graphics.operators;
 
 	import evx.math;
+	import evx.range; // all
 }
 
 ubyte[4] texel (Color color)
