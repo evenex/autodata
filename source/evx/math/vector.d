@@ -230,18 +230,17 @@ struct Vector (size_t n, Component = double)
 
 			auto tuple ()
 				{/*...}*/
-					static code ()
-						{/*...}*/
-							string code;
-
-							foreach (i; 0..n)
-								code ~= q{this[} ~i.text~ q{], };
-
-							return code[0..$-2];
-						}
-
 					mixin(q{
-						return std.typecons.tuple (} ~code~ q{);
+						return std.typecons.tuple (}
+							~ (){/*...}*/
+								string code;
+
+								foreach (i; 0..n)
+									code ~= q{this[} ~i.text~ q{], };
+
+								return code[0..$-2];
+							}() ~
+						q{);
 					});
 				}
 		}
