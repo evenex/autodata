@@ -1,4 +1,4 @@
-module evx.misc.commoninterface; // REFACTOR package
+module evx.adaptors.common;
 
 private {/*import}*/
 	import std.conv: text;
