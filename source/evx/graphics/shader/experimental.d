@@ -147,4 +147,3 @@ unittest {/*...}*/
 			preview;
 		}
 }
-void main () {}
