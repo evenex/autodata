@@ -115,7 +115,8 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 	}
 	unittest {/*...}*/
 		import evx.math;
-		import evx.utils; // REVIEW this module has to do with resource lifetime management
+		import evx.memory;
+		import evx.memory.transfer; // REVIEW doc this - memory transfer module must be explicitly imported, as its dangerous and could conflict with range transfers
 		import std.conv;
 
 		static struct Basic
