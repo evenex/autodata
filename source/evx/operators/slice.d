@@ -310,7 +310,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 
 					mixin(extensions);
 				}
-	}
+		}
 		private:
 		private {/*aliases}*/
 			alias Source = typeof(this);
