@@ -176,7 +176,8 @@ auto translate (T, Vec = ElementType!T)(T geometry, Vec displacement)
 auto rotate (T, U = ElementType!(ElementType!T), V = ElementType!T)(T geometry, U θ, V pivot = V.init)
 	if (is_geometric!T)
 	{/*...}*/
-		import evx.math;//		import evx.math.geometry.vectors;
+		import evx.math;
+		import evx.memory.transfer;
 
 		auto c = pivot.bytes == V.init.bytes? geometry.mean: pivot;
 
