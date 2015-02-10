@@ -9,6 +9,7 @@ private {/*imports}*/
 	import evx.misc.tuple;
 
 	import evx.graphics.opengl;
+	import evx.graphics.color;
 
 	import evx.math;
 	import evx.range;
@@ -79,15 +80,17 @@ struct GLBuffer (T, alias target, alias usage)
 				else {/*copy over pci}*/
 					static if (is (typeof(range.ptr) == T*))
 						auto ptr = range.ptr;
+					else static if (is (typeof(range.to!T) == T))
+						{/*...}*/
+							auto value = range.to!T;
+							auto ptr = &value;
+						}
 					else static if (is (typeof(range.map!(to!T))))
 						{/*...}*/
 							auto array = range.map!(to!T).array;
 							auto ptr = array.ptr;
 						}
-					else {/*...}*/
-						auto value = range.to!T;
-						auto ptr = &value;
-					}
+					else static assert (0);
 
 					bind;
 
@@ -211,7 +214,7 @@ auto gpu_array (R)(R range)
 alias VertexBuffer = GLBuffer!(fvec, GL_ARRAY_BUFFER, GL_STATIC_DRAW);
 alias IndexBuffer = GLBuffer!(ushort, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW);
 alias UniformBuffer (T) = GLBuffer!(T, GL_UNIFORM_BUFFER, GL_STATIC_DRAW);
-alias ColorBuffer = GLBuffer!(Vector!(4, float), GL_ARRAY_BUFFER, GL_STATIC_DRAW);
+alias ColorBuffer = GLBuffer!(Color, GL_ARRAY_BUFFER, GL_STATIC_DRAW);
 
 /* composite buffer types 
 */
