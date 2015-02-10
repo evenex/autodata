@@ -11,6 +11,7 @@ private {/*import}*/
 	import evx.adaptors;
 	import evx.containers;
 	import evx.patterns;
+	import evx.memory;
 
 	import evx.graphics.buffer;
 	import evx.graphics.color;
@@ -24,7 +25,6 @@ private {/*types}*/
 	alias texture_atlas_t = void;
 }
 
-void main (){}
 struct Glyph
 	{/*...}*/
 		immutable(dchar) symbol;
@@ -108,7 +108,12 @@ struct Font
 				reset;
 			}
 
-		package:
+		auto opDispatch (string data)()
+			{/*...}*/
+				return mixin(q{base.} ~ data);
+			}
+
+		private:
 
 		enum path = "./font/DejaVuSansMono.ttf";
 
@@ -431,7 +436,7 @@ struct Font
 
 struct Text
 	{/*...}*/
-		void refresh ()
+		void refresh () // REVIEW every place we need to refresh... also an adaptor for an asynchronous update... refresh on dtor or explicit call or w/e
 			in {/*...}*/
 				assert (font.is_loaded);
 			}
@@ -490,7 +495,7 @@ struct Text
 								if (trim_length < 0)
 									trim_length = i + 1;
 
-								auto cutoff = i + 1 - length;
+								auto cutoff = i + 1 - length; // insanomatic
 									
 								auto word = ℕ[0..trim_length]
 									.map!(j => j + cutoff)
@@ -556,10 +561,16 @@ struct Text
 				}
 			}
 
-		this (ref Font font, Display display, dstring text)
+		this ()(auto ref Font font, ref Display display, dstring text)
 			{/*...}*/
-				this.font = font;
-				this.display = display;
+				import evx.memory.transfer;
+
+				static if (__traits(isRef, font))
+					this.font = borrow (font);
+				else font.move (this.font);
+
+				this.display = borrow (display);
+
 				this.draw_box = display.normalized_bounds; 
 				this.data = text;
 
@@ -604,8 +615,14 @@ struct Text
 				{/*...}*/
 					return Glyph (data[i], colors[4*i..4*(i+1)], cards[4*i..4*(i+1)]);
 				}
-			auto pull (R)(R range, size_t i, size_t j)
+			auto pull (R)(R range, size_t i)
 				{/*...}*/
+					pull (range, i, i+1);
+				}
+			auto pull (R)(R range, size_t[2] interval)
+				{/*...}*/
+					auto i = interval.left, j = interval.right;
+
 					static if (is_string!R)
 						{/*...}*/
 							data = data[0..i] ~ range.to!dstring ~ data[j..$];
@@ -633,7 +650,7 @@ struct Text
 				{/*...}*/
 					auto color (Color color)
 						{/*...}*/
-							foreach (glyph; this[])
+							foreach (glyph; this[]) // REVIEW optimization opportunity, instead of per-glyph, batch it
 								glyph.color = color;
 						}
 
@@ -657,34 +674,67 @@ struct Text
 		}
 		private:
 		private {/*data}*/
-			Font font;
+			MaybeBorrowed!Font font;
+			Borrowed!Display display;
 
 			dstring data;
 			Stack!(Array!(size_t, 1)) newline_positions;
 
-			Display display; // REVIEW need this
 			Alignment _alignment;
 			Box!float card_box; // REVIEW out here why?
 			BoundingBox draw_box;
 		}
 	}
-version (none):
 
-void main () {/*...}*/
-	scope gfx = new Display; // BUG need this before using gpu stuff at all... how to enforce?
+unittest {/*...}*/
+	auto display = Display (512, 512);
 
-	scope f = new Font (12); // class
-	scope x = new Text (f, gfx, `hay sup`);
+	auto text = Text (Font (12), display, `hay sup`);
 
-	assert (x[][1] == x[1]);
+	assert (text[] == `hay sup`);
+	text[0..3] = `oi,`;
+	assert (text[] == `oi, sup`);
 
-	x[].up_from (`s`).color = red;
-
-	assert (x[1] == 'a');
-	x[0..3] = `oi,`;
-	assert (x[1] == 'i');
-
-	assert (x.colors[].stride (4).m_array[] == [black, black, black, black, red, red, red]);
-
-	assert (x[] == `oi, sup`);
+	text[].up_from (`s`).color = red;
+	assert (text.colors[].stride (4).array[] == [black, black, black, black, red, red, red]);
 }
+
+void main () // TODO
+	{/*...}*/
+		import evx.graphics.display;
+
+		auto display = Display (512, 512);
+
+		auto t = Text (Font (200), display, `Lorem`);// ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`);
+
+		t.align_to (Alignment.top_right)
+			.within ([-1.vec, 1.vec].bounding_box);
+
+		version (none)
+		scope s = new TextShader;
+		version (none)
+		scope r = new TextRenderer;
+
+		auto triangle = [fvec (1), fvec(0), fvec(1,0)];
+
+		version (none)
+		gfx.attach (s);
+		version (none)
+		r.attach (s);
+
+		t[0..$/3].color = red;
+		t[$/3..2*$/3].color = white;
+		t[2*$/3..$].color = blue;
+
+		version (none)
+		r.draw.text (t)
+			.rotate (π/4)
+			.translate (vec(0,1))
+			.scale (0.2)
+			.immediately;
+		
+		display.post;
+
+		import core.thread;
+		Thread.sleep (1000.msecs);
+	}
