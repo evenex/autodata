@@ -4,6 +4,7 @@ private {/*imports}*/
 	import evx.range;
 	import evx.operators;
 	import evx.math;
+	import evx.type;
 }
 
 struct Stack (R)
@@ -48,8 +49,10 @@ struct Stack (R)
 			{/*...}*/
 				auto i = interval.left, j = interval.right;
 
-				foreach (k; i..j)
-					base[k] = range[k-i];
+				auto pulled ()() {base[interval.left..interval.right] = range;}
+				auto iterated ()() {foreach (k; i..j) base[k] = range[k-i];}
+
+				Match!(pulled, iterated);
 			}
 
 		/* push */
