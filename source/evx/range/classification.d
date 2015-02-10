@@ -17,7 +17,7 @@ alias is_forward_range = std.range.isForwardRange;
 alias is_bidirectional_range = std.range.isBidirectionalRange;
 alias is_random_access_range = std.range.isRandomAccessRange;
 
-template Element (R) // TODO deprecate ElementType, substitute Element, watch out for ICE
+template Element (R) // TODO deprecate ElementType, substitute Element, watch out for ICE REVIEW this can screw things up...
 	{/*...}*/
 		alias Standard () = typeof(ElementType!R.init);
 		alias Codomain () = typeof(R.init[Coords!(typeof(R.init[])).init]);
