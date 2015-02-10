@@ -9,10 +9,10 @@ private {/*imports}*/
 
 struct Stack (R)
 	{/*...}*/
-		R base;
+		R store;
 		private size_t _length;
 
-		alias base this;
+		alias store this;
 
 		auto length () const
 			{/*...}*/
@@ -21,12 +21,12 @@ struct Stack (R)
 
 		auto capacity ()
 			{/*...}*/
-				return base.length;
+				return store.length;
 			}
 		auto capacity ()(size_t n)
 			{/*...}*/
-				void allocate ()() {base.allocate (n);}
-				void set_length ()() {base.length = n;}
+				void allocate ()() {store.allocate (n);}
+				void set_length ()() {store.length = n;}
 
 				if (capacity >= n)
 					return;
@@ -38,7 +38,7 @@ struct Stack (R)
 
 		auto ref access (size_t i)
 			{/*...}*/
-				return base[i];
+				return store[i];
 			}
 
 		void pull (R)(R range, size_t i)
@@ -49,8 +49,8 @@ struct Stack (R)
 			{/*...}*/
 				auto i = interval.left, j = interval.right;
 
-				auto pulled ()() {base[interval.left..interval.right] = range;}
-				auto iterated ()() {foreach (k; i..j) base[k] = range[k-i];}
+				auto pulled ()() {store[interval.left..interval.right] = range;}
+				auto iterated ()() {foreach (k; i..j) store[k] = range[k-i];}
 
 				Match!(pulled, iterated);
 			}
@@ -66,7 +66,7 @@ struct Stack (R)
 
 				_length += range.length;
 
-				base[start.._length] = range;
+				store[start.._length] = range;
 			}
 		auto opOpAssign (string op : `~`, T)(T element)
 			if (is (T : Element!R))
