@@ -169,11 +169,14 @@ struct Array (T, uint dimensions = 1)
 /* allocate an array from data 
 */
 auto array (S)(S space)
-	{/*...}*/
+	in {/*...}*/
 		static assert (dimensionality!S > 0,
 			S.stringof ~ ` has 0 dimensions; if it is a container, try passing a slice [] instead`
 		);
 
+		static assert (not (is (S == Element!S)));
+	}
+	body {/*...}*/
 		static if (is (typeof(S == Array!(Element!S, dimensionality!S))))
 			return space;
 
