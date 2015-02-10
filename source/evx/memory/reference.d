@@ -1,6 +1,7 @@
 module evx.memory.reference;
 
 private {/*import}*/
+	import evx.math.logic;
 	import evx.type;
 
 	import evx.memory.transfer;
@@ -60,4 +61,70 @@ struct Borrowed (T)
 auto borrow (T)(ref T resource)
 	{/*...}*/
 		return Borrowed!T (resource);
+	}
+
+/* union of borrowed and owned resource, automatically aliases itself to given type irrespective of held type 
+*/
+struct MaybeBorrowed (T)
+	{/*...}*/
+		auto ref opAssign (U)(auto ref U value)
+			if (Contains!(U, Types))
+			{/*...}*/
+				enum selected = IndexOf!(U, Types);
+
+				is_borrowed = selected == is (U == Borrowed!T);
+
+				indexed_cast!selected = value;
+
+				return this;
+			}
+
+		this (U)(auto ref U value)
+			{/*...}*/
+				this = value;
+			}
+
+		ref deref ()
+			{/*...}*/
+				if (is_borrowed)
+					return borrowed;
+				else return owned;
+			}
+
+		alias deref this;
+
+		private:
+
+		alias Types = Cons!(T, Borrowed!T);
+
+		byte[
+			Reduce!(λ!q{(uint a, uint b) = a > b? a : b},
+				Map!(λ!q{(T) = T.sizeof}, 
+					Types
+				)
+			)
+		] value;
+
+		bool is_borrowed;
+
+		ref owned ()
+			{/*...}*/
+				return indexed_cast!(IndexOf!(T, Types));
+			}
+		ref borrowed ()
+			{/*...}*/
+				return indexed_cast!(IndexOf!(Borrowed!T, Types)).deref;
+			}
+
+		ref indexed_cast (uint i)()
+			in {/*...}*/
+				static if (i == IndexOf!(T, Types))
+					assert (not (is_borrowed));
+				else static if (i == IndexOf!(Borrowed!T, Types))
+					assert (is_borrowed);
+				else static assert (0);
+			}
+			body {/*...}*/
+				return *cast(Types[i]*) value.ptr;
+			}
 	}
