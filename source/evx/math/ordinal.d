@@ -45,12 +45,12 @@ bool all_equal (Args...)(Args args)
 /* ¬(a < b || b < a) ¿ a == b 
 */
 bool antisymmetrically_equivalent (alias compare, T, U)(const T a, const U b)
-	if (__traits(compiles, compare (a, b)))
+	if (is (typeof(compare (a, b)) : bool))
 	{/*...}*/
 		return not (compare (a,b) || compare (b,a));
 	}
 bool antisymmetrically_equivalent (T,U)(const T a, const U b)
-	if (__traits(compiles, a < b))
+	if (is (typeof(a < b) : bool))
 	{/*...}*/
 		return not (a < b || b < a);
 	}
