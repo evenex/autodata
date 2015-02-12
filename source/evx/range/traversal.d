@@ -235,17 +235,17 @@ struct Stride (R)
 	{/*...}*/
 		R range;
 
-		size_t stride;
+		private size_t width;
 
-		this (R range, size_t stride)
+		this (R range, size_t width)
 			{/*...}*/
 				this.range = range;
-				this.stride = stride;
+				this.width = width;
 			}
 
 		const @property length ()
 			{/*...}*/
-				return range.length / stride;
+				return range.length / width;
 			}
 
 		static if (is_input_range!R)
@@ -256,12 +256,12 @@ struct Stride (R)
 					}
 				void popFront ()
 					{/*...}*/
-						foreach (_; 0..stride)
+						foreach (_; 0..width)
 							range.popFront;
 					}
 				bool empty () const
 					{/*...}*/
-						return range.length < stride;
+						return range.length < width;
 					}
 
 				static assert (is_input_range!Stride);
@@ -283,7 +283,7 @@ struct Stride (R)
 					}
 				void popBack ()
 					{/*...}*/
-						foreach (_; 0..stride)
+						foreach (_; 0..width)
 							range.popBack;
 					}
 
@@ -292,7 +292,7 @@ struct Stride (R)
 
 
 		invariant() {/*}*/
-			assert (stride != 0, `stride must be nonzero`);
+			assert (width != 0, `width must be nonzero`);
 		}
 	}
 auto stride (R,T)(R range, T stride)
