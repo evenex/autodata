@@ -34,7 +34,7 @@ auto approx (T,U)(T a, U b)
 
 		return true;
 	}
-auto approx (T,U, V = CommonType!(T,U))(T a, U b, V tolerance = ε_std!V)
+auto approx (T,U, V = CommonType!(T,U))(T a, U b, V tolerance = ε_std!V) // BUG Error: cannot have parameter of type void
 	if (All!(not!(or!(is_input_range, is_vector_like)), T, U))
 	{/*...}*/
 		alias V = CommonType!(T,U);
