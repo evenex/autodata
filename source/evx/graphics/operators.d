@@ -11,7 +11,6 @@ template CanvasOps (alias preprocess, alias framebuffer_id, alias attachment_id,
 			import evx.operators;
 
 			import evx.graphics.opengl;
-			import evx.graphics.error;
 			import evx.graphics.shader;
 		}
 
@@ -32,7 +31,7 @@ template CanvasOps (alias preprocess, alias framebuffer_id, alias attachment_id,
 				auto status = gl.CheckFramebufferStatus (GL_DRAW_FRAMEBUFFER);
 
 				if (status != GL_FRAMEBUFFER_COMPLETE)
-					assert (0, status.constant_string);
+					assert (0, gl.enum_string (status));
 			}
 			body {/*...}*/
 				gl.framebuffer = framebuffer_id;
