@@ -14,8 +14,7 @@ private {/*import}*/
 
 	import evx.graphics.opengl;
 	import evx.graphics.operators;
-	import evx.graphics.buffer;
-	import evx.graphics.texture;
+	import evx.graphics.resource;
 	import evx.graphics.color;
 
 	import evx.graphics.shader.core;
@@ -42,7 +41,7 @@ struct ArrayRenderer (S)
 				assert (n != 0, `issued empty draw call`);
 			}
 			body {/*...}*/
-				gl.DrawArrays (mode, 0, n);
+				gl.DrawArrays (GL_TRIANGLE_FAN, 0, n);
 			}
 
 		mixin RenderOps!(draw, base_shader);
@@ -52,7 +51,7 @@ auto triangle_fan (S)(S shader)
 		return ArrayRenderer!S (RenderMode.t_fan, shader);
 	}
 
-auto card (T)(auto ref T texture, vec position = 0.vec, vec dimensions = 2.vec)
+auto card (T)(auto ref T texture, vec position = 0.vec, vec dimensions = 2.vec) // TODO builder struct
 	{/*...}*/
 		static if (__traits(isRef, texture) && is (InitialType!T == T))
 			auto card_texture = borrow (texture);

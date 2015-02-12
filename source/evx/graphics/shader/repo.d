@@ -8,7 +8,7 @@ private {/*imports}*/
 	import evx.misc.tuple;
 
 	import evx.graphics.shader;
-	import evx.graphics.texture;
+	import evx.graphics.resource;
 }
 
 alias aspect_correction = vertex_shader!(`aspect_ratio`, q{

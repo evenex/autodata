@@ -1,4 +1,4 @@
-module evx.graphics.buffer;
+module evx.graphics.resource.buffer;
 
 private {/*imports}*/
 	import std.conv;
@@ -85,7 +85,7 @@ struct GLBuffer (T, alias target, alias usage)
 							auto value = range.to!T;
 							auto ptr = &value;
 						}
-					else static if (is (typeof(range.map!(to!T))))
+					else static if (is_range!R && is (typeof(range.map!(to!T))))
 						{/*...}*/
 							auto array = range.map!(to!T).array;
 							auto ptr = array.ptr;

@@ -13,8 +13,7 @@ private {/*import}*/
 	import std.conv: to;
 
 	import evx.graphics.opengl;
-	import evx.graphics.buffer;
-	import evx.graphics.texture;
+	import evx.graphics.resource;
 	import evx.graphics.renderer;
 	import evx.graphics.color;
 

@@ -13,7 +13,7 @@ private {/*import}*/
 	import evx.patterns;
 	import evx.memory;
 
-	import evx.graphics.buffer;
+	import evx.graphics.resource;
 	import evx.graphics.color;
 	import evx.graphics.display;
 	import evx.graphics.opengl;
@@ -63,8 +63,8 @@ struct Glyph
 
 		private:
 		private {/*...}*/
-			Stack!ColorBuffer.Sub!0 _color;
-			Stack!VertexBuffer.Sub!0 _card;
+			ColorBuffer.Sub!0 _color;
+			VertexBuffer.Sub!0 _card;
 		}
 	}
 
@@ -102,6 +102,8 @@ struct Font
 				mixin(error_suppression);
 
 				load_texture_atlas ();
+
+				texture = MonoTexture.reconstruct (atlas.id);
 			}
 		~this ()
 			{/*...}*/
@@ -113,6 +115,8 @@ struct Font
 				return mixin(q{base.} ~ data);
 			}
 
+		MonoTexture texture;
+
 		private:
 
 		enum path = "./font/DejaVuSansMono.ttf";
@@ -123,13 +127,10 @@ struct Font
 
 		alias base this;
 
-		auto texture_id ()
-			{/*...}*/
-				return atlas.id;
-			}
-
 		void reset ()
 			{/*...}*/
+				evx.memory.transfer.neutralize (texture);
+
 				if (atlas !is null)
 					texture_atlas_delete (atlas);
 
@@ -434,9 +435,9 @@ struct Font
 			}
 	}
 
-struct Text
+struct Text // TODO move renderops and shit into here
 	{/*...}*/
-		void refresh () // REVIEW every place we need to refresh... also an adaptor for an asynchronous update... refresh on dtor or explicit call or w/e
+		void refresh () // REVIEW every place we need to refresh
 			in {/*...}*/
 				assert (font.is_loaded);
 			}
@@ -446,15 +447,15 @@ struct Text
 				if (text.length == 0)
 					return;
 
+				Stack!(Array!(fvec, 1)) cards;
+				Stack!(Array!(fvec, 1)) tex_coords;
+				Stack!(Array!(size_t, 1)) newline_positions;
+
 				auto wrap_width = (draw_box.width * î!vec.rotate (rotation)).to_pixel_space (display).norm;
 				auto pen = fvec(0, -font.ascender);
 				this.card_box = [0.fvec, pen].bounding_box; 
 
 				{/*reserve memory}*/
-					cards.clear;
-					tex_coords.clear;
-					newline_positions.clear;
-
 					cards.capacity = 4 * text.length;
 					tex_coords.capacity = 4 * text.length;
 					{/*estimate line breaks}*/
@@ -467,67 +468,68 @@ struct Text
 
 				newline_positions ~= 0;
 
-				foreach (i, symbol; text[])
-					{/*build buffers}*/
-						auto glyph = Font.texture_font_get_glyph (font, symbol);
+				{/*build buffers}*/
+					foreach (i, symbol; text[])
+						{/*...}*/
+							auto glyph = Font.texture_font_get_glyph (font, symbol);
 
-						auto offset = ivec(glyph.offset_x, glyph.offset_y);
-						auto dims = uvec(glyph.width, glyph.height);
-						auto advance = glyph.advance_x;
+							auto offset = ivec(glyph.offset_x, glyph.offset_y);
+							auto dims = uvec(glyph.width, glyph.height);
+							auto advance = glyph.advance_x;
 
-						with (glyph) 
-						tex_coords ~= [
-							fvec(s0, t0), 
-							fvec(s1, t1)
-						].bounding_box[].flip!`vertical`;
+							with (glyph) 
+							tex_coords ~= [
+								fvec(s0, t0), 
+								fvec(s1, t1)
+							].bounding_box[].flip!`vertical`;
 
-						cards ~= [
-							pen,
-							pen + fvec(dims.x, 0),
-							pen + dims,
-							pen + fvec(0, dims.y)
-						];
+							cards ~= [
+								pen,
+								pen + fvec(dims.x, 0),
+								pen + dims,
+								pen + fvec(0, dims.y)
+							];
 
-						if (pen.x + dims.x > wrap_width)
-							{/*word wrap}*/
-								auto trim_length = text[0..i+1].retro.up_to!isWhite.length;
+							if (pen.x + dims.x > wrap_width)
+								{/*word wrap}*/
+									auto trim_length = text[0..i+1].retro.before!isWhite.length;
 
-								if (trim_length < 0)
-									trim_length = i + 1;
+									if (trim_length < 0)
+										trim_length = i + 1;
 
-								auto cutoff = i + 1 - length; // insanomatic
-									
-								auto word = ℕ[0..trim_length]
-									.map!(j => j + cutoff)
-									.map!(j => cards[4*j..4*(j+1)]);
+									auto cutoff = i + 1 - trim_length;
+										
+									auto word = ℕ[0..trim_length]
+										.map!(j => j + cutoff)
+										.map!(j => cards[4*j..4*(j+1)]);
 
-								auto Δx = (word.empty? 
-									pen.x + advance : word[0][0].x
-								) - offset.x;
+									auto Δx = (word.empty? 
+										pen.x + advance : word[0][0].x
+									) - offset.x;
 
-								auto carriage_return (fvec v) {return v - fvec(Δx, font.height);} 
+									auto carriage_return (fvec v) {return v - fvec(Δx, font.height);} 
 
-								foreach (ref letter; word)
-									letter.transform!(map!carriage_return);
+									foreach (ref letter; word)
+										letter.transform!(map!carriage_return);
 
-								pen = carriage_return (pen);
+									pen = carriage_return (pen);
 
-								newline_positions ~= i - word.length + 1;
-							}
-						else if (symbol == '\n')
-							{/*line break}*/
-								newline_positions ~= i;
+									newline_positions ~= i - word.length + 1;
+								}
+							else if (symbol == '\n')
+								{/*line break}*/
+									newline_positions ~= i;
 
-								pen = fvec(0, pen.y - font.height);
-							}
+									pen = fvec(0, pen.y - font.height);
+								}
 
-						cards[$-4..$] = cards[$-4..$].map!(v => v - fvec(-offset.x, dims.y - offset.y));
+							cards[$-4..$] = cards[$-4..$].map!(v => v - fvec(-offset.x, dims.y - offset.y));
 
-						pen.x += advance;
+							pen.x += advance;
 
-						card_box.width = max (card_box.width, pen.x);
-					}
-
+							card_box.width = max (card_box.width, pen.x);
+						}
+			}
 				{/*align text}*/
 					card_box.height = max (pen.y.abs, font.height);
 					card_box = card_box.align_to (Alignment.top_left, 0.fvec);
@@ -559,6 +561,10 @@ struct Text
 						.map!(v => v.to_normalized_space (display) + translation)
 						.map!(v => v.each!(to!float));
 				}
+				{/*flush buffers}*/
+					this.cards[] = cards[];
+					this.tex_coords[] = tex_coords[];
+				}
 			}
 
 		this ()(auto ref Font font, ref Display display, dstring text)
@@ -574,12 +580,10 @@ struct Text
 				this.draw_box = display.normalized_bounds; 
 				this.data = text;
 
-				{/*reserve memory}*/
-					colors.clear;
-					colors.capacity = 4*text.length;
-				}
-
-				colors ~= black.repeat (4*text.length);
+				immutable n = 4*text.length;
+				cards = VertexBuffer (n);
+				tex_coords = VertexBuffer (n);
+				colors = black.repeat (n);
 
 				refresh;
 			}
@@ -650,13 +654,13 @@ struct Text
 				{/*...}*/
 					auto color (Color color)
 						{/*...}*/
-							foreach (glyph; this[]) // REVIEW optimization opportunity, instead of per-glyph, batch it
+							foreach (glyph; this[]) // REVIEW optimization: source.color[limit!0.left..limit!0.right] = color;
 								glyph.color = color;
 						}
 
 					auto bounding_box ()
 						{/*...}*/
-							return this[].extract!`card`.join.bounding_box;
+							return this[].extract!`card`.join.bounding_box; // REVIEW optimization: source.cards[limit!0.left..limit!0.right].cached.bounding_box
 						}
 
 					auto toString ()
@@ -668,9 +672,9 @@ struct Text
 			mixin TransferOps!(pull, access, length, RangeOps, TextOps);
 		}
 		public {/*data}*/
-			Stack!VertexBuffer cards;
-			Stack!VertexBuffer tex_coords;
-			Stack!ColorBuffer colors;
+			VertexBuffer cards;
+			VertexBuffer tex_coords;
+			ColorBuffer colors;
 		}
 		private:
 		private {/*data}*/
@@ -678,63 +682,122 @@ struct Text
 			Borrowed!Display display;
 
 			dstring data;
-			Stack!(Array!(size_t, 1)) newline_positions;
 
 			Alignment _alignment;
 			Box!float card_box; // REVIEW out here why?
 			BoundingBox draw_box;
 		}
 	}
+	unittest {/*...}*/
+		auto display = Display (512, 512);
 
-unittest {/*...}*/
-	auto display = Display (512, 512);
+		auto text = Text (Font (12), display, `hay sup`);
 
-	auto text = Text (Font (12), display, `hay sup`);
+		assert (text[] == `hay sup`);
+		text[0..3] = `oi,`;
+		assert (text[] == `oi, sup`);
 
-	assert (text[] == `hay sup`);
-	text[0..3] = `oi,`;
-	assert (text[] == `oi, sup`);
-
-	text[].up_from (`s`).color = red;
-	assert (text.colors[].stride (4).array[] == [black, black, black, black, red, red, red]);
-}
+		text[].up_from (`s`).color = red;
+		assert (text.colors[].stride (4).array[] == [black, black, black, black, red, red, red]);
+	}
 
 void main () // TODO
 	{/*...}*/
 		import evx.graphics.display;
 
 		auto display = Display (512, 512);
+		display.background = grey;
 
-		auto t = Text (Font (200), display, `Lorem`);// ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`);
+		auto t = Text (Font (20), display, 
+			`Lorem ipsum dolor sit amet, `
+			`consectetur adipiscing elit, `
+			`sed do eiusmod tempor incididunt `
+			`ut labore et dolore magna aliqua. `
+			`Ut enim ad minim veniam, quis `
+			`nostrud exercitation ullamco laboris `
+			`nisi ut aliquip ex ea commodo consequat. `
+			`Duis aute irure dolor in reprehenderit `
+			`in voluptate velit esse cillum dolore `
+			`eu fugiat nulla pariatur. Excepteur `
+			`sint occaecat cupidatat non proident, `
+			`sunt in culpa qui officia deserunt `
+			`mollit anim id est laborum.`
+		);
 
 		t.align_to (Alignment.top_right)
 			.within ([-1.vec, 1.vec].bounding_box);
 
-		version (none)
-		scope s = new TextShader;
-		version (none)
-		scope r = new TextRenderer;
+//		t[0..$/3].color = red;
+//		t[$/3..2*$/3].color = white;
+//		t[2*$/3..$].color = blue;
 
-		auto triangle = [fvec (1), fvec(0), fvec(1,0)];
+		t.text_shader.text_renderer.render_to (display);
 
-		version (none)
-		gfx.attach (s);
-		version (none)
-		r.attach (s);
-
-		t[0..$/3].color = red;
-		t[$/3..2*$/3].color = white;
-		t[2*$/3..$].color = blue;
-
-		version (none)
-		r.draw.text (t)
-			.rotate (π/4)
-			.translate (vec(0,1))
-			.scale (0.2)
-			.immediately;
-		
 		display.post;
 
 		import core.thread;
-		Thread.sleep (1000.msecs);
+		Thread.sleep (10.seconds);
+	}
+
+void render_to_console (Tex)(Tex texture)
+	if (is (Tex : MonoTexture))
+	{/*...}*/
+		auto arr = texture[].array;
+
+		foreach (row; arr[].limit!1.left..arr[].limit!1.right)
+			std.stdio.stderr.writeln (arr[~$..$, row].map!((float x)
+				{/*...}*/
+					if (x < 0.2)
+						return ` `;
+					else if (x < 0.4)
+						return `░`;
+					else if (x < 0.6)
+						return `▒`;
+					else if (x < 0.8)
+						return `▓`;
+					else return `█`;
+				}
+			).join.text);
+	}
+
+import evx.type;
+import evx.misc.tuple;
+import evx.graphics.shader;
+import evx.graphics.renderer;
+import evx.graphics.operators;
+
+auto text_shader (T)(ref T text)
+	if (is (InitialType!T == Text))
+	{/*...}*/
+		return τ(borrow (text.cards), borrow (text.tex_coords), borrow (text.colors))
+			.vertex_shader!(
+				`cards`, `tex_coords`, `colors`, q{
+					gl_Position = vec4 (cards, 0, 1);
+					color = colors;
+					tex_uv = tex_coords;
+				}
+			).fragment_shader!(
+				Color, `color`,
+				fvec, `tex_uv`,
+				Texture, `tex`, q{
+					gl_FragColor = vec4 (color.rgb, color.a * texture (tex, tex_uv).r);
+				}
+			)(borrow (text.font.texture));
+	}
+
+struct TextRenderer (S)
+	{/*...}*/
+		S text_shader;
+
+		void draw (uint i : 0)(uint n)
+			{/*...}*/
+				foreach (j; 0..n/4)
+					gl.DrawArrays (GL_TRIANGLE_FAN, 4*j, 4);
+			}
+
+		mixin RenderOps!(draw, text_shader);
+	}
+auto text_renderer (S)(S shader)
+	{/*...}*/
+		return TextRenderer!S (shader);
 	}

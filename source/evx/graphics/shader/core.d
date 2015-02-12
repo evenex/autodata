@@ -13,8 +13,7 @@ private {/*imports}*/
 	import evx.misc.utils; // XXX
 
 	import evx.graphics.opengl;
-	import evx.graphics.buffer;
-	import evx.graphics.texture;
+	import evx.graphics.resource;
 }
 
 enum glsl_version = 440;
@@ -335,7 +334,7 @@ private {/*symbol construction}*/
 
 							enum type = base ~ q{vec} ~ n.text;
 						}
-					else static if (is (BaseType == Texture))
+					else static if (is (BaseType == GLTexture!F, F...))
 						{/*...}*/
 							enum type = q{sampler2D};
 						}
@@ -359,7 +358,7 @@ private {/*parameter framing}*/
 		{/*...}*/
 			static if (
 				is (InitialType!T == GLBuffer!U, U...) 
-				|| is (InitialType!T == Texture)
+				|| is (InitialType!T == GLTexture!F, F...)
 			)
 				{/*...}*/
 					static if (is (InitialType!T == T))
@@ -376,7 +375,7 @@ private {/*parameter framing}*/
 			else static if (is (typeof(T.init.gpu_array) == GPUArray, GPUArray))
 				alias GPUType = Managed!GPUArray;
 
-			else static assert (0, T.stringof ~ ` has no GPUType` ~ typeof(T.init.gpu_array).stringof);
+			else static assert (0, T.stringof ~ ` has no GPUType`);
 		}
 }
 package {/*generator/compiler/linker}*/
@@ -582,9 +581,9 @@ package {/*generator/compiler/linker}*/
 							}
 					}
 
-				enum is_uniform (V) = V.storage_class is StorageClass.uniform;
-				enum is_vertex_input (V) = V.storage_class is StorageClass.vertex_input;
-				enum is_texture (V) = is (V.BaseType == Texture);
+				enum is_uniform (Var) = Var.storage_class is StorageClass.uniform;
+				enum is_vertex_input (Var) = Var.storage_class is StorageClass.vertex_input;
+				enum is_texture (Var) = is (Var.BaseType : GLTexture!F, F...);
 			}
 		}
 
