@@ -52,10 +52,13 @@ struct Borrowed (T)
 			}
 
 		ref deref ()
-			{/*...}*/
+			in {/*...}*/
+				assert (ptr);
+			}
+			body {/*...}*/
 				return *ptr;
 			}
-
+		
 		alias deref this;
 	}
 auto borrow (T)(ref T resource)
