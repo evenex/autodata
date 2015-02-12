@@ -7,7 +7,7 @@ private {/*imports}*/
 	import evx.graphics.color;
 	import evx.graphics.operators;
 	import evx.graphics.shader;
-	import evx.graphics.texture;
+	import evx.graphics.resource;
 
 	import evx.type;
 	import evx.math;
@@ -92,6 +92,7 @@ struct Display
 				this.height = height;
 
 				gl.window_size (width, height);
+				gl.blend = true;
 
 				if (width * height == 0)
 					gl.on_resize = null;
