@@ -1,7 +1,5 @@
 module evx.misc.utils;
 
-debug = profiler;
-
 private {/*imports}*/
 	import std.typetuple;
 	import std.traits;
@@ -58,16 +56,15 @@ public {/*C compatibility}*/
 public {/*debug}*/
 	/* pure nothrow writeln 
 	*/
-	debug auto pwriteln (Args...)(Args args)
+	auto pwriteln (Args...)(Args args)
 		{/*...}*/
-			debug try {/*...}*/
+			try {/*...}*/
 				foreach (arg; args)
 					stderr.write (arg, ` `);
 				stderr.writeln;
 			}
 			catch (Exception) assert (0, `pwriteln failed`);
 		}
-	else void pwriteln (Args...)(Args){}
 	alias pl = pwriteln;
 		
 	/* print a function call with arguments 
@@ -76,7 +73,7 @@ public {/*debug}*/
 		{/*...}*/
 			string call;
 			
-			debug try foreach (arg; args)
+			try foreach (arg; args)
 				call ~= arg.text~ `, `;
 			catch (Exception) assert (0, `function call to string failed`);
 				
@@ -117,13 +114,12 @@ public {/*debug}*/
 	*/
 	auto tid_string (uint digits = 4)()
 		{/*...}*/
-			debug try {/*...}*/
+			try {/*...}*/
 				auto tid = thisTid;
 				
 				return (*cast(ulong*) &tid).text[$-digits..$];
 			}
 			catch (Exception) assert (0, `tid_string failed`);
-			else return `???`;
 		}
 
 	static string trace (string name = __FUNCTION__)()
@@ -144,14 +140,14 @@ public {/*debug}*/
 			fflush (stderr);
 		}
 }
-debug (profiler) {/*}*/
+public {/*profiler}*/
 	/* write information about the thread environment to the output 
 		and time program execution through checkpoints */
 	struct Profiler
 		{/*...}*/
 			enum ExitStatus {success, failure}
 
-			pure nothrow:
+			nothrow:
 			
 			public:
 			public {/*interface}*/
@@ -162,24 +158,22 @@ debug (profiler) {/*}*/
 					
 				void end (ExitStatus exit_status)
 					{/*...}*/
-						debug (profiler) try
-							{/*...}*/
-								this.exit_time = Clock.currTime;
-								this.exit_status = exit_status;
-							}
+						try {/*...}*/
+							this.exit_time = Clock.currTime;
+							this.exit_status = exit_status;
+						}
 						catch (Exception) assert (0, `profiler end failed`);
 					}
 					
 				void checkpoint (T...)(T marks)
 					{/*...}*/
-						debug (profiler) try
-							{/*...}*/
-								auto check = Clock.currTime - last_check;
-								
-								this.last_check = Clock.currTime;
-								
-								pwriteln (check, ` `, marks);
-							}
+						try {/*...}*/
+							auto check = Clock.currTime - last_check;
+							
+							this.last_check = Clock.currTime;
+							
+							pwriteln (check, ` ┊ `, marks);
+						}
 						catch (Exception) assert (0, `profiler checkpoint failed`);
 					}
 			}
@@ -202,7 +196,7 @@ debug (profiler) {/*}*/
 			private {/*☀}*/
 				this (string func_name)
 					{/*...}*/
-						debug try {/*...}*/
+						try {/*...}*/
 							this.func_name = func_name;
 							this.entry_time = Clock.currTime;
 							this.last_check = entry_time;
@@ -231,16 +225,14 @@ debug (profiler) {/*}*/
 	public {/*formatting}*/
 		auto profiler_enter_indent ()()
 			{/*...}*/
-				debug return '\t'.repeat (indent++);
-				else return ``;
+				return '\t'.repeat (indent++);
 			}
 		auto profiler_exit_indent ()()
 			{/*...}*/
-				debug return '\t'.repeat (--indent);
-				else return ``;
+				return '\t'.repeat (--indent);
 			}
 	}
 	private {/*formatting}*/
-		debug static uint indent = 0;
+		static uint indent = 0;
 	}
 }
