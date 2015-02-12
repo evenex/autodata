@@ -181,17 +181,12 @@ struct Color
 
 					normalize;
 				}
-			this (Vector!(4, ubyte) pixel)
+			this (T)(Vector!(4,T) color)
 				{/*...}*/
-					base = pixel.each!(to!float);
+					base = color.each!(to!float);
 
-					base /= 255;
-
-					normalize;
-				}
-			this (Vector!(4, float) color)
-				{/*...}*/
-					base = color;
+					static if (is_integral!T)
+						base /= T.max;
 
 					normalize;
 				}
@@ -199,7 +194,7 @@ struct Color
 		public {/*cast}*/
 			V opCast (V)()
 				{/*...}*/
-					static if (is (V == Vector!(4,T), T : long))
+					static if (is (V == Vector!(4,T), T : double))
 						{}
 					else static assert (0);
 
@@ -293,4 +288,11 @@ struct Color
 				`color is not normalized! ` ~ this.text
 			);
 		}
+	}
+	unittest {/*conversion}*/
+		auto x = Color (0.5);
+		auto y = Color (Vector!(3, ushort)(0, ushort.max/2, ushort.max));
+
+		assert (x == Color (0,0,0, 0.5));
+		assert (y == Color (0,0.5,1.0,1.0));
 	}
