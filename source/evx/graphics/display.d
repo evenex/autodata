@@ -157,33 +157,37 @@ struct Display
 
 // TODO compile-time routing generic draw -> renderer through a router containing a list of renderers
 
-auto to_pixel_space (vec v, ref Display display)
+auto to_pixel_space (Vec)(Vec v, ref Display display)
+	if (is_vector_like!Vec)
 	{/*...}*/
-		v /= display.normalized_dimensions;
-		v += unity!vec;
+		v /= display.normalized_dimensions.to!Vec;
+		v += unity!Vec;
 		v /= 2;
 		v *= display.pixel_dimensions / 2;
 
 		return v;
 	}
-auto to_normalized_space (vec v, ref Display display)
+auto to_normalized_space (Vec)(Vec v, ref Display display)
+	if (is_vector_like!Vec)
 	{/*...}*/
 		v /= display.pixel_dimensions;
 		v *= 2;
-		v -= unity!vec;
-		v *= display.normalized_dimensions;
+		v -= unity!Vec;
+		v *= display.normalized_dimensions.to!Vec;
 
 		return v;
 	}
 
 @(`from pixel space`) 
 auto to_normalized_space (R)(R range, ref Display display)
+	if (is_range!R)
 	{/*...}*/
 		return range.map!(v => v.to_normalized_space (display));
 	}
 
 @(`from normalized space`) 
 auto to_pixel_space (R)(R range, ref Display display)
+	if (is_range!R)
 	{/*...}*/
 		return range.map!(v => v.to_pixel_space (display));
 	}
