@@ -20,7 +20,15 @@ struct Grid (Space)
 
 		Element!Space access (typeof(lengths) point)
 			{/*...}*/
-				auto domain_transform (uint d)() {return space.limit!d.left + point[d] * space.limit!d.width / lengths[d];}
+				auto space_limit (uint d)()
+					{/*...}*/
+						auto limit ()() {return space.limit!d;}
+						typeof(space.length)[2] length ()() if (d == 0) {return [0, space.length];}
+
+						return Match!(limit, length);
+					}
+
+				auto domain_transform (uint d)() {return space_limit!d.left + point[d] * space_limit!d.width / lengths[d];}
 
 				return space[Map!(domain_transform, Count!(typeof(point)))];
 			}
