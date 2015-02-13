@@ -12,12 +12,15 @@ private {/*import}*/
 	import evx.containers;
 	import evx.patterns;
 	import evx.memory;
+	import evx.misc.tuple;
 
 	import evx.graphics.resource;
 	import evx.graphics.color;
 	import evx.graphics.display;
 	import evx.graphics.opengl;
-	
+	import evx.graphics.operators;
+	import evx.graphics.shader;
+
 	import evx.misc.utils;
 }
 private {/*types}*/
@@ -435,9 +438,9 @@ struct Font
 			}
 	}
 
-struct Text // TODO move renderops and shit into here
+struct Text
 	{/*...}*/
-		void refresh () // REVIEW every place we need to refresh
+		void refresh ()
 			in {/*...}*/
 				assert (font.is_loaded);
 			}
@@ -554,17 +557,19 @@ struct Text // TODO move renderops and shit into here
 
 					auto transform (fvec v) {return scale * (v-pen/2).rotate (rotation) + pen/2;}
 
-					card_box = card_box[].map!transform.bounding_box;
+					card_box = card_box[].map!transform.to_normalized_space (display).bounding_box;
 
 					cards[] = cards[].map!transform
-						.map!(v => v + card_box.offset_to (alignment, draw_box))
 						.map!(v => v.to_normalized_space (display) + translation)
+						.map!(v => v + card_box.offset_to (alignment, draw_box))
 						.map!(v => v.each!(to!float));
 				}
 				{/*flush buffers}*/
 					this.cards[] = cards[];
 					this.tex_coords[] = tex_coords[];
 				}
+
+				this.needs_update = false;
 			}
 
 		this ()(auto ref Font font, ref Display display, dstring text)
@@ -588,13 +593,12 @@ struct Text // TODO move renderops and shit into here
 				refresh;
 			}
 
-		mixin AffineTransform!float;
-
 		public:
 		public {/*alignment}*/
 			ref align_to (Alignment alignment)
 				{/*...}*/
 					this._alignment = alignment;
+					this.needs_update = true;
 
 					return this;
 				}
@@ -606,12 +610,39 @@ struct Text // TODO move renderops and shit into here
 			ref within (BoundingBox box)
 				{/*...}*/
 					this.draw_box = box;
+					this.needs_update = true;
 
 					return this;
 				}
 			auto bounding_box ()
 				{/*...}*/
 					return draw_box;
+				}
+		}
+		public {/*affine transform}*/
+			mixin AffineTransform!float affine;
+
+			auto ref translate (fvec Δx)
+				{/*...}*/
+					this.needs_update = true;
+
+					return affine.translate (Δx);
+				}
+			auto ref rotate (float θ)
+				{/*...}*/
+					this.needs_update = true;
+
+					return affine.rotate (θ);
+				}
+			auto ref scale (float s)
+				{/*...}*/
+					this.needs_update = true;
+
+					return affine.scale (s);
+				}
+			auto ref scale ()
+				{/*...}*/
+					return affine.scale;
 				}
 		}
 		public {/*transfer ops}*/
@@ -654,8 +685,18 @@ struct Text // TODO move renderops and shit into here
 				{/*...}*/
 					auto color (Color color)
 						{/*...}*/
-							foreach (glyph; this[]) // REVIEW optimization: source.color[limit!0.left..limit!0.right] = color;
-								glyph.color = color;
+							this.colors (color.repeat (limit!0.width));
+						}
+					auto colors (R)(R colors)
+						in {/*...}*/
+							static assert (is (ElementType!R == Color));
+
+							assert (limit!0.width == colors.length,
+								`assignment length mismatch [` ~ limit!0.width.text ~ `] = [` ~ colors.length.text ~ `]`
+							);
+						}
+						body {/*...}*/
+							source.colors[4*limit!0.left..4*limit!0.right] = colors.grid (colors.length * 4);
 						}
 
 					auto bounding_box ()
@@ -669,15 +710,67 @@ struct Text // TODO move renderops and shit into here
 						}
 				}
 
-			mixin TransferOps!(pull, access, length, RangeOps, TextOps);
+			mixin TransferOps!(pull, access, length, RangeOps, TextOps)
+				transfer;
+
+			auto opIndexAssign (Args...)(Args args)
+				{/*...}*/
+					this.needs_update = true;
+
+					return transfer.opIndexAssign (args);
+				}
+			auto opIndex (Args...)(Args args)
+				{/*...}*/
+					if (this.needs_update)
+						refresh;
+
+					return transfer.opIndex (args);
+				}
 		}
-		public {/*data}*/
+		public {/*render ops}*/
+			auto shader ()
+				{/*...}*/
+					return τ(borrow (cards), borrow (tex_coords), borrow (colors))
+						.vertex_shader!(
+							`cards`, `tex_coords`, `colors`, q{
+								gl_Position = vec4 (cards, 0, 1);
+								color = colors;
+								tex_uv = tex_coords;
+							}
+						).fragment_shader!(
+							Color, `color`,
+							fvec, `tex_uv`,
+							Texture, `tex`, q{
+								gl_FragColor = vec4 (color.rgb, color.a * texture (tex, tex_uv).r);
+							}
+						)(borrow (font.texture));
+				}
+			void draw (uint i : 0)(uint n)
+				{/*...}*/
+					foreach (j; 0..n/4)
+						gl.DrawArrays (GL_TRIANGLE_FAN, 4*j, 4);
+				}
+
+			mixin RenderOps!(draw, shader) 
+				renderer;
+
+			auto ref render_to (T)(auto ref T target)
+				{/*...}*/
+					if (this.needs_update)
+						refresh;
+
+					return renderer.render_to (target);
+				}
+		}
+		private:
+		private {/*buffers}*/
 			VertexBuffer cards;
 			VertexBuffer tex_coords;
 			ColorBuffer colors;
 		}
-		private:
 		private {/*data}*/
+			bool needs_update;
+
 			MaybeBorrowed!Font font;
 			Borrowed!Display display;
 
@@ -701,103 +794,37 @@ struct Text // TODO move renderops and shit into here
 		assert (text.colors[].stride (4).array[] == [black, black, black, black, red, red, red]);
 	}
 
-void main () // TODO
-	{/*...}*/
-		import evx.graphics.display;
+unittest {/*...}*/
+	import evx.graphics.display;
 
-		auto display = Display (512, 512);
-		display.background = grey;
+	auto display = Display (512, 512);
 
-		auto t = Text (Font (20), display, 
-			`Lorem ipsum dolor sit amet, `
-			`consectetur adipiscing elit, `
-			`sed do eiusmod tempor incididunt `
-			`ut labore et dolore magna aliqua. `
-			`Ut enim ad minim veniam, quis `
-			`nostrud exercitation ullamco laboris `
-			`nisi ut aliquip ex ea commodo consequat. `
-			`Duis aute irure dolor in reprehenderit `
-			`in voluptate velit esse cillum dolore `
-			`eu fugiat nulla pariatur. Excepteur `
-			`sint occaecat cupidatat non proident, `
-			`sunt in culpa qui officia deserunt `
-			`mollit anim id est laborum.`
-		);
+	auto t = Text (Font (20), display, 
+		`Lorem ipsum dolor sit amet, `
+		`consectetur adipiscing elit, `
+		`sed do eiusmod tempor incididunt `
+		`ut labore et dolore magna aliqua. `
+		`Ut enim ad minim veniam, quis `
+		`nostrud exercitation ullamco laboris `
+		`nisi ut aliquip ex ea commodo consequat. `
+		`Duis aute irure dolor in reprehenderit `
+		`in voluptate velit esse cillum dolore `
+		`eu fugiat nulla pariatur. Excepteur `
+		`sint occaecat cupidatat non proident, `
+		`sunt in culpa qui officia deserunt `
+		`mollit anim id est laborum.`
+	);
 
-		t.align_to (Alignment.top_right)
-			.within ([-1.vec, 1.vec].bounding_box);
+	t.align_to (Alignment.center)
+		.within ([-1.vec, 1.vec].bounding_box)
+		.rotate (π/4);
 
-//		t[0..$/3].color = red;
-//		t[$/3..2*$/3].color = white;
-//		t[2*$/3..$].color = blue;
+	t[].colors = rainbow (t.length*3)[$/3..2*$/3];
 
-		t.text_shader.text_renderer.render_to (display);
+	t.render_to (display);
 
-		display.post;
+	display.post;
 
-		import core.thread;
-		Thread.sleep (10.seconds);
-	}
-
-void render_to_console (Tex)(Tex texture)
-	if (is (Tex : MonoTexture))
-	{/*...}*/
-		auto arr = texture[].array;
-
-		foreach (row; arr[].limit!1.left..arr[].limit!1.right)
-			std.stdio.stderr.writeln (arr[~$..$, row].map!((float x)
-				{/*...}*/
-					if (x < 0.2)
-						return ` `;
-					else if (x < 0.4)
-						return `░`;
-					else if (x < 0.6)
-						return `▒`;
-					else if (x < 0.8)
-						return `▓`;
-					else return `█`;
-				}
-			).join.text);
-	}
-
-import evx.type;
-import evx.misc.tuple;
-import evx.graphics.shader;
-import evx.graphics.renderer;
-import evx.graphics.operators;
-
-auto text_shader (T)(ref T text)
-	if (is (InitialType!T == Text))
-	{/*...}*/
-		return τ(borrow (text.cards), borrow (text.tex_coords), borrow (text.colors))
-			.vertex_shader!(
-				`cards`, `tex_coords`, `colors`, q{
-					gl_Position = vec4 (cards, 0, 1);
-					color = colors;
-					tex_uv = tex_coords;
-				}
-			).fragment_shader!(
-				Color, `color`,
-				fvec, `tex_uv`,
-				Texture, `tex`, q{
-					gl_FragColor = vec4 (color.rgb, color.a * texture (tex, tex_uv).r);
-				}
-			)(borrow (text.font.texture));
-	}
-
-struct TextRenderer (S)
-	{/*...}*/
-		S text_shader;
-
-		void draw (uint i : 0)(uint n)
-			{/*...}*/
-				foreach (j; 0..n/4)
-					gl.DrawArrays (GL_TRIANGLE_FAN, 4*j, 4);
-			}
-
-		mixin RenderOps!(draw, text_shader);
-	}
-auto text_renderer (S)(S shader)
-	{/*...}*/
-		return TextRenderer!S (shader);
-	}
+	import core.thread;
+	Thread.sleep (7.seconds);
+}
