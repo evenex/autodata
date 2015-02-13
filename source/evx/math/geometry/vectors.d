@@ -17,17 +17,17 @@ private {/*imports}*/
 
 /* standard basis 
 */
-auto î (Vec)()
+template î (Vec)
 	{/*...}*/
 		alias T = ElementType!Vec;
 
-		return Vec(unity!T, zero!T);
+		enum î = Vec(unity!T, zero!T);
 	}
-auto ĵ (Vec)()
+template ĵ (Vec)
 	{/*...}*/
 		alias T = ElementType!Vec;
 
-		return Vec(zero!T, unity!T);
+		enum ĵ = Vec(zero!T, unity!T);
 	}
 
 unittest {/*...}*/
