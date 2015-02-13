@@ -321,6 +321,28 @@ struct ImageTexture
 
 alias Texture = ImageTexture;
 
+debug void render_to_console (MonoTexture texture)
+	{/*...}*/
+		import std.stdio;
+
+		auto arr = texture[].array;
+
+		foreach (row; arr[].limit!1.left..arr[].limit!1.right)
+			std.stdio.stderr.writeln (arr[~$..$, row].map!((float x)
+				{/*...}*/
+					if (x < 0.2)
+						return ` `;
+					else if (x < 0.4)
+						return `░`;
+					else if (x < 0.6)
+						return `▒`;
+					else if (x < 0.8)
+						return `▓`;
+					else return `█`;
+				}
+			).join.text);
+	}
+
 unittest {/*texture transfer}*/
 	import evx.graphics.display;
 	import evx.graphics.shader;
