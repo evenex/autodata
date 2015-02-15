@@ -123,6 +123,11 @@ struct Input
 		public {/*input state}*/
 			const @property:
 
+			bool is_streaming_text ()
+				{/*...}*/
+					return not (text_output is null || text_backspace is null);
+				}
+
 			auto key_pressed (Key key)
 				{/*...}*/
 					return keys[key];
@@ -143,50 +148,6 @@ struct Input
 			auto pointer ()
 				{/*...}*/
 					return mouse_pointer;
-				}
-		}
-		public {/*key mode}*/
-			enum Mode {action, text}
-
-			void enter_text_mode ()
-				{/*...}*/
-					this.mode = Mode.text;
-
-					{/*set callbacks}*/
-						auto window = glfwGetCurrentContext();
-
-						assert (window !is null);
-
-						glfwSetKeyCallback (window, &text_key_callback);
-						glfwSetCharCallback (window, &text_character_callback);
-					}
-
-					foreach (ref key_pressed; keys.byValue)
-						key_pressed = false;
-
-					events.clear;
-				}
-			void enter_action_mode ()
-				{/*...}*/
-					this.mode = Mode.action;
-
-					{/*set callbacks}*/
-						auto window = glfwGetCurrentContext();
-
-						assert (window !is null);
-
-						glfwSetKeyCallback (window, &action_key_callback);
-						glfwSetCharCallback (window, null);
-					}
-
-					foreach (ref key_pressed; keys.byValue)
-						key_pressed = false;
-
-					events.clear;
-				}
-			auto key_mode ()
-				{/*...}*/
-					return mode;
 				}
 		}
 		public {/*control mapping}*/
@@ -219,24 +180,25 @@ struct Input
 				{/*...}*/
 					key_map.on_pop = on_pop;
 				}
-			void on_scroll (void delegate(double) action)
+			void on_scroll (void delegate(double) nothrow action)
 				{/*...}*/
-					_on_scroll = action;
+					scroll_action = action;
 				}
 		}
-		public {/*text input}*/
-			string get_text_input ()
+		public {/*text stream}*/
+			void text_stream (R)(ref R output)
 				{/*...}*/
-					return text_buffer[].cache.to!string;
+					set_callbacks (&text_key_callback, &text_character_callback);
+
+					text_output = (dchar c){output ~= c;};
+					text_backspace = (){if (output.length > 0) output--;};
 				}
-			void set_text_input (string text)
+			void text_stream (typeof(null))
 				{/*...}*/
-					text_buffer.clear;
-					text_buffer ~= text;
-				}
-			void clear_text_input ()
-				{/*...}*/
-					return text_buffer.clear;
+					set_callbacks (&action_key_callback, null);
+
+					text_output = null;
+					text_backspace = null;
 				}
 		}
 		public {/*event processing}*/
@@ -260,43 +222,37 @@ struct Input
 
 			struct Event
 				{/*...}*/
-					private {/*data}*/
-						int code;
-						bool pressed;
-					}
-					nothrow @property {/*key/mouse}*/
-						union Cast {int code; Key key; Mouse button;}
+					int code;
+					bool pressed;
 
-						Key key ()
-							{/*...}*/
-								return Cast (code).key;
-							}
-						Mouse button ()
-							{/*...}*/
-								return Cast (code).button;
-							}
-					}
+					nothrow @property:
+
+					union Cast {int code; Key key; Mouse button;}
+
+					Key key ()
+						{/*...}*/
+							return Cast (code).key;
+						}
+					Mouse button ()
+						{/*...}*/
+							return Cast (code).button;
+						}
 				}
 		}
 		private {/*state}*/
-			Mode mode;
-
-			Stack!(dchar[36], OnOverflow.discard) text_buffer;
-
 			ControlMap!Key key_map;
 			bool[Key] keys;
 
 			ControlMap!Mouse mouse_map;
 			bool[Mouse] buttons;
 			vec mouse_pointer = 0.vec;
-
 			vec scroll_offset;
-			void delegate(double) _on_scroll;
 
 			struct ControlMap (T)
 				{/*...}*/
 					alias current_map this;
 					void delegate() on_pop;
+
 					public:
 					public {/*interface}*/
 						void pop ()
@@ -321,6 +277,7 @@ struct Input
 								this.context ~= context;
 							}
 					}
+
 					private:
 					private {/*data}*/
 						void delegate(bool)[T][string] lookup;
@@ -342,6 +299,26 @@ struct Input
 		private {/*services}*/
 			Borrowed!Display display;
 		}
+		private {/*callbacks}*/
+			void set_callbacks (GLFWkeyfun key_callback, GLFWcharfun char_callback)
+				{/*...}*/
+					auto window = glfwGetCurrentContext ();
+
+					assert (window !is null);
+
+					glfwSetKeyCallback (window, key_callback);
+					glfwSetCharCallback (window, char_callback);
+
+					foreach (ref key_pressed; keys.byValue)
+						key_pressed = false;
+
+					events.clear;
+				}
+
+			void delegate(double) nothrow scroll_action;
+			void delegate(dchar) nothrow text_output;
+			void delegate() nothrow text_backspace;
+		}
 
 		static nothrow:
 		extern (C) {/*callbacks}*/
@@ -357,7 +334,10 @@ struct Input
 					events ~= event;
 				}
 			void text_key_callback (GLFWwindow*, int key, int scancode, int state, int mods)
-				{/*...}*/
+				in {/*...}*/
+					assert (text_backspace);
+				}
+				body {/*...}*/
 					auto event = Event (key, cast(bool)state);
 
 					if (event.key in key_map)
@@ -368,16 +348,19 @@ struct Input
 						}
 					else if (event.key.isASCII)
 						return;
-					else if (event.key == Key.backspace && (event.pressed || state == GLFW_REPEAT) && text_buffer.length > 0)
-						text_buffer--;
+					else if (event.key == Key.backspace && (event.pressed || state == GLFW_REPEAT))
+						text_backspace ();
 					else if (state == GLFW_REPEAT)
 						return;
 				}
 			void text_character_callback (GLFWwindow*, uint character_code)
-				{/*...}*/
+				in {/*...}*/
+					assert (text_output);
+				}
+				body {/*...}*/
 					auto character = cast(dchar)character_code;
 
-					text_buffer ~= character;
+					text_output (character);
 				}
 			void mouse_button_callback (GLFWwindow*, int button, int state, int mods)
 				{/*...}*/
@@ -397,9 +380,8 @@ struct Input
 				}
 			void scroll_callback (GLFWwindow*, double x_offset, double y_offset)
 				{/*...}*/
-					if (_on_scroll)						
-						try _on_scroll (y_offset);
-					catch (Exception ex) assert (0, `scroll callback failed`);
+					if (scroll_action)
+						scroll_action (y_offset);
 				}
 		}
 	}
@@ -409,39 +391,28 @@ struct Input
 
 		auto display = Display (512, 512);
 		auto input = Input (display, (bool){});
-		input.bind (Input.Key.esc, _ => input.enter_action_mode);
+		input.bind (Input.Key.esc, _ => input.text_stream = null);
 
 		auto text = Text (Font (12), display, `q rotates color; space to edit, esc stops editing`);
 		text[].color = red;
 
 		foreach (_; 0..400)
 			{/*...}*/
+				static Stack!(dchar[], OnOverflow.reallocate) text_buffer;
 				static i = 0;
 
-				if (input.key_mode == Input.Mode.text)
-					{/*...}*/
-						auto s = input.get_text_input;
-
-						if (s.length)
-							{/*...}*/
-								text = s;
-							}
-						else text = `_`;
-
-						text[].color = rainbow (20)[i % $];
-					}
+				if (input.is_streaming_text)
+					text = text_buffer[];
 
 				text.within ([0.vec, vec(1, -1)].bounding_box.translate (input.pointer));
 
 				if (input.key_pressed (Input.Key.q))
-					text[].color = rainbow (20)[++i % $];
+					++i;
+
+				text[].color = rainbow (20)[i % $];
 
 				if (input.key_pressed (Input.Key.space))
-					{/*...}*/
-						if (input.key_mode == Input.Mode.text)
-							input.enter_action_mode;
-						else input.enter_text_mode;
-					}
+					input.text_stream = text_buffer;
 
 				text.render_to (display);
 				display.post;
