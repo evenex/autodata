@@ -43,8 +43,6 @@ template CanvasOps (alias preprocess, alias framebuffer_id, alias attachment_id,
 				else assert (framebuffer_id == 0,
 					`non-default framebuffer bound without attachment`
 				);
-
-				gl.clear;
 			}
 		void attach (S)(auto ref S shader)
 			if (is (S == Shader!Sym, Sym...))
