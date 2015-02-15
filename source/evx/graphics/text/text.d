@@ -454,7 +454,7 @@ struct Text
 				Stack!(Array!fvec) tex_coords;
 				Stack!(Array!size_t) newline_positions;
 
-				auto wrap_width = (draw_box.width * î!vec.rotate (rotation)).to_pixel_space (display).norm;
+				auto wrap_width = (draw_box.width * (î!vec.rotate (rotation) * display.pixel_dimensions) / 2).norm;
 				auto pen = fvec(0, -font.ascender);
 				this.card_box = [0.fvec, pen].bounding_box; 
 
@@ -493,19 +493,13 @@ struct Text
 								pen + fvec(0, dims.y)
 							];
 
-							if (pen.x + dims.x > wrap_width)
+							if (pen.x + dims.x >= wrap_width)
 								{/*word wrap}*/
-									size_t trim_length = text[0..i+1].retro.before!isWhite.length;
+									auto last_newline = newline_positions[$-1];
+									size_t trim_length = text[last_newline..i+1].retro.before!isWhite.length;
 
-									if (trim_length < 0) // TODO if the line length exceeds the wrap width but we can't find any whitespace, force the break
-										{/*...}*/
-										std.stdio.stderr.writeln (`this never happens`);
-										trim_length = i + 1;
-										}
-									else if (trim_length == i + 1)
-										{/*...}*/
-											trim_length = 1; // BUG it forces cutoff too early, and also breaks at the line start if ∃ whitespace anywhere in the text
-										}
+									if (trim_length == (i+1) - last_newline)
+										trim_length = 1;
 
 									auto cutoff = i + 1 - trim_length;
 										
