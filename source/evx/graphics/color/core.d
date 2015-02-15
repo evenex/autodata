@@ -165,7 +165,7 @@ struct Color
 
 			auto opCall (float alpha)
 				{/*...}*/
-					return this.alpha (alpha);
+					return Color (this).alpha (alpha);
 				}
 		}
 		public {/*ctor}*/
