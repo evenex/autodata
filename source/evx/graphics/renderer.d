@@ -41,7 +41,7 @@ struct ArrayRenderer (S)
 				assert (n != 0, `issued empty draw call`);
 			}
 			body {/*...}*/
-				gl.DrawArrays (GL_TRIANGLE_FAN, 0, n);
+				gl.DrawArrays (mode, 0, n);
 			}
 
 		mixin RenderOps!(draw, base_shader);
@@ -49,6 +49,14 @@ struct ArrayRenderer (S)
 auto triangle_fan (S)(S shader)
 	{/*...}*/
 		return ArrayRenderer!S (RenderMode.t_fan, shader);
+	}
+auto triangle_strip (S)(S shader)
+	{/*...}*/
+		return ArrayRenderer!S (RenderMode.t_strip, shader);
+	}
+auto line_loop (S)(S shader)
+	{/*...}*/
+		return ArrayRenderer!S (RenderMode.l_loop, shader);
 	}
 
 auto card (T)(auto ref T texture, vec position = 0.vec, vec dimensions = 2.vec) // TODO builder struct
