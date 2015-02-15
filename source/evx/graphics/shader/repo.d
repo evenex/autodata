@@ -9,6 +9,7 @@ private {/*imports}*/
 
 	import evx.graphics.shader;
 	import evx.graphics.resource;
+	import evx.graphics.color;
 }
 
 alias aspect_correction = vertex_shader!(`aspect_ratio`, q{
@@ -39,4 +40,15 @@ auto textured_shape_shader (R, T)(R shape, auto ref T texture)
 				gl_FragColor = texture2D (tex, frag_tex_coords);
 			}
 		)(draw_texture);
+	}
+
+auto basic_shader (R)(R shape, Color color = red)
+	{/*...}*/
+		return shape.vertex_shader!(
+			`vert`, 
+			q{gl_Position = vec4(vert,0,1);}
+		).fragment_shader!(
+			Color, `color`,
+			q{gl_FragColor = color;}
+		)(color);
 	}
