@@ -1,4 +1,4 @@
-module evx.adaptors.stack;
+module evx.adaptors.queue;
 
 private {/*imports}*/
 	import evx.range;
@@ -9,16 +9,20 @@ private {/*imports}*/
 	import evx.adaptors.policy;
 }
 
-struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
+struct Queue (R, OnOverflow overflow_policy = OnOverflow.error) // TODO implement overflow
 	{/*...}*/
 		R store;
-		private size_t _length;
+		private size_t[2] limit;
 
 		alias store this;
 
 		auto length () const
 			{/*...}*/
-				return _length;
+				auto i = limit.left, j = limit.right;
+
+				if (i <= j)
+					return j - i;
+				else return (capacity - i) + j + 1;
 			}
 
 		auto capacity () const
@@ -40,7 +44,7 @@ struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 
 		auto ref access (size_t i)
 			{/*...}*/
-				return store[i];
+				return store[(limit.left + i) % capacity];
 			}
 
 		void pull (R)(R range, size_t i)
@@ -49,12 +53,32 @@ struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 			}
 		void pull (R)(R range, size_t[2] interval)
 			{/*...}*/
-				auto i = interval.left, j = interval.right;
+				auto i = (limit.left + interval.left) % capacity,
+					j = (limit.left + interval.right) % capacity;
 
-				auto pulled ()() {store[i..j] = range;}
-				auto iterated ()() {foreach (k; i..j) store[k] = range[k-i];}
+				if (i <= j)
+					{/*...}*/
+						auto pulled ()() {store[i..j] = range;}
+						auto iterated ()() {foreach (k; i..j) store[k] = range[k-i];}
 
-				Match!(pulled, iterated);
+						Match!(pulled, iterated);
+					}
+				else {/*...}*/
+					immutable C = capacity;
+
+					auto wrapped_pulled ()() 
+						{/*...}*/
+							store[i..C] = range[0..C-i];
+							store[0..j] = range[C-i..$];
+						}
+					auto wrapped_iterated ()()
+						{/*...}*/
+							foreach (k; i..C) store[k] = range[k-i];
+							foreach (k; 0..j) store[k] = range[k-(C-i)];
+						}
+
+					Match!(wrapped_pulled, wrapped_iterated);
+				}
 			}
 
 		/* push */
@@ -67,7 +91,10 @@ struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 				if (exit_on_overflow (range.length))
 					return this;
 
-				_length += range.length;
+				auto start = limit.right;
+
+				limit.right += range.length;
+				limit.right %= (capacity + 1);
 
 				this[$-range.length..$] = range;
 
@@ -79,7 +106,8 @@ struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 				if (exit_on_overflow (1))
 					return this;
 
-				++_length;
+				++limit.right;
+				limit.right %= (capacity + 1);
 
 				this[$-1] = element;
 
@@ -89,12 +117,11 @@ struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 		/* pop */
 		auto ref opOpAssign (string op : `-`)(size_t count)
 			in {/*...}*/
-				assert (count <= length,
-					`attempted to pop ` ~ count.text ~ ` from ` ~ Stack.stringof ~ ` of length ` ~ length.text
-				);
+				assert (count < length);
 			}
 			body {/*...}*/
-				_length -= count;
+				limit.left += count + capacity;
+				limit.left %= capacity;
 
 				return this;
 			}
@@ -106,7 +133,7 @@ struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 		/* clear */
 		auto clear ()
 			{/*...}*/
-				_length = 0;
+				limit.left = limit.right = 0;
 			}
 
 		mixin TransferOps!(pull, access, length, RangeOps);
@@ -114,9 +141,9 @@ struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 		private mixin OverflowPolicy;
 	}
 	unittest {/*...}*/
-		auto A = Stack!(int[])();
+		auto A = Queue!(int[])();
 
-		A.capacity = 100;
+		A.capacity = 5;
 
 		A ~= 1;
 		A ~= 2;
@@ -130,18 +157,33 @@ struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 
 		A--;
 
-		assert (A[] == [1,2,3]);
+		assert (A[] == [2,3,4]);
+
+		A ~= 5;
+
+		assert (A[] == [2,3,4,5]);
 
 		A -= 2;
 
-		assert (A[] == [1]);
+		assert (A[] == [4,5]);
+
+		A ~= [6,7,8];
+
+		assert (A[] == [4,5,6,7,8]);
+
+		A[1..4] = [7,6,5];
+
+		assert (A[] == [4,7,6,5,8]);
 
 		A.clear;
 
 		assert (A[].empty);
 
-		A ~= [1,2,3,4,5];
-		A[1..4] = [4,3,2];
+		A ~= 1;
+		A ~= 2;
+		A ~= [3,4,5];
+		A -= 2;
+		A ~= [6,7];
 
-		assert (A[] == [1,4,3,2,5]);
+		assert (A[] == [3,4,5,6,7]);
 	}
