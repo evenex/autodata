@@ -477,7 +477,7 @@ struct Text
 							auto glyph = Font.texture_font_get_glyph (font, symbol);
 
 							auto offset = ivec(glyph.offset_x, glyph.offset_y);
-							auto dims = uvec(glyph.width, glyph.height);
+							auto dims = ivec(glyph.width.to!int, glyph.height.to!int);
 							auto advance = glyph.advance_x;
 
 							with (glyph) 
@@ -497,8 +497,15 @@ struct Text
 								{/*word wrap}*/
 									size_t trim_length = text[0..i+1].retro.before!isWhite.length;
 
-									if (trim_length < 0)
+									if (trim_length < 0) // TODO if the line length exceeds the wrap width but we can't find any whitespace, force the break
+										{/*...}*/
+										std.stdio.stderr.writeln (`this never happens`);
 										trim_length = i + 1;
+										}
+									else if (trim_length == i + 1)
+										{/*...}*/
+											trim_length = 1; // BUG it forces cutoff too early, and also breaks at the line start if ∃ whitespace anywhere in the text
+										}
 
 									auto cutoff = i + 1 - trim_length;
 										
@@ -532,7 +539,7 @@ struct Text
 
 							card_box.width = max (card_box.width, pen.x);
 						}
-			}
+				}
 				{/*align text}*/
 					card_box.height = max (pen.y.abs, font.height);
 					card_box = card_box.align_to (Alignment.top_left, 0.fvec);
@@ -555,7 +562,7 @@ struct Text
 							line[] = line.map!(v => v + fvec(justification, 0));
 						}
 
-					auto transform (fvec v) {return scale * (v-pen/2).rotate (rotation) + pen/2;}
+					auto transform (fvec v) {return scale * (v-pen/2).rotate (rotation) + pen/2;} // REVIEW could go a lot faster if we let the shader handle the affine transformation
 
 					card_box = card_box[].map!transform.to_normalized_space (display).bounding_box;
 
