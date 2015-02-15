@@ -450,9 +450,9 @@ struct Text
 				if (text.length == 0)
 					return;
 
-				Stack!(Array!(fvec, 1)) cards;
-				Stack!(Array!(fvec, 1)) tex_coords;
-				Stack!(Array!(size_t, 1)) newline_positions;
+				Stack!(Array!fvec) cards;
+				Stack!(Array!fvec) tex_coords;
+				Stack!(Array!size_t) newline_positions;
 
 				auto wrap_width = (draw_box.width * î!vec.rotate (rotation)).to_pixel_space (display).norm;
 				auto pen = fvec(0, -font.ascender);
@@ -462,17 +462,17 @@ struct Text
 					cards.capacity = 4 * text.length;
 					tex_coords.capacity = 4 * text.length;
 					{/*estimate line breaks}*/
-						auto newlines = text.count!(c => c == '\n');
+						auto newlines = text[].count!(c => c == '\n');
 						auto approx_glyphs_per_line = (wrap_width / Font.texture_font_get_glyph (font, ' ').width).floor;
 
-						newline_positions.capacity = (newlines + text.length / approx_glyphs_per_line).ceil.to!size_t;
+						newline_positions.capacity = (newlines + text.length / approx_glyphs_per_line).ceil.to!size_t + 1;
 					}
 				}
 
 				newline_positions ~= 0;
 
 				{/*build buffers}*/
-					foreach (i, symbol; text[])
+					foreach (i, symbol; enumerate (text[]))
 						{/*...}*/
 							auto glyph = Font.texture_font_get_glyph (font, symbol);
 
@@ -495,7 +495,7 @@ struct Text
 
 							if (pen.x + dims.x > wrap_width)
 								{/*word wrap}*/
-									auto trim_length = text[0..i+1].retro.before!isWhite.length;
+									size_t trim_length = text[0..i+1].retro.before!isWhite.length;
 
 									if (trim_length < 0)
 										trim_length = i + 1;
@@ -569,7 +569,7 @@ struct Text
 					this.tex_coords[] = tex_coords[];
 				}
 
-				this.needs_update = false;
+				this.needs_refresh = false;
 			}
 
 		this ()(auto ref Font font, ref Display display, dstring text)
@@ -583,14 +583,8 @@ struct Text
 				this.display = borrow (display);
 
 				this.draw_box = display.normalized_bounds; 
-				this.data = text;
 
-				immutable n = 4*text.length;
-				cards = VertexBuffer (n);
-				tex_coords = VertexBuffer (n);
-				colors = black.repeat (n);
-
-				refresh;
+				this = text;
 			}
 
 		public:
@@ -598,7 +592,7 @@ struct Text
 			ref align_to (Alignment alignment)
 				{/*...}*/
 					this._alignment = alignment;
-					this.needs_update = true;
+					this.needs_refresh = true;
 
 					return this;
 				}
@@ -610,7 +604,7 @@ struct Text
 			ref within (BoundingBox box)
 				{/*...}*/
 					this.draw_box = box;
-					this.needs_update = true;
+					this.needs_refresh = true;
 
 					return this;
 				}
@@ -624,19 +618,19 @@ struct Text
 
 			auto ref translate (fvec Δx)
 				{/*...}*/
-					this.needs_update = true;
+					this.needs_refresh = true;
 
 					return affine.translate (Δx);
 				}
 			auto ref rotate (float θ)
 				{/*...}*/
-					this.needs_update = true;
+					this.needs_refresh = true;
 
 					return affine.rotate (θ);
 				}
 			auto ref scale (float s)
 				{/*...}*/
-					this.needs_update = true;
+					this.needs_refresh = true;
 
 					return affine.scale (s);
 				}
@@ -645,9 +639,12 @@ struct Text
 					return affine.scale;
 				}
 		}
-		public {/*transfer ops}*/
+		public {/*buffer ops}*/
 			auto access (size_t i)
 				{/*...}*/
+					if (this.needs_refresh)
+						refresh;
+
 					return Glyph (data[i], colors[4*i..4*(i+1)], cards[4*i..4*(i+1)]);
 				}
 			auto pull (R)(R range, size_t i)
@@ -660,9 +657,9 @@ struct Text
 
 					static if (is_string!R)
 						{/*...}*/
-							data = data[0..i] ~ range.to!dstring ~ data[j..$];
+							data[i..j] = range;
 
-							refresh;
+							this.needs_refresh = true;
 						}
 					else {/*...}*/
 						foreach (k, glyph; enumerate (range))
@@ -670,11 +667,21 @@ struct Text
 
 						auto old_data = data;
 
-						data = data[0..i] ~ range.map!(glyph => glyph.symbol).to!dstring ~ data[j..$];
+						data[i..j] = range.map!(glyph => glyph.symbol).to!dstring;
 
 						if (data != old_data)
-							refresh;
+							this.needs_refresh = true;
 					}
+				}
+			auto allocate (size_t length)
+				{/*...}*/
+					data = Array!dchar (length);
+
+					immutable n = 4 * length;
+
+					cards = VertexBuffer (n);
+					tex_coords = VertexBuffer (n);
+					colors = black.repeat (n);
 				}
 			auto length () const
 				{/*...}*/
@@ -685,23 +692,23 @@ struct Text
 				{/*...}*/
 					auto color (Color color)
 						{/*...}*/
-							this.colors (color.repeat (limit!0.width));
+							this.colors (color.repeat (bounds[0].width));
 						}
 					auto colors (R)(R colors)
 						in {/*...}*/
 							static assert (is (ElementType!R == Color));
 
-							assert (limit!0.width == colors.length,
-								`assignment length mismatch [` ~ limit!0.width.text ~ `] = [` ~ colors.length.text ~ `]`
+							assert (bounds[0].width == colors.length,
+								`assignment length mismatch [` ~ bounds[0].width.text ~ `] = [` ~ colors.length.text ~ `]`
 							);
 						}
 						body {/*...}*/
-							source.colors[4*limit!0.left..4*limit!0.right] = colors.grid (colors.length * 4);
+							source.colors[4*bounds[0].left..4*bounds[0].right] = colors.grid (colors.length * 4);
 						}
 
 					auto bounding_box ()
 						{/*...}*/
-							return this[].extract!`card`.join.bounding_box; // REVIEW optimization: source.cards[limit!0.left..limit!0.right].cached.bounding_box
+							return this[].extract!`card`.join.bounding_box; // REVIEW optimization: source.cards[bounds[0].left..bounds[0].right].cached.bounding_box
 						}
 
 					auto toString ()
@@ -710,22 +717,7 @@ struct Text
 						}
 				}
 
-			mixin TransferOps!(pull, access, length, RangeOps, TextOps)
-				transfer;
-
-			auto opIndexAssign (Args...)(Args args)
-				{/*...}*/
-					this.needs_update = true;
-
-					return transfer.opIndexAssign (args);
-				}
-			auto opIndex (Args...)(Args args)
-				{/*...}*/
-					if (this.needs_update)
-						refresh;
-
-					return transfer.opIndex (args);
-				}
+			mixin BufferOps!(allocate, pull, access, length, RangeOps, TextOps);
 		}
 		public {/*render ops}*/
 			auto shader ()
@@ -756,7 +748,7 @@ struct Text
 
 			auto ref render_to (T)(auto ref T target)
 				{/*...}*/
-					if (this.needs_update)
+					if (this.needs_refresh)
 						refresh;
 
 					return renderer.render_to (target);
@@ -769,12 +761,12 @@ struct Text
 			ColorBuffer colors;
 		}
 		private {/*data}*/
-			bool needs_update;
+			bool needs_refresh;
 
 			MaybeBorrowed!Font font;
 			Borrowed!Display display;
 
-			dstring data;
+			Array!dchar data;
 
 			Alignment _alignment;
 			Box!float card_box; // REVIEW out here why?
