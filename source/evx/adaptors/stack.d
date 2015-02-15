@@ -7,35 +7,19 @@ private {/*imports}*/
 	import evx.type;
 
 	import evx.adaptors.policy;
+	import evx.adaptors.capacity;
 }
 
 struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 	{/*...}*/
 		R store;
-		private size_t _length;
-
 		alias store this;
+
+		mixin AdaptorCapacity;
 
 		auto length () const
 			{/*...}*/
 				return _length;
-			}
-
-		auto capacity () const
-			{/*...}*/
-				return store.length;
-			}
-		auto capacity ()(size_t n)
-			{/*...}*/
-				void allocate ()() {store.allocate (n);}
-				void set_length ()() {store.length = n;}
-
-				if (capacity >= n)
-					return;
-
-				if (length > 0)
-					assert (0, `cannot reserve memory for ` ~ R.stringof ~ ` when it contains data`);
-				else Match!(allocate, set_length);
 			}
 
 		auto ref access (size_t i)
@@ -112,6 +96,7 @@ struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 		mixin TransferOps!(pull, access, length, RangeOps);
 
 		private mixin OverflowPolicy;
+		private size_t _length;
 	}
 	unittest {/*...}*/
 		auto A = Stack!(int[])();

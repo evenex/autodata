@@ -7,14 +7,15 @@ private {/*imports}*/
 	import evx.type;
 
 	import evx.adaptors.policy;
+	import evx.adaptors.capacity;
 }
 
-struct Queue (R, OnOverflow overflow_policy = OnOverflow.error) // TODO implement overflow
+struct Queue (R, OnOverflow overflow_policy = OnOverflow.error)
 	{/*...}*/
 		R store;
-		private size_t[2] limit;
-
 		alias store this;
+
+		mixin AdaptorCapacity;
 
 		auto length () const
 			{/*...}*/
@@ -23,23 +24,6 @@ struct Queue (R, OnOverflow overflow_policy = OnOverflow.error) // TODO implemen
 				if (i <= j)
 					return j - i;
 				else return (capacity - i) + j + 1;
-			}
-
-		auto capacity () const
-			{/*...}*/
-				return store.length;
-			}
-		auto capacity ()(size_t n)
-			{/*...}*/
-				void allocate ()() {store.allocate (n);}
-				void set_length ()() {store.length = n;}
-
-				if (capacity >= n)
-					return;
-
-				if (length > 0)
-					assert (0, `cannot reserve memory for ` ~ R.stringof ~ ` when it contains data`);
-				else Match!(allocate, set_length);
 			}
 
 		auto ref access (size_t i)
@@ -139,6 +123,7 @@ struct Queue (R, OnOverflow overflow_policy = OnOverflow.error) // TODO implemen
 		mixin TransferOps!(pull, access, length, RangeOps);
 
 		private mixin OverflowPolicy;
+		private size_t[2] limit;
 	}
 	unittest {/*...}*/
 		auto A = Queue!(int[])();
