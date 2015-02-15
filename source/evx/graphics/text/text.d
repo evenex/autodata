@@ -572,7 +572,7 @@ struct Text
 				this.needs_refresh = false;
 			}
 
-		this ()(auto ref Font font, ref Display display, dstring text)
+		this ()(auto ref Font font, ref Display display, dstring text = ``)
 			{/*...}*/
 				import evx.memory.transfer;
 
@@ -655,7 +655,7 @@ struct Text
 				{/*...}*/
 					auto i = interval.left, j = interval.right;
 
-					static if (is_string!R)
+					static if (is (ElementType!R : dchar))
 						{/*...}*/
 							data[i..j] = range;
 
@@ -743,11 +743,13 @@ struct Text
 						gl.DrawArrays (GL_TRIANGLE_FAN, 4*j, 4);
 				}
 
-			mixin RenderOps!(draw, shader) 
-				renderer;
+			mixin RenderOps!(draw, shader) renderer;
 
 			auto ref render_to (T)(auto ref T target)
 				{/*...}*/
+					if (data.length == 0)
+						return target;
+
 					if (this.needs_refresh)
 						refresh;
 
@@ -785,38 +787,37 @@ struct Text
 		text[].up_from (`s`).color = red;
 		assert (text.colors[].stride (4).array[] == [black, black, black, black, red, red, red]);
 	}
+	unittest {/*...}*/
+		import evx.graphics.display;
 
-unittest {/*...}*/
-	import evx.graphics.display;
+		auto display = Display (512, 512);
 
-	auto display = Display (512, 512);
+		auto t = Text (Font (20), display, 
+			`Lorem ipsum dolor sit amet, `
+			`consectetur adipiscing elit, `
+			`sed do eiusmod tempor incididunt `
+			`ut labore et dolore magna aliqua. `
+			`Ut enim ad minim veniam, quis `
+			`nostrud exercitation ullamco laboris `
+			`nisi ut aliquip ex ea commodo consequat. `
+			`Duis aute irure dolor in reprehenderit `
+			`in voluptate velit esse cillum dolore `
+			`eu fugiat nulla pariatur. Excepteur `
+			`sint occaecat cupidatat non proident, `
+			`sunt in culpa qui officia deserunt `
+			`mollit anim id est laborum.`
+		);
 
-	auto t = Text (Font (20), display, 
-		`Lorem ipsum dolor sit amet, `
-		`consectetur adipiscing elit, `
-		`sed do eiusmod tempor incididunt `
-		`ut labore et dolore magna aliqua. `
-		`Ut enim ad minim veniam, quis `
-		`nostrud exercitation ullamco laboris `
-		`nisi ut aliquip ex ea commodo consequat. `
-		`Duis aute irure dolor in reprehenderit `
-		`in voluptate velit esse cillum dolore `
-		`eu fugiat nulla pariatur. Excepteur `
-		`sint occaecat cupidatat non proident, `
-		`sunt in culpa qui officia deserunt `
-		`mollit anim id est laborum.`
-	);
+		t.align_to (Alignment.center)
+			.within ([-1.vec, 1.vec].bounding_box)
+			.rotate (π/4);
 
-	t.align_to (Alignment.center)
-		.within ([-1.vec, 1.vec].bounding_box)
-		.rotate (π/4);
+		t[].colors = rainbow (t.length*3)[$/3..2*$/3];
 
-	t[].colors = rainbow (t.length*3)[$/3..2*$/3];
+		t.render_to (display);
 
-	t.render_to (display);
+		display.post;
 
-	display.post;
-
-	import core.thread;
-	Thread.sleep (7.seconds);
-}
+		import core.thread;
+		Thread.sleep (7.seconds);
+	}
