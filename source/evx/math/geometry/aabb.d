@@ -11,6 +11,7 @@ private {/*imports}*/
 	import evx.range;
 
 	import evx.math.algebra;
+	import evx.math.intervals;
 	import evx.math.functional;
 	import evx.math.vector;
 	import evx.math.ordinal;
@@ -171,6 +172,22 @@ struct Box (T)
 					}
 			}
 		}
+		public {/*affine transform}*/
+			auto ref translate ()(Vec Δv)
+				{/*...}*/
+					this[] = this[].map!(v => v + Δv);
+
+					return this;
+				}
+			auto ref scale ()(T s)
+				{/*...}*/
+					immutable c = this.center;
+
+					this[] = this[].map!(v => (v - c) * s + c);
+
+					return this;
+				}
+		}
 		public {/*ctor}*/
 			this (R)(R geometry)
 				if (is_geometric!R && is (ElementType!R == Vec))
@@ -196,8 +213,10 @@ struct Box (T)
 			enum size_t n_verts = 4;
 			Vec[n_verts] verts;
 
-			void pull (R)(R range, size_t i, size_t j)
+			void pull (R)(R range, size_t[2] interval)
 				{/*...}*/
+					auto i = interval.left, j = interval.right;
+
 					foreach (k; i..j)
 						verts[k] = range[k-i];
 				}
