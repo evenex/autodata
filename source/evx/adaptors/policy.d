@@ -11,7 +11,7 @@ package template OverflowPolicy ()
 						static if (overflow_policy is discard)
 							return true;
 						else static if (overflow_policy is reallocate)
-							capacity = capacity * 2;
+							capacity = capacity == 0? 1 : capacity * 2;
 						else static if (overflow_policy is error)
 							assert (0, 
 								typeof(this).stringof ~ ` overflowed ` ~ (this.length + extension).text ~ ` exceeds ` ~ capacity.text
