@@ -35,6 +35,10 @@ alias chain = std.range.chain;
 */
 alias retro = std.range.retro;
 
+/* iterate several ranges transverse-wise from front to back 
+*/
+alias interleaved = std.range.roundRobin;
+
 /* split a range length-wise into subranges in which adjacent elements satisfy some relation 
 */
 struct Group (R, alias relation)
