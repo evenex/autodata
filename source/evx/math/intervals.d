@@ -103,7 +103,8 @@ auto clamp (T,U)(T value, U[2] interval)
 		return value;
 	}
 
-// REFACTOR
+/* named access to left and right elements of T[2] 
+*/
 auto ref left (T)(auto ref T[2] bounds)
 	{/*...}*/
 		return bounds[0];
@@ -112,7 +113,7 @@ auto ref right (T)(auto ref T[2] bounds)
 	{/*...}*/
 		return bounds[1];
 	}
-auto width (T)(T[2] bounds) // TODO WIDTH
+auto width (T)(T[2] bounds)
 	{/*...}*/
 		return bounds.right - bounds.left;
 	}
