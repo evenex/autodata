@@ -12,7 +12,6 @@ private {/*imports}*/
 		import evx.math;
 		import evx.range;
 		import evx.containers;
-		import evx.adaptors;
 		import evx.memory;
 		import evx.graphics.display;
 	}
@@ -218,7 +217,7 @@ struct Input
 
 		private __gshared:
 		private {/*events}*/
-			Queue!(Event[], OnOverflow.reallocate) events;
+			Queue!(Event[], OnOverflow.reallocate) events; // TODO mutexed https://issues.dlang.org/show_bug.cgi?id=14185
 
 			struct Event
 				{/*...}*/
