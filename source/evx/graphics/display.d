@@ -145,6 +145,8 @@ struct Display
 						{this.width = w; this.height = h;};
 
 					background = black;
+
+					post;
 				}
 			auto preprocess ()
 				{/*...}*/
