@@ -34,10 +34,16 @@ auto approx (T,U)(T a, U b)
 
 		return true;
 	}
-auto approx (T,U, V = CommonType!(T,U))(T a, U b, V tolerance = ε_std!V) // BUG Error: cannot have parameter of type void
+auto approx (T,U)(T a, U b)
+	if (All!(is_vector_like, T, U))
+	{/*...}*/
+		return approx (a[], b[]); 
+	}
+auto approx (T,U,V = CommonTypeHack!(T,U))(T a, U b, V tolerance = ε_std!V)
 	if (All!(not!(or!(is_input_range, is_vector_like)), T, U))
 	{/*...}*/
 		alias V = CommonType!(T,U);
+		pragma(msg, V);
 
 		auto abs_a = abs (a.to!double);
 		auto abs_b = abs (b.to!double);
@@ -49,10 +55,11 @@ auto approx (T,U, V = CommonType!(T,U))(T a, U b, V tolerance = ε_std!V) // BUG
 
 		return abs (a-b) < ε;			
 	}
-auto approx (T,U)(T a, U b)
-	if (All!(is_vector_like, T, U))
+
+private template CommonTypeHack (T,U) //HACK to get around BUG Error: cannot have parameter of type void -- evidently something that was meant to fail semantic analysis causes a syntactic failure
 	{/*...}*/
-		return approx (a[], b[]); 
+		alias Common = CommonType!(T,U);
+		alias CommonTypeHack = Select!(is (Common == void), byte[0], Common);
 	}
 
 /* a.approx (b) && b.approx (c) && ...
