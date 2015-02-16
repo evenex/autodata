@@ -1,4 +1,4 @@
-module evx.adaptors.queue;
+module evx.containers.adaptors.queue;
 
 private {/*imports}*/
 	import evx.range;
@@ -6,8 +6,8 @@ private {/*imports}*/
 	import evx.math;
 	import evx.type;
 
-	import evx.adaptors.policy;
-	import evx.adaptors.capacity;
+	import evx.containers.adaptors.policy;
+	import evx.containers.adaptors.capacity;
 }
 
 struct Queue (R, OnOverflow overflow_policy = OnOverflow.error)

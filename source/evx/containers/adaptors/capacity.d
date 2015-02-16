@@ -1,4 +1,4 @@
-module evx.adaptors.capacity;
+module evx.containers.adaptors.capacity;
 
 package template AdaptorCapacity ()
 	{/*...}*/

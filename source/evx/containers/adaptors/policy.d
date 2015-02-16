@@ -1,4 +1,4 @@
-module evx.adaptors.policy;
+module evx.containers.adaptors.policy;
 
 enum OnOverflow {reallocate, discard, error}
 
