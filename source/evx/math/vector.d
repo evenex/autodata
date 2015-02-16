@@ -81,14 +81,13 @@ enum Storage {padded, packed} // TODO unlocking potential autovectorization: Rep
 
 // DEFINITION
 struct Vector (size_t n, Component = double)
-	//if (supports_arithmetic!Component)
+	//if (supports_arithmetic!Component) TODO
 	{/*...}*/
 		Component[n] components;
 		alias components this;
 
 		public {/*ctors}*/
-			this (Args...)(Args args)
-				if (Args.length == length)
+			this (Repeat!(n, Component) args)
 				{/*...}*/
 					alias lhs = components;
 					alias rhs = args;
@@ -386,69 +385,117 @@ struct VectorTraits (T)
 		alias UnwrappedVectorType = Vector!(length, Unwrapped!(ElementType!Components));
 	}
 
-// METAPROGRAMMING TOOLS
-template ceil_power_of_two (uint n)
-	{/*...}*/
-		static if (n < 1)
-			enum m = 0;
-		else static if (n < 2)
-			enum m = 1;
-		else static if (n < 3)
-			enum m = 2;
-		else static if (n < 5)
-			enum m = 4;
-		else static if (n < 9)
-			enum m = 8;
-		else static if (n < 17)
-			enum m = 16;
-		else static if (n < 33)
-			enum m = 32;
-		else static assert (0, "vectors of length > 32 not supported");
+private {/*metaprogramming tools}*/
+	template ceil_power_of_two (uint n)
+		{/*...}*/
+			static if (n < 1)
+				enum m = 0;
+			else static if (n < 2)
+				enum m = 1;
+			else static if (n < 3)
+				enum m = 2;
+			else static if (n < 5)
+				enum m = 4;
+			else static if (n < 9)
+				enum m = 8;
+			else static if (n < 17)
+				enum m = 16;
+			else static if (n < 33)
+				enum m = 32;
+			else static assert (0, "vectors of length > 32 not supported");
 
-		enum ceil_power_of_two = m;
-	}
+			enum ceil_power_of_two = m;
+		}
 
-template Unwrapped (T)
-	{/*...}*/
-		static assert (RepresentationTypeTuple!T.length == 1, `only single-data-unit wrappers supported`);
+	template Unwrapped (T)
+		{/*...}*/
+			static assert (RepresentationTypeTuple!T.length == 1, `only single-data-unit wrappers supported`);
 
-		alias Unwrapped = RepresentationTypeTuple!T[0];
-	}
+			alias Unwrapped = RepresentationTypeTuple!T[0];
+		}
 
-union VectorCast (V)
-	{/*...}*/
-		V wrapped;
-		VectorTraits!V.UnwrappedVectorType unwrapped;
-	}
-auto unwrapped (V)(V vector)
-	if (is_vector_like!V)
-	{/*...}*/
-		return VectorCast!V (vector).unwrapped;
-	}
-auto unwrapped (T)(T scalar)
-	if (not (is_vector_like!T))
-	{/*...}*/
-		union Cast
-			{/*...}*/
-				T wrapped;
-				Unwrapped!T unwrapped;
+	union VectorCast (V)
+		{/*...}*/
+			V wrapped;
+			VectorTraits!V.UnwrappedVectorType unwrapped;
+		}
+	auto unwrapped (V)(V vector)
+		if (is_vector_like!V)
+		{/*...}*/
+			return VectorCast!V (vector).unwrapped;
+		}
+	auto unwrapped (T)(T scalar)
+		if (not (is_vector_like!T))
+		{/*...}*/
+			union Cast
+				{/*...}*/
+					T wrapped;
+					Unwrapped!T unwrapped;
+				}
+
+			return Cast(scalar).unwrapped;
+		}
+
+	enum ArgType {vector, scalar}
+
+	string vector_arithmetic (string op, long n, ArgType lhs_type, ArgType rhs_type)()
+		{/*...}*/
+			version (all) {/*mixin pieces}*/
+				static vector_arithmetic (long i)()
+					{/*...}*/
+						enum index = `[` ~i.text~ `]`;
+
+						static if (lhs_type is ArgType.vector)
+							enum il = index;
+						else enum il = ``;
+
+						static if (rhs_type is ArgType.vector)
+							enum ir = index;
+						else enum ir = ``;
+
+						static if (i < 0)
+							return ``;
+						else return vector_arithmetic!(i-1) ~ q{
+
+							ret} ~index~ q{ = lhs} ~il~ q{ } ~op~ q{ rhs} ~ir~ q{;
+						};
+					}
+
+				static if (lhs_type is ArgType.vector)
+					{/*...}*/
+						enum il = `[0]`;
+						enum sl = `[]`;
+					}
+				else {/*...}*/
+					enum il = ``;
+					enum sl = ``;
+				}
+
+				static if (rhs_type is ArgType.vector)
+					{/*...}*/
+						enum ir = `[0]`;
+						enum sr = `[]`;
+					}
+				else {/*...}*/
+					enum ir = ``;
+					enum sr = ``;
+				}
 			}
 
-		return Cast(scalar).unwrapped;
-	}
+			return q{
+				alias VectorType = typeof(vector!n (lhs} ~il~q{ }~op~ q{ rhs} ~ir~ q{));
+				VectorType ret;
 
-enum ArgType {vector, scalar}
+				} ~vector_arithmetic!n~ q{
 
-string vector_arithmetic (string op, long n, ArgType lhs_type, ArgType rhs_type)()
-	{/*...}*/
-		version (all) {/*mixin pieces}*/
-			static vector_arithmetic (long i)()
+				return ret;
+			};
+		}
+	string vector_assignment (long n, ArgType rhs_type)()
+		{/*...}*/
+			static vector_assignment (long i)()
 				{/*...}*/
 					enum index = `[` ~i.text~ `]`;
-
-					static if (lhs_type is ArgType.vector)
-						enum il = index;
-					else enum il = ``;
 
 					static if (rhs_type is ArgType.vector)
 						enum ir = index;
@@ -456,98 +503,50 @@ string vector_arithmetic (string op, long n, ArgType lhs_type, ArgType rhs_type)
 
 					static if (i < 0)
 						return ``;
-					else return vector_arithmetic!(i-1) ~ q{
+					else return vector_assignment!(i-1) ~ q{
 
-						ret} ~index~ q{ = lhs} ~il~ q{ } ~op~ q{ rhs} ~ir~ q{;
+						lhs} ~index~ q{ = rhs} ~ir~ q{;
 					};
 				}
 
-			static if (lhs_type is ArgType.vector)
-				{/*...}*/
-					enum il = `[0]`;
-					enum sl = `[]`;
-				}
-			else {/*...}*/
-				enum il = ``;
-				enum sl = ``;
-			}
-
-			static if (rhs_type is ArgType.vector)
-				{/*...}*/
-					enum ir = `[0]`;
-					enum sr = `[]`;
-				}
-			else {/*...}*/
-				enum ir = ``;
-				enum sr = ``;
-			}
+			return vector_assignment!n;
 		}
+	string vector_equality (long n)()
+		{/*...}*/
+			static vector_equality (long i)()
+				{/*...}*/
+					static if (i < 0)
+						return ``;
+					else return vector_equality!(i-1) ~q{
 
-		return q{
-			alias VectorType = typeof(vector!n (lhs} ~il~q{ }~op~ q{ rhs} ~ir~ q{));
-			VectorType ret;
-
-			} ~vector_arithmetic!n~ q{
-
-			return ret;
-		};
-	}
-string vector_assignment (long n, ArgType rhs_type)()
-	{/*...}*/
-		static vector_assignment (long i)()
-			{/*...}*/
-				enum index = `[` ~i.text~ `]`;
-
-				static if (rhs_type is ArgType.vector)
-					enum ir = index;
-				else enum ir = ``;
-
-				static if (i < 0)
-					return ``;
-				else return vector_assignment!(i-1) ~ q{
-
-					lhs} ~index~ q{ = rhs} ~ir~ q{;
-				};
-			}
-
-		return vector_assignment!n;
-	}
-string vector_equality (long n)()
-	{/*...}*/
-		static vector_equality (long i)()
-			{/*...}*/
-				static if (i < 0)
-					return ``;
-				else return vector_equality!(i-1) ~q{
-
-					lhs[} ~i.text~ q{] == rhs[} ~i.text~ q{]
+						lhs[} ~i.text~ q{] == rhs[} ~i.text~ q{]
+					}
+						~q{&&};
 				}
-					~q{&&};
-			}
 
-		return q{
-			if (lhs.length != rhs.length)
-				return false;
-			else return } ~vector_equality!n[0..$-2]~ q{;
-		};
-	}
-string vector_mapping (long n)()
-	{/*...}*/
-		static vector_mapping (long i)()
-			{/*...}*/
-				static if (i < 0)
-					return ``;
-				else return vector_mapping!(i-1) ~q{
-					ret[} ~i.text~ q{] = func (vector[} ~i.text~ q{], args);
-				};
-			}
+			return q{
+				if (lhs.length != rhs.length)
+					return false;
+				else return } ~vector_equality!n[0..$-2]~ q{;
+			};
+		}
+	string vector_mapping (long n)()
+		{/*...}*/
+			static vector_mapping (long i)()
+				{/*...}*/
+					static if (i < 0)
+						return ``;
+					else return vector_mapping!(i-1) ~q{
+						ret[} ~i.text~ q{] = func (vector[} ~i.text~ q{], args);
+					};
+				}
 
-		return q{
-			Vector!(} ~(n+1).text~ q{, typeof(func(vector[0], args))) ret;
+			return q{
+				Vector!(} ~(n+1).text~ q{, typeof(func(vector[0], args))) ret;
 
-			} ~vector_mapping!n~ q{
+				} ~vector_mapping!n~ q{
 
-			return ret;
-		};
-	}
-// /////////////// /////
+				return ret;
+			};
+		}
+}
