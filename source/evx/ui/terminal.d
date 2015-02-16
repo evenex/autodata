@@ -6,7 +6,7 @@ private {/*import}*/
 	import evx.memory;
 	import evx.math;
 	import evx.range;
-	import evx.adaptors;
+	import evx.containers;
 }
 
 struct Terminal
@@ -31,12 +31,12 @@ struct Terminal
 					with (std.stdio.stderr) input.bind (Input.Key.tilde, hit 
 						=> hit? (
 							input.key_mode == Input.Mode.action?
-								 writeln (input.key_mode == Input.Mode.action) : writeln (input.key_mode != Input.Mode.action)//input.enter_action_mode : input.enter_text_mode // BUG gets evaluated in the wrong order : if true, RHS, else LHS
+								 writeln (input.key_mode == Input.Mode.action) : writeln (input.key_mode != Input.Mode.action)// BUG gets evaluated in the wrong order : if true, RHS, else LHS
 						) : {}
 					);
 				}
 				
-				input.bind (Input.Key.tilde, hit 
+				input.bind (Input.Key.tilde, hit
 					=> hit? (
 						input.is_streaming_text?
 							 input.text_stream (null) : input.text_stream (text_buffer) // BUG gets evaluated in the wrong order : if true, RHS, else LHS
@@ -44,25 +44,24 @@ struct Terminal
 				);
 
 				auto geometry = [fvec(-1, 1), fvec(1, 1), fvec(1, 0.5), fvec(-1, 0.5)];
+				auto scale = vec(0.995, 0.98);
+
 				console_geometry = geometry;
-				console_border_geometry = geometry.scale (fvec(0.995, 0.98));
+				console_border_geometry = geometry.scale (scale.to!fvec);
 				console_color = green (0.2);
 
 				console_text = Text (Font (12), display);
+				console_text.within (console_border_geometry[].cache.scale (scale*scale).bounding_box); // REVIEW sucks that we have to manually convert float -> double
 			}
 
 		void show_console () // TODO drop-down animation
 			{/*...}*/
 				borrow (console_geometry)
-					.vertex_shader!(`verts`, q{gl_Position = vec4(verts, 0, 1);})
-					.fragment_shader!(Color, `color`, q{gl_FragColor = color;})
-						(console_color)
+					.basic_shader (console_color)
 					.triangle_fan.render_to (display);
 
 				borrow (console_border_geometry)
-					.vertex_shader!(`verts`, q{gl_Position = vec4(verts, 0, 1);})
-					.fragment_shader!(Color, `color`, q{gl_FragColor = color;})
-						(console_color * white)
+					.basic_shader (console_color * white)
 					.line_loop.render_to (display);
 
 				console_text = text_buffer[];
