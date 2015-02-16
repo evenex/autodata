@@ -192,7 +192,14 @@ struct Color
 				}
 			this (T)(Vector!(3,T) color)
 				{/*...}*/
-					this (vector (color.tuple.expand, unity!T));
+					base[0..3] = color.each!(to!float);
+
+					static if (is_integral!T)
+						base /= T.max;
+
+					base[3] = 1;
+
+					normalize;
 				}
 		}
 		public {/*cast}*/
@@ -297,6 +304,6 @@ struct Color
 		auto x = Color (0.5);
 		auto y = Color (Vector!(3, ushort)(0, ushort.max/2, ushort.max));
 
-		assert (x == Color (0,0,0, 0.5));
-		assert (y == Color (0,0.5,1.0,1.0));
+		assert (x == Color (0.5, 0.5, 0.5, 1.0));
+		assert (y == Color (0, (ushort.max/2).to!float/ushort.max, 1.0, 1.0));
 	}
