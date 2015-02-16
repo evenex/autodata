@@ -15,6 +15,8 @@ private {/*imports}*/
 	import evx.range; // all
 }
 
+// BUG blank-allocated texture contains whatever the hell happened to be in VRAM prior... need a SELECTIVE zero-fill
+
 alias RGBATexture = GLTexture!(float, GL_RGBA);
 alias RGBTexture = GLTexture!(float, GL_RGB);
 alias MonoTexture = GLTexture!(float, GL_RED);
