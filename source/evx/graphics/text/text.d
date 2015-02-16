@@ -8,7 +8,6 @@ private {/*import}*/
 	import evx.math;
 	import evx.range;
 	import evx.operators;
-	import evx.adaptors;
 	import evx.containers;
 	import evx.patterns;
 	import evx.memory;
