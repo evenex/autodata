@@ -1,10 +1,5 @@
 module evx.graphics.operators;
 
-// REVIEW forwarding semantics are sealed within these 2 templates, should be ok to use
-// we CAN guarantee that Canvas.preprocess will take by ref, but CANNOT that Render.shaders will be refs
-// OR we can guarantee that preprocess is a shader stage
-//	we won't pay for compile/link if we dont activate it separately
-//	so we can just chain them and activate
 template CanvasOps (alias preprocess, alias framebuffer_id, alias attachment_id, alias allocate, alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
 		private {/*imports}*/
@@ -36,7 +31,7 @@ template CanvasOps (alias preprocess, alias framebuffer_id, alias attachment_id,
 			body {/*...}*/
 				gl.framebuffer = framebuffer_id;
 
-				if (gl.IsTexture (attachment_id))
+				if (gl.IsTexture (attachment_id)) // TODO blank the texture before rendering to it? somehow need to blank it or else prior contents of VRAM (including webpages and shit) will still be there in the background
 					gl.FramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, attachment_id, 0);
 				else if (gl.IsRenderbuffer (attachment_id))
 					gl.FramebufferRenderbuffer (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, attachment_id);
