@@ -190,6 +190,10 @@ struct Color
 
 					normalize;
 				}
+			this (T)(Vector!(3,T) color)
+				{/*...}*/
+					this (vector (color.tuple.expand, unity!T));
+				}
 		}
 		public {/*cast}*/
 			V opCast (V)()
