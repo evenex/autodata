@@ -18,7 +18,7 @@ private {/*imports}*/
 
 	alias enumerate = evx.range.enumerate;
 	alias map = evx.math.functional.map;
-	alias zip = std.algorithm.zip;
+	alias zip = std.range.zip;
 	alias reduce = evx.math.functional.reduce;
 	alias filter = evx.math.functional.filter;
 	alias sum = evx.math.arithmetic.sum;
@@ -124,7 +124,10 @@ bool has_cyclic_dependencies (Module root)
 Module[] find_minimal_cycle (Module node, Module[] path = [])
 	{/*...}*/
 		if (path.contains (node))
-			return path;
+			{/*...}*/
+				cycles ~= path;
+				return path;
+			}
 
 		else return node.imported_modules
 			.map!(mod => mod.find_minimal_cycle (path ~ node))
@@ -263,6 +266,8 @@ auto concatenate (R,S)(R r, S s) // REFACTOR
 
 ///////////////////
 
+Module[][] cycles;
+
 version (generate_dependency_graph) void main ()
 	{/*...}*/
 		auto modules = dependency_graph (`./source/`);
@@ -335,9 +340,7 @@ version (generate_dependency_graph) void main ()
 
 			std.stdio.stderr.writeln (`marking cycles`);
 
-			dot_file ~= modules.map!(mod => mod.find_minimal_cycle)
-				.filter!(not!empty)
-				.array.select!(cycles => cycles.empty? [] : cycles.reduce!shortest)
+			dot_file ~= (cycles.empty? [] : cycles.reduce!shortest)
 				.adjacent_pairs.map!((a,b) => a.connect_to (b, `[color="#ff0000", penwidth=10]`))
 				.array.reduce!concatenate (``);
 			
