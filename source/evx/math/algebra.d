@@ -31,7 +31,7 @@ template zero (T)
 
 /* generate an group element for a given type 
 */
-template group_element (Element...)
+template group_element (Element...) // TODO pattern matching
 	if (Element.length == 1)
 	{/*...}*/
 		enum element = Element[0];
