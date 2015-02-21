@@ -19,7 +19,7 @@ struct Terminal
 		Color console_color;
 		Text console_text;
 
-		Stack!(dchar[], OnOverflow.reallocate) text_buffer;
+		Stack!(dchar[], OnOverflow.reallocate) text_buffer; // TODO filter out ~` 
 
 		this (size_t width, size_t height)
 			{/*...}*/
@@ -79,16 +79,16 @@ struct Terminal
 			}
 	}
 
-	void main ()
-		{/*...}*/
-			import core.thread;
+void main ()
+	{/*...}*/
+		import core.thread;
 
-			auto terminal = Terminal (512, 512);
+		auto terminal = Terminal (512, 512);
 
-			foreach (_; 0..300)
-				{/*...}*/
-					terminal.refresh;
+		foreach (_; 0..300)
+			{/*...}*/
+				terminal.refresh;
 
-					Thread.sleep (20.msecs);
-				}
-		}
+				Thread.sleep (20.msecs);
+			}
+	}
