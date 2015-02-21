@@ -16,21 +16,14 @@ template forward (alias symbol)
 		else auto forward ()
 			{/*...}*/
 				typeof(symbol) value;
-				move (symbol, value);
+				move (symbol, value); // REVIEW memmove?
 				
 				return value;
 			}
 	}
-
-// TODO coalesce forward methods when this bug is squashed
-template forward2 (Aliases...) // BUG https://issues.dlang.org/show_bug.cgi?id=14096
+template forward (Aliases...)
 	{/*...}*/
-		auto ref f (uint i)()
-			{/*...}*/
-				return forward!(Aliases[i]);
-			}
-
-		alias forward2 = Map!(f, Count!Aliases);
+		alias forward = Map!(forward, Aliases);
 	}
 
 /* a borrowed resource bypasses RAII and move semantics 

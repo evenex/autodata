@@ -200,10 +200,10 @@ template generate_shader (Stage stage, Decl...)
 				);
 
 				auto shader 	 ()() {return S (input[0].args);}
-				auto shader_etc  ()() {return S (input[0].args, forward2!(input[1..$]));}
+				auto shader_etc  ()() {return S (input[0].args, forward!(input[1..$]));}
 				auto tuple 		 ()() {return S (input[0].expand);}
-				auto tuple_etc 	 ()() {return S (input[0].expand, forward2!(input[1..$]));}
-				auto forward_all ()() {return S (input);} // BUG https://issues.dlang.org/show_bug.cgi?id=14096
+				auto tuple_etc 	 ()() {return S (input[0].expand, forward!(input[1..$]));}
+				auto forward_all ()() {return S (forward!input);}
 
 				return Match!(shader_etc, shader, tuple_etc, tuple, forward_all);
 			}
