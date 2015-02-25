@@ -68,10 +68,7 @@ struct Queue (R, OnOverflow overflow_policy = OnOverflow.error)
 		/* push */
 		auto ref opOpAssign (string op : `~`, S)(S range)
 			if (not (is (S : Element!R)))
-			in {/*...}*/
-				assert (this.length + range.length <= this.capacity);
-			}
-			body {/*...}*/
+			{/*...}*/
 				if (exit_on_overflow (range.length))
 					return this;
 
