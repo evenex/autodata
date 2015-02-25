@@ -38,7 +38,7 @@ struct Queue (R, OnOverflow overflow_policy = OnOverflow.error)
 		void pull (R)(R range, size_t[2] interval)
 			{/*...}*/
 				auto i = (limit.left + interval.left) % capacity,
-					j = (limit.left + interval.right) % capacity;
+					j = (limit.left + interval.right) % (capacity + 1);
 
 				if (i <= j)
 					{/*...}*/
