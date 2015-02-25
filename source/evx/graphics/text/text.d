@@ -524,6 +524,8 @@ struct Text
 									newline_positions ~= i;
 
 									pen = fvec(0, pen.y - font.height);
+
+									tex_coords[$-4..$] = 0.fvec.repeat (4);
 								}
 
 							cards[$-4..$] = cards[$-4..$].map!(v => v - fvec(-offset.x, dims.y - offset.y));
