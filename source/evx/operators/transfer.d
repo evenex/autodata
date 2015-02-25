@@ -49,10 +49,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 
 						auto bounds_check (size_t i, T)(T limit)
 							{/*...}*/
-								auto space ()() {return source.limit!i.width;}
-								auto range ()() if (i == 0) {return source.length;}
-
-								auto width = Match!(space, range);
+								auto width = source.limit!i.width;
 
 								static if (is (typeof(limit.width)))
 									assert (width == limit.width,
