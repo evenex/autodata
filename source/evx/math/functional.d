@@ -637,7 +637,8 @@ public {/*zip}*/
 
 			invariant ()
 				{/*...}*/
-					import std.algorithm: find, replace;
+					import std.algorithm: find;
+					import std.array: replace;
 
 					mixin LambdaCapture;
 
