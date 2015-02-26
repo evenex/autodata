@@ -7,14 +7,14 @@
 		"derelict-glfw3": "~master",
 		"derelict-gl3"  : "~master",
 		"derelict-ft"  	: "~master",
+		"dchip"		  	: "~master",
 	},
 	"_versions": ["generate_dependency_graph"],
 	"libs": ["GL", "freetype-gl", "freetype", "GLEW"],
 	"targetType": "executable",
 	"buildRequirements": ["disallowDeprecations"],
-	"buildOptions": ["debugInfo", "alwaysStackFrame"],
-	"_buildOptions": ["releaseMode", "inline", "noBoundsCheck"],
-	"_buildOptions": ["releaseMode", "optimize", "inline", "noBoundsCheck"],
+	"_buildOptions": ["debugInfo", "alwaysStackFrame"],
+	"buildOptions": ["releaseMode", "optimize", "inline", "noBoundsCheck"],
 	"_dflags": ["-v"],
 	"postBuildCommands": ["echo '<>>'"]
 }
