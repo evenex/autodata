@@ -32,6 +32,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 		ref opAssign ()(auto ref this space)
 			{/*...}*/
 				import evx.memory.transfer; // REVIEW
+				// TODO change blit to move and unittest... if all good, always move
 
 				static if (__traits(isRef, space))// REVIEW move if not ref, but blit if ref? seems to work ok... but is there ever a case for duplication? should we enforce move semantics on buffers?
 					space.blit (this); // BUG this won't trigger our destructor, and therefore may result in an orphaned resource... destructive copy?
