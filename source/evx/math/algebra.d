@@ -4,8 +4,11 @@ private {/*...}*/
 	import std.conv;
 	import std.traits;
 	import std.range;
+
+	import evx.type;
 }
 
+// TODO update style
 /* generic identity operator
 */
 T identity (T)(T that)
@@ -42,8 +45,8 @@ template group_element (Element...) // TODO pattern matching
 
 				static if (__traits(compiles, U(element)))
 					return U(element);
-				else static if (__traits(compiles, U(staticMap!(of_group, FieldTypeTuple!U))))
-					return U(staticMap!(of_group, FieldTypeTuple!U));
+				else static if (__traits(compiles, U(Map!(of_group, FieldTypeTuple!U))))
+					return U(Map!(of_group, FieldTypeTuple!U));
 				else static if (isStaticArray!U)
 					{/*...}*/
 						Unqual!U array;
@@ -52,6 +55,10 @@ template group_element (Element...) // TODO pattern matching
 
 						return array;
 					}
-				else static assert (0, `can't compute ` ~ element.text ~ ` for ` ~ U.stringof);
+				else {/*}*/
+				pragma(msg, Map!(of_group, FieldTypeTuple!U));
+					
+				static assert (0, `can't compute ` ~ element.text ~ ` for ` ~ U.stringof);
+				}
 			}
 	}
