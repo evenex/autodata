@@ -7,7 +7,7 @@ private {/*imports}*/
 	import evx.type;
 
 	import evx.containers.adaptors.policy;
-	import evx.containers.adaptors.capacity;
+	import evx.containers.adaptors.common;
 }
 
 struct Queue (R, OnOverflow overflow_policy = OnOverflow.error)
@@ -16,6 +16,7 @@ struct Queue (R, OnOverflow overflow_policy = OnOverflow.error)
 		alias store this;
 
 		mixin AdaptorCapacity;
+		mixin AdaptorCtor;
 
 		auto length () const
 			{/*...}*/

@@ -1,4 +1,4 @@
-module evx.containers.adaptors.capacity;
+module evx.containers.adaptors.common;
 
 package template AdaptorCapacity ()
 	{/*...}*/
@@ -31,5 +31,16 @@ package template AdaptorCapacity ()
 					return;
 
 				else Match!(set_length, move_and_allocate, allocate);
+			}
+	}
+
+package template AdaptorCtor ()
+	{/*...}*/
+		this (T...)(T args)
+			{/*...}*/
+				void ctor ()() {store = R (args);}
+				void alloc ()() {store = new Element!R[args];}
+
+				Match!(ctor, alloc);
 			}
 	}
