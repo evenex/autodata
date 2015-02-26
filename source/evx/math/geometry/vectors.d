@@ -74,7 +74,7 @@ auto unit (V)(V v)
 
 		if (norm == T(0))
 			return vector!(V.length) (T(0)/T(1));
-		else return vector!(V.length) (v[].map!(t => t/norm));
+		else return v.each!(t => t/norm);
 	}
 
 /* dot product 
