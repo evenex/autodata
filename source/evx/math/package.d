@@ -18,4 +18,5 @@ import evx.math.probability;
 import evx.math.sequence;
 import evx.math.space;
 import evx.math.statistics;
+import evx.math.units;
 import evx.math.vector;
