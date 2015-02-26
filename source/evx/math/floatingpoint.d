@@ -43,7 +43,6 @@ auto approx (T,U,V = CommonTypeHack!(T,U))(T a, U b, V tolerance = ε_std!V)
 	if (All!(not!(or!(is_input_range, is_vector_like)), T, U))
 	{/*...}*/
 		alias V = CommonType!(T,U);
-		pragma(msg, V);
 
 		auto abs_a = abs (a.to!double);
 		auto abs_b = abs (b.to!double);
