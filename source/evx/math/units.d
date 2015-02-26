@@ -74,7 +74,9 @@ public {/*convenience functions}*/
 		}
 }
  
-alias Scalar = double;
+version (FLOAT_UNITS)
+	alias Scalar = float;
+else alias Scalar = double;
 
 immutable string[string] abbreviation_map; 
 shared static this ()
