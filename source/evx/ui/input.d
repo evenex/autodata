@@ -12,6 +12,7 @@ private {/*imports}*/
 		import evx.math;
 		import evx.range;
 		import evx.containers;
+		import evx.async;
 		import evx.memory;
 		import evx.graphics.display;
 	}
@@ -189,7 +190,7 @@ struct Input
 				{/*...}*/
 					set_callbacks (&text_key_callback, &text_character_callback);
 
-					text_output = (dchar c){output ~= c;};
+					text_output = (dchar c){try output ~= c; catch (Exception ex) assert (0, ex.msg);};
 					text_backspace = (){if (output.length > 0) output--;};
 				}
 			void text_stream (typeof(null))
@@ -205,7 +206,9 @@ struct Input
 				{/*...}*/
 					glfwPollEvents ();
 
-					foreach (event; events[])
+					events.buffer.swap;
+
+					foreach (event; events.buffer.read[])
 						with (event) {/*...}*/
 							if (button in mouse_map)
 								mouse_map[button](pressed);
@@ -217,7 +220,19 @@ struct Input
 
 		private __gshared:
 		private {/*events}*/
-			Queue!(Event[], OnOverflow.reallocate) events; // TODO mutexed https://issues.dlang.org/show_bug.cgi?id=14185
+			struct EventBuffer // REVIEW
+				{/*...}*/
+					DoubleBuffered!(Queue!(Event[], OnOverflow.reallocate)) 
+						buffer;
+
+					ref write () nothrow
+						{/*...}*/
+							return buffer.write;
+						}
+
+					alias write this;
+				}
+			EventBuffer events; // TODO mutexed https://issues.dlang.org/show_bug.cgi?id=14185
 
 			struct Event
 				{/*...}*/
