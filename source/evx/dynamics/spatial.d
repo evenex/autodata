@@ -6,6 +6,7 @@ private {/*imports}*/
 	import std.conv;
 
 	import evx.math;
+	import evx.range;
 	import evx.containers;
 	import evx.misc.utils;
 }
@@ -49,7 +50,9 @@ struct SpatialId
 			}
 		this (T)(T data)
 			{/*...}*/
-				this.data = data.voidptr; // REVIEW what module this belongs in
+				static if (is (T == int))
+					this.data = size_t(data).voidptr;
+				else this.data = data.voidptr; // REVIEW what module this belongs in
 			}
 	}
 struct Body
@@ -157,8 +160,12 @@ struct Body
 		}
 		private {/*ctor/free}*/
 			this (R...)(SpatialDynamics world, SpatialId spatial_id, Kilograms mass, R geometries)
-				if (allSatisfy!(is_geometric, R))
 				in {/*...}*/
+					foreach (Range; R)
+						static assert (is_geometric!Range, 
+							Range.stringof ~ ` is not geometric [` ~ ElementType!R.stringof ~ `]`
+						);
+
 					assert (mass == mass, `mass of body ` ~spatial_id.text~ ` not specified`);
 
 					foreach (geometry; geometries)
@@ -197,14 +204,14 @@ struct Body
 						{/*...}*/
 							Scalar moment;
 
-							auto component_mass = (mass * areas[i] / Σ_areas).dimensionless;
+							auto component_mass = (mass * areas[i] / Σ_areas).to!Scalar;
 
 							with (Body.Type) final switch (deduce_shape (geometry))
 								{/*create simulation data}*/
 									case circle:
 										{/*...}*/
-											auto radius = geometry.radius.dimensionless;
-											auto center = geometry.mean.dimensionless.to!cpVect;
+											auto radius = geometry.radius.to!Scalar;
+											auto center = geometry.mean.each!(to!Scalar).to!cpVect;
 
 											moment = cp.MomentForCircle (component_mass, 0.0, radius, center);
 											this.shape_ids ~= cp.CircleShapeNew (body_id, radius, center);
@@ -214,19 +221,19 @@ struct Body
 									case polygon:
 										{/*...}*/
 											auto len = geometry.length.to!int;
-											auto poly = Array!cpVect (geometry[].map!dimensionless.map!(to!cpVect));
+											auto poly = Array!cpVect (geometry[].map!(v => v.each!(to!Scalar)).map!(to!cpVect));
 											auto hull = Array!cpVect (len);
 
-											cp.ConvexHull (len, poly[].ptr, hull[].ptr, null, 0.0);
+											cp.ConvexHull (len, poly.ptr, hull.ptr, null, 0.0);
 
-											moment = cp.MomentForPoly (component_mass, len, hull[].ptr, cpvzero);
-											this.shape_ids ~= cp.PolyShapeNew (body_id, len, hull[].ptr, cpvzero);
+											moment = cp.MomentForPoly (component_mass, len, hull.ptr, cpvzero);
+											this.shape_ids ~= cp.PolyShapeNew (body_id, len, hull.ptr, cpvzero);
 
 											break;
 										}
 									case none: assert (null);
 								}
-							auto shape_id = shape_ids.back;
+							auto shape_id = shape_ids[$-1];
 				
 							if (not (cp.BodyIsStatic (body_id)))
 								cp.BodySetMoment (body_id, cp.BodyGetMoment (body_id) + moment);
@@ -269,7 +276,7 @@ struct Body
 				{/*...}*/
 					auto center = geometry.mean;
 					auto vs = geometry.map!(v => v - center);
-					auto dirs = geometry.adjacent_pairs.map!(v => (v[1]-v[0]).unit);
+					auto dirs = geometry.adjacent_pairs.map!((u,v) => (u-v).unit);
 					auto turn = dirs.adjacent_pairs;
 
 					auto dot = turn.map!(v => v[0].dot(v[1]));
@@ -320,13 +327,11 @@ final class SpatialDynamics
 				body {/*...}*/
 					auto id = SpatialId (spatial_id);
 
-					this.bodies.insert (
-						id, Body (
-							this,
-							id,
-							mass, 
-							geometries
-						)
+					this.bodies[id] = Body (
+						this,
+						id,
+						mass, 
+						geometries
 					);
 
 					return bodies[id];
@@ -373,7 +378,7 @@ final class SpatialDynamics
 		public {/*update}*/
 			void update ()
 				{/*...}*/
-					cp.SpaceStep (space, Δt.dimensionless);
+					cp.SpaceStep (space, Δt.to!Scalar);
 					elapsed_ticks += 1;
 
 					{/*postprocess}*/
@@ -394,6 +399,7 @@ final class SpatialDynamics
 				{/*...}*/
 					return q{
 						auto } ~type~ q{_query (Args...)(Args args)
+							if (not (is (typeof(args[$-1] ~= SpatialId.init))))
 							}`{`q{
 								Stack!(SpatialId[]) result;
 
@@ -406,31 +412,35 @@ final class SpatialDynamics
 
 			void box_query (Output)(Position[2] corners, ref Output result)
 				in {/*...}*/
-					static assert (can_receive_spatial_ids!Output, Output.stringof~ ` cant put `~Id.stringof);
+					static assert (can_receive_spatial_ids!Output,
+						Output.stringof ~ ` can't receive spatial ids`
+					);
 				}
 				body {/*...}*/
-					alias Id = ElementType!Output;
+					alias Id = Element!Output;
 
-					auto box = cp.BB (corners[].map!dimensionless.bounding_box.extents.expand);
+					auto box = cp.BB (corners[].map!(v => v.each!(to!Scalar)).bounding_box.extents.expand);
 					auto layers = CP_ALL_LAYERS;
 					auto group = CP_NO_GROUP;
 
 					cp.SpaceBBQuery (space, box, layers, group, 
 						(ShapeId shape, void* data) 
-							{(cast(Output*)data).put (get_id (shape).as!Id);},
+							{(*cast(Output*)data) ~= get_id (shape).as!Id;},
 						&result
 					);
 				}
 
 			void polygon_query (Output, R)(R polygon, ref Output result) // TODO optionally build out own result array if none supplied
 				in {/*...}*/
-					static assert (can_receive_spatial_ids!Output, Output.stringof~ ` cant put `~Id.stringof);
+					static assert (can_receive_spatial_ids!Output,
+						Output.stringof ~ ` can't receive spatial ids`
+					);
 				}
 				body {/*...}*/
-					alias Id = ElementType!Output;
+					alias Id = Element!Output;
 
 					auto len = polygon.length.to!int;
-					auto poly = Array!cpVect (polygon[].map!dimensionless.map!(to!cpVect));
+					auto poly = Array!cpVect (polygon[].map!(v => v.each!(to!Scalar)).map!(to!cpVect));
 					auto hull = Array!cpVect (len);
 
 					cp.ConvexHull (len, poly[].ptr, hull[].ptr, null, 0.0);
@@ -444,7 +454,7 @@ final class SpatialDynamics
 
 					cp.SpaceShapeQuery (space, shape,
 						(ShapeId shape, cpContactPointSet* points, void* data)
-							{(cast(Output*)data).put (get_id (shape).as!Id);},
+							{(*cast(Output*)data) ~= get_id (shape).as!Id;},
 						&result
 					);
 
@@ -454,28 +464,34 @@ final class SpatialDynamics
 
 			void circle_query (Output)(Position center, Meters radius, ref Output result)
 				in {/*...}*/
-					static assert (can_receive_spatial_ids!Output, Output.stringof~ ` cant put `~Id.stringof);
+					static assert (can_receive_spatial_ids!Output,
+						Output.stringof ~ ` can't receive spatial ids`
+					);
 				}
 				body {/*...}*/
-					alias Id = ElementType!Output;
+					alias Id = Element!Output;
 
 					auto layers = CP_ALL_LAYERS;
 					auto group = CP_NO_GROUP;
 
 					static if (__traits(compiles, SpatialId.init.as!Id))
-						static put (ShapeId shape, Scalar distance, cpVect point, void* data)
-							{/*...}*/
-								(cast(Output*)data).put (get_id (shape).as!Id);
-							}
+						{/*...}*/
+							static put (ShapeId shape, Scalar distance, cpVect point, void* data)
+								{/*...}*/
+									(*cast(Output*)data) ~= get_id (shape).as!Id;
+								}
+						}
 					else static if (__traits(compiles, SpatialId.init.as!(Id.Types[0])))
-						static put (ShapeId shape, Scalar distance, cpVect point, void* data)
-							{/*...}*/
-								(cast(Output*)data).put (τ(get_id (shape).as!(Id.Types[0]), point.vector * meters));
-							}
+						{/*...}*/
+							static put (ShapeId shape, Scalar distance, cpVect point, void* data)
+								{/*...}*/
+									(*cast(Output*)data) ~= (τ(get_id (shape).as!(Id.Types[0]), point.vector * meters));
+								}
+						}
 					else static assert (0, `output type must put Id or Tuple!(Id, Position)`);
 
 					cp.SpaceNearestPointQuery (space,
-						center.dimensionless.to!cpVect, radius.dimensionless,
+						center.each!(to!Scalar).to!cpVect, radius.to!Scalar,
 						layers, group,
 						&put, &result
 					);
@@ -602,15 +618,16 @@ final class SpatialDynamics
 		private {/*traits}*/
 			template can_receive_spatial_ids (Array)
 				{/*...}*/
-					alias Id = ElementType!Array;
+					alias Id = Element!Array;
 
-					enum can_receive_spatial_ids = is(typeof(SpatialId(Id.init))) && isOutputRange!(Array, Id);
+					enum can_receive_spatial_ids = is(typeof(Array.init ~= SpatialId (Id.init)));
 				}
 		}
 	}
 
-void main (){}
-unittest {/*demo}*/
+void main ()
+//unittest
+{/*demo}*/
 	scope phy = new SpatialDynamics;
 
 	auto b1 = phy.new_body (1, 1.kilogram, square (meters))
@@ -621,7 +638,7 @@ unittest {/*demo}*/
 	assert (b1.position != zero!Position);
 
 	Stack!(SpatialId[3]) hits;
-	phy.box_query (([zero!Position, unity!Position].vector!2 * 10).array, hits);
+	phy.box_query ([zero!Position, 10 * unity!Position], hits);
 	assert (hits[].equal ([SpatialId (1)]));
 
 	auto b2 = phy.new_body (2, 1.kilogram, square (meters))
