@@ -196,6 +196,12 @@ auto join (R, S = ElementType!R)(R ranges, S separator = S.init)
 		assert ([u,v,w].join.equal ([1,2,3,4,5]));
 	}
 
+/*
+	TODO doc
+*/
+alias split = std.algorithm.splitter;
+
+
 /* traverse a range with elements rotated left by some number of positions 
 */
 auto rotate_elements (R)(R range, int positions = 1)
