@@ -12,6 +12,10 @@ private {/*imports}*/
 */
 alias contains = std.algorithm.canFind;
 
+/* check if a value is contained in a range 
+*/
+alias contained_in = std.functional.reverseArgs!contains;
+
 /* get the subrange beginning with a given element or meeting a given criteria 
 */
 alias find = std.algorithm.find;
