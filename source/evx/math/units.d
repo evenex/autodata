@@ -230,7 +230,7 @@ public {/*unit}*/
 				}
 			}
 			const {/*comparison}*/
-				mixin ComparisonOps!dimensionless;
+				mixin ComparisonOps!scalar;
 			}
 			const {/*operators}*/
 				auto opUnary (string op)()
@@ -408,14 +408,9 @@ public {/*unit}*/
 					}
 			}
 			const @property {/*conversion}*/
-				Scalar dimensionless ()
+				auto opCast (T : Scalar)()
 					{/*...}*/
-						return scalar;
-					}
-
-				template opCast (T : Scalar)
-					{/*...}*/
-						alias opCast = dimensionless;
+						return scalar.to!T;
 					}
 			}
 
