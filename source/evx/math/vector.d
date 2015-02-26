@@ -179,11 +179,11 @@ struct Vector (size_t n, Component = double)
 					return this;
 				}
 
-			V opCast (V)()
+			V opCast (V)() // REVIEW cast elements?
 				{/*...}*/
 					auto tuple ()() {return V (this.tuple.expand);}
-					auto ctor  ()() {return V (this);}
-					auto range ()() {return V (this[]);}
+					auto ctor  ()() {return V (this);} // REVIEW this will never work either
+					auto range ()() {return V (this[]);} // REVIEW pretty sure this NEVER works
 
 					return Match!(tuple, ctor, range);
 				}
@@ -483,7 +483,7 @@ private {/*metaprogramming tools}*/
 			}
 
 			return q{
-				alias VectorType = typeof(vector!n (lhs} ~il~q{ }~op~ q{ rhs} ~ir~ q{));
+				alias VectorType = typeof(vector!n (lhs} ~il~ q{ } ~op~ q{ rhs} ~ir~ q{));
 				VectorType ret;
 
 				} ~vector_arithmetic!n~ q{
