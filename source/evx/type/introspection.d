@@ -80,3 +80,23 @@ template is_accessible (T, string member)
 	{/*...}*/
 		enum is_accessible = mixin(q{__traits(compiles, T.} ~member~ q{)});
 	}
+
+/* generate a predicate to test if a type defines a given enum 
+*/
+template has_trait (string trait)
+	{/*...}*/
+		template has_trait (T...)
+			if (T.length == 1)
+			{/*...}*/
+				static if (is_type!(T[0]))
+					{/*...}*/
+						alias U = T[0];
+
+						mixin(q{
+							enum has_trait = is (U.} ~trait~ q{ == enum);
+						});
+					}
+				else enum has_trait = false;
+
+			}
+	}

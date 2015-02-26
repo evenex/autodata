@@ -21,6 +21,16 @@ enum is_class (T...) = is(T[0] == class);
 */
 enum is_template (T...) = __traits(isTemplate, T[0]);
 
+/*
+	test if a type is a string
+*/
+alias is_string = isSomeString;
+
+/*
+	test if a type is numeric
+*/
+alias is_numeric = isNumeric;
+
 /* test if a type is a builtin integral type
 */
 alias is_integral = isIntegral;
@@ -121,26 +131,6 @@ alias is_scalar_type = std.traits.isScalarType;
 template is_type_of (T)
 	{/*...}*/
 		enum is_type_of (U) = is (T == U);
-	}
-
-/* generate a predicate to test if a type defines a given enum 
-*/
-template has_trait (string trait)
-	{/*...}*/
-		template has_trait (T...)
-			if (T.length == 1)
-			{/*...}*/
-				static if (is_type!(T[0]))
-					{/*...}*/
-						alias U = T[0];
-
-						mixin(q{
-							enum has_trait = is (U.} ~trait~ q{ == enum);
-						});
-					}
-				else enum has_trait = false;
-
-			}
 	}
 
 /* test the arity of a function 
