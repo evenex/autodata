@@ -85,7 +85,7 @@ struct DoubleBuffered (R) // TODO REVIEW synchronized final class
 		private:
 		private {/*data}*/
 			import evx.type;
-			Cons!(R,R) buffer; // BUG was R[2], causes bad attribute inference
+			Cons!(R,R) buffer; // BUG was R[2], causes bad attribute inference https://issues.dlang.org/show_bug.cgi?id=14239
 			shared uint write_index = 0; // REVIEW shared at what level?
 		}
 	}
