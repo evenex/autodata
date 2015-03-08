@@ -130,16 +130,15 @@ struct Terminal
 
 alias CommandMap = void delegate(string[])[string];
 
-void main ()
-	{/*...}*/
-		import core.thread;
+unittest {/*...}*/
+	import core.thread;
 
-		auto terminal = Terminal (512, 512);
+	auto terminal = Terminal (512, 512);
 
-		while (terminal.is_open)
-			{/*...}*/
-				terminal.refresh;
+	while (terminal.is_open)
+		{/*...}*/
+			terminal.refresh;
 
-				Thread.sleep (20.msecs);
-			}
-	}
+			Thread.sleep (20.msecs);
+		}
+}
