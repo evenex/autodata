@@ -19,16 +19,15 @@ private {/*imports}*/
 
 struct Display
 	{/*...}*/
-
-		auto aspect_ratio ()
-			{/*...}*/
-				return (1/normalized_dimensions).to!fvec;
-			}
-
 		void post ()
 			{/*...}*/
 				gl.swap_buffers;
 				gl.clear;
+			}
+
+		auto aspect_ratio ()
+			{/*...}*/
+				return (1/normalized_dimensions).to!fvec;
 			}
 
 		void background (Color color)
