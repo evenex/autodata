@@ -21,7 +21,7 @@ struct Stream (Sample, Bounds)
 				return bounds ();
 			}
 
-		mixin SliceOps!(source, measure);
+		mixin SliceOps!(source, measure, RangeOps);
 	}
 auto stream_from (Source, Bounds)(Source source, Bounds bounds)
 	{/*...}*/
@@ -33,7 +33,7 @@ auto s (T, uint n)(T[n] array)
 		return array;
 	}
 
-void main ()
+void xmain ()
 	{/*...}*/
 		auto f = (int x) => double (x).sqrt;
 		auto b = () => [0, 100].s;
