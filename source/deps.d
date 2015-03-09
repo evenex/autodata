@@ -28,9 +28,10 @@ private {/*imports}*/
 struct Flags {mixin Builder!(typeof(null), `_`);}
 struct Status (string name, string condition, Etc...) {}
 
-alias count = evx.range.traversal.count; // TODO make count like std.algorithm count except by default it takes TRUE and just counts up all the elements
+alias count = evx.range.traversal.count;
 alias join = std.algorithm.joiner;
 alias array = std.array.array;
+alias memoize = std.functional.memoize;
 
 ///////////////////
 
@@ -119,7 +120,7 @@ bool is_package (Module mod)
 	}
 bool has_cyclic_dependencies (Module root)
 	{/*...}*/
-		return root.find_minimal_cycle.not!empty;
+		return root.memoize!find_minimal_cycle ([]).not!empty;
 	}
 Module[] find_minimal_cycle (Module node, Module[] path = [])
 	{/*...}*/
@@ -129,9 +130,13 @@ Module[] find_minimal_cycle (Module node, Module[] path = [])
 				return path;
 			}
 
-		else return node.imported_modules
-			.map!(mod => mod.find_minimal_cycle (path ~ node))
-			.array.filter!(not!empty) // TODO .buffer.filter... to say do this, then buffer it, then do that.. and someday, map!(...).parallel_buffer.filter!(...)
+		foreach (cycle; cycles)
+			if (cycle.contains (node))
+				return cycle;
+
+		return node.imported_modules
+			.map!(mod => mod.memoize!find_minimal_cycle (path ~ node))
+			.array.filter!(not!empty)
 			.select!(cycles => cycles.empty? [] : cycles.reduce!shortest);
 	}
 string connect_to (Module from, Module to, string append)
