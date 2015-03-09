@@ -62,3 +62,61 @@ template group_element (Element...) // TODO pattern matching
 				}
 			}
 	}
+
+	/// REVIEW REVIEW REVIEW this whole module needs work
+
+auto coset (G)(G.Element element, G group)
+	{/*...}*/
+		return map!((g,h) => h*g)
+			(group[], element)
+			.underlying_set;
+	}
+auto coset (G)(G group, G.Element element)
+	{/*...}*/
+		return map!((g,h) => g*h)
+			(group[], element)
+			.underlying_set;
+	}
+auto coset (G,H)(G g, H h)
+	{/*...}*/
+		return outer_product (g,h).along!0.map!underlying_set;
+	}
+
+// REVIEW this is more of a general thing
+auto outer_product (R,S)(R r, S s)
+	{/*...}*/
+		return r.by (s)
+			.map!((x,y) => x*y);
+	}
+auto underlying_set (R)(R r)
+	{/*...}*/
+		return r.unique.sort.unique;
+	}
+
+struct QuotientGroup (G, alias classification)
+	{/*...}*/
+		this (G group)
+			out {/*...}*/
+				assert (equivalence_classes.values == group.coset (equivalence_classes[G.Element.identity_element]));
+				// REVIEW maybe not range equivalence like this but set equivalence at least
+			}
+			body {/*...}*/
+				this.equivalence_classes = group[]
+					.map!(adjoin!(
+						classification,
+						identity
+					));
+					// TODO the type of equivalence classes
+					// should put (a,z),(a,y),(b,x),(c,w)
+					// into [a:[z,y], b:[x], c[w]]
+
+				this.group = typeof(group)(equivalence_classes.keys);
+			}
+
+		G.Element[][typeof(classification (G.Element.init))] equivalence_classes;
+		Group!(G.Element, G.operation) group;
+	}
+auto quotient_group (G, alias classification)(G group)
+	{/*...}*/
+		return QuotientGroup!(G, classification)(group);
+	}
