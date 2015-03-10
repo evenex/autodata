@@ -120,24 +120,30 @@ bool is_package (Module mod)
 	}
 bool has_cyclic_dependencies (Module root)
 	{/*...}*/
-		return root.memoize!find_minimal_cycle ([]).not!empty;
+		foreach (cycle; cycles)
+			if (cycle.contains (root))
+				return true;
+
+		return root.find_minimal_cycle.not!empty;
 	}
 Module[] find_minimal_cycle (Module node, Module[] path = [])
 	{/*...}*/
 		if (path.contains (node))
 			{/*...}*/
 				cycles ~= path;
+
 				return path;
 			}
 
-		foreach (cycle; cycles)
-			if (cycle.contains (node))
-				return cycle;
+		foreach (mod; node.imported_modules)
+			{/*...}*/
+				auto cycle = mod.find_minimal_cycle (path ~ node);
 
-		return node.imported_modules
-			.map!(mod => mod.memoize!find_minimal_cycle (path ~ node))
-			.array.filter!(not!empty)
-			.select!(cycles => cycles.empty? [] : cycles.reduce!shortest);
+				if (cycle.not!empty)
+					return cycle;
+			}
+
+		return [];
 	}
 string connect_to (Module from, Module to, string append)
 	{/*...}*/
@@ -315,6 +321,7 @@ version (generate_dependency_graph) void main ()
 			string dot_file = `digraph dependencies {`"\n";
 
 			dot_file ~= `bgcolor = "#ffffff"`;
+			dot_file ~= `node [fontname = "DejaVuSans"]`;
 
 			foreach (mod; modules)
 				{/*...}*/
@@ -337,8 +344,8 @@ version (generate_dependency_graph) void main ()
 						{/*...}*/
 							std.stdio.stderr.writeln ("\t"`processing dependency ` ~ dep.name);
 
-							if (dep.has_cyclic_dependencies)
-								dot_file ~= dep.connect_to (mod, `[color="#ff0000"]`);
+							if (dep.memoize!has_cyclic_dependencies)
+								dot_file ~= dep.connect_to (mod, `[color="#ff000044"]`);
 							else dot_file ~= dep.connect_to (mod, `[color="` ~dep.color.value (0.5).text~ `", penwidth=4, arrowsize=2]`);
 						}
 				}
