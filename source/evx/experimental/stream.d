@@ -1,3 +1,5 @@
+module evx.experimental.stream;
+
 import std.functional;
 import evx.operators;
 import evx.range;
