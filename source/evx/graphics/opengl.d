@@ -1,4 +1,5 @@
 module evx.graphics.opengl;
+version(none):
 
 private {/*imports}*/
 	import std.conv: to, text;

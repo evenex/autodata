@@ -1,4 +1,5 @@
 module evx.range.query;
+version(none):
 
 private {/*imports}*/
 	import std.range;

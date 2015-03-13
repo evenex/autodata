@@ -1,4 +1,5 @@
 module evx.graphics.shader.repo;
+version(none):
 
 private {/*imports}*/
 	import evx.math;

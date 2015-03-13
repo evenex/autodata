@@ -1,4 +1,5 @@
 module evx.async.adaptors.mutex;
+version(none):
 
 private {/*import}*/
 	import core.atomic;

@@ -1,4 +1,5 @@
 module evx.operators.comparison;
+version(none):
 
 private {/*imports}*/
 	import evx.math.logic;

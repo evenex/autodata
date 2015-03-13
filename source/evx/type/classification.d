@@ -1,4 +1,5 @@
 module evx.type.classification;
+version(none):
 
 private {/*imports}*/
 	import std.traits;

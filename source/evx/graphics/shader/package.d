@@ -1,4 +1,5 @@
 module evx.graphics.shader;
+version(none):
 
 public:
 import evx.graphics.shader.core;

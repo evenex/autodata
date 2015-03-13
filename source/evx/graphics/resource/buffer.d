@@ -1,4 +1,5 @@
 module evx.graphics.resource.buffer;
+version(none):
 
 private {/*imports}*/
 	import std.conv;

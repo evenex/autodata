@@ -1,3 +1,4 @@
+version(none):
 private {/*imports}*/
 	import std.stdio;
 	import std.range;

@@ -1,4 +1,5 @@
 module evx.math;
+version(none):
 public:
 import evx.math.algebra;
 import evx.math.arithmetic;

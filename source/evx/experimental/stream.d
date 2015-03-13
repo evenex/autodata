@@ -1,4 +1,5 @@
 module evx.experimental.stream;
+version(none):
 
 import std.functional;
 import evx.operators;

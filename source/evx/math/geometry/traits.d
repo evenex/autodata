@@ -1,4 +1,5 @@
 module evx.math.geometry.traits;
+version(none):
 
 private {/*imports}*/
 	import std.range;

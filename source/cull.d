@@ -1,3 +1,4 @@
+version(none):
 private {/*imports}*/
 	import std.file;
 	import std.conv;

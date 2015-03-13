@@ -1,4 +1,5 @@
 module evx.operators.write;
+version(none):
 
 static if (0) // TEMP
 version = enable_rejected_transfer_warning;

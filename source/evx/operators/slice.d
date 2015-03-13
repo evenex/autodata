@@ -1,4 +1,5 @@
 module evx.operators.slice;
+version(none):
 
 /* generate slicing operators with IndexOps
 

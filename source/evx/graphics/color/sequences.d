@@ -1,4 +1,5 @@
 module evx.graphics.color.sequences;
+version(none):
 
 private {/*imports}*/
 	import evx.math;//	import evx.math.functional;

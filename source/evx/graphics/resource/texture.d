@@ -1,4 +1,5 @@
 module evx.graphics.resource.texture;
+version(none):
 
 private {/*imports}*/
 	import std.conv: to, text;

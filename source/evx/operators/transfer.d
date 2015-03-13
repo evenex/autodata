@@ -1,4 +1,5 @@
 module evx.operators.transfer;
+version(none):
 
 /* generate WriteOps with input bounds checking
 	

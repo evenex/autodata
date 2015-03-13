@@ -1,4 +1,5 @@
 module evx.range.traversal; // REFACTOR construction and traversal or adaptors or something
+version(none):
 
 private {/*imports}*/
 	import std.range;

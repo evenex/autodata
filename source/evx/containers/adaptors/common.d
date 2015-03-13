@@ -1,4 +1,5 @@
 module evx.containers.adaptors.common;
+version(none):
 
 package template AdaptorCapacity ()
 	{/*...}*/

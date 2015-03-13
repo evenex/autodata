@@ -1,4 +1,5 @@
 module evx.operators.range;
+version(none):
 
 /* generate random access range primitives
 

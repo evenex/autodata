@@ -1,4 +1,5 @@
 module evx.graphics.display;
+version(none):
 
 private {/*imports}*/
 	import std.conv;

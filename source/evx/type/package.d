@@ -1,4 +1,5 @@
 module evx.type;
+version(none):
 public:
 import evx.type.introspection;
 import evx.type.classification;

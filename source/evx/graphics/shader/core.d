@@ -1,4 +1,5 @@
 module evx.graphics.shader.core;
+version(none):
 
 private {/*imports}*/
 	import std.typecons: Tuple; // XXX removal pending http://wiki.dlang.org/DIP32

@@ -1,4 +1,5 @@
 module evx.math.fields;
+version(none):
 
 public:
 import evx.math.fields.nats;

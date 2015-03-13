@@ -1,4 +1,5 @@
 module evx.math.grid;
+version(none):
 
 private {/*imports}*/
 	import std.conv;

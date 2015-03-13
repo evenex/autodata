@@ -1,4 +1,5 @@
 module evx.math.geometry.vectors;
+version(none):
 
 private {/*imports}*/
 	import std.conv;

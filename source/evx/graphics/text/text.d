@@ -1,4 +1,5 @@
 module evx.graphics.text;
+version(none):
 
 private {/*import}*/
 	import std.ascii;

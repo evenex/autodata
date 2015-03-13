@@ -1,4 +1,5 @@
 module evx.type.processing;
+version(none):
 
 private {/*import}*/
 	import std.typecons;

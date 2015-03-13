@@ -12,28 +12,27 @@ module evx.operators.limit;
 template LimitOps (limits...)
 	{/*...}*/
 		private {/*imports}*/
-			import evx.type;
-			import evx.range;
-
-			import evx.math.logic;
-			import evx.math.algebra;
+			import evx.meta;
 		}
 
 		static assert (All!(is_const_function, Filter!(is_function, limits)),
 			full_name!(typeof(this)) ~ ` LimitOps: limit functions must be const`
 		);
-		static assert (All!(is_comparable, Map!(ReturnType, Filter!(is_function, limits)), Filter!(Not!is_function, limits)),
+		static assert (All!(is_comparable, Map!(Codomain, Filter!(is_function, limits)), Filter!(Not!is_function, limits)),
 			full_name!(typeof(this)) ~ ` LimitOps: limit types must support comparison (<. >, <=, >=)`
 		);
 
 		auto opDollar (size_t i)()
 			{/*...}*/
-				alias T = Element!(typeof(limits[i].identity));
+				alias Element () = typeof(limits[i][0]);
+				alias Identity () = typeof(limits[i].identity);
+
+				alias T = Match!(Element, Identity);
 
 				static if (is (typeof(limits[i].identity) == T[2]))
 					return Limit!T (limits[i]);
 
-				else return Limit!T ([zero!T, limits[i]]);
+				else return Limit!T ([T(0), limits[i]]);
 			}
 	}
 struct Limit (T)

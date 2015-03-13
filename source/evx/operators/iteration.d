@@ -1,4 +1,5 @@
 module evx.operators.iteration;
+version(none):
 
 private {/*imports}*/
 	import std.traits; // REVIEW

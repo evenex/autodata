@@ -1,4 +1,5 @@
 module evx.async.adaptors.swap;
+version(none):
 
 private {/*imports}*/
 	private {/*core}*/

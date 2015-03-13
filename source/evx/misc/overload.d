@@ -1,4 +1,5 @@
 module evx.misc.overload;
+version(none):
 
 private {/*import}*/
 	import std.conv;

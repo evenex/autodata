@@ -1,4 +1,5 @@
 module evx.patterns;
+version(none):
 public:
 import evx.patterns.id;
 import evx.patterns.builder;

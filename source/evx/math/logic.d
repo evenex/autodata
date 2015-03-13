@@ -1,4 +1,5 @@
 module evx.math.logic;
+version(none):
 
 private {/*imports}*/
 	import std.typetuple;

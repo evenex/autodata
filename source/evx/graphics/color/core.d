@@ -1,4 +1,5 @@
 module evx.graphics.color.core;
+version(none):
 
 private {/*imports}*/
 	import core.stdc.stdio;

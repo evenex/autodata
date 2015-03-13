@@ -15,11 +15,15 @@ template IndexOps (alias access, limits...)
 			import evx.operators.limit;
 			import evx.operators.error;
 			import evx.math.intervals;
-			import evx.misc.overload;
-			import evx.type;
+			import evx.misc.overload; // REVIEW
+
+			import evx.meta;
+			import evx.logic;
+			import evx.algebra;
+			import evx.interval;
 		}
 
-		auto ref ReturnType!access opIndex (Parameters!access selected)
+		auto ref Codomain!access opIndex (Domain!access selected)
 			in {/*...}*/
 				version (all)
 					{/*error messages}*/
@@ -32,7 +36,7 @@ template IndexOps (alias access, limits...)
 
 						enum type_error = error_header ~ `limit base types must match access parameter types`
 						`: ` ~ Map!(ExprType, limits).stringof
-						~ ` !→ ` ~ Parameters!access.stringof;
+						~ ` !→ ` ~ Domain!access.stringof;
 
 						auto bounds_inverted_error (LimitType)(LimitType limit) 
 							{return error_header ~ `bounds inverted! ` ~ limit.left.text ~ ` > ` ~ limit.right.text;}
@@ -41,13 +45,13 @@ template IndexOps (alias access, limits...)
 							{return error_header ~ `bounds exceeded! ` ~ arg.text ~ ` not in ` ~ limit.text;}
 					}
 
-				static assert (not (is (ReturnType!access == void)), 
+				static assert (not (is (Codomain!access == void)), 
 					element_type_error
 				);
 
 				foreach (i, limit; limits)
 					{/*type check}*/
-						static assert  (limits.length == Parameters!access.length,
+						static assert  (limits.length == Domain!access.length,
 							type_error
 						);
 
@@ -57,11 +61,11 @@ template IndexOps (alias access, limits...)
 							);
 
 						static if (is (LimitType))
-							static assert (is (Parameters!access[i] == LimitType),
+							static assert (is (Domain!access[i] == LimitType),
 								type_error
 							);
 
-						else static assert (is (Parameters!access[i] == Unqual!(typeof(limit.identity))), 
+						else static assert (is (Domain!access[i] == Unqual!(typeof(limit.identity))), 
 							type_error
 						);
 					}
@@ -82,13 +86,13 @@ template IndexOps (alias access, limits...)
 								out_of_bounds_error (selected[i], limit)
 							);
 						else assert (
-							limit == zero!(typeof(limit.identity))? (
-								selected[0] == zero!(typeof(limit.identity))
+							limit == typeof(limit.identity)(0)? (
+								selected[0] == typeof(limit.identity)(0)
 							) : (
-								selected[i] >= zero!(typeof(limit.identity))
+								selected[i] >= typeof(limit.identity)(0)
 								&& selected[i] < limit
 							),
-							out_of_bounds_error (selected[i], [zero!(typeof(limit.identity)), limit])
+							out_of_bounds_error (selected[i], [typeof(limit.identity)(0), limit])
 						);
 					}
 			}
@@ -98,7 +102,7 @@ template IndexOps (alias access, limits...)
 
 		mixin LimitOps!limits;
 	}
-	unittest {/*...}*/
+	void main () {/*...}*/
 		import evx.misc.test;
 
 		static struct Basic

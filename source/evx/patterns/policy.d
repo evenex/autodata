@@ -1,4 +1,5 @@
 module evx.patterns.policy;
+version(none):
 
 private {/*imports}*/
 	import std.typetuple;

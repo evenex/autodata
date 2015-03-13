@@ -1,4 +1,5 @@
 // REVIEW this is a fundamentally different type of thing than input
+version(none):
 private {/*import}*/
 	import evx.graphics;
 	import evx.graphics.text;

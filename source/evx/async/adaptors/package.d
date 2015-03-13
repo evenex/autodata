@@ -1,4 +1,5 @@
 module evx.async.adaptors;
+version(none):
 
 public:
 import evx.async.adaptors.mutex;

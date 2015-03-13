@@ -1,4 +1,5 @@
 module evx.math.infinity;
+version(none):
 
 private {/*imports}*/
 	import std.traits;

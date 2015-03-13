@@ -1,4 +1,5 @@
 module evx.type.introspection;
+version(none):
 
 private {/*imports}*/
 	import std.traits;

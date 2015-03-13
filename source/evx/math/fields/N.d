@@ -1,4 +1,5 @@
 module evx.math.fields.nats;
+version(none):
 
 private {/*imports}*/
 	import std.typetuple;

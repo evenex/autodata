@@ -1,4 +1,5 @@
 module evx.containers.array;
+version(none):
 
 private {/*import}*/
 	import std.typecons;

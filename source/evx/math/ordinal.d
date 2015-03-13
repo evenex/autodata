@@ -1,4 +1,5 @@
 module evx.math.ordinal;
+version(none):
 
 private {/*imports}*/
 	import std.traits;

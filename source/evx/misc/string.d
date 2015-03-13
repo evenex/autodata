@@ -1,4 +1,5 @@
 module evx.misc.string;
+version(none):
 
 private {/*imports}*/
 	import std.string;

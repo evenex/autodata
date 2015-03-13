@@ -1,4 +1,5 @@
 module evx.math.statistics;
+version(none):
 
 private {/*imports}*/
 	import evx.math.logic;

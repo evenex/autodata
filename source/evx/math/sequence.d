@@ -1,4 +1,5 @@
 module evx.math.sequence;
+version(none):
 
 private {/*imports}*/
 	import std.conv;

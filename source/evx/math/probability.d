@@ -1,4 +1,5 @@
 module evx.math.probability;
+version(none):
 
 private {/*imports}*/
 	private {/*std}*/

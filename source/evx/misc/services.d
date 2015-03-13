@@ -1,4 +1,5 @@
 module evx.misc.services;
+version(none):
 
 private {/*imports}*/
 	import std.typetuple;

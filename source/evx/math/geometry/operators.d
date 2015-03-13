@@ -1,4 +1,5 @@
 module evx.math.geometry.operators;
+version(none):
 
 /* define affine transformation operators in a Builder pattern 
 */

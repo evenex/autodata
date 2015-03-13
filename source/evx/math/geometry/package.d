@@ -1,4 +1,5 @@
 module evx.math.geometry;
+version(none):
 public:
 import evx.math.geometry.polygons;
 import evx.math.geometry.vectors;

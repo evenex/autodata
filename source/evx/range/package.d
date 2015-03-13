@@ -1,4 +1,5 @@
 module evx.range;
+version(none):
 public:
 import evx.range.traversal;
 import evx.range.slicing;

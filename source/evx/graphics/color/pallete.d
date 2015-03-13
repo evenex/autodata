@@ -1,4 +1,5 @@
 module evx.graphics.color.palette;
+version(none):
 
 import evx.graphics.color.core;
 

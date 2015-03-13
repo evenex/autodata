@@ -1,4 +1,5 @@
 module evx.patterns.view;
+version(none):
 
 private {/*import}*/
 	import evx.math;

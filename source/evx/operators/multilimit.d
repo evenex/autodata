@@ -1,4 +1,5 @@
 module evx.operators.multilimit;
+version(none):
 
 private {/*imports}*/
 	import std.algorithm: swap;

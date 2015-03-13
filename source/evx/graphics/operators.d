@@ -1,4 +1,5 @@
 module evx.graphics.operators;
+version(none):
 
 template CanvasOps (alias preprocess, alias framebuffer_id, alias attachment_id, alias allocate, alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/

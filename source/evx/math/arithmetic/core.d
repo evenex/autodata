@@ -1,4 +1,5 @@
 module evx.math.arithmetic.core;
+version(none):
 
 private {/*imports}*/
 	import std.typecons;

@@ -1,4 +1,5 @@
 module evx.containers.adaptors;
+version(none):
 
 public:
 import evx.containers.adaptors.stack;

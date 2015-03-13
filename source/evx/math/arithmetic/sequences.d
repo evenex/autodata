@@ -1,4 +1,5 @@
 module evx.math.arithmetic.sequences;
+version(none):
 
 private {/*...}*/
 	import std.numeric;

@@ -1,4 +1,5 @@
 module evx.containers.adaptors.queue;
+version(none):
 
 private {/*imports}*/
 	import evx.range;

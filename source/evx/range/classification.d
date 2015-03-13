@@ -1,4 +1,5 @@
 module evx.range.classification;
+version(none):
 
 private {/*...}*/
 	import std.range;

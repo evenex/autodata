@@ -1,4 +1,5 @@
 module evx.math.functional;
+version(none):
  // TODO redocument
 private {/*imports}*/
 	import std.conv;

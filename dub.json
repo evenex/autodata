@@ -10,7 +10,7 @@
 		"dchip"		  	: "~master",
 	},
 	"versions": ["FLOAT_UNITS"],
-	"versions": ["generate_dependency_graph"],
+	"_versions": ["generate_dependency_graph"],
 	"libs": ["GL", "freetype-gl", "freetype", "GLEW"],
 	"targetType": "executable",
 	"buildRequirements": ["disallowDeprecations"],

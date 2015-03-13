@@ -1,4 +1,5 @@
 module evx.math.intervals;
+version(none):
 
 import std.traits;
 import std.conv;
@@ -14,7 +15,7 @@ import evx.math.logic;
 /* convenience constructor 
 */
 CommonType!(T,U)[2] interval (T,U)(T left, U right)
-	if (not(is(CommonType!(T,U) == void)))
+	if (not (is(CommonType!(T,U) == void)))
 	{/*...}*/
 		return [left, right];
 	}
@@ -48,13 +49,13 @@ bool overlaps (T)(const T[2] A, const T[2] B)
 		assert (A.left < B.left);
 		assert (A.right < B.left);
 
-		assert (not (A.overlaps (B)));
+		assert (A.not!overlaps (B));
 		A.right = 11;
-		assert (not (A.overlaps (B)));
+		assert (A.not!overlaps (B));
 		A.right = 12;
 		assert (A.overlaps (B));
 		B.left = 13;
-		assert (not (A.overlaps (B)));
+		assert (A.not!overlaps (B));
 	}
 
 /* test if an interval is contained within another 
@@ -69,21 +70,21 @@ bool is_contained_in (T)(T[2] A, T[2] B)
 		auto C = interval (10, 11);
 		auto D = interval (9, 17);
 
-		assert (not (A.is_contained_in (B)));
-		assert (not (A.is_contained_in (C)));
-		assert (not (A.is_contained_in (D)));
+		assert (A.not!is_contained_in (B));
+		assert (A.not!is_contained_in (C));
+		assert (A.not!is_contained_in (D));
 
 		assert (B.is_contained_in (A));
-		assert (not (B.is_contained_in (C)));
-		assert (not (B.is_contained_in (D)));
+		assert (B.not!is_contained_in (C));
+		assert (B.not!is_contained_in (D));
 
-		assert (not (C.is_contained_in (A)));
-		assert (not (C.is_contained_in (B)));
+		assert (C.not!is_contained_in (A));
+		assert (C.not!is_contained_in (B));
 		assert (C.is_contained_in (D));
 
-		assert (not (D.is_contained_in (A)));
-		assert (not (D.is_contained_in (B)));
-		assert (not (D.is_contained_in (C)));
+		assert (D.not!is_contained_in (A));
+		assert (D.not!is_contained_in (B));
+		assert (D.not!is_contained_in (C));
 	}
 
 /* test if a point is contained within an interval 

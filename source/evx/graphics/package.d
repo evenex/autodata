@@ -1,4 +1,5 @@
 module evx.graphics;
+version(none):
 public:
 import evx.graphics.opengl;
 import evx.graphics.resource;

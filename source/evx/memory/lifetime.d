@@ -1,4 +1,5 @@
 module evx.memory.lifetime;
+version(none):
 
 private {/*import}*/
 	import evx.type;

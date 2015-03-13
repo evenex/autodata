@@ -1,4 +1,5 @@
 module evx.patterns.library;
+version(none):
 
 /* generate a member load_library function which automatically looks up member extern (C) function pointer identifiers in linked C libraries  
 	due to the way dmd processes mixins, function pointers must be declared above the mixin.

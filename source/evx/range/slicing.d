@@ -1,4 +1,5 @@
 module evx.range.slicing;
+version(none):
 
 private {/*imports}*/
 	import std.algorithm;

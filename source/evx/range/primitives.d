@@ -1,4 +1,5 @@
 module evx.range.primitives;
+version(none):
 
 private {/*imports}*/
 	import std.range;

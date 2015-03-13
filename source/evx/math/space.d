@@ -1,4 +1,5 @@
 module evx.math.space;
+version(none):
 
 private {/*import}*/
 	import evx.type;

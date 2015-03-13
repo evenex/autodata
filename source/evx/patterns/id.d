@@ -1,4 +1,5 @@
 module evx.patterns.id;
+version(none):
 
 /* generate Id, a unique (up to host type) identifier type 
 */

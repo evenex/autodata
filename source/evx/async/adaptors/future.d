@@ -1,4 +1,5 @@
 module evx.async.adaptors.future;
+version(none):
 
 private {/*imports}*/
 	import core.thread;

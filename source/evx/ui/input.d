@@ -1,4 +1,5 @@
 module evx.ui.input;
+version(none):
 
 private {/*imports}*/
 	private {/*std}*/

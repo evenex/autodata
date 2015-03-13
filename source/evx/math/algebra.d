@@ -1,4 +1,5 @@
 module evx.math.algebra;
+version(none):
 
 private {/*...}*/
 	import std.conv;

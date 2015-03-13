@@ -1,4 +1,5 @@
 module evx.dynamics.spatial;
+version(none):
 
 private {/*imports}*/
 	import dchip.all;

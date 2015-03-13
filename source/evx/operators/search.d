@@ -1,4 +1,5 @@
 module evx.operators.search;
+version(none):
 
 /* generate an `in` operator from a search function
 

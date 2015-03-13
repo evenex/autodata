@@ -1,4 +1,5 @@
 module evx.camera;
+version(none):
 version (none):
 
 private {/*imports}*/

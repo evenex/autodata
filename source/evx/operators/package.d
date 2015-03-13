@@ -1,4 +1,5 @@
 module evx.operators;
+version(none):
 public:
 import evx.operators.limit;
 import evx.operators.index;
