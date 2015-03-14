@@ -1,5 +1,4 @@
 module evx.operators.error;
-version(none):
 
 package template StandardErrorMessages ()
 	{/*...}*/

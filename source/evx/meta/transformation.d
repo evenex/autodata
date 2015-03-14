@@ -3,6 +3,7 @@ module evx.meta.transformation;
 private {/*import}*/
 	import std.typecons;
 	import evx.meta.resolution;
+	import evx.meta.traits;
 }
 
 alias Identity (T...) = T[0]; 

@@ -1,5 +1,4 @@
 module evx.operators.buffer;
-version(none):
 
 /* generate RAII ctor/dtor and copy/free assignment operators from allocate function, with TransferOps 
 	move/copy semantics are customizable via composition with lifetime templates
@@ -13,11 +12,11 @@ version(none):
 template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
 		private {/*imports}*/
-			import evx.type;
+			import evx.meta;
 			import evx.operators.transfer;
 		}
 
-		this (Parameters!allocate dimensions)
+		this (Domain!allocate dimensions)
 			{/*...}*/
 				allocate (dimensions);
 			}
@@ -30,14 +29,11 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 				this = null;
 			}
 
-		ref opAssign ()(auto ref this space)
+		ref opAssigne ()(auto ref this space)
 			{/*...}*/
-				import evx.memory.transfer; // REVIEW
-				// TODO change blit to move and unittest... if all good, always move
+				import evx.memory.transfer;
 
-				static if (__traits(isRef, space))// REVIEW move if not ref, but blit if ref? seems to work ok... but is there ever a case for duplication? should we enforce move semantics on buffers?
-					space.blit (this); // BUG this won't trigger our destructor, and therefore may result in an orphaned resource... destructive copy?
-				else space.move (this); // move is destructive swap... so really we have swaps and copies in destructive and nondestructive variants
+				space.move (this);
 
 				return this;
 			}
@@ -50,38 +46,38 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 					` to ` ~ typeof(this).stringof;
 
 				enum parameter_mismatch_error = error_header
-					~ `access parameters ` ~ Parameters!access.stringof ~
-					` do not match allocate parameters ` ~ Parameters!allocate.stringof;
+					~ `access parameters ` ~ Domain!access.stringof ~
+					` do not match allocate parameters ` ~ Domain!allocate.stringof;
 
-				static assert (is (Parameters!allocate == Parameters!access),
+				static assert (is (Domain!allocate == Domain!access),
 					parameter_mismatch_error
 				);
 
 				static if (is (typeof(space.limit!0)))
 					{/*...}*/
-						foreach (i, LimitType; Parameters!allocate)
+						foreach (i, LimitType; Domain!allocate)
 							static assert (is (typeof(space.limit!i.left) : LimitType),
 								cannot_assign_error ~ ` (dimension or type mismatch)`
 							);
 
-						static assert (not (is (typeof(space.limit!(Parameters!access.length)))),
+						static assert (not (is (typeof(space.limit!(Domain!access.length)))),
 							cannot_assign_error ~ `(` ~ S.stringof ~ ` has too many dimensions)`
 						);
 					}
 				else static if (is (typeof(space.length)) && not (is (typeof(this[selected].limit!1))))
 					{/*...}*/
-						static assert (is (typeof(space.length.identity) : Parameters!allocate[0]),
+						static assert (is (typeof(space.length.identity) : Domain!allocate[0]),
 							cannot_assign_error ~ ` (length is incompatible)`
 						);
 					}
 				else static assert (0, cannot_assign_error);
 			}
 			body {/*...}*/
-				Parameters!allocate size;
+				Domain!allocate size;
 
 				auto read_limits ()()
 					{/*...}*/
-						foreach (i; Count!(Parameters!access))
+						foreach (i; Count!(Domain!access))
 							size[i] = space.limit!i.width;
 					}
 				auto read_length ()()
@@ -101,14 +97,14 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 			}
 		ref opAssign (typeof(null))
 			out {/*...}*/
-				foreach (i, T; Parameters!access)
-					assert (this[].limit!i.width == zero!T);
+				foreach (i, T; Domain!access)
+					assert (this[].limit!i.width == T(0));
 			}
 			body {/*...}*/
-				Parameters!access zeroed;
+				Domain!access zeroed;
 
 				foreach (ref size; zeroed)
-					size = zero!(typeof(size));
+					size = typeof(size)(0);
 
 				allocate (zeroed);
 
@@ -118,10 +114,26 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 		mixin TransferOps!(pull, access, LimitsAndExtensions);
 	}
 	unittest {/*...}*/
-		import evx.math;
 		import evx.memory;
 		import evx.memory.transfer; // REVIEW doc this - memory transfer module must be explicitly imported, as its dangerous and could conflict with range transfers
+
+		import evx.operators.slice;
+		import evx.operators.range;
+
 		import std.conv;
+		import std.algorithm: map;
+		import std.range: enumerate;
+
+		static struct Nat
+			{/*...}*/
+				static access (size_t i)
+					{/*...}*/
+						return i;
+					}
+				enum length = size_t.max;
+
+				static mixin SliceOps!(access, length, RangeOps);
+			}
 
 		static struct Basic
 			{/*...}*/
@@ -143,7 +155,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 					}
 				auto pull (R)(R range, size_t[2] limits)
 					{/*...}*/
-						foreach (i, j; enumerate (ℕ[limits.left..limits.right]))
+						foreach (i, j; enumerate (Nat[limits.left..limits.right]))
 							data[j] = range[i];
 					}
 
@@ -155,7 +167,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 				mixin BufferOps!(allocate, pull, access, length);
 			}
 
-		auto N = ℕ[500..525].map!(to!int);
+		auto N = Nat[500..525].map!(to!int);
 
 		// can initialize via assignment or constructor from any element-compatible range
 		Basic x = N;
@@ -239,7 +251,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 					}
 				auto pull (R)(R range, size_t[2] limits)
 					{/*...}*/
-						foreach (i, j; enumerate (ℕ[limits.left..limits.right]))
+						foreach (i, j; enumerate (Nat[limits.left..limits.right]))
 							data[j] = range[i];
 					}
 

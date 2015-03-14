@@ -5,6 +5,8 @@ private {/*import}*/
 
 	import evx.meta.lambda;
 	import evx.meta.list;
+
+	import std.range: join; // REVIEW join
 }
 
 alias Instantiate (alias symbol) = symbol!();
@@ -28,29 +30,24 @@ template Match (patterns...)
 		else alias Match = Instantiate!(Filtered[0]);
 	}
 
-version(none):
-
-private {/*import}*/
-	import std.range;
-}
-
 /* mixin overload priority will route calls to the given symbol 
 		to the first given mixin alias which can complete the call
 	useful for controlling mixin overload sets
 */
+
 /* mixin a variadic overload function 
 */
-// REVIEW to pattern matching
-static function_overload_priority (string symbol, MixinAliases...)()
+string function_overload_priority (string symbol, MixinAliases...)()
 	{/*...}*/
 		return q{auto } ~symbol~ q{ (Args...)(Args args)}
 			`{` 
 				~ attempt_overloads!(symbol ~ q{(args)}, MixinAliases) ~ 
 			`}`;
 	}
+
 /* mixin a variadic overload template 
 */
-static template_overload_priority (string symbol, MixinAliases...)()
+string template_overload_priority (string symbol, MixinAliases...)()
 	{/*...}*/
 		return q{template } ~symbol~ q{ (Args...)}
 			`{` 
@@ -58,9 +55,10 @@ static template_overload_priority (string symbol, MixinAliases...)()
 					.replace (q{return}, q{alias } ~ symbol ~ q{ = }) ~ 
 			`}`;
 	}
+
 /* mixin a variadic overload template function
 */
-static template_function_overload_priority (string symbol, MixinAliases...)()
+string template_function_overload_priority (string symbol, MixinAliases...)()
 	{/*...}*/
 		return q{template } ~symbol~ q{ (CTArgs...)}
 			`{` 

@@ -1,5 +1,4 @@
 module evx.operators.write;
-version(none):
 
 static if (0) // TEMP
 version = enable_rejected_transfer_warning;
@@ -121,7 +120,21 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 
 		import evx.math;
 		import evx.misc.test;
-		import evx.range;
+		import evx.operators.slice;
+		import evx.operators.range;
+		import std.range: only, enumerate;
+		import std.algorithm: map;
+
+		static struct Nat
+			{/*...}*/
+				static access (size_t i)
+					{/*...}*/
+						return i;
+					}
+				enum length = size_t.max;
+
+				static mixin SliceOps!(access, length, RangeOps);
+			}
 
 		static struct Basic
 			{/*...}*/
@@ -135,7 +148,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 					}
 				auto pull (R)(R range, size_t[2] limits)
 					{/*...}*/
-						foreach (i, j; enumerate (ℕ[limits.left..limits.right]))
+						foreach (i, j; enumerate (Nat[limits.left..limits.right]))
 							data[j] = range[i];
 					}
 
@@ -222,7 +235,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 					}
 				auto pull (R)(R range, size_t[2] limits)
 					{/*...}*/
-						foreach (i, j; enumerate (ℕ[limits.left..limits.right]))
+						foreach (i, j; enumerate (Nat[limits.left..limits.right]))
 							data[j] = range[i];
 					}
 
@@ -266,19 +279,19 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 		no_error (w[0..3] = only (1,2,3,4));
 
 		auto q = z[100..200];
-		q[0..100] = ℕ[800..900].map!(to!int);
+		q[0..100] = Nat[800..900].map!(to!int);
 		assert (q[0] == 800);
 		assert (q[99] == 899);
 		assert (z[100] == 800);
 		assert (z[199] == 899);
-		q[$/2..$] = ℕ[120..170].map!(to!int);
+		q[$/2..$] = Nat[120..170].map!(to!int);
 		assert (q[0] == 800);
 		assert (q[50] == 120);
 		assert (q[99] == 169);
 		assert (z[100] == 800);
 		assert (z[150] == 120);
 		assert (z[199] == 169);
-		q[] = ℕ[1111..1211].map!(to!int);
+		q[] = Nat[1111..1211].map!(to!int);
 		assert (q[0] == 1111);
 		assert (q[50] == 1161);
 		assert (q[99] == 1210);
@@ -286,7 +299,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 		assert (z[150] == 1161);
 		assert (z[199] == 1210);
 
-		z[] = ℕ[0..z.length].map!(to!int);
+		z[] = Nat[0..z.length].map!(to!int);
 
 		foreach (i; 0..z.length)
 			assert (z[i] == i);

@@ -1,12 +1,12 @@
 module evx.operators.multilimit;
-version(none):
 
 private {/*imports}*/
 	import std.algorithm: swap;
 
-	import evx.type;
-	import evx.math.intervals;
-	import evx.math.logic;
+	import evx.meta;
+	import evx.interval;
+	import evx.logic;
+	import evx.algebra;
 }
 
 /* WARNING experimental -- 
@@ -16,6 +16,8 @@ private {/*imports}*/
 */
 template MultiLimitOps (size_t dim, limits...)
 	{/*...}*/
+		mixin LambdaCapture;
+
 		auto opDollar (size_t i: dim)()
 			{/*...}*/
 				alias Limits = Map!(Λ!q{(T...) = typeof(T[0].identity)}, limits);
@@ -31,7 +33,7 @@ template MultiLimitOps (size_t dim, limits...)
 				foreach (i, Lim; Limits)
 					static if (is (Lim == T[2], T))
 						multilimit.limits[i] = limits[i];
-					else multilimit.limits[i] = [zero!Lim, limits[i]];
+					else multilimit.limits[i] = [Lim(0), limits[i]];
 
 				return multilimit;
 			}

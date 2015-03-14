@@ -1,5 +1,4 @@
 module evx.operators.slice;
-version(none):
 
 /* generate slicing operators with IndexOps
 
@@ -21,10 +20,9 @@ template SliceOps (alias access, LimitsAndExtensions...)
 			import std.conv: to;
 
 			import evx.operators.index;
-			import evx.math.logic; // REVIEW for Any, does Any belong in logic?
-			import evx.type;
 
-			alias Identity = evx.type.processing.Identity;
+			import evx.meta;
+			import evx.algebra;
 		}
 		public:
 		public {/*opIndex}*/
@@ -56,8 +54,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 
 							static if (is (T == U[2], U))
 								U[2] boundary = limits[i];
-
-							else T[2] boundary = [zero!T, limits[i]];
+							else T[2] boundary = [T(0), limits[i]];
 
 							static if (is (typeof(limit.identity) == typeof(boundary)))
 								assert (
@@ -73,7 +70,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 									out_of_bounds_error (limit, boundary)
 									~ ` (in)`
 								);
-							else static assert (0, T.stringof);
+							else static assert (0, typeof(limit.identity).stringof ~ ` incompatible with ` ~ typeof(boundary).stringof);
 						}
 				}
 				out (result) {/*...}*/
@@ -126,7 +123,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 									bounds[i] = limit;
 								else static if (is_proper_sub)
 									bounds[i][] = limit;
-								else bounds[i] = [zero!(typeof(limit.identity)), limit];
+								else bounds[i] = [typeof(limit.identity)(0), limit];
 
 							auto local_access ()() {return Subspace (&this, bounds);}
 							auto static_access ()() {return Subspace (null, bounds);}
@@ -137,7 +134,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 				}
 		}
 		public {/*opSlice}*/
-			alias Parameter (int i) = Parameters!access[i];
+			alias Parameter (int i) = Domain!access[i];
 
 			Parameter!d[2] opSlice (size_t d)(Parameter!d i, Parameter!d j)
 				{/*...}*/
@@ -147,6 +144,8 @@ template SliceOps (alias access, LimitsAndExtensions...)
 		public {/*Sub}*/
 			template SubGenerator (Dimensions...)
 				{/*...}*/
+					mixin LambdaCapture;
+
 					public {/*source}*/
 						Source* source;
 					}
@@ -160,16 +159,13 @@ template SliceOps (alias access, LimitsAndExtensions...)
 					public {/*limits}*/
 						auto limit (size_t dim)() const
 							{/*...}*/
-								static if (is (Cons!(typeof(this.origin.identity)) == Parameters!access))
-									{/*...}*/
-										auto boundary = unity!(typeof(bounds[Dimensions[dim]]));
+								alias T = Unqual!(ElementType!(typeof(bounds[Dimensions[dim]])));
 
-										static if (is (typeof(origin[0])))
-											boundary[] *= -origin[(Dimensions[dim])];
+								auto multi ()() {return -origin[(Dimensions[dim])];}
+								auto uni   ()() {return -origin;}
+								auto zero  ()() {return T(0);}
 
-										else boundary[] *= -origin;
-									}
-								else auto boundary = zero!(typeof(bounds[Dimensions[dim]]));
+								T[2] boundary = [Repeat!(2, Match!(multi, uni, zero))];
 
 								boundary.right += bounds[Dimensions[dim]].width;
 
@@ -197,8 +193,6 @@ template SliceOps (alias access, LimitsAndExtensions...)
 											static assert (Selected.length == Dimensions.length,
 												type_mismatch_error
 											);
-
-										mixin LambdaCapture;
 
 										static assert (
 											All!(Pair!().Both!is_implicitly_convertible,
@@ -233,10 +227,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 										typeof(bounds) bounds;
 
 										foreach (i,_; bounds)
-											{/*...}*/
-												bounds[i] = unity!(typeof(bounds[i]));
-												bounds[i][] *= this.bounds[i].left;
-											}
+											bounds[i] = [this.bounds[i].left, this.bounds[i].left];
 										
 										foreach (i, j; Dimensions)
 											static if (is (typeof(selected[i]) == T[2], T))
@@ -270,7 +261,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 							}
 					}
 					public {/*opSlice}*/
-						alias Parameter (int i) = Parameters!access[(Dimensions[i])];
+						alias Parameter (int i) = Domain!access[(Dimensions[i])];
 
 						Parameter!d[2] opSlice (size_t d)(Parameter!d i, Parameter!d j)
 							{/*...}*/
@@ -291,7 +282,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 				{/*...}*/
 					mixin SubGenerator!Dimensions sub;
 
-					alias Element = ReturnType!access;
+					alias Element = Codomain!access;
 
 					static extensions ()
 						{/*...}*/
@@ -320,7 +311,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 	}
 	unittest {/*...}*/
 		import evx.misc.test;
-		import evx.math.logic;
+		import evx.logic;
 		import evx.operators.multilimit;
 
 		static struct Basic

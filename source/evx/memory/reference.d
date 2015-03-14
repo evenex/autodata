@@ -1,5 +1,4 @@
 module evx.memory.reference;
-version(none):
 
 private {/*import}*/
 	import evx.math.logic;

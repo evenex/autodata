@@ -102,7 +102,7 @@ template IndexOps (alias access, limits...)
 
 		mixin LimitOps!limits;
 	}
-	void main () {/*...}*/
+	unittest {/*...}*/
 		import evx.misc.test;
 
 		static struct Basic

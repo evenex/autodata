@@ -1,5 +1,4 @@
 module evx.operators.transfer;
-version(none):
 
 /* generate WriteOps with input bounds checking
 	
@@ -80,11 +79,24 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 		mixin WriteOps!(verified_limit_pull, access, LimitsAndExtensions);
 	}
 	unittest {/*...}*/
-		import evx.math;
-		import evx.range;
+		import evx.logic;
 		import evx.misc.test;
 		import evx.operators.write;
 		import evx.operators.slice;
+		import evx.operators.range;
+		import std.range: only, enumerate, retro;
+		import std.math: approx = approxEqual;
+
+		static struct Nat
+			{/*...}*/
+				static access (size_t i)
+					{/*...}*/
+						return i;
+					}
+				enum length = size_t.max;
+
+				static mixin SliceOps!(access, length, RangeOps);
+			}
 
 		template Basic ()
 			{/*...}*/
@@ -98,7 +110,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 					}
 				auto pull (R)(R range, size_t[2] limits)
 					{/*...}*/
-						foreach (i, j; enumerate (ℕ[limits.left..limits.right]))
+						foreach (i, j; enumerate (Nat[limits.left..limits.right]))
 							data[j] = range[i];
 					}
 

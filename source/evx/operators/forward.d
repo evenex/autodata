@@ -1,5 +1,4 @@
 module evx.operators.forward;
-version(none):
 
 template ForwardOps (alias target)
 	{/*...}*/

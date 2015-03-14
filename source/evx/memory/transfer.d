@@ -1,5 +1,4 @@
 module evx.memory.transfer;
-version(none):
 
 private {/*imports}*/
 	import std.algorithm;

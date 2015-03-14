@@ -2,6 +2,9 @@ module evx.meta.list;
 
 private {/*import}*/
 	import std.typetuple;
+	import std.typecons;
+
+	import evx.meta.transformation;
 }
 
 ////
@@ -11,7 +14,6 @@ alias Iota (size_t n) = staticIota!(0,n);
 alias Iota (size_t l, size_t r) = staticIota!(l,r);
 
 alias Repeat (size_t n, T...) = Cons!(T, Repeat!(n-1, T));
-alias Repeat (size_t n : 1, T...) = Cons!T;
 alias Repeat (size_t n : 0, T...) = Cons!();
 
 ////

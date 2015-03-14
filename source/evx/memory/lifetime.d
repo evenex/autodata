@@ -1,12 +1,11 @@
 module evx.memory.lifetime;
-version(none):
 
 private {/*import}*/
-	import evx.type;
-	import evx.patterns;
-	import evx.operators;
+	import evx.meta;
+	import evx.patterns; // REVIEW
+	import evx.operators.forward; // REVIEW
 
-	import evx.math.logic;
+	import evx.logic;
 
 	import evx.memory.transfer;
 }
