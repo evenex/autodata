@@ -689,7 +689,7 @@ public {/*zip}*/
 		{/*...}*/
 			return Zipped!Spaces (spaces);
 		}
-		void main () {/*...}*/
+		unittest {/*...}*/
 			import spacecadet.meta.test;
 
 			int[4] x = [1,2,3,4], y = [4,3,2,1];
