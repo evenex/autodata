@@ -1,0 +1,11 @@
+{
+	"name": "spacecadet",
+	"description": "spatial interface library",
+	"copyright": "Copyright © 2014-2015, Vlad Levenfeld",
+	"authors": ["Vlad Levenfeld"],
+	"targetType": "executable",
+	"buildRequirements": ["disallowDeprecations"],
+	"buildOptions": ["debugInfo", "alwaysStackFrame"],
+	"_buildOptions": ["releaseMode", "optimize", "inline", "noBoundsCheck"],
+	"postBuildCommands": ["echo '<>>'"]
+}
