@@ -14,12 +14,20 @@ template RangeOps ()
 			@property {/*...}*/
 				auto ref front () {return this[~$];}
 				auto ref back () {return this[$-1];}
+
 				auto popFront () {++bounds[Dimensions[0]].left;}
 				auto popBack () {--bounds[Dimensions[0]].right;}
+
 				auto empty () {return length == 0;}
 				auto length () const {return bounds[Dimensions[0]].width;}
+
 				auto save () {return this;}
-				auto opEquals (R)(R range) {return std.algorithm.equal (save, range);}
+
+				auto opEquals (R)(R range)
+					{/*...}*/
+						import std.algorithm: equal;
+						return equal (save, range);
+					}
 			}
 	}
 	unittest {/*...}*/

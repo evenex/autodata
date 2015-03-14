@@ -42,3 +42,11 @@ enum is_enumerable (T...) = is (typeof((){enum x = T[0];}()));
 /* test if a type is a builtin floating point type
 */
 alias is_floating_point = isFloatingPoint;
+
+/* test if a range belongs to a given range category 
+*/
+alias is_input_range = std.range.isInputRange;
+alias is_output_range = std.range.isOutputRange;
+alias is_forward_range = std.range.isForwardRange;
+alias is_bidirectional_range = std.range.isBidirectionalRange;
+alias is_random_access_range = std.range.isRandomAccessRange;
