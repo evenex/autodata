@@ -1,9 +1,10 @@
 module spacecadet.spaces.array;
-version (none):
 
 private {/*import}*/
 	import std.typecons;
+	import std.range.primitives: front, back, popFront, popBack, empty;
 
+	import spacecadet.math;
 	import spacecadet.meta;
 	import spacecadet.operators;
 }
@@ -121,7 +122,7 @@ struct Array (T, uint dimensions = 1)
 
 		mixin BufferOps!(allocate, pull, access, Map!(length, Iota!dimensions), RangeOps);
 	}
-	void main() {/*...}*/
+	unittest {/*...}*/
 		auto x = Array!int ();
 
 		x = [1,2,3];
@@ -173,13 +174,13 @@ auto array (S)(S space)
 			S.stringof ~ ` has 0 dimensions; if it is a container, try passing a slice [] instead`
 		);
 
-		static assert (is_range!S);
+	//	static assert (is_range!S); REVIEW
 	}
 	body {/*...}*/
-		static if (is (typeof(S == Array!(Element!S, dimensionality!S))))
+		static if (is (typeof(S == Array!(ElementType!S, dimensionality!S))))
 			return space;
 
-		else return Array!(Element!S, dimensionality!S)(space);
+		else return Array!(ElementType!S, dimensionality!S)(space);
 	}
 	unittest {/*...}*/
 		auto x = [1,2,3].array;

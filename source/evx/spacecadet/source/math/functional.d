@@ -8,7 +8,6 @@ private {/*import}*/
 
 
 	import spacecadet.meta;
-	import spacecadet.operators;
 
 	import spacecadet.math.algebra;
 	import spacecadet.math.interval;
@@ -157,6 +156,7 @@ public {/*map}*/
 		}
 		unittest {/*...}*/
 			import std.range: only;
+			import spacecadet.operators;
 
 			int[8] x = [1,2,3,4,5,6,7,8];
 
@@ -387,7 +387,7 @@ public {/*filter}*/
 	/* traverse the subrange consisting only of elements which match a given criteria 
 	*/
 
-	struct Filtered (R, alias match = identity)
+	struct Filtered (R, alias match)
 		{/*...}*/
 			R range;
 			enum is_n_ary_function = is (typeof(match (range.front.expand)));
@@ -691,6 +691,7 @@ public {/*zip}*/
 		}
 		unittest {/*...}*/
 			import spacecadet.meta.test;
+			import spacecadet.operators;
 
 			int[4] x = [1,2,3,4], y = [4,3,2,1];
 
