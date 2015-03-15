@@ -31,7 +31,7 @@ struct CartesianProduct (Spaces...)
 		auto access (Map!(CoordinateType, Spaces) point)
 			in {/*...}*/
 				static assert (typeof(point).length >= Spaces.length,
-					`could not deduce coordinate type for ` ~ Spaces.stringof
+					`could not deduce coordinate type for ` ~Spaces.stringof
 				);
 			}
 			body {/*...}*/

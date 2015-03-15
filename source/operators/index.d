@@ -21,19 +21,19 @@ template IndexOps (alias access, limits...)
 			in {/*...}*/
 				version (all)
 					{/*error messages}*/
-						enum error_header = typeof(this).stringof ~ `: `;
+						enum error_header = typeof(this).stringof~ `: `;
 
-						enum element_type_error = error_header ~ `access primitive must return a non-void value`;
+						enum element_type_error = error_header~ `access primitive must return a non-void value`;
 
-						enum array_error = error_header ~ `limit types must be singular or arrays of two`
-						`: ` ~ Map!(ExprType, limits).stringof;
+						enum array_error = error_header~ `limit types must be singular or arrays of two`
+						`: ` ~Map!(ExprType, limits).stringof;
 
-						enum type_error = error_header ~ `limit base types must match access parameter types`
-						`: ` ~ Map!(ExprType, limits).stringof
-						~ ` !→ ` ~ Domain!access.stringof;
+						enum type_error = error_header~ `limit base types must match access parameter types`
+						`: ` ~Map!(ExprType, limits).stringof
+						~ ` !→ ` ~Domain!access.stringof;
 
 						auto out_of_bounds_error (Arg, Lim)(Arg arg, Lim limit) 
-							{return error_header ~ `bounds exceeded! ` ~ arg.text ~ ` not in ` ~ limit.text;}
+							{return error_header~ `bounds exceeded! ` ~arg.text~ ` not in ` ~limit.text;}
 					}
 
 				static assert (not (is (Codomain!access == void)), 

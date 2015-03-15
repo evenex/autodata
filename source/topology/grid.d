@@ -41,7 +41,7 @@ struct Grid (S)
 auto grid (S, T...)(S space, T cells)
 	{/*...}*/
 		static assert (typeof(cells).length == dimensionality!S,
-			`only ` ~ T.length.text ~ ` cell given for ` ~ dimensionality!S.text ~ `D space`
+			`only ` ~T.length.text~ ` cell given for ` ~dimensionality!S.text~ `D space`
 		);
 
 		return Grid!S (space, cells);

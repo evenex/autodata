@@ -206,8 +206,8 @@ struct Zipped (Spaces...)
 
 
 							assert (base == lim, `zip error: `
-								`mismatched limits! ` ~ lim.text ~ ` != ` ~ base.text
-								~ ` in ` ~ Spaces[i].stringof
+								`mismatched limits! ` ~lim.text~ ` != ` ~base.text
+								~ ` in ` ~Spaces[i].stringof
 							);
 						}
 			}

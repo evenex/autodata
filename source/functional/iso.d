@@ -140,7 +140,7 @@ struct Mapped (Domain, alias f, Parameters...)
 					else static if (is (typeof(domain.front)))
 						auto subdomain = domain.front;
 					else static assert (0, `map error: `
-						~ Domain.stringof ~ ` is not a range (no front) or a space (no limit!i)`
+						~ Domain.stringof~ ` is not a range (no front) or a space (no limit!i)`
 					);
 
 					static if (is (typeof (f (subdomain))))

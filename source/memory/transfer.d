@@ -41,7 +41,7 @@ auto bytes (T)(T x)
 void blit (byte[] src, byte[] tgt)
 	in {/*...}*/
 		assert (src.length == tgt.length,
-			src.length.text ~ ` != ` ~ tgt.length.text
+			src.length.text~ ` != ` ~tgt.length.text
 		);
 	}
 	body {/*...}*/

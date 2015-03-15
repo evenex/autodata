@@ -172,7 +172,7 @@ struct Array (T, uint dimensions = 1)
 auto array (S)(S space)
 	in {/*...}*/
 		static assert (dimensionality!S > 0,
-			S.stringof ~ ` has 0 dimensions; if it is a container, try passing a slice [] instead`
+			S.stringof~ ` has 0 dimensions; if it is a container, try passing a slice [] instead`
 		);
 	}
 	body {/*...}*/

@@ -41,15 +41,15 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 			}
 		ref opAssign (S)(S space)
 			in {/*...}*/
-				enum error_header = full_name!(typeof(this)) ~ `: `;
+				enum error_header = full_name!(typeof(this))~ `: `;
 
 				enum cannot_assign_error = error_header
-					~ `cannot assign ` ~ S.stringof ~
-					` to ` ~ typeof(this).stringof;
+					~ `cannot assign ` ~S.stringof ~
+					` to ` ~typeof(this).stringof;
 
 				enum parameter_mismatch_error = error_header
-					~ `access parameters ` ~ Domain!access.stringof ~
-					` do not match allocate parameters ` ~ Domain!allocate.stringof;
+					~ `access parameters ` ~Domain!access.stringof ~
+					` do not match allocate parameters ` ~Domain!allocate.stringof;
 
 				static assert (is (Domain!allocate == Domain!access),
 					parameter_mismatch_error
@@ -59,17 +59,17 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 					{/*...}*/
 						foreach (i, LimitType; Domain!allocate)
 							static assert (is (typeof(space.limit!i.left) : LimitType),
-								cannot_assign_error ~ ` (dimension or type mismatch)`
+								cannot_assign_error~ ` (dimension or type mismatch)`
 							);
 
 						static assert (not (is (typeof(space.limit!(Domain!access.length)))),
-							cannot_assign_error ~ `(` ~ S.stringof ~ ` has too many dimensions)`
+							cannot_assign_error~ `(` ~S.stringof~ ` has too many dimensions)`
 						);
 					}
 				else static if (is (typeof(space.length)) && not (is (typeof(this[selected].limit!1))))
 					{/*...}*/
 						static assert (is (typeof(space.length.identity) : Domain!allocate[0]),
-							cannot_assign_error ~ ` (length is incompatible)`
+							cannot_assign_error~ ` (length is incompatible)`
 						);
 					}
 				else static assert (0, cannot_assign_error);

@@ -47,7 +47,7 @@ struct MultiLimit (T...)
 		U opCast (U)()
 			in {/*...}*/
 				static assert (Contains!(U,T),
-					`cannot cast ` ~ typeof(this).stringof ~ ` to ` ~ U.stringof
+					`cannot cast ` ~typeof(this).stringof~ ` to ` ~U.stringof
 				);
 			}
 			body {/*...}*/
@@ -60,7 +60,7 @@ struct MultiLimit (T...)
 					Any!(Pair!().Both!(λ!q{(T,U) = is (U : T)}),
 						Zip!(T, Repeat!(T.length, U))
 					),
-					U.stringof ~ ` does not convert to any ` ~ T.stringof
+					U.stringof~ ` does not convert to any ` ~T.stringof
 				);
 			}
 			body {/*...}*/

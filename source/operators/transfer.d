@@ -16,10 +16,10 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 			in {/*...}*/
 				version (all)
 					{/*error messages}*/
-						enum error_header = full_name!(typeof(this)) ~ `: `;
+						enum error_header = full_name!(typeof(this))~ `: `;
 
 						enum type_mismatch_error = error_header
-							~ `cannot transfer ` ~ S.stringof ~ ` to `
+							~ `cannot transfer ` ~S.stringof~ ` to `
 							~ Filter!(λ!q{(T) = is (T == U[2], U)}, Selected).stringof
 							~ ` subsource`;
 
@@ -27,7 +27,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 							{/*...}*/
 								return error_header
 								~ `assignment size mismatch `
-								`(` ~ this_size.text ~ ` != ` ~ that_size.text ~ `)`;
+								`(` ~this_size.text~ ` != ` ~that_size.text~ `)`;
 							}
 					}
 

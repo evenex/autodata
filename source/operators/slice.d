@@ -572,14 +572,14 @@ package {/*error}*/
 			alias Element (T) = ElementType!(Select!(is (T == U[2], U), T, T[2]));
 
 			static if (__traits(compiles, full_name!(typeof(this))))
-				enum error_header = full_name!(typeof(this)) ~ `: `;
+				enum error_header = full_name!(typeof(this))~ `: `;
 
-			else enum error_header = typeof(this).stringof ~ `: `;
+			else enum error_header = typeof(this).stringof~ `: `;
 
 			enum type_mismatch_error = error_header
-				~ Map!(Element, Selected).stringof ~ ` does not convert to ` ~ Map!(Element, Map!(ExprType, limits)).stringof;
+				~ Map!(Element, Selected).stringof~ ` does not convert to ` ~Map!(Element, Map!(ExprType, limits)).stringof;
 
 			auto out_of_bounds_error (T, U)(T arg, U limit) 
-				{return error_header ~ `bounds exceeded! ` ~ arg.text ~ ` not in ` ~ limit.text;}
+				{return error_header~ `bounds exceeded! ` ~arg.text~ ` not in ` ~limit.text;}
 		}
 }

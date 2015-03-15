@@ -28,8 +28,8 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 					|| is (typeof(pull (space, this[].bounds)))
 					|| is (typeof(access (selected) = space)),
 
-					typeof(this).stringof ~ ` cannot pull ` ~ S.stringof
-					~ ` through ` ~ Selected.stringof
+					typeof(this).stringof~ ` cannot pull ` ~S.stringof
+					~ ` through ` ~Selected.stringof
 				);
 			}
 			body {/*...}*/
@@ -55,7 +55,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 						))
 							{/*...}*/
 								static if (is (typeof(*space.source) == Src, Src))
-									enum from = Src.stringof ~ `.` ~ S.stringof;
+									enum from = Src.stringof~ `.` ~S.stringof;
 								else enum from = S.stringof;
 							}
 					}

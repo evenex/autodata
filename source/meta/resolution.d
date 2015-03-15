@@ -21,7 +21,7 @@ template Match (patterns...)
 				import std.array: replace;
 
 				static assert (0, 
-					`none of ` ~ patterns.stringof
+					`none of ` ~patterns.stringof
 					.replace (`()`, ``)
 					~ ` could be matched`
 				);
@@ -79,7 +79,7 @@ private {/*impl}*/
 						return } ~ __traits(identifier, Alias) ~ q{.} ~ call ~ q{;
 				};
 
-			attempts ~= q{static assert (0, typeof(this).stringof ~ `: no overloads for `}`"` ~ call ~ `"`q{` found`);};
+			attempts ~= q{static assert (0, typeof(this).stringof~ `: no overloads for `}`"` ~call~ `"`q{` found`);};
 
 			return join (attempts, q{else }).to!string;
 		}
