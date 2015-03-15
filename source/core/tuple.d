@@ -1,9 +1,11 @@
 module spacecadet.core.tuple;
 
 private {/*import}*/
-	import std.typecons: Tuple;
+	import std.typecons;
 	import spacecadet.meta;
 }
+
+alias tuple = std.typecons.tuple;
 
 template Flatten (T...)
 	{/*...}*/
