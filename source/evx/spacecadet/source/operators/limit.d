@@ -13,6 +13,7 @@ template LimitOps (limits...)
 	{/*...}*/
 		private {/*imports}*/
 			import spacecadet.meta;
+			import spacecadet.functional;
 		}
 
 		static assert (All!(is_const_function, Filter!(is_function, limits)),

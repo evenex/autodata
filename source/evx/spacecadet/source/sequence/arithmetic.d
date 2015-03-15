@@ -1,11 +1,11 @@
-module spacecadet.sequence;
+module spacecadet.sequence.arithmetic;
 
 private {/*import}*/
 	import std.range.primitives: front, back, popFront, popBack, empty;
 
+	import spacecadet.core;
 	import spacecadet.meta;
-	import spacecadet.core.functional;
-	import spacecadet.core.logic;
+	import spacecadet.functional;
 }
 
 /* compute the product of a sequence 

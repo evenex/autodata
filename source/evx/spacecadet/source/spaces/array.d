@@ -6,6 +6,7 @@ private {/*import}*/
 
 	import spacecadet.core;
 	import spacecadet.meta;
+	import spacecadet.functional;
 	import spacecadet.operators;
 	import spacecadet.sequence;
 }

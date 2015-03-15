@@ -23,7 +23,8 @@ template SliceOps (alias access, LimitsAndExtensions...)
 			import spacecadet.operators.index;
 
 			import spacecadet.meta;
-			import spacecadet.core;
+			//import spacecadet.core; REVIEW
+			import spacecadet.functional;
 		}
 		public:
 		public {/*opIndex}*/
