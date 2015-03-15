@@ -32,10 +32,7 @@ template IndexOps (alias access, limits...)
 						`: ` ~ Map!(ExprType, limits).stringof
 						~ ` !→ ` ~ Domain!access.stringof;
 
-						auto bounds_inverted_error (LimitType)(LimitType limit) 
-							{return error_header ~ `bounds inverted! ` ~ limit.left.text ~ ` > ` ~ limit.right.text;}
-
-						auto out_of_bounds_error (LimitType, U)(LimitType arg, U limit) 
+						auto out_of_bounds_error (Arg, Lim)(Arg arg, Lim limit) 
 							{return error_header ~ `bounds exceeded! ` ~ arg.text ~ ` not in ` ~ limit.text;}
 					}
 
@@ -66,27 +63,9 @@ template IndexOps (alias access, limits...)
 
 				foreach (i, limit; limits)
 					{/*bounds check}*/
-						static if (is (typeof(limit.identity) == LimitType[2], LimitType))
-							assert (limit.left <= limit.right, bounds_inverted_error (limit));
-
-						static if (is (LimitType))
-							assert (
-								limit.left == limit.right? (
-									selected[i] == limit.left
-								) : (
-									selected[i] >= limit.left
-									&& selected[i] < limit.right
-								),
-								out_of_bounds_error (selected[i], limit)
-							);
-						else assert (
-							limit == typeof(limit.identity)(0)? (
-								selected[0] == typeof(limit.identity)(0)
-							) : (
-								selected[i] >= typeof(limit.identity)(0)
-								&& selected[i] < limit
-							),
-							out_of_bounds_error (selected[i], [typeof(limit.identity)(0), limit])
+						assert (
+							selected[i].is_contained_in (limit.interval),
+							out_of_bounds_error (selected[i], limit.interval)
 						);
 					}
 			}
@@ -248,3 +227,6 @@ template IndexOps (alias access, limits...)
 		error (MultiDimensional()[1, $]);
 		error (MultiDimensional()[$, $]);
 	}
+
+
+void main (){}

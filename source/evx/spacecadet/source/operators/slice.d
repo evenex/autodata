@@ -49,7 +49,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 							);
 						}
 
-					foreach (i, limit; selected)
+					foreach (i,_; selected)
 						{/*bounds check}*/
 							alias T = Unqual!(typeof(limits[i].identity));
 
@@ -57,21 +57,11 @@ template SliceOps (alias access, LimitsAndExtensions...)
 								U[2] boundary = limits[i];
 							else T[2] boundary = [T(0), limits[i]];
 
-							static if (is (typeof(limit.identity) == typeof(boundary)))
-								assert (
-									boundary.left <= limit.left
-									&& limit.right <= boundary.right,
-									out_of_bounds_error (limit, boundary)
-									~ ` (in)`
-								);
-							else static if (is (typeof(limit.identity) : ElementType!(typeof(boundary))))
-								assert (
-									boundary.left <= limit
-									&& limit < boundary.right,
-									out_of_bounds_error (limit, boundary)
-									~ ` (in)`
-								);
-							else static assert (0, typeof(limit.identity).stringof ~ ` incompatible with ` ~ typeof(boundary).stringof);
+							assert (
+								selected[i].is_contained_in (boundary),
+								out_of_bounds_error (selected[i], boundary)
+								~ ` (in)`
+							);
 						}
 				}
 				out (result) {/*...}*/
@@ -209,15 +199,8 @@ template SliceOps (alias access, LimitsAndExtensions...)
 
 								foreach (i,_; selected)
 									{/*bounds check}*/
-										static if (is (typeof(selected[i]) == T[2], T))
-											assert (
-												limit!i.left <= selected[i].left
-												&& selected[i].right <= limit!i.right,
-												out_of_bounds_error (selected[i], limit!i)
-											);
-										else assert (
-											limit!i.left <= selected[i]
-											&& selected[i] < limit!i.right,
+										assert (
+											selected[i].is_contained_in (limit!i),
 											out_of_bounds_error (selected[i], limit!i)
 										);
 									}
