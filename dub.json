@@ -1,21 +1,11 @@
 {
-	"name": "engine_vX",
-	"description": "TCR engine prototype 10",
-	"copyright": "Copyright © 2014-2015, evenex",
-	"authors": ["evenex"],
-	"dependencies": {
-		"derelict-glfw3": "~master",
-		"derelict-gl3"  : "~master",
-		"derelict-ft"  	: "~master",
-		"dchip"		  	: "~master",
-	},
-	"versions": ["FLOAT_UNITS"],
-	"_versions": ["generate_dependency_graph"],
-	"libs": ["GL", "freetype-gl", "freetype", "GLEW"],
+	"name": "spacecadet",
+	"description": "spatial interface library",
+	"copyright": "Copyright © 2014-2015, Vlad Levenfeld",
+	"authors": ["Vlad Levenfeld"],
 	"targetType": "executable",
 	"buildRequirements": ["disallowDeprecations"],
 	"buildOptions": ["debugInfo", "alwaysStackFrame"],
 	"_buildOptions": ["releaseMode", "optimize", "inline", "noBoundsCheck"],
-	"_dflags": ["-v"],
 	"postBuildCommands": ["echo '<>>'"]
 }
