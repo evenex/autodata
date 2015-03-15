@@ -79,7 +79,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 		mixin WriteOps!(verified_limit_pull, access, LimitsAndExtensions);
 	}
 	unittest {/*...}*/
-		import spacecadet.math;
+		import spacecadet.core;
 		import spacecadet.meta.test;
 		import spacecadet.operators.write;
 		import spacecadet.operators.slice;

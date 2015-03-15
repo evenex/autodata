@@ -14,7 +14,7 @@ template IndexOps (alias access, limits...)
 
 			import spacecadet.operators.limit;
 			import spacecadet.meta;
-			import spacecadet.math;
+			import spacecadet.core;
 		}
 
 		auto ref Codomain!access opIndex (Domain!access selected)

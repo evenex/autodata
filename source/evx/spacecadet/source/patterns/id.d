@@ -6,7 +6,7 @@ mixin template TypeUniqueId (uint bit = 0)
 	{/*...}*/
 		static assert (is(typeof(this)), `mixin requires host struct`);
 
-		import spacecadet.math;
+		import spacecadet.core;
 
 		struct Id
 			{/*...}*/

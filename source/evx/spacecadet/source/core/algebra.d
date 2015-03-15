@@ -1,5 +1,11 @@
-module spacecadet.math.logic;
+module spacecadet.core.logic;
 
+private {/*import}*/
+	import spacecadet.meta;
+}
+
+/* named logical inversion operator 
+*/
 template not ()
 	{/*...}*/
 		bool not (T)(T value)

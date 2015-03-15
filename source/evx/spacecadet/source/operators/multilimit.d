@@ -4,7 +4,7 @@ private {/*imports}*/
 	import std.algorithm: swap;
 
 	import spacecadet.meta;
-	import spacecadet.math;
+	import spacecadet.core;
 }
 
 /* WARNING experimental -- 

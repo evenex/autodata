@@ -4,9 +4,10 @@ private {/*import}*/
 	import std.typecons;
 	import std.range.primitives: front, back, popFront, popBack, empty;
 
-	import spacecadet.math;
+	import spacecadet.core;
 	import spacecadet.meta;
 	import spacecadet.operators;
+	import spacecadet.sequence;
 }
 
 struct Array (T, uint dimensions = 1)

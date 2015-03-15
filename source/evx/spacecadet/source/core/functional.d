@@ -1,19 +1,26 @@
-module spacecadet.math.functional;
+module spacecadet.core.functional;
 
 private {/*import}*/
 	import std.typecons: Tuple, tuple;
 	import std.range.primitives: front, back, popFront, popBack, empty;
 	import std.conv: text;
 	import std.algorithm: equal;
-
-
+	import spacecadet.core.logic;
 	import spacecadet.meta;
-
-	import spacecadet.math.algebra;
-	import spacecadet.math.interval;
-	import spacecadet.math.logic;
 }
 
+public {/*identity}*/
+	/* generic identity transform
+	*/
+	T identity (T)(T that)
+		{/*...}*/
+			return that;
+		}
+
+	/* test if identity transform is defined for a type 
+	*/
+	enum has_identity (T...) = is (typeof(T[0].identity));
+}
 public {/*map}*/
 	/* apply a given function to the elements in a range 
 	*/
@@ -28,7 +35,7 @@ public {/*map}*/
 					auto slice_all ()() if (Args.length == 0) {return domain;}
 					auto get_point ()() {return domain[args];}
 					auto get_space ()() {return domain.opIndex (args);}
-					auto get_range ()() if (Args.length == 1) {return domain[args[0].left..args[0].right];}
+					auto get_range ()() if (Args.length == 1) {return domain[args[0][0]..args[0][1]];}
 
 					auto subdomain = Match!(slice_all, get_point, get_space, get_range);
 

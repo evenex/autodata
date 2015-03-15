@@ -1,18 +1,15 @@
-module spacecadet.math.interval;
-/* generic interval type 
-*/
+module spacecadet.core.interval;
 
 private {/*import}*/
 	import std.algorithm: min, max;
-
+	import spacecadet.core.logic;
 	import spacecadet.meta;
-	import spacecadet.math.logic;
 }
 
 /* convenience constructor 
 */
 CommonType!(T,U)[2] interval (T,U)(T left, U right)
-	if (not (is(CommonType!(T,U) == void)))
+	if (not (is (CommonType!(T,U) == void)))
 	out (result) {/*...}*/
 		assert (result.is_valid_interval);
 	}

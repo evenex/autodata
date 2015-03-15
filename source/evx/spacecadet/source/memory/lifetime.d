@@ -1,9 +1,9 @@
 module spacecadet.memory.lifetime;
 
 private {/*import}*/
+	import spacecadet.core;
 	import spacecadet.meta;
 	import spacecadet.patterns;
-	import spacecadet.math;
 	import spacecadet.memory.transfer;
 }
 

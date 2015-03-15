@@ -4,7 +4,7 @@ private {/*imports}*/
 	import std.algorithm;
 	import std.conv;
 
-	import spacecadet.math;
+	import spacecadet.core;
 }
 
 /* convenience structure for representing structs as byte arrays 

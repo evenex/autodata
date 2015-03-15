@@ -23,7 +23,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 			import spacecadet.operators.index;
 
 			import spacecadet.meta;
-			import spacecadet.math;
+			import spacecadet.core;
 		}
 		public:
 		public {/*opIndex}*/
@@ -295,7 +295,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 	}
 	unittest {/*...}*/
 		import spacecadet.meta.test;
-		import spacecadet.math;
+		import spacecadet.core;
 		import spacecadet.operators.multilimit;
 
 		static struct Basic
