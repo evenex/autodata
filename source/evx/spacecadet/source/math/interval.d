@@ -13,16 +13,25 @@ private {/*import}*/
 */
 CommonType!(T,U)[2] interval (T,U)(T left, U right)
 	if (not (is(CommonType!(T,U) == void)))
-	{/*...}*/
+	out (result) {/*...}*/
+		assert (result.is_valid_interval);
+	}
+	body {/*...}*/
 		return [left, right];
 	}
-auto interval (T)(T[2] bounds)
-	{/*...}*/
-		return bounds;
+auto interval (T)(T[2] interval)
+	out (result) {/*...}*/
+		assert (result.is_valid_interval);
+	}
+	body {/*...}*/
+		return interval;
 	}
 auto interval (T)(T right)
 	if (not (is (T == U[2], U)))
-	{/*...}*/
+	out (result) {/*...}*/
+		assert (result.is_valid_interval);
+	}
+	body 	{/*...}*/
 		return interval (T(0), right);
 	}
 	unittest {/*...}*/
@@ -46,26 +55,34 @@ auto interval (T)(T right)
 
 /* named access to first and second elements of T[2] 
 */
-auto ref left (T)(auto ref T[2] bounds)
-	{return bounds[0];}
-auto ref right (T)(auto ref T[2] bounds)
-	{return bounds[1];}
+auto ref left (T)(auto ref T[2] interval)
+	in {/*...}*/
+		assert (interval.is_valid_interval);
+	}
+	body {/*...}*/
+		return interval[0];
+	}
+auto ref right (T)(auto ref T[2] interval)
+	in {/*...}*/
+		//assert (interval.is_valid_interval);
+	}
+	body {/*...}*/
+		return interval[1];
+	}
 
 /* distance between the endpoints of an interval
 */
-auto width (T)(T[2] bounds)
-	{return bounds.right - bounds.left;}
-
-/* test if an interval's endpoints are ordered 
-*/
-auto is_valid_interval (T)(T[2] bounds)
-	{/*...}*/
-		return bounds.left <= bounds.right;
+auto width (T)(T[2] interval)
+	in {/*...}*/
+	//	assert (interval.is_valid_interval);
+	}
+	body {/*...}*/
+		return interval.right - interval.left;
 	}
 
 /* test if two intervals overlap 
 */
-bool overlaps (T)(const T[2] a, const T[2] b)
+bool overlaps (T)(T[2] a, T[2] b)
 	in {/*...}*/
 		assert (a.is_valid_interval);
 		assert (b.is_valid_interval);
@@ -93,7 +110,7 @@ bool overlaps (T)(const T[2] a, const T[2] b)
 
 /* test if an interval is contained within another 
 */
-bool is_contained_in (T)(const T[2] a, const T[2] b) // assert intervals in order
+bool is_contained_in (T)(T[2] a, T[2] b)
 	in {/*...}*/
 		assert (a.is_valid_interval);
 		assert (b.is_valid_interval);
@@ -126,16 +143,29 @@ bool is_contained_in (T)(const T[2] a, const T[2] b) // assert intervals in orde
 
 /* test if a point is contained within an interval 
 */
-bool is_contained_in (T)(T x, T[2] bounds)
+bool is_contained_in (T)(T x, T[2] interval)
+	in {/*...}*/
+		//assert (interval.is_valid_interval);
+	}
+	body {/*...}*/
+		return (interval.left <= x && x < interval.right)
+			|| (interval.left == interval.right && x == interval.left);
+	}
+
+/* test if an interval's endpoints are ordered 
+*/
+bool is_valid_interval (T)(T[2] interval)
 	{/*...}*/
-		return (bounds.left <= x && x < bounds.right)
-			|| (bounds.left == bounds.right && x == bounds.left);
+		return interval[0] <= interval[1];
 	}
 
 /* clamp a value to an interval
 */
 auto clamp (T,U)(T value, U[2] interval)
-	{/*...}*/
+	in {/*...}*/
+		//assert (interval.is_valid_interval);
+	}
+	body {/*...}*/
 		value = max (value, interval.left);
 		value = min (value, interval.right);
 
