@@ -227,6 +227,3 @@ template IndexOps (alias access, limits...)
 		error (MultiDimensional()[1, $]);
 		error (MultiDimensional()[$, $]);
 	}
-
-
-void main (){}
