@@ -29,11 +29,13 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 				this = null;
 			}
 
-		ref opAssigne ()(auto ref this space)
+		ref opAssign ()(auto ref this space)
 			{/*...}*/
 				import spacecadet.memory;
 
-				space.move (this);
+				static if (__traits(isRef, space))
+					space.blit (this);
+				else space.move (this);
 
 				return this;
 			}
