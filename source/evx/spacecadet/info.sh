@@ -1,4 +1,4 @@
-HEADER="--spacecadet toolkit--"
+HEADER="--spacecadet--"
 echo "$HEADER"
 echo ""
 ./info/info
