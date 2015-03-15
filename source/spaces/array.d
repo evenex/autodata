@@ -1,7 +1,6 @@
 module spacecadet.spaces.array;
 
 private {/*import}*/
-	import std.typecons;
 	import std.range.primitives: front, back, popFront, popBack, empty;
 
 	import spacecadet.core;
