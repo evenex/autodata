@@ -32,7 +32,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 
 			auto ref opIndex (Selected...)(Selected selected)
 				in {/*...}*/
-					alias Error = ErrorMessages!(typeof(this), Tuple!Selected, limits);
+					alias Error = ErrorMessages!(Source, Tuple!Selected, limits);
 
 					static if (Selected.length > 0)
 						{/*type check}*/
@@ -66,7 +66,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 						}
 				}
 				out (result) {/*...}*/
-					alias Error = ErrorMessages!(typeof(this), Tuple!Selected, limits);
+					alias Error = ErrorMessages!(Source, Tuple!Selected, limits);
 
 					static if (is (typeof(result) == Sub!T, T...))
 						{/*...}*/
@@ -177,7 +177,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 							}
 						auto ref opIndex (Selected...)(Selected selected)
 							in {/*...}*/
-								alias Error = ErrorMessages!(typeof(this), Tuple!Selected, limits);
+								alias Error = ErrorMessages!(Source, Tuple!Selected, limits);
 
 								version (all)
 									{/*type check}*/
@@ -574,10 +574,7 @@ package {/*error}*/
 
 			alias Element (T) = ElementType!(Select!(is (T == U[2], U), T, T[2]));
 
-			static if (__traits(compiles, full_name!This))
-				enum error_header = full_name!This~ `: `;
-
-			else enum error_header = This.stringof~ `: `;
+			enum error_header = This.stringof~ `: `;
 
 			enum type_mismatch = error_header
 				~ Map!(Element, Selected.Types).stringof~ ` does not convert to ` ~Map!(Element, Map!(ExprType, limits)).stringof;
