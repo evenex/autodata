@@ -32,21 +32,21 @@ template SliceOps (alias access, LimitsAndExtensions...)
 
 			auto ref opIndex (Selected...)(Selected selected)
 				in {/*...}*/
-					mixin ErrorMessages;
+					alias Error = ErrorMessages!(typeof(this), Tuple!Selected, limits);
 
 					static if (Selected.length > 0)
 						{/*type check}*/
 							static assert (Selected.length == limits.length, 
-								type_mismatch_error
+								Error.type_mismatch
 							);
 
 							static assert (
 								All!(Pair!().Both!is_implicitly_convertible,
 									Zip!(
-										Map!(Element, Selected),
-										Map!(Element, Map!(ExprType, limits)),
+										Map!(Error.Element, Selected),
+										Map!(Error.Element, Map!(ExprType, limits)),
 									)
-								), type_mismatch_error
+								), Error.type_mismatch
 							);
 						}
 
@@ -60,26 +60,26 @@ template SliceOps (alias access, LimitsAndExtensions...)
 
 							assert (
 								selected[i].is_contained_in (boundary),
-								out_of_bounds_error (selected[i], boundary)
+								Error.out_of_bounds (selected[i], boundary)
 								~ ` (in)`
 							);
 						}
 				}
 				out (result) {/*...}*/
-					mixin ErrorMessages;
+					alias Error = ErrorMessages!(typeof(this), Tuple!Selected, limits);
 
 					static if (is (typeof(result) == Sub!T, T...))
 						{/*...}*/
 							foreach (i, limit; selected)
 								static if (is (typeof(limit) == U[2], U))
 									assert (limit == result.bounds[i],
-										out_of_bounds_error (limit, result.bounds[i])
+										Error.out_of_bounds (limit, result.bounds[i])
 										~ ` (out)`
 									);
 								else assert (
 									limit == result.bounds[i].left
 									&& limit == result.bounds[i].right,
-									out_of_bounds_error (limit, result.bounds[i])
+									Error.out_of_bounds (limit, result.bounds[i])
 									~ ` (out)`
 								);
 						}
@@ -177,24 +177,24 @@ template SliceOps (alias access, LimitsAndExtensions...)
 							}
 						auto ref opIndex (Selected...)(Selected selected)
 							in {/*...}*/
-								mixin ErrorMessages;
+								alias Error = ErrorMessages!(typeof(this), Tuple!Selected, limits);
 
 								version (all)
 									{/*type check}*/
 										static if (Selected.length > 0)
 											static assert (Selected.length == Dimensions.length,
-												type_mismatch_error
+												Error.type_mismatch
 											);
 
 										static assert (
 											All!(Pair!().Both!is_implicitly_convertible,
 												Zip!(
-													Map!(Element, Selected),
-													Map!(Element, 
+													Map!(Error.Element, Selected),
+													Map!(Error.Element, 
 														Map!(Λ!q{(int i) = typeof(limits[i].identity)}, Dimensions)
 													),
 												)
-											), type_mismatch_error
+											), Error.type_mismatch
 										);
 									}
 
@@ -202,7 +202,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 									{/*bounds check}*/
 										assert (
 											selected[i].is_contained_in (limit!i),
-											out_of_bounds_error (selected[i], limit!i)
+											Error.out_of_bounds (selected[i], limit!i)
 										);
 									}
 							}
@@ -567,19 +567,22 @@ template SliceOps (alias access, LimitsAndExtensions...)
 	}
 
 package {/*error}*/
-	template ErrorMessages ()
+	struct ErrorMessages (This, Selected, limits...)
 		{/*...}*/
+			import std.conv;
+			import spacecadet.meta;
+
 			alias Element (T) = ElementType!(Select!(is (T == U[2], U), T, T[2]));
 
-			static if (__traits(compiles, full_name!(typeof(this))))
-				enum error_header = full_name!(typeof(this))~ `: `;
+			static if (__traits(compiles, full_name!This))
+				enum error_header = full_name!This~ `: `;
 
-			else enum error_header = typeof(this).stringof~ `: `;
+			else enum error_header = This.stringof~ `: `;
 
-			enum type_mismatch_error = error_header
-				~ Map!(Element, Selected).stringof~ ` does not convert to ` ~Map!(Element, Map!(ExprType, limits)).stringof;
+			enum type_mismatch = error_header
+				~ Map!(Element, Selected.Types).stringof~ ` does not convert to ` ~Map!(Element, Map!(ExprType, limits)).stringof;
 
-			auto out_of_bounds_error (T, U)(T arg, U limit) 
+			static out_of_bounds (T, U)(T arg, U limit) 
 				{return error_header~ `bounds exceeded! ` ~arg.text~ ` not in ` ~limit.text;}
 		}
 }
