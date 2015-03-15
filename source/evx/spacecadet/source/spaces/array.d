@@ -173,8 +173,6 @@ auto array (S)(S space)
 		static assert (dimensionality!S > 0,
 			S.stringof ~ ` has 0 dimensions; if it is a container, try passing a slice [] instead`
 		);
-
-	//	static assert (is_range!S); REVIEW
 	}
 	body {/*...}*/
 		static if (is (typeof(S == Array!(ElementType!S, dimensionality!S))))
