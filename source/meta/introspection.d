@@ -19,6 +19,10 @@ alias Codomain = std.traits.ReturnType;
 */
 alias FieldTypes = std.traits.FieldTypeTuple;
 
+/* get the common implictly convertible type, if any, among several types 
+*/
+alias CommonType = std.traits.CommonType;
+
 /* get the element type, which a space contains 
 */
 template ElementType (S)
