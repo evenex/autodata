@@ -22,7 +22,7 @@ alias Map = staticMap;
 
 alias Count (T...) = Iota!(T.length);
 
-alias Indexed (T...) = Zip!(Count!T, T);
+alias Enumerate (T...) = Zip!(Count!T, T);
 
 template Sort (alias compare, T...)
 	{/*...}*/
