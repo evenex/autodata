@@ -175,7 +175,7 @@ struct Zipped (Spaces...)
 
 				static assert (All!(λ!q{(int d) = d == Dimensionalities[0]}, Dimensionalities),
 					`zip error: dimension mismatch! ` 
-					~ Interleave!(Spaces, Dimensionalities)
+					~Interleave!(Spaces, Dimensionalities)
 						.stringof[`tuple(`.length..$-1]
 						.replace (`),`, `):`)
 				);
@@ -184,7 +184,7 @@ struct Zipped (Spaces...)
 					foreach (i; Count!Spaces)
 						{/*bounds check}*/
 							enum no_measure_error (int i) = `zip error: `
-								~ Spaces[i].stringof
+								~Spaces[i].stringof
 								~ ` does not define limit or integral length (const)`;
 
 							static if (is (typeof(spaces[0].limit!d)))

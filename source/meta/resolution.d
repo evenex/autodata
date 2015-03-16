@@ -40,7 +40,7 @@ string function_overload_priority (string symbol, MixinAliases...)()
 	{/*...}*/
 		return q{auto } ~symbol~ q{ (Args...)(Args args)}
 			`{` 
-				~ attempt_overloads!(symbol ~ q{(args)}, MixinAliases) ~ 
+				~attempt_overloads!(symbol ~ q{(args)}, MixinAliases) ~ 
 			`}`;
 	}
 
@@ -50,7 +50,7 @@ string template_overload_priority (string symbol, MixinAliases...)()
 	{/*...}*/
 		return q{template } ~symbol~ q{ (Args...)}
 			`{` 
-				~ attempt_overloads!(symbol ~ q{!Args}, MixinAliases)
+				~attempt_overloads!(symbol ~ q{!Args}, MixinAliases)
 					.replace (q{return}, q{alias } ~ symbol ~ q{ = }) ~ 
 			`}`;
 	}
@@ -63,7 +63,7 @@ string template_function_overload_priority (string symbol, MixinAliases...)()
 			`{` 
 				q{auto } ~symbol~ q{ (RTArgs...)(RTArgs args)}
 					`{` 
-						~ attempt_overloads!(symbol ~ q{!CTArgs (args)}, MixinAliases) ~ 
+						~attempt_overloads!(symbol ~ q{!CTArgs (args)}, MixinAliases) ~ 
 					`}`
 			`}`;
 	}

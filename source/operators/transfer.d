@@ -20,7 +20,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 
 						enum type_mismatch_error = error_header
 							~ `cannot transfer ` ~S.stringof~ ` to `
-							~ Filter!(λ!q{(T) = is (T == U[2], U)}, Selected).stringof
+							~Filter!(λ!q{(T) = is (T == U[2], U)}, Selected).stringof
 							~ ` subsource`;
 
 						auto size_mismatch_error (T,U)(T this_size, U that_size)

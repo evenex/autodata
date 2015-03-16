@@ -577,7 +577,7 @@ package {/*error}*/
 			enum error_header = This.stringof~ `: `;
 
 			enum type_mismatch = error_header
-				~ Map!(Element, Selected.Types).stringof~ ` does not convert to ` ~Map!(Element, Map!(ExprType, limits)).stringof;
+				~Map!(Element, Selected.Types).stringof~ ` does not convert to ` ~Map!(Element, Map!(ExprType, limits)).stringof;
 
 			static out_of_bounds (T, U)(T arg, U limit) 
 				{return error_header~ `bounds exceeded! ` ~arg.text~ ` not in ` ~limit.text;}

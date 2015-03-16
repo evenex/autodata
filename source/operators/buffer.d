@@ -44,12 +44,12 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 				enum error_header = full_name!(typeof(this))~ `: `;
 
 				enum cannot_assign_error = error_header
-					~ `cannot assign ` ~S.stringof ~
-					` to ` ~typeof(this).stringof;
+					~ `cannot assign ` ~S.stringof
+					~ ` to ` ~typeof(this).stringof;
 
 				enum parameter_mismatch_error = error_header
-					~ `access parameters ` ~Domain!access.stringof ~
-					` do not match allocate parameters ` ~Domain!allocate.stringof;
+					~ `access parameters ` ~Domain!access.stringof
+					~ ` do not match allocate parameters ` ~Domain!allocate.stringof;
 
 				static assert (is (Domain!allocate == Domain!access),
 					parameter_mismatch_error
