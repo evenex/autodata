@@ -59,13 +59,13 @@ template vector (size_t n)
 					{/*...}*/
 						return Vector!(n,T)(v);
 					}
-				else static if (is (typeof(v + v * v) == V))
-					{/*...}*/
-						return Vector!(n,V)(v);
-					}
 				else static if (not (is (ElementType!V == void)))
 					{/*...}*/
 						return Vector!(n, ElementType!V)(v);
+					}
+				else static if (is (typeof(v + v * v)))
+					{/*...}*/
+						return Vector!(n,V)(v);
 					}
 				else static if (is (typeof(v.tupleof) == T, T))
 					{/*...}*/
@@ -265,7 +265,7 @@ struct Vector (size_t n, Component = double)
 				return components.text;
 			}
 	}
-	void main () {/*...}*/
+	unittest {/*...}*/
 		import std.algorithm: equal;
 		import std.math;
 
