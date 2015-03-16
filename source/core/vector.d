@@ -1,26 +1,13 @@
-module spacecadet.spaces.vector;
+module spacecadet.core.vector;
 
 private {/*import}*/
 	import std.conv: to, text;
 	import std.range.primitives: empty;
 	import std.algorithm: count_until = countUntil;
 	import std.range: join;
-	import spacecadet.core;
+	import spacecadet.core.logic;
 	import spacecadet.meta;
-	import spacecadet.operators;
-	import spacecadet.sequence;
 }
-
-import spacecadet.functional;
-/* generate a foreach index for a custom range 
-	this exploits the automatic tuple foreach index unpacking trick which is obscure and under controversy
-	reference: https://issues.dlang.org/show_bug.cgi?id=7361
-*/
-auto enumerate (R)(R range)
-	if (is_input_range!R && has_length!R)
-	{/*...}*/
-		return zip (ℕ[0..range.length], range);
-	}
 
 /* convenience constructors 
 */
@@ -97,19 +84,8 @@ auto each (alias f, V, Args...)(V v, Args args)
 struct Vector (size_t n, Component = double)
 	{/*...}*/
 		Component[n] components;
+		alias components this;
 		enum length = n;
-
-		ref component (size_t i) 
-			{/*...}*/
-				return components[i];
-			}
-		void pull (S)(S source, size_t[2] interval)
-			{/*...}*/
-				foreach (i, j; enumerate (ℕ[interval.left..interval.right]))
-					components[j] = source[i];
-			}
-
-		mixin TransferOps!(pull, component, n, RangeOps);
 
 		auto opUnary (string op)()
 			{/*...}*/
@@ -164,41 +140,6 @@ struct Vector (size_t n, Component = double)
 				});
 
 				return this;
-			}
-		auto opIndexUnary (string op)(size_t[2] limits)
-			if (op.length == 2)
-			{/*...}*/
-				foreach (i; limits.left..limits.right)
-					mixin(q{
-						} ~op~ q{ this[i];
-					});
-
-				return this[limits.left..limits.right];
-			}
-		auto opIndexOpAssign (string op, V)(V v, size_t[2] limits)
-			{/*...}*/
-				static if (not (is (typeof(v.length))))
-					auto rhs = v.vector!n;
-				else alias rhs = v;
-
-				foreach (i, j; enumerate (ℕ[limits.left..limits.right]))
-					mixin(q{
-						components[j] } ~op~ q{= rhs[i];
-					});
-
-				return this[limits.left..limits.right];
-			}
-		auto opIndexOpAssign (string op, V)(V v)
-			{/*...}*/
-				mixin(q{
-					this[~$..$] } ~op~ q{= v;
-				});
-
-				return this[];
-			}
-		auto opEquals (T)(T v)
-			{/*...}*/
-				return this.components == v;
 			}
 
 		auto ref opDispatch (string swizzle)()
@@ -361,7 +302,7 @@ struct Vector (size_t n, Component = double)
 		static assert (not (__traits(compiles, q.z)));
 
 		// slice assignment and arithmetic
-		u[0..3] += [1,2,3];
+		u[0..3] += [1,2,3f];
 		assert (u == [-1,-1,-1,-5]);
 
 		u[0..2] = q;
@@ -370,7 +311,7 @@ struct Vector (size_t n, Component = double)
 		v[] = u.each!(to!int);
 		assert (v == [-2,-3,-1,-5]);
 
-		u[1..4] -= v[1..4];
+		u[1..4] -= v[1..4].Vector!(3, float)[];
 		assert (u == [-2,0,0,0]);
 
 		v[] *= -1;
