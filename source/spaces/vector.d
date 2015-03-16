@@ -1,7 +1,7 @@
 module spacecadet.spaces.vector;
 
 private {/*import}*/
-	import std.conv: text;
+	import std.conv: to, text;
 	import std.range.primitives: empty;
 	import std.algorithm: count_until = countUntil;
 	import std.range: join;
@@ -11,38 +11,85 @@ private {/*import}*/
 	import spacecadet.sequence;
 }
 
+import spacecadet.functional;
+/* generate a foreach index for a custom range 
+	this exploits the automatic tuple foreach index unpacking trick which is obscure and under controversy
+	reference: https://issues.dlang.org/show_bug.cgi?id=7361
+*/
+auto enumerate (R)(R range)
+	if (is_input_range!R && has_length!R)
+	{/*...}*/
+		return zip (ℕ[0..range.length], range);
+	}
+
 /* convenience constructors 
 */
 template vector ()
 	{/*...}*/
-		auto vector (V)(V that)
+		auto vector (V)(V v)
 			{/*...}*/
 				static if (is (V : Vector!(n,T), T, size_t n))
-					return that;
+					{/*...}*/
+						return v;
+					}
 				else static if (is (V : T[n], T, size_t n))
-					return that.construct_vector!n;
-				else static if (is (typeof(that.tupleof) == T, T))
-					return that.construct_vector!(T.length);
-				else static assert (0, V.stringof);
+					{/*...}*/
+						return Vector!(n,T)(v);
+					}
+				else static if (is (typeof(v.tupleof) == T, T))
+					{/*...}*/
+						return Vector!(T.length, CommonType!T)(v.tupleof);
+					}
+				else static assert (0, `cannot construct vector from ` ~V.stringof);
 			}
 		auto vector (T...)(T args)
 			{/*...}*/
-				CommonType!T[T.length] array = [args];
-
-				return vector (array);
+				return Vector!(T.length, CommonType!T)(args);
 			}
 	}
 template vector (size_t n)
 	{/*...}*/
-		alias vector = construct_vector!n;
+		auto vector (V)(V v)
+			{/*...}*/
+				static if (is (V : Vector!(n,T), T))
+					{/*...}*/
+						return v;
+					}
+				else static if (is (V : T[n], T))
+					{/*...}*/
+						return Vector!(n,T)(v);
+					}
+				else static if (is (typeof(v + v * v) == V))
+					{/*...}*/
+						return Vector!(n,V)(v);
+					}
+				else static if (not (is (ElementType!V == void)))
+					{/*...}*/
+						return Vector!(n, ElementType!V)(v);
+					}
+				else static if (is (typeof(v.tupleof) == T, T))
+					{/*...}*/
+						return Vector!(n, CommonType!T)(v.tupleof);
+					}
+				else static assert (0, `cannot construct vector from ` ~V.stringof);
+			}
+		auto vector (T...)(T args)
+			{/*...}*/
+				return Vector!(n, CommonType!T)(args);
+			}
 	}
 
-/* componentwise map which constructs a new vector 
+/* componentwise map to a new vector 
 */
-auto each (alias f, V, Args...)(V vector, Args args)
+auto each (alias f, V, Args...)(V v, Args args)
 	if (is (V == Vector!(n,T), size_t n, T))
 	{/*...}*/
-		mixin(unroll_vector_mapping!(V.length-1));
+		Vector!(V.length, typeof(f (v[0], args))) mapped;
+
+		foreach (i; Iota!(V.length))
+			mapped[i] = f(v[i], args);
+
+		return mapped;
 	}
 
 /* generic vector type with space and algebraic operators 
@@ -58,7 +105,7 @@ struct Vector (size_t n, Component = double)
 			}
 		void pull (S)(S source, size_t[2] interval)
 			{/*...}*/
-				foreach (i, j; ℕ[interval.left..interval.right])
+				foreach (i, j; enumerate (ℕ[interval.left..interval.right]))
 					components[j] = source[i];
 			}
 
@@ -86,33 +133,72 @@ struct Vector (size_t n, Component = double)
 					}
 				else static assert (0);
 			}
-		auto opBinary (string op, V)(V that)
+		auto opBinary (string op, V)(V v)
 			{/*...}*/
 				auto lhs = this;
-				auto rhs = that.vector!n;
-				enum rhs_argtype = ArgType.vector;
+				auto rhs = v.vector!n;
 
-				mixin(unroll_vector_arithmetic!(op, n-1, Repeat!(2, ArgType.vector)));
+				alias T = typeof(mixin(q{lhs[0] } ~op~ q{ rhs[0]}));
+				Vector!(n,T) ret;
+
+				foreach (i; Iota!n)
+					mixin(q{
+						ret[i] = lhs[i] } ~op~ q{ rhs[i];
+					});
+
+				return ret;
 			}
-		auto opBinaryRight (string op, V)(V that)
+		auto opBinaryRight (string op, V)(V v)
 			{/*...}*/
-				auto lhs = that.vector!n;
+				auto lhs = v.vector!n;
 				auto rhs = this;
-				enum lhs_argtype = ArgType.vector;
 
-				mixin(unroll_vector_arithmetic!(op, n-1, Repeat!(2, ArgType.vector)));
+				mixin(q{
+					return lhs } ~op~ q{ rhs;
+				});
 			}
-		ref opOpAssign (string op, U)(U that)
+		auto ref opOpAssign (string op, V)(V v)
 			{/*...}*/
 				mixin(q{
-					this = this } ~op~ q{ that;
+					this = this } ~op~ q{ v;
 				});
 
 				return this;
 			}
-		auto opEquals (T)(T that)
+		auto opIndexUnary (string op)(size_t[2] limits)
+			if (op.length == 2)
 			{/*...}*/
-				return this.components == that;
+				foreach (i; limits.left..limits.right)
+					mixin(q{
+						} ~op~ q{ this[i];
+					});
+
+				return this[limits.left..limits.right];
+			}
+		auto opIndexOpAssign (string op, V)(V v, size_t[2] limits)
+			{/*...}*/
+				static if (not (is (typeof(v.length))))
+					auto rhs = v.vector!n;
+				else alias rhs = v;
+
+				foreach (i, j; enumerate (ℕ[limits.left..limits.right]))
+					mixin(q{
+						components[j] } ~op~ q{= rhs[i];
+					});
+
+				return this[limits.left..limits.right];
+			}
+		auto opIndexOpAssign (string op, V)(V v)
+			{/*...}*/
+				mixin(q{
+					this[~$..$] } ~op~ q{= v;
+				});
+
+				return this[];
+			}
+		auto opEquals (T)(T v)
+			{/*...}*/
+				return this.components == v;
 			}
 
 		auto ref opDispatch (string swizzle)()
@@ -153,21 +239,25 @@ struct Vector (size_t n, Component = double)
 
 		this (Repeat!(n, Component) args)
 			{/*...}*/
-				alias lhs = components;
-				alias rhs = args;
-
-				mixin(unroll_vector_assignment!(n-1, ArgType.vector));
+				foreach (i; Iota!n)
+					components[i] = args[i];
 			}
 		this (Component component)
 			{/*...}*/
-				alias lhs = components;
-				alias rhs = component;
-
-				mixin(unroll_vector_assignment!(n-1, ArgType.scalar));
+				foreach (i; Iota!n)
+					components[i] = component;
 			}
 		this (Component[n] components)
 			{/*...}*/
 				this.components = components;
+			}
+		this (R)(R range)
+			in {/*...}*/
+				assert (range.length == n);
+			}
+			body {/*...}*/
+				foreach (i; Iota!n)
+					components[i] = range[i];
 			}
 
 		auto toString ()
@@ -175,7 +265,7 @@ struct Vector (size_t n, Component = double)
 				return components.text;
 			}
 	}
-	unittest {/*...}*/
+	void main () {/*...}*/
 		import std.algorithm: equal;
 		import std.math;
 
@@ -269,146 +359,20 @@ struct Vector (size_t n, Component = double)
 
 		auto q = u.xy;
 		static assert (not (__traits(compiles, q.z)));
+
+		// slice assignment and arithmetic
+		u[0..3] += [1,2,3];
+		assert (u == [-1,-1,-1,-5]);
+
+		u[0..2] = q;
+		assert (u == [-2,-3,-1,-5]);
+
+		v[] = u.each!(to!int);
+		assert (v == [-2,-3,-1,-5]);
+
+		u[1..4] -= v[1..4];
+		assert (u == [-2,0,0,0]);
+
+		v[] *= -1;
+		assert (v == [2,3,1,5]);
 	}
-
-private {/*impl}*/
-	enum ArgType {vector, scalar}
-
-	string unroll_vector_assignment (long n, ArgType rhs_type)()
-		{/*...}*/
-			static vector_assignment (long i)()
-				{/*...}*/
-					enum index = `[` ~i.text~ `]`;
-
-					static if (rhs_type is ArgType.vector)
-						enum ir = index;
-					else enum ir = ``;
-
-					static if (i < 0)
-						return ``;
-					else return vector_assignment!(i-1)~ q{
-
-						lhs} ~index~ q{ = rhs} ~ir~ q{;
-					};
-				}
-
-			return vector_assignment!n;
-		}
-	string unroll_vector_arithmetic (string op, long n, ArgType lhs_type, ArgType rhs_type)()
-		{/*...}*/
-			version (all) {/*mixin pieces}*/
-				static vector_arithmetic (long i)()
-					{/*...}*/
-						enum index = `[` ~i.text~ `]`;
-
-						static if (lhs_type is ArgType.vector)
-							enum il = index;
-						else enum il = ``;
-
-						static if (rhs_type is ArgType.vector)
-							enum ir = index;
-						else enum ir = ``;
-
-						static if (i < 0)
-							return ``;
-						else return vector_arithmetic!(i-1)~ q{
-
-							ret} ~index~ q{ = lhs} ~il~ q{ } ~op~ q{ rhs} ~ir~ q{;
-						};
-					}
-
-				static if (lhs_type is ArgType.vector)
-					{/*...}*/
-						enum il = `[0]`;
-						enum sl = `[]`;
-					}
-				else {/*...}*/
-					enum il = ``;
-					enum sl = ``;
-				}
-
-				static if (rhs_type is ArgType.vector)
-					{/*...}*/
-						enum ir = `[0]`;
-						enum sr = `[]`;
-					}
-				else {/*...}*/
-					enum ir = ``;
-					enum sr = ``;
-				}
-			}
-
-			return q{
-				alias VectorType = typeof(vector!n (lhs} ~il~ q{ } ~op~ q{ rhs} ~ir~ q{));
-				VectorType ret;
-
-				} ~vector_arithmetic!n~ q{
-
-				return ret;
-			};
-		}
-	string unroll_vector_mapping (long n)()
-		{/*...}*/
-			static vector_mapping (long i)()
-				{/*...}*/
-					static if (i < 0)
-						return ``;
-					else return vector_mapping!(i-1) ~q{
-						ret[} ~i.text~ q{] = f (vector[} ~i.text~ q{], args);
-					};
-				}
-
-			return q{
-				Vector!(} ~(n+1).text~ q{, typeof(f (vector[0], args))) ret;
-
-				} ~vector_mapping!n~ q{
-
-				return ret;
-			};
-		}
-
-	template construct_vector (size_t n)
-		{/*...}*/
-			auto construct_vector (V)(V that)
-				{/*...}*/
-					static if (is (V : Vector!(n,T), T))
-						{/*...}*/
-							return that;
-						}
-					else static if (is (V : T[n], T))
-						{/*...}*/
-							Vector!(n,T) lhs;
-							alias rhs = that;
-							alias argtype = ArgType.vector;
-						}
-					else static if (is (typeof(that.tupleof) == T, T))
-						{/*...}*/
-							Vector!(n, CommonType!T) lhs;
-							auto rhs = that.tupleof;
-							alias argtype = ArgType.vector;
-						}
-					else static if (is_random_access_range!V)
-						{/*...}*/
-							Vector!(n, ElementType!V) lhs;
-							alias rhs = that;
-							alias argtype = ArgType.vector;
-
-							assert (that.length == n);
-						}
-					else static if (is (typeof(that + that * that) == V))
-						{/*...}*/
-							Vector!(n,V) lhs;
-							alias rhs = that;
-							alias argtype = ArgType.scalar;
-						}
-					else static assert (0, `cannot construct vector from ` ~V.stringof);
-
-					static if (is (typeof(lhs)))
-						{/*...}*/
-							mixin(unroll_vector_assignment!(n-1, argtype));
-
-							return lhs;
-						}
-				}
-		}
-}
