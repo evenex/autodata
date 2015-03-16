@@ -150,6 +150,30 @@ struct Vector (size_t n, Component = double)
 
 				assert (0);
 			}
+
+		this (Repeat!(n, Component) args)
+			{/*...}*/
+				alias lhs = components;
+				alias rhs = args;
+
+				mixin(unroll_vector_assignment!(n-1, ArgType.vector));
+			}
+		this (Component component)
+			{/*...}*/
+				alias lhs = components;
+				alias rhs = component;
+
+				mixin(unroll_vector_assignment!(n-1, ArgType.scalar));
+			}
+		this (Component[n] components)
+			{/*...}*/
+				this.components = components;
+			}
+
+		auto toString ()
+			{/*...}*/
+				return components.text;
+			}
 	}
 	unittest {/*...}*/
 		import std.algorithm: equal;
