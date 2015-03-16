@@ -83,9 +83,11 @@ auto each (alias f, V, Args...)(V v, Args args)
 */
 struct Vector (size_t n, Component = double)
 	{/*...}*/
+		enum length = n;
+
 		Component[n] components;
 		alias components this;
-		enum length = n;
+		@disable Component front ();
 
 		auto opUnary (string op)()
 			{/*...}*/
