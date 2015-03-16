@@ -31,6 +31,10 @@ struct Repeated (T, size_t dim)
 			{/*...}*/
 				return lengths[0] == 0;
 			}
+		auto length ()() const if (dim == 1)
+			{/*...}*/
+				return length!0;
+			}
 		bool opEquals (R)(R range) if (dim == 1)
 			{/*...}*/
 				return this[] == range;
@@ -47,6 +51,7 @@ auto repeat (T, U...)(T value, U lengths)
 		auto x = 6.repeat (3);
 		auto y = 1.repeat (2,2,2);
 
+		assert (x.length == 3);
 		assert (x == [6,6,6]);
 		assert (y[0..$, 0, 0] == [1,1]);
 		assert (y[0, 0..$, 0] == [1,1]);
