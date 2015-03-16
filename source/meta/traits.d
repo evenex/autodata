@@ -43,6 +43,10 @@ enum is_enumerable (T...) = is (typeof((){enum x = T[0];}()));
 */
 alias is_floating_point = isFloatingPoint;
 
+/* test if a type is a builtin integral type
+*/
+alias is_integral = isIntegral;
+
 /* test if a range belongs to a given range category 
 */
 alias is_input_range = std.range.isInputRange;
