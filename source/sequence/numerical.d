@@ -1,4 +1,4 @@
-module spacecadet.sequence.numbers;
+module spacecadet.sequence.numerical;
 
 private {/*import}*/
 	import spacecadet.operators;
