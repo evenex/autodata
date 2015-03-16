@@ -6,6 +6,9 @@ private {/*import}*/
 	import spacecadet.meta;
 }
 
+/* unless otherwise noted, intervals are half-open on the right side (for bounds checking) 
+*/
+
 /* convenience constructor 
 */
 CommonType!(T,U)[2] interval (T,U)(T left, U right)
@@ -156,7 +159,14 @@ bool is_valid_interval (T)(T[2] interval)
 		return interval[0] <= interval[1];
 	}
 
-/* clamp a value to an interval
+/* test if a point is between two values, inclusive 
+*/
+bool between (T, U, V) (T t, U t0, V t1) 
+	{/*...}*/
+		return t0 <= t && t <= t1;
+	}
+
+/* clamp a value to an interval 
 */
 auto clamp (T,U)(T value, U[2] interval)
 	in {/*...}*/
@@ -168,3 +178,4 @@ auto clamp (T,U)(T value, U[2] interval)
 
 		return value;
 	}
+
