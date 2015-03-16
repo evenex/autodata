@@ -94,7 +94,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 								alias Subspace = Sub!(
 									Map!(Pair!().First!Identity,
 										Filter!(Pair!().Second!Identity,
-											Indexed!(
+											Enumerate!(
 												Map!(λ!q{(T) = is (T == U[2], U)},
 													Selected
 												)

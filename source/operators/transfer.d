@@ -61,7 +61,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 
 						foreach (i,j; Map!(Pair!().First!Identity, 
 							Filter!(Pair!().Second!(λ!q{(T) = is (T == U[2], U)}),
-								Indexed!Selected
+								Enumerate!Selected
 							)
 						)) bounds_check!i (selected[j]);
 					}
