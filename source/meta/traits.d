@@ -47,6 +47,10 @@ alias is_floating_point = isFloatingPoint;
 */
 alias is_integral = isIntegral;
 
+/* test if a type is unsigned
+*/
+alias is_unsigned = isUnsigned;
+
 /* test if a range belongs to a given range category 
 */
 alias is_input_range = std.range.isInputRange;
