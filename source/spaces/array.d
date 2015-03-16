@@ -98,7 +98,7 @@ struct Array (T, uint dimensions = 1)
 									Map!(get_index,
 										Map!(Pair!().First!Identity,
 											Filter!(Pair!().Second!Identity,
-												Indexed!open
+												Enumerate!open
 											)
 										)
 									).tuple.expand
