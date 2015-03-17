@@ -11,6 +11,19 @@ private {/*import}*/
 */
 enum has_identity (T...) = is (typeof(T[0].identity));
 
+// of symbols
+/* test if a symbol is a type 
+*/
+enum is_type (T...) = is (T[0]);
+
+/* test if a symbol is a class  
+*/
+enum is_class (T...) = is(T[0] == class);
+
+/* test if a symbol is a template  
+*/
+enum is_template (T...) = __traits(isTemplate, T[0]);
+
 /* test if a symbol refers to a function 
 */
 template is_function (T...)
@@ -31,6 +44,25 @@ template is_const_function (T...)
 		enum is_const_function = Match!(yes, no);
 	}
 
+/* test if a value has a numeric type 
+*/
+template has_numeric_type (T...)
+	{/*...}*/
+		static if (is (typeof(T[0]) == U, U))
+			enum has_numeric_type = is_numeric!U;
+		else enum has_numeric_type = false;
+	}
+
+/* test if a value has a string type
+*/
+template has_string_type (T...)
+	{/*...}*/
+		static if (is (typeof(T[0]) == U, U))
+			enum has_string_type = is_string!U;
+		else enum has_string_type = false;
+	}
+
+// of types
 /* test if a type supports comparison operators <, <=, >, >= 
 */
 enum is_comparable (T...) = is (typeof((){auto x = T[0].init; return x < x? x > x? x <= x : x >= x : true;}));
@@ -39,9 +71,15 @@ enum is_comparable (T...) = is (typeof((){auto x = T[0].init; return x < x? x > 
 */
 alias is_implicitly_convertible = isImplicitlyConvertible;
 
-/* test if an expression can be made into an enum 
+/*
+	test if a type is a string
 */
-enum is_enumerable (T...) = is (typeof((){enum x = T[0];}()));
+alias is_string = isSomeString;
+
+/*
+	test if a type is numeric
+*/
+alias is_numeric = isNumeric;
 
 /* test if a type is a builtin floating point type
 */
