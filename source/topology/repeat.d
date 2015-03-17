@@ -35,6 +35,9 @@ struct Repeated (T, size_t dim)
 			{/*...}*/
 				return length!0;
 			}
+		alias back = front;
+		alias popBack = popFront;
+
 		bool opEquals (R)(R range) if (dim == 1)
 			{/*...}*/
 				return this[] == range;
@@ -48,6 +51,8 @@ auto repeat (T, U...)(T value, U lengths)
 		return Repeated!(T, U.length)(value, lengths);
 	}
 	unittest {/*...}*/
+		import spacecadet.functional;
+
 		auto x = 6.repeat (3);
 		auto y = 1.repeat (2,2,2);
 
@@ -56,4 +61,7 @@ auto repeat (T, U...)(T value, U lengths)
 		assert (y[0..$, 0, 0] == [1,1]);
 		assert (y[0, 0..$, 0] == [1,1]);
 		assert (y[0, 0, 0..$] == [1,1]);
+
+		assert (x.front == 6);
+		assert (x.map!(q => q*2) == [12, 12, 12]);
 	}
