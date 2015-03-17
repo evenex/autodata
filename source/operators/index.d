@@ -10,8 +10,6 @@ module spacecadet.operators.index;
 template IndexOps (alias access, limits...)
 	{/*...}*/
 		private {/*imports}*/
-			import std.conv: text;
-
 			import spacecadet.operators.limit;
 			import spacecadet.meta;
 			import spacecadet.core;
@@ -19,6 +17,8 @@ template IndexOps (alias access, limits...)
 
 		auto ref Codomain!access opIndex (Domain!access selected)
 			in {/*...}*/
+				import std.conv: text;
+
 				version (all)
 					{/*error messages}*/
 						enum error_header = typeof(this).stringof~ `: `;

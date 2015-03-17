@@ -17,14 +17,8 @@ module spacecadet.operators.slice;
 template SliceOps (alias access, LimitsAndExtensions...)
 	{/*...}*/
 		private {/*imports}*/
-			import std.conv: to;
-			import std.range: join;
-
 			import spacecadet.operators.index;
-
 			import spacecadet.meta;
-			//import spacecadet.core; REVIEW
-			import spacecadet.functional;
 		}
 		public:
 		public {/*opIndex}*/
@@ -271,6 +265,9 @@ template SliceOps (alias access, LimitsAndExtensions...)
 
 					static extensions ()
 						{/*...}*/
+							import std.conv: to;
+							import std.range: join;
+
 							string[] code;
 
 							foreach (i, extension; Filter!(Not!has_identity, LimitsAndExtensions))
