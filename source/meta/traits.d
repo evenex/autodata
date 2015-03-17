@@ -65,33 +65,37 @@ template has_string_type (T...)
 // of types
 /* test if a type supports comparison operators <, <=, >, >= 
 */
-enum is_comparable (T...) = is (typeof((){auto x = T[0].init; return x < x? x > x? x <= x : x >= x : true;}));
+enum is_comparable (T...) = is (typeof(T[0].init < T[0].init) == bool);
 
 /* test if a type is implicitly convertible to another 
 */
 alias is_implicitly_convertible = isImplicitlyConvertible;
 
 /*
-	test if a type is a string
+	test if a type is a string 
 */
 alias is_string = isSomeString;
 
 /*
-	test if a type is numeric
+	test if a type is numeric 
 */
 alias is_numeric = isNumeric;
 
-/* test if a type is a builtin floating point type
+/* test if a type is a builtin floating point type 
 */
 alias is_floating_point = isFloatingPoint;
 
-/* test if a type is a builtin integral type
+/* test if a type is a builtin integral type 
 */
 alias is_integral = isIntegral;
 
-/* test if a type is unsigned
+/* test if a type is unsigned 
 */
 alias is_unsigned = isUnsigned;
+
+/* test if a type is a range 
+*/
+enum is_range (R) = is (typeof(T.init.front.identity));
 
 /* test if a range belongs to a given range category 
 */
