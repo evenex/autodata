@@ -318,7 +318,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 
 				mixin TransferOps!(pull, access, length);
 			}
-		static struct Domain
+		static struct SqDomain
 			{/*...}*/
 				double factor = 1;
 				double offset = 0;
@@ -339,7 +339,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 		assert (a[0.50] == 0.50);
 		assert (a[0.75] == 0.75);
 
-		Domain b;
+		SqDomain b;
 		b.factor = 2; b.offset = 1;
 		assert (b[0.50] == 2.00);
 		assert (b[0.75] == 2.50);
