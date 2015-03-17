@@ -44,7 +44,7 @@ template is_const_function (T...)
 		enum is_const_function = Match!(yes, no);
 	}
 
-/* test if a value has a numeric type 
+/* test if a symbol has a numeric type 
 */
 template has_numeric_type (T...)
 	{/*...}*/
@@ -53,7 +53,7 @@ template has_numeric_type (T...)
 		else enum has_numeric_type = false;
 	}
 
-/* test if a value has a string type
+/* test if a symbol has a string type
 */
 template has_string_type (T...)
 	{/*...}*/
