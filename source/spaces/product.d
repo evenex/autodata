@@ -1,10 +1,9 @@
-module spacecadet.topology.product;
+module spacecadet.spaces.product;
 
 private {/*import}*/
 	import spacecadet.core;
 	import spacecadet.meta;
 	import spacecadet.operators;
-	import std.typecons: tuple; 
 }
 
 struct CartesianProduct (Spaces...)

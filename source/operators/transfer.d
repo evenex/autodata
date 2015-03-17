@@ -14,6 +14,8 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 
 		auto verified_limit_pull (S, Selected...)(S source, Selected selected)
 			in {/*...}*/
+				import std.conv: text;
+
 				version (all)
 					{/*error messages}*/
 						enum error_header = full_name!(typeof(this))~ `: `;

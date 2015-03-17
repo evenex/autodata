@@ -2,6 +2,7 @@ module spacecadet.spaces.array;
 
 private {/*import}*/
 	import std.range.primitives: front, back, popFront, popBack, empty;
+	import std.conv: to;
 
 	import spacecadet.core;
 	import spacecadet.meta;

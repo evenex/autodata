@@ -1,4 +1,4 @@
-module spacecadet.topology.repeat;
+module spacecadet.spaces.repeat;
 
 private {/*import}*/
 	import spacecadet.meta;

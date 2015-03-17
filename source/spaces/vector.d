@@ -1,4 +1,4 @@
-module spacecadet.core.vector;
+module spacecadet.spaces.vector;
 
 private {/*import}*/
 	import std.conv: to, text;
