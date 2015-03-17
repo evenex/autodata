@@ -1,23 +1,11 @@
 module spacecadet.functional.iso;
 
 private {/*import}*/
-	import std.typecons: Tuple;
 	import std.range.primitives: front, back, popFront, popBack, empty;
 	import std.algorithm: equal;
-	//import spacecadet.core;
+	import spacecadet.core;
 	import spacecadet.meta;
 }
-
-/* generic identity transform
-*/
-T identity (T)(T that)
-	{/*...}*/
-		return that;
-	}
-
-/* test if identity transform is defined for a type 
-*/
-enum has_identity (T...) = is (typeof(T[0].identity));
 
 /* apply a given function to the elements in a space 
 */
@@ -137,7 +125,7 @@ struct Mapped (Domain, alias f, Parameters...)
 
 					static if (is (typeof(domain.limit!0)))
 						auto subdomain = domain[Map!(Coord, Dimensions!()).init];
-					else static if (is (typeof(domain.front)))
+					else static if (is (typeof(domain.front.identity)))
 						auto subdomain = domain.front;
 					else static assert (0, `map error: `
 						~Domain.stringof~ ` is not a range (no front) or a space (no limit!i)`

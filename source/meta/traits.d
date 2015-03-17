@@ -7,6 +7,10 @@ private {/*import}*/
 	import spacecadet.meta.resolution;
 }
 
+/* test if identity transform is defined for a type 
+*/
+enum has_identity (T...) = is (typeof(T[0].identity));
+
 /* test if a symbol refers to a function 
 */
 template is_function (T...)

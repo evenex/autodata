@@ -8,6 +8,16 @@ private {/*import}*/
 	import spacecadet.meta.list;
 }
 
+/* generic identity transform 
+	resolves type of symbol whether template, function or value
+*/
+T identity (T)(T that)
+	{/*...}*/
+		return that;
+	}
+
+/* instantiate a zero-parameter template
+*/
 alias Instantiate (alias symbol) = symbol!();
 
 /* given a set of zero-parameter templates, invoke the first which successfully compiles 
