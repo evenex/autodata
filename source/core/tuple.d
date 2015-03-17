@@ -5,6 +5,7 @@ private {/*import}*/
 	import spacecadet.meta;
 }
 
+alias Tuple = std.typecons.Tuple;
 alias tuple = std.typecons.tuple;
 
 template Flatten (T...)
