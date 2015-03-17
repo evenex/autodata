@@ -40,12 +40,27 @@ auto sum (T...)(T args)
 	}
 alias Σ = sum;
 
+auto mean (R)(R range)
+	if (is_input_range!R && has_length!R)
+	{/*...}*/
+		return range.sum/range.length;
+	}
+auto mean (T...)(T args)
+	if (not (Any!(is_input_range, T)))
+	{/*...}*/
+		return args.sum/args.length;
+	}
+
 unittest {/*...}*/
 	assert ([1,2,3,4].sum == 10);
 	assert (sum (1,2,3,4) == 10);
 
 	assert ([1,2,3,4].product == 24);
 	assert (product (1,2,3,4) == 24);
+
+	assert ([1,2,3,4].mean == 2);
+	assert ([1,2,3,4f].mean == 2.5);
+	assert (mean (1,2,3,4f) == 2.5);
 }
 
 private {/*impl}*/
