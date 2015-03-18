@@ -2,6 +2,8 @@ module spacecadet.sequence.iteration;
 
 private {/*import}*/
 	import spacecadet.functional;
+	import spacecadet.meta;
+	import spacecadet.sequence.numerical;
 }
 
 /* generate a foreach index for a custom range 
@@ -13,4 +15,3 @@ auto enumerate (R)(R range)
 	{/*...}*/
 		return zip (ℕ[0..range.length], range);
 	}
-

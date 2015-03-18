@@ -4,6 +4,8 @@ private {/*imports}*/
 	import std.range;
 	import std.algorithm;
 	import std.conv;
+
+	import spacecadet.meta;
 }
 
 /* check if a range contains a value 
