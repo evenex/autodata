@@ -81,7 +81,7 @@ struct MultiLimit (T...)
 		auto opUnary (string op : `~`)()
 			{/*...}*/
 				foreach (ref limit; limits)
-					swap (limit.left, limit.right);
+					limit.right = limit.left;
 
 				return this;
 			}
