@@ -1,4 +1,4 @@
-HEADER="--spacecadet--"
+HEADER="--autodata--"
 echo "$HEADER"
 echo ""
 ./info/info
