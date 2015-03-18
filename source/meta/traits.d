@@ -1,6 +1,7 @@
 module spacecadet.meta.traits;
 
 private {/*import}*/
+	import std.range.primitives: front;
 	import std.traits;
 	import std.typetuple;
 
@@ -62,6 +63,15 @@ template has_string_type (T...)
 		else enum has_string_type = false;
 	}
 
+/* test if a variable has static storage class 
+*/
+template is_static_variable (T...)
+	{/*...}*/
+		static if (is (typeof(T[0]) == function))
+			enum is_static_variable = false;
+		else enum is_static_variable = is (typeof((){static f () {return &(T[0]);}}));
+	}
+
 // of types
 /* test if a type supports comparison operators <, <=, >, >= 
 */
@@ -95,7 +105,7 @@ alias is_unsigned = isUnsigned;
 
 /* test if a type is a range 
 */
-enum is_range (R) = is (typeof(T.init.front.identity));
+enum is_range (R) = is (typeof(R.init.front.identity));
 
 /* test if a range belongs to a given range category 
 */
