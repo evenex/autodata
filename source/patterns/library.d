@@ -1,6 +1,6 @@
 module spacecadet.patterns.library;
 
-/* generate a member load_library function which automatically looks up member extern (C) function pointer identifiers in linked C libraries  
+/* generate a member load_library function which automatically looks up static member extern (C) function pointer identifiers in linked C libraries  
 	due to the way dmd processes mixins, function pointers must be declared above the mixin.
 	if the function is not found, the program will halt. otherwise, the function pointer is set to the library function
 */
@@ -20,7 +20,7 @@ mixin template DynamicLibrary ()
 					foreach (symbol; __traits (allMembers, typeof(this)))
 						static if (is_static_C_function!symbol)
 							code ~= q{
-								} ~symbol~ q{ = cast(typeof(} ~symbol~ q{)) dlsym (lib, } `"`~symbol~`"` q{);
+								} ~symbol~ q{ = cast(typeof(} ~symbol~ q{)) dlsym (null, } `"`~symbol~`"` q{);
 
 								assert (} ~symbol~ q{ !is null, "couldn't load C library function "} `"`~symbol~`"` q{);
 							};
