@@ -103,6 +103,10 @@ alias is_integral = isIntegral;
 */
 alias is_unsigned = isUnsigned;
 
+/* test if a type is signed 
+*/
+alias is_signed = isSigned;
+
 /* test if a type is a range 
 */
 enum is_range (R) = is (typeof(R.init.front.identity));
