@@ -6,7 +6,6 @@ private {/*import}*/
 	import autodata.meta;
 }
 
-pragma(msg, dimensionality!(Stride!(int[])));
 /* iterate over a range, skipping a fixed number of elements each iteration 
 */
 struct Stride (R) // TODO multidimensional support
