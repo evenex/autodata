@@ -5,6 +5,7 @@ private {/*import}*/
 	import std.range;
 
 	import spacecadet.meta.list;
+	import spacecadet.meta.resolution;
 }
 
 /* get the domain (parameter) types of a function 
@@ -39,7 +40,7 @@ template CoordinateType (S)
 	{/*...}*/
 		template Coord (size_t i)
 			{/*...}*/
-				static if (is (typeof(S.opIndex ().limit!i[0]) == T, T))
+				static if (is (typeof(S.opIndex.limit!i.identity) == T[2], T))
 					alias Coord = T;
 
 				else static if (i == 0 && is (typeof(S.init[0])))
@@ -60,7 +61,7 @@ template dimensionality (S)
 				static if (is (typeof(S.init[].limit!d)))
 					enum count = 1 + count!(d+1);
 
-				else static if (d == 0 && is (typeof(S.init[].length)))
+				else static if (d == 0 && is (typeof(S.init[].length.identity)))
 					enum count = 1;
 
 				else enum count = 0;
