@@ -1,10 +1,10 @@
-module spacecadet.operators.multilimit;
+module autodata.operators.multilimit;
 
 private {/*imports}*/
 	import std.algorithm: swap;
 
-	import spacecadet.meta;
-	import spacecadet.core;
+	import autodata.meta;
+	import autodata.core;
 }
 
 /* WARNING experimental -- 

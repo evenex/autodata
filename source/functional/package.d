@@ -1,6 +1,6 @@
-module spacecadet.functional;
+module autodata.functional;
 
 public:
-import spacecadet.functional.iso;
-import spacecadet.functional.cata;
-import spacecadet.functional.zip;
+import autodata.functional.iso;
+import autodata.functional.cata;
+import autodata.functional.zip;

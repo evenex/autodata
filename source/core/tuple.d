@@ -1,8 +1,8 @@
-module spacecadet.core.tuple;
+module autodata.core.tuple;
 
 private {/*import}*/
 	import std.typecons;
-	import spacecadet.meta;
+	import autodata.meta;
 }
 
 alias Tuple = std.typecons.Tuple;

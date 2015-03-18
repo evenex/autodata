@@ -1,8 +1,8 @@
-module spacecadet.spaces.repeat;
+module autodata.spaces.repeat;
 
 private {/*import}*/
-	import spacecadet.meta;
-	import spacecadet.operators;
+	import autodata.meta;
+	import autodata.operators;
 }
 
 struct Repeated (T, size_t dim)
@@ -51,7 +51,7 @@ auto repeat (T, U...)(T value, U lengths)
 		return Repeated!(T, U.length)(value, lengths);
 	}
 	unittest {/*...}*/
-		import spacecadet.functional;
+		import autodata.functional;
 
 		auto x = 6.repeat (3);
 		auto y = 1.repeat (2,2,2);

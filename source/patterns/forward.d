@@ -1,10 +1,10 @@
-module spacecadet.patterns.forward;
+module autodata.patterns.forward;
 
 template ForwardOps (alias target)
 	{/*...}*/
 		auto ref opDispatch (string op, Args...)(auto ref Args args)
 			{/*...}*/
-				import spacecadet.meta;
+				import autodata.meta;
 
 				auto ref call ()() {return mixin(q{target.} ~ op ~ q{ (args)});}
 				auto ref read ()() if (Args.length == 0) {return mixin(q{target.} ~ op);}

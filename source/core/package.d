@@ -1,7 +1,7 @@
-module spacecadet.core;
+module autodata.core;
 
 public:
-import spacecadet.core.logic;
-import spacecadet.core.interval;
-import spacecadet.core.order;
-import spacecadet.core.tuple;
+import autodata.core.logic;
+import autodata.core.interval;
+import autodata.core.order;
+import autodata.core.tuple;

@@ -1,11 +1,11 @@
-module spacecadet.meta;
+module autodata.meta;
 
 public:
 
-import spacecadet.meta.introspection;
-import spacecadet.meta.lambda;
-import spacecadet.meta.list;
-import spacecadet.meta.predicate;
-import spacecadet.meta.resolution;
-import spacecadet.meta.traits;
-import spacecadet.meta.transformation;
+import autodata.meta.introspection;
+import autodata.meta.lambda;
+import autodata.meta.list;
+import autodata.meta.predicate;
+import autodata.meta.resolution;
+import autodata.meta.traits;
+import autodata.meta.transformation;

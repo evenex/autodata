@@ -1,9 +1,9 @@
-module spacecadet.meta.transformation;
+module autodata.meta.transformation;
 
 private {/*import}*/
 	import std.typecons;
-	import spacecadet.meta.resolution;
-	import spacecadet.meta.traits;
+	import autodata.meta.resolution;
+	import autodata.meta.traits;
 }
 
 alias Identity (T...) = T[0]; 

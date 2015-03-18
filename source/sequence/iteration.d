@@ -1,9 +1,9 @@
-module spacecadet.sequence.iteration;
+module autodata.sequence.iteration;
 
 private {/*import}*/
-	import spacecadet.functional;
-	import spacecadet.meta;
-	import spacecadet.sequence.numerical;
+	import autodata.functional;
+	import autodata.meta;
+	import autodata.sequence.numerical;
 }
 
 /* generate a foreach index for a custom range 

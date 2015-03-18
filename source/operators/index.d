@@ -1,4 +1,4 @@
-module spacecadet.operators.index;
+module autodata.operators.index;
 
 /* generate an indexing operator from an access function and a set of index limits
 
@@ -10,9 +10,9 @@ module spacecadet.operators.index;
 template IndexOps (alias access, limits...)
 	{/*...}*/
 		private {/*imports}*/
-			import spacecadet.operators.limit;
-			import spacecadet.meta;
-			import spacecadet.core;
+			import autodata.operators.limit;
+			import autodata.meta;
+			import autodata.core;
 		}
 
 		auto ref Codomain!access opIndex (Domain!access selected)
@@ -76,7 +76,7 @@ template IndexOps (alias access, limits...)
 		mixin LimitOps!limits;
 	}
 	unittest {/*...}*/
-		import spacecadet.meta.test;
+		import autodata.meta.test;
 
 		static struct Basic
 			{/*...}*/

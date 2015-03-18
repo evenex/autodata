@@ -1,11 +1,11 @@
-module spacecadet.meta.introspection;
+module autodata.meta.introspection;
 
 private {/*import}*/
 	import std.traits;
 	import std.range;
 
-	import spacecadet.meta.list;
-	import spacecadet.meta.resolution;
+	import autodata.meta.list;
+	import autodata.meta.resolution;
 }
 
 /* get the domain (parameter) types of a function 

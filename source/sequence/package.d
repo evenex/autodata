@@ -1,10 +1,10 @@
-module spacecadet.sequence;
+module autodata.sequence;
 
 public:
 
-import spacecadet.sequence.adaptors;
-import spacecadet.sequence.arithmetic;
-import spacecadet.sequence.iteration;
-import spacecadet.sequence.numerical;
-import spacecadet.sequence.slicing;
-import spacecadet.sequence.query;
+import autodata.sequence.adaptors;
+import autodata.sequence.arithmetic;
+import autodata.sequence.iteration;
+import autodata.sequence.numerical;
+import autodata.sequence.slicing;
+import autodata.sequence.query;

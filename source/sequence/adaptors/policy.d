@@ -1,4 +1,4 @@
-module spacecadet.sequence.adaptors.policy;
+module autodata.sequence.adaptors.policy;
 
 enum OnOverflow {reallocate, discard, error}
 

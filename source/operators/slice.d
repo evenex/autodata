@@ -1,4 +1,4 @@
-module spacecadet.operators.slice;
+module autodata.operators.slice;
 
 /* generate slicing operators with IndexOps
 
@@ -17,8 +17,8 @@ module spacecadet.operators.slice;
 template SliceOps (alias access, LimitsAndExtensions...)
 	{/*...}*/
 		private {/*imports}*/
-			import spacecadet.operators.index;
-			import spacecadet.meta;
+			import autodata.operators.index;
+			import autodata.meta;
 		}
 		public:
 		public {/*opIndex}*/
@@ -292,9 +292,9 @@ template SliceOps (alias access, LimitsAndExtensions...)
 		}
 	}
 	unittest {/*...}*/
-		import spacecadet.meta.test;
-		import spacecadet.core;
-		import spacecadet.operators.multilimit;
+		import autodata.meta.test;
+		import autodata.core;
+		import autodata.operators.multilimit;
 
 		static struct Basic
 			{/*...}*/
@@ -567,7 +567,7 @@ package {/*error}*/
 	struct ErrorMessages (This, Selected, limits...)
 		{/*...}*/
 			import std.conv;
-			import spacecadet.meta;
+			import autodata.meta;
 
 			alias Element (T) = ElementType!(Select!(is (T == U[2], U), T, T[2]));
 

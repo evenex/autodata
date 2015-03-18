@@ -1,4 +1,4 @@
-module spacecadet.meta.test;
+module autodata.meta.test;
 
 private import std.exception; 
 

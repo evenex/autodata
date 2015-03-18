@@ -1,14 +1,14 @@
-module spacecadet.spaces.array;
+module autodata.spaces.array;
 
 private {/*import}*/
 	import std.range.primitives: front, back, popFront, popBack, empty;
 	import std.conv: to;
 
-	import spacecadet.core;
-	import spacecadet.meta;
-	import spacecadet.functional;
-	import spacecadet.operators;
-	import spacecadet.sequence;
+	import autodata.core;
+	import autodata.meta;
+	import autodata.functional;
+	import autodata.operators;
+	import autodata.sequence;
 }
 
 struct Array (T, uint dimensions = 1)

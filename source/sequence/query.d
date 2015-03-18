@@ -1,11 +1,11 @@
-module spacecadet.sequence.query;
+module autodata.sequence.query;
 
 private {/*imports}*/
 	import std.range;
 	import std.algorithm;
 	import std.conv;
 
-	import spacecadet.meta;
+	import autodata.meta;
 }
 
 /* check if a range contains a value 

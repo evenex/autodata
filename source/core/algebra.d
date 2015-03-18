@@ -1,7 +1,7 @@
-module spacecadet.core.logic;
+module autodata.core.logic;
 
 private {/*import}*/
-	import spacecadet.meta;
+	import autodata.meta;
 }
 
 /* named logical inversion operator 

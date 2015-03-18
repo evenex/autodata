@@ -1,12 +1,12 @@
-module spacecadet.spaces.vector;
+module autodata.spaces.vector;
 
 private {/*import}*/
 	import std.conv: to, text;
 	import std.range.primitives: empty;
 	import std.algorithm: count_until = countUntil;
 	import std.range: join;
-	import spacecadet.core.logic;
-	import spacecadet.meta;
+	import autodata.core.logic;
+	import autodata.meta;
 }
 
 /* convenience constructors 

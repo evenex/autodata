@@ -1,13 +1,13 @@
-module spacecadet.functional.zip;
+module autodata.functional.zip;
 
 private {/*import}*/
 	import std.typecons: Tuple, tuple;
 	import std.range.primitives: front, back, popFront, popBack, empty;
 	import std.conv: text;
 	import std.algorithm: equal;
-	import spacecadet.core;
-	import spacecadet.meta;
-	import spacecadet.functional.iso;
+	import autodata.core;
+	import autodata.meta;
+	import autodata.functional.iso;
 }
 
 /* join several spaces together transverse-wise, 
@@ -213,8 +213,8 @@ struct Zipped (Spaces...)
 			}
 	}
 	unittest {/*...}*/
-		import spacecadet.meta.test;
-		import spacecadet.operators;
+		import autodata.meta.test;
+		import autodata.operators;
 
 		int[4] x = [1,2,3,4], y = [4,3,2,1];
 

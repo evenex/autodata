@@ -1,10 +1,10 @@
-module spacecadet.memory.transfer;
+module autodata.memory.transfer;
 
 private {/*imports}*/
 	import std.algorithm;
 	import std.conv;
 
-	import spacecadet.core;
+	import autodata.core;
 }
 
 /* convenience structure for representing structs as byte arrays 

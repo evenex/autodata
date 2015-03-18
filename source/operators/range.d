@@ -1,4 +1,4 @@
-module spacecadet.operators.range;
+module autodata.operators.range;
 
 /* generate random access range primitives
 
@@ -31,7 +31,7 @@ template RangeOps ()
 			}
 	}
 	unittest {/*...}*/
-		import spacecadet.operators.slice;
+		import autodata.operators.slice;
 
 		static struct Basic
 			{/*...}*/

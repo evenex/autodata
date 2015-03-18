@@ -1,11 +1,11 @@
-module spacecadet.operators;
+module autodata.operators;
 
 public:
-import spacecadet.operators.buffer;
-import spacecadet.operators.index;
-import spacecadet.operators.limit;
-import spacecadet.operators.multilimit;
-import spacecadet.operators.range;
-import spacecadet.operators.slice;
-import spacecadet.operators.transfer;
-import spacecadet.operators.write;
+import autodata.operators.buffer;
+import autodata.operators.index;
+import autodata.operators.limit;
+import autodata.operators.multilimit;
+import autodata.operators.range;
+import autodata.operators.slice;
+import autodata.operators.transfer;
+import autodata.operators.write;

@@ -1,10 +1,10 @@
-module spacecadet.memory.reference;
+module autodata.memory.reference;
 
 private {/*import}*/
-	import spacecadet.core;
-	import spacecadet.meta;
+	import autodata.core;
+	import autodata.meta;
 
-	import spacecadet.memory.transfer;
+	import autodata.memory.transfer;
 }
 
 /* forward an argument, as lvalue reference or rvalue move 

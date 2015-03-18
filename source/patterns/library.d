@@ -1,4 +1,4 @@
-module spacecadet.patterns.library;
+module autodata.patterns.library;
 
 /* generate a member load_library function which automatically looks up static member extern (C) function pointer identifiers in linked C libraries  
 	due to the way dmd processes mixins, function pointers must be declared above the mixin.
@@ -33,7 +33,7 @@ mixin template DynamicLibrary ()
 
 		static void verify_function_call (string op, CArgs...)(CArgs c_args)
 			{/*...}*/
-				import spacecadet.meta: Domain;
+				import autodata.meta: Domain;
 
 				enum generic_error = `call to ` ~op~ ` (` ~CArgs.stringof~ `) failed to compile`;
 

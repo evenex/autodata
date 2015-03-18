@@ -1,10 +1,10 @@
-module spacecadet.memory.lifetime;
+module autodata.memory.lifetime;
 
 private {/*import}*/
-	import spacecadet.core;
-	import spacecadet.meta;
-	import spacecadet.patterns;
-	import spacecadet.memory.transfer;
+	import autodata.core;
+	import autodata.meta;
+	import autodata.patterns;
+	import autodata.memory.transfer;
 }
 
 /* resource lifetime management wrappers

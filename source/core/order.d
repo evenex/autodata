@@ -1,7 +1,7 @@
-module spacecadet.core.order;
+module autodata.core.order;
 
 private {/*import}*/
-	import spacecadet.meta;
+	import autodata.meta;
 }
 
 /* emulate opCmp 

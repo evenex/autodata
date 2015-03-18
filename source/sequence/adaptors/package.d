@@ -1,6 +1,6 @@
-module spacecadet.sequence.adaptors;
+module autodata.sequence.adaptors;
 
 public:
-import spacecadet.sequence.adaptors.stack;
-import spacecadet.sequence.adaptors.queue;
-import spacecadet.sequence.adaptors.policy;
+import autodata.sequence.adaptors.stack;
+import autodata.sequence.adaptors.queue;
+import autodata.sequence.adaptors.policy;

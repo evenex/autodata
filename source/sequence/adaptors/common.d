@@ -1,4 +1,4 @@
-module spacecadet.sequence.adaptors.common;
+module autodata.sequence.adaptors.common;
 
 package template AdaptorCapacity ()
 	{/*...}*/

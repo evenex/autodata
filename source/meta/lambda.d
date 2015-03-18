@@ -1,4 +1,4 @@
-module spacecadet.meta.lambda;
+module autodata.meta.lambda;
 
 template LambdaCapture ()
 	{/*...}*/

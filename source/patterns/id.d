@@ -1,4 +1,4 @@
-module spacecadet.patterns.id;
+module autodata.patterns.id;
 
 /* generate Id, a unique (up to host type) identifier type 
 */
@@ -6,7 +6,7 @@ mixin template TypeUniqueId (uint bit = 0)
 	{/*...}*/
 		static assert (is(typeof(this)), `mixin requires host struct`);
 
-		import spacecadet.core;
+		import autodata.core;
 
 		struct Id
 			{/*...}*/

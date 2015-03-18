@@ -1,12 +1,12 @@
-module spacecadet.functional.cata;
+module autodata.functional.cata;
 
 private {/*import}*/
 	import std.typecons: Tuple, tuple;
 	import std.range.primitives: front, back, popFront, popBack, empty;
 	import std.conv: text;
 	import std.algorithm: equal;
-	import spacecadet.core;
-	import spacecadet.meta;
+	import autodata.core;
+	import autodata.meta;
 }
 
 /* accumulate a value over a range using a binary function 

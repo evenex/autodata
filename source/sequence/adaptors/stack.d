@@ -1,10 +1,10 @@
-module spacecadet.sequence.adaptors.stack;
+module autodata.sequence.adaptors.stack;
 
 private {/*imports}*/
 	import std.conv: text;
-	import spacecadet.operators;
-	import spacecadet.sequence.adaptors.policy;
-	import spacecadet.sequence.adaptors.common;
+	import autodata.operators;
+	import autodata.sequence.adaptors.policy;
+	import autodata.sequence.adaptors.common;
 }
 
 struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)

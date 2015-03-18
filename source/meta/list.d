@@ -1,11 +1,11 @@
-module spacecadet.meta.list;
+module autodata.meta.list;
 
 private {/*import}*/
 	import std.typetuple;
 	import std.typecons;
 
-	import spacecadet.meta.lambda;
-	import spacecadet.meta.predicate;
+	import autodata.meta.lambda;
+	import autodata.meta.predicate;
 }
 
 ////
@@ -121,6 +121,13 @@ template Pair (T...)
 		static if (is (typeof({enum x = T[1];})))
 			enum second = T[1];
 		else alias second = T[1];
+	}
+
+struct Pack (T...) // TODO deprecate Pair, and overload Zip (T...) for Pack args and non-Pack args: non-Pack is implicitly 2 lists, Pack args is |Unpack| lists
+	{/*...}*/
+		alias Unpack = T;
+		alias Unpack this;
+		enum length = Unpack.length;
 	}
 
 template InterleaveNLists (uint n, T...)

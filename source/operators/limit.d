@@ -1,4 +1,4 @@
-module spacecadet.operators.limit;
+module autodata.operators.limit;
 
 /* generates left and right limit operators (~$ and $)
 
@@ -12,7 +12,7 @@ module spacecadet.operators.limit;
 template LimitOps (limits...)
 	{/*...}*/
 		private {/*imports}*/
-			import spacecadet.meta;
+			import autodata.meta;
 		}
 
 		static assert (All!(is_const_function, Filter!(is_function, limits)),

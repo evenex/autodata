@@ -1,9 +1,9 @@
-module spacecadet.spaces.product;
+module autodata.spaces.product;
 
 private {/*import}*/
-	import spacecadet.core;
-	import spacecadet.meta;
-	import spacecadet.operators;
+	import autodata.core;
+	import autodata.meta;
+	import autodata.operators;
 }
 
 struct CartesianProduct (Spaces...)
@@ -56,7 +56,7 @@ auto cartesian_product (S,R)(S left, R right)
 		else return CartesianProduct!(S,R)(left, right);
 	}
 	unittest {/*...}*/
-		import spacecadet.functional; 
+		import autodata.functional; 
 
 		int[3] x = [1,2,3];
 		int[3] y = [4,5,6];
@@ -81,3 +81,10 @@ auto cartesian_product (S,R)(S left, R right)
 	}
 
 alias by = cartesian_product;
+
+auto extrude (S,R)(S space, R extrusion)
+	if (dimensionality!R == 1)
+	{/*...}*/
+		return space.by (extrusion)
+			.map!((e,_) => e);
+	}

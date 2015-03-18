@@ -1,4 +1,4 @@
-module spacecadet.operators.buffer;
+module autodata.operators.buffer;
 
 /* generate RAII ctor/dtor and copy/free assignment operators from allocate function, with TransferOps 
 	move/copy semantics are customizable via composition with lifetime templates
@@ -12,8 +12,8 @@ module spacecadet.operators.buffer;
 template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
 		private {/*imports}*/
-			import spacecadet.meta;
-			import spacecadet.operators.transfer;
+			import autodata.meta;
+			import autodata.operators.transfer;
 		}
 
 		this (Domain!allocate dimensions)
@@ -31,7 +31,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 
 		ref opAssign ()(auto ref this space)
 			{/*...}*/
-				import spacecadet.memory;
+				import autodata.memory;
 
 				static if (__traits(isRef, space))
 					space.blit (this);
@@ -114,10 +114,10 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 		mixin TransferOps!(pull, access, LimitsAndExtensions);
 	}
 	unittest {/*...}*/
-		import spacecadet.memory;
+		import autodata.memory;
 
-		import spacecadet.operators.slice;
-		import spacecadet.operators.range;
+		import autodata.operators.slice;
+		import autodata.operators.range;
 
 		import std.conv;
 		import std.algorithm: map;

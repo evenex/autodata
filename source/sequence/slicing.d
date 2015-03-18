@@ -1,4 +1,4 @@
-module spacecadet.sequence.slicing;
+module autodata.sequence.slicing;
 
 private {/*imports}*/
 	import std.algorithm;

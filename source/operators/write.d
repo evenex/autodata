@@ -1,4 +1,4 @@
-module spacecadet.operators.write;
+module autodata.operators.write;
 
 /* generate index/slice assignment from a pull template, with SliceOps 
 
@@ -16,7 +16,7 @@ module spacecadet.operators.write;
 template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
 		private {/*imports}*/
-			import spacecadet.operators.slice;
+			import autodata.operators.slice;
 		}
 
 		auto opIndexAssign (S, Selected...)(S space, Selected selected)
@@ -109,10 +109,10 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 	unittest {/*...}*/
 		import std.conv: to, text;
 
-		import spacecadet.meta.test;
+		import autodata.meta.test;
 
-		import spacecadet.operators.slice;
-		import spacecadet.operators.range;
+		import autodata.operators.slice;
+		import autodata.operators.range;
 
 		import std.range: only, enumerate;
 		import std.algorithm: map;

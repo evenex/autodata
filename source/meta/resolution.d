@@ -1,11 +1,11 @@
-module spacecadet.meta.resolution;
+module autodata.meta.resolution;
 
 private {/*import}*/
 	import std.conv;
 	import std.range: join;
 
-	import spacecadet.meta.lambda;
-	import spacecadet.meta.list;
+	import autodata.meta.lambda;
+	import autodata.meta.list;
 }
 
 /* generic identity transform 

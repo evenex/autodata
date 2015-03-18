@@ -1,7 +1,7 @@
-module spacecadet.sequence.numerical;
+module autodata.sequence.numerical;
 
 private {/*import}*/
-	import spacecadet.operators;
+	import autodata.operators;
 }
 
 /* the set¹ of natural numbers 

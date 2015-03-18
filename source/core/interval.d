@@ -1,9 +1,9 @@
-module spacecadet.core.interval;
+module autodata.core.interval;
 
 private {/*import}*/
 	import std.algorithm: min, max;
-	import spacecadet.core.logic;
-	import spacecadet.meta;
+	import autodata.core.logic;
+	import autodata.meta;
 }
 
 /* unless otherwise noted, intervals are half-open on the right side (for bounds checking) 

@@ -1,8 +1,8 @@
-module spacecadet.spaces.matrix;
+module autodata.spaces.matrix;
 
 private {/*imports}*/
-	import spacecadet.operators;
-	import spacecadet.core;
+	import autodata.operators;
+	import autodata.core;
 }
 
 struct Matrix (T, uint n_rows, uint n_cols)

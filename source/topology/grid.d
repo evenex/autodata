@@ -1,11 +1,11 @@
-module spacecadet.topology.grid;
+module autodata.topology.grid;
 
 private {/*imports}*/
 	import std.conv;
 
-	import spacecadet.core;
-	import spacecadet.meta;
-	import spacecadet.operators;
+	import autodata.core;
+	import autodata.meta;
+	import autodata.operators;
 }
 
 struct Grid (S)

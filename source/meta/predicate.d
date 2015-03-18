@@ -1,4 +1,4 @@
-module spacecadet.meta.predicate;
+module autodata.meta.predicate;
 
 private {/*imports}*/
 	import std.typetuple;

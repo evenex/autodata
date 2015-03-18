@@ -1,4 +1,4 @@
-module spacecadet.operators.transfer;
+module autodata.operators.transfer;
 
 /* generate WriteOps with input bounds checking
 	
@@ -9,7 +9,7 @@ module spacecadet.operators.transfer;
 template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 	{/*...}*/
 		private {/*imports}*/
-			import spacecadet.operators.write;
+			import autodata.operators.write;
 		}
 
 		auto verified_limit_pull (S, Selected...)(S source, Selected selected)
@@ -81,11 +81,11 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 		mixin WriteOps!(verified_limit_pull, access, LimitsAndExtensions);
 	}
 	unittest {/*...}*/
-		import spacecadet.core;
-		import spacecadet.meta.test;
-		import spacecadet.operators.write;
-		import spacecadet.operators.slice;
-		import spacecadet.operators.range;
+		import autodata.core;
+		import autodata.meta.test;
+		import autodata.operators.write;
+		import autodata.operators.slice;
+		import autodata.operators.range;
 		import std.range: only, enumerate, retro;
 		import std.math: approx = approxEqual;
 

@@ -1,10 +1,10 @@
-module spacecadet.functional.iso;
+module autodata.functional.iso;
 
 private {/*import}*/
 	import std.range.primitives: front, back, popFront, popBack, empty;
 	import std.algorithm: equal;
-	import spacecadet.core;
-	import spacecadet.meta;
+	import autodata.core;
+	import autodata.meta;
 }
 
 /* apply a given function to the elements in a space 
@@ -146,7 +146,7 @@ struct Mapped (Domain, alias f, Parameters...)
 	}
 	unittest {/*...}*/
 		import std.range: only;
-		import spacecadet.operators;
+		import autodata.operators;
 
 		int[8] x = [1,2,3,4,5,6,7,8];
 

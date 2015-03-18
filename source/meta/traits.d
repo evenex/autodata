@@ -1,11 +1,11 @@
-module spacecadet.meta.traits;
+module autodata.meta.traits;
 
 private {/*import}*/
 	import std.range.primitives: front;
 	import std.traits;
 	import std.typetuple;
 
-	import spacecadet.meta.resolution;
+	import autodata.meta.resolution;
 }
 
 /* test if identity transform is defined for a type 

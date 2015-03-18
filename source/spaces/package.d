@@ -1,8 +1,9 @@
-module spacecadet.spaces;
+module autodata.spaces;
 
 public:
-import spacecadet.spaces.array;
-import spacecadet.spaces.matrix;
-import spacecadet.spaces.product;
-import spacecadet.spaces.repeat;
-import spacecadet.spaces.vector;
+import autodata.spaces.array;
+import autodata.spaces.cyclic; // REVIEW actually a topo transform? whats the diff between spaces and topos anyway?
+import autodata.spaces.matrix;
+import autodata.spaces.product;
+import autodata.spaces.repeat;
+import autodata.spaces.vector;

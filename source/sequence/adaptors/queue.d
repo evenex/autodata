@@ -1,12 +1,12 @@
-module spacecadet.sequence.adaptors.queue;
+module autodata.sequence.adaptors.queue;
 
 version (none): // TODO fix array bounds bug CAREFULLY
 
 private {/*imports}*/
-	import spacecadet.core;
-	import spacecadet.operators;
-	import spacecadet.sequence.adaptors.policy;
-	import spacecadet.sequence.adaptors.common;
+	import autodata.core;
+	import autodata.operators;
+	import autodata.sequence.adaptors.policy;
+	import autodata.sequence.adaptors.common;
 }
 
 struct Queue (R, OnOverflow overflow_policy = OnOverflow.error)

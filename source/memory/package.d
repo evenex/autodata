@@ -1,6 +1,6 @@
-module spacecadet.memory;
+module autodata.memory;
 
 public:
-import spacecadet.memory.lifetime;
-import spacecadet.memory.reference;
-import spacecadet.memory.transfer;
+import autodata.memory.lifetime;
+import autodata.memory.reference;
+import autodata.memory.transfer;
