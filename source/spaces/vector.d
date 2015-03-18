@@ -5,7 +5,7 @@ private {/*import}*/
 	import std.range.primitives: empty;
 	import std.algorithm: count_until = countUntil;
 	import std.range: join;
-	import autodata.core.logic;
+	import autodata.core;
 	import autodata.meta;
 }
 
