@@ -2,6 +2,7 @@ module spacecadet.memory.reference;
 
 private {/*import}*/
 	import spacecadet.core;
+	import spacecadet.meta;
 
 	import spacecadet.memory.transfer;
 }
