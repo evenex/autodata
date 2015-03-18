@@ -85,7 +85,7 @@ struct Vector (size_t n, Component = double)
 	{/*...}*/
 		enum length = n;
 
-		Component[n] components;
+		Unqual!Component[n] components;
 		alias components this;
 		@disable Component front ();
 
@@ -93,13 +93,17 @@ struct Vector (size_t n, Component = double)
 			{/*...}*/
 				static if (op.length == 1)
 					{/*...}*/
-						Vector ret;
+						static if (op == `+`)
+							return this;
+						else {/*...}*/
+							Vector ret;
 
-						mixin(q{
-							ret.components[] = } ~op~ q{ this.components[];
-						});
+							mixin(q{
+								ret.components[] = } ~op~ q{ this.components[];
+							});
 
-						return ret;
+							return ret;
+						}
 					}
 				else static if (op.length == 2)
 					{/*...}*/
