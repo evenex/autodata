@@ -7,35 +7,6 @@ private {/*imports}*/
 	import autodata.core;
 }
 
-/* convenience structure for representing structs as byte arrays 
-*/
-struct Bytes (T)
-	{/*...}*/
-		byte[T.sizeof] data;
-		alias data this;
-
-		auto bytes ()
-			{/*...}*/
-				return data[];
-			}
-
-		auto opEquals (byte[] that)
-			{/*...}*/
-				return bytes[].equal (that[]);
-			}
-	}
-
-/* convert values into bytes, or references into byte views 
-*/
-auto bytes (T)(ref T x)
-	{/*...}*/
-		return (*cast(Bytes!T*)&x)[];
-	}
-auto bytes (T)(T x)
-	{/*...}*/
-		return (*cast(Bytes!T*)&x);
-	}
-
 /* byte-by-byte copy, circumventing all ctors/dtors/assign 
 */
 void blit (byte[] src, byte[] tgt)
@@ -84,6 +55,37 @@ void neutralize (T)(ref T target)
 	{/*...}*/
 		T.init.move (target);
 	}
+
+private {/*impl}*/
+	/* convenience structure for representing structs as byte arrays 
+	*/
+	struct Bytes (T)
+		{/*...}*/
+			byte[T.sizeof] data;
+			alias data this;
+
+			auto bytes ()
+				{/*...}*/
+					return data[];
+				}
+
+			auto opEquals (byte[] that)
+				{/*...}*/
+					return bytes[].equal (that[]);
+				}
+		}
+
+	/* convert values into bytes, or references into byte views 
+	*/
+	auto bytes (T)(ref T x)
+		{/*...}*/
+			return (*cast(Bytes!T*)&x)[];
+		}
+	auto bytes (T)(T x)
+		{/*...}*/
+			return (*cast(Bytes!T*)&x);
+		}
+}
 
 unittest {/*stacked mixin postblit}*/
 		static bool one, two;
