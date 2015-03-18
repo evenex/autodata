@@ -77,7 +77,7 @@ struct Zipped (Spaces...)
 
 		static if (
 			not (Contains!(void, Map!(ElementType, Spaces)))
-			&& is (typeof(length) : size_t)
+			&& is (typeof(length.identity) : size_t)
 		) // HACK foreach tuple expansion causes compiler segfault on template range ops, opApply is workaround
 			int opApply (int delegate(Map!(ElementType, Spaces)) op)
 				{/*...}*/
@@ -190,7 +190,7 @@ struct Zipped (Spaces...)
 							static if (is (typeof(spaces[0].limit!d)))
 								auto base = spaces[0].limit!d;
 
-							else static if (d == 0 && is (typeof(spaces[0].length) : size_t))
+							else static if (d == 0 && is (typeof(spaces[0].length.identity) : size_t))
 								size_t[2] base = [0, spaces[0].length];
 
 							else static assert (0, no_measure_error!i);
@@ -199,7 +199,7 @@ struct Zipped (Spaces...)
 							static if (is (typeof(spaces[i].limit!d)))
 								auto lim = spaces[i].limit!d;
 
-							else static if (d == 0 && is (typeof(spaces[i].length) : size_t))
+							else static if (d == 0 && is (typeof(spaces[i].length.identity) : size_t))
 								size_t[2] lim = [0, spaces[i].length];
 
 							else static assert (0, no_measure_error!i);

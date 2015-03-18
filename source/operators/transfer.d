@@ -67,7 +67,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 							)
 						)) bounds_check!i (selected[j]);
 					}
-				else static if (is (typeof(source.length)) && not (is (typeof(this[selected].limit!1))))
+				else static if (is (typeof(source.length.identity)) && not (is (typeof(this[selected].limit!1))))
 					{/*...}*/
 						assert (source.length == this[selected].limit!0.width,
 							size_mismatch_error (source.length, this[selected].limit!0.width)
