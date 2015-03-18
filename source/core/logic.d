@@ -33,3 +33,10 @@ template not (alias predicate)
 				return !(predicate!Args);
 			}
 	}
+
+/* logical implication
+*/
+bool implies (bool a, bool b)
+	{/*...}*/
+		return a? b : true;
+	}
