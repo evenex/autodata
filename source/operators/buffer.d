@@ -66,7 +66,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 							cannot_assign_error~ `(` ~S.stringof~ ` has too many dimensions)`
 						);
 					}
-				else static if (is (typeof(space.length)) && not (is (typeof(this[selected].limit!1))))
+				else static if (is (typeof(space.length.identity)) && not (is (typeof(this[selected].limit!1))))
 					{/*...}*/
 						static assert (is (typeof(space.length.identity) : Domain!allocate[0]),
 							cannot_assign_error~ ` (length is incompatible)`
