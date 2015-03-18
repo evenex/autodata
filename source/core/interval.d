@@ -64,7 +64,7 @@ auto ref left (T)(auto ref T[2] interval)
 	}
 auto ref right (T)(auto ref T[2] interval)
 	in {/*...}*/
-		//assert (interval.is_valid_interval);
+		assert (interval.is_valid_interval);
 	}
 	body {/*...}*/
 		return interval[1];
@@ -74,7 +74,7 @@ auto ref right (T)(auto ref T[2] interval)
 */
 auto width (T)(T[2] interval)
 	in {/*...}*/
-	//	assert (interval.is_valid_interval);
+		assert (interval.is_valid_interval);
 	}
 	body {/*...}*/
 		return interval.right - interval.left;
@@ -145,7 +145,7 @@ bool is_contained_in (T)(T[2] a, T[2] b)
 */
 bool is_contained_in (T)(T x, T[2] interval)
 	in {/*...}*/
-		//assert (interval.is_valid_interval);
+		assert (interval.is_valid_interval);
 	}
 	body {/*...}*/
 		return (interval.left <= x && x < interval.right)
@@ -170,7 +170,7 @@ bool between (T, U, V) (T t, U t0, V t1)
 */
 auto clamp (T,U)(T value, U[2] interval)
 	in {/*...}*/
-		//assert (interval.is_valid_interval);
+		assert (interval.is_valid_interval);
 	}
 	body {/*...}*/
 		value = max (value, interval.left);
@@ -178,4 +178,3 @@ auto clamp (T,U)(T value, U[2] interval)
 
 		return value;
 	}
-
