@@ -9,11 +9,11 @@ private {/*import}*/
 
 /* forward an argument, as lvalue reference or rvalue move 
 */
-template forward (alias symbol)
+template forward_single (alias symbol)
 	{/*...}*/
 		static if (__traits(isRef, symbol))
-			alias forward = symbol;
-		else auto forward ()
+			alias forward_single = symbol;
+		else auto forward_single ()
 			{/*...}*/
 				typeof(symbol) value;
 				move (symbol, value);
@@ -21,9 +21,15 @@ template forward (alias symbol)
 				return value;
 			}
 	}
+template forward_multi (Aliases...)
+	{/*...}*/
+		alias forward_multi = Map!(forward_single, Aliases);
+	}
 template forward (Aliases...)
 	{/*...}*/
-		alias forward = Map!(forward, Aliases);
+		static if (Aliases.length > 1)
+			alias forward = forward_multi!Aliases;
+		else alias forward = forward_single!Aliases;
 	}
 
 /* a borrowed resource bypasses RAII and move semantics 
