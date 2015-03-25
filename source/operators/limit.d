@@ -22,7 +22,7 @@ template LimitOps (limits...)
 			full_name!(typeof(this))~ ` LimitOps: limit types must support comparison (<. >, <=, >=)`
 		);
 
-		auto opDollar (size_t i)()
+		auto opDollar (size_t i)() // const REVIEW source/operators/limit.d(35): Error: incompatible types for ((0) : (this.bounds)): 'int' and 'const(int[2])'
 			{/*...}*/
 				alias Element () = typeof(limits[i][0]);
 				alias Identity () = typeof(limits[i].identity);
