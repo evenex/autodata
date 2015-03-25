@@ -2,6 +2,7 @@ module autodata.meta;
 
 public:
 
+import autodata.meta.diagnostic;
 import autodata.meta.introspection;
 import autodata.meta.lambda;
 import autodata.meta.list;
