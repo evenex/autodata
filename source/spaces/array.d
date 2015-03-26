@@ -102,7 +102,7 @@ struct Array (T, uint dimensions = 1)
 												Enumerate!open
 											)
 										)
-									).tuple.expand
+									).tuple.expand // REVIEW tuple.expand idiom
 								];
 							}
 						void input_range ()()
