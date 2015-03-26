@@ -21,7 +21,7 @@ template ForwardOps (alias target)
 		mixin(parameterized_op!`opIndexOpAssign`);
 		mixin(parameterized_op!`opIndexUnary`);
 
-		auto opDollar (uint d)() const
+		auto opDollar (uint d)()
 			{/*...}*/
 				return target.opDollar!d;
 			}
