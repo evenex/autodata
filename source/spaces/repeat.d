@@ -10,6 +10,10 @@ struct Repeated (T, size_t dim)
 		T value;
 		Repeat!(dim, size_t) lengths;
 
+		auto limit (size_t d)() const
+			{/*...}*/
+				return interval (lengths[d]);
+			}
 		size_t length (size_t d)() const
 			{/*...}*/
 				return lengths[d];
@@ -45,6 +49,7 @@ struct Repeated (T, size_t dim)
 
 		mixin SliceOps!(access, Map!(length, Iota!dim), RangeOps);
 	}
+
 auto repeat (T, U...)(T value, U lengths)
 	if (All!(is_integral, U))
 	{/*...}*/
