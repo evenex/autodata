@@ -2,6 +2,7 @@ module autodata.spaces.product;
 
 private {/*import}*/
 	import autodata.core;
+	import autodata.functional;
 	import autodata.meta;
 	import autodata.operators;
 }
