@@ -67,7 +67,9 @@ template dimensionality (S)
 				else enum count = 0;
 			}
 
-		enum dimensionality = count!();
+		static if (is (typeof(S.dimensionality) : size_t))
+			enum dimensionality = S.dimensionality;
+		else enum dimensionality = count!();
 	}
 
 /* get the fully qualified name of a type, including its containing module 
