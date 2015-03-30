@@ -53,6 +53,10 @@ template SliceOps (alias access, LimitsAndExtensions...)
 							else T[2] boundary = [T(0), limits[i]];
 
 							assert (
+								boundary.width > T(0),
+								Error.zero_width_boundary!i ~ ` (in)`
+							);
+							assert (
 								selected[i].is_contained_in (boundary),
 								Error.out_of_bounds (selected[i], boundary)
 								~ ` (in)`
@@ -578,5 +582,7 @@ package {/*error}*/
 
 			static out_of_bounds (T, U)(T arg, U limit) 
 				{return error_header~ `bounds exceeded! ` ~arg.text~ ` not in ` ~limit.text;}
+
+			enum zero_width_boundary (size_t dim) = error_header~ ` dimension ` ~dim.text~ ` has zero width`;
 		}
 }
