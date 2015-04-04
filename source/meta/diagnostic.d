@@ -34,3 +34,18 @@ string error_suppression (int line = __LINE__)()
 			}`}`q{
 		};
 	}
+
+/* print a symbol's type, name and value
+*/
+void print (alias symbol)()
+	{/*...}*/
+		import std.stdio;
+
+		stderr.writeln (
+			typeof(symbol).stringof,
+			` `, 
+			__traits(identifier, symbol),
+			` = `,
+			symbol
+		);
+	}
