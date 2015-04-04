@@ -1,7 +1,5 @@
 module autodata.sequence.adaptors.queue;
 
-version (none): // TODO fix array bounds bug CAREFULLY
-
 private {/*imports}*/
 	import autodata.core;
 	import autodata.operators;
@@ -19,7 +17,7 @@ struct Queue (R, OnOverflow overflow_policy = OnOverflow.error)
 
 		auto length () const
 			{/*...}*/
-				auto i = limit.left, j = limit.right;
+				auto i = limit[0], j = limit[1];
 
 				if (i <= j)
 					return j - i;
@@ -28,7 +26,7 @@ struct Queue (R, OnOverflow overflow_policy = OnOverflow.error)
 
 		auto ref access (size_t i)
 			{/*...}*/
-				return store[(limit.left + i) % capacity];
+				return store[(limit[0] + i) % capacity];
 			}
 
 		void pull (R)(R range, size_t i)
@@ -37,8 +35,11 @@ struct Queue (R, OnOverflow overflow_policy = OnOverflow.error)
 			}
 		void pull (R)(R range, size_t[2] interval)
 			{/*...}*/
-				auto i = (limit.left + interval.left) % capacity,
-					j = (limit.left + interval.right) % (capacity + 1);
+				auto i = limit[0] + interval.left,
+					j = limit[0] + interval.right; 
+
+				i %= capacity;
+				j = (j == capacity)? j : j % capacity;
 
 				if (i <= j)
 					{/*...}*/
@@ -72,12 +73,10 @@ struct Queue (R, OnOverflow overflow_policy = OnOverflow.error)
 				if (exit_on_overflow (range.length))
 					return this;
 
-				auto start = limit.right;
+				limit[1] += range.length;
+				limit[1] %= (capacity + 1);
 
-				limit.right += range.length;
-				limit.right %= (capacity + 1);
-
-				this[$-range.length..$] = range;
+				this[$ - range.length..$] = range;
 
 				return this;
 			}
@@ -101,8 +100,8 @@ struct Queue (R, OnOverflow overflow_policy = OnOverflow.error)
 				assert (count < length);
 			}
 			body {/*...}*/
-				limit.left += count + capacity;
-				limit.left %= capacity;
+				limit[0] += count + capacity;
+				limit[0] %= capacity;
 
 				return this;
 			}
@@ -114,7 +113,7 @@ struct Queue (R, OnOverflow overflow_policy = OnOverflow.error)
 		/* clear */
 		auto clear ()
 			{/*...}*/
-				limit.left = limit.right = 0;
+				limit[0] = limit[1] = 0;
 			}
 
 		mixin TransferOps!(pull, access, length, RangeOps);
@@ -122,7 +121,7 @@ struct Queue (R, OnOverflow overflow_policy = OnOverflow.error)
 		private mixin OverflowPolicy;
 		private size_t[2] limit;
 	}
-	unittest {/*...}*/
+	void main () {/*...}*/
 		auto A = Queue!(int[])();
 
 		A.capacity = 5;

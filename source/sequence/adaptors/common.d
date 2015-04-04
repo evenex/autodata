@@ -1,5 +1,9 @@
 module autodata.sequence.adaptors.common;
 
+private {/*import}*/
+	import autodata.meta;
+}
+
 package template AdaptorCapacity ()
 	{/*...}*/
 		auto capacity () const
@@ -39,7 +43,7 @@ package template AdaptorCtor ()
 		this (T...)(T args)
 			{/*...}*/
 				void ctor ()() {store = R (args);}
-				void alloc ()() {store = new Element!R[args];}
+				void alloc ()() {store = new ElementType!R[args];}
 
 				Match!(ctor, alloc);
 			}
