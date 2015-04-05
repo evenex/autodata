@@ -14,38 +14,15 @@ private {/*import}*/
 template reduce (functions...)
 	if (functions.length > 0)
 	{/*...}*/
-		template Accumulator (R)
-			{/*...}*/
-				static if (functions.length == 1)
-					alias Accumulator = Unqual!(typeof(functions[0] (R.init.front, R.init.front)));
-				else {/*alias Accumulator}*/
-					string generate_accumulator ()
-						{/*...}*/
-							string code;
-
-							foreach (i, f; functions)
-								code ~= q{Unqual!(typeof(functions[} ~ i.text ~ q{] (R.init.front, R.init.front))), };
-
-							return q{Tuple!(} ~code[0..$-2]~ q{)};
-						}
-
-					mixin(q{
-						alias Accumulator = } ~generate_accumulator~ q{;
-					});
-				}
-			}
-
 		auto reduce (R)(R range)
 			if (is_input_range!R)
 			in {/*...}*/
 				assert (not (range.empty), `cannot reduce empty ` ~R.stringof~ ` without seed`);
 			}
 			body {/*...}*/
-				Accumulator!R seed;
+				Repeat!(functions.length, ElementType!R) seed;
 
-				static if (functions.length == 1)
-					seed = range.front;
-				else foreach (i, f; functions)
+				foreach (i, f; functions)
 					seed[i] = range.front;
 
 				range.popFront;
@@ -53,19 +30,18 @@ template reduce (functions...)
 				return reduce (range, seed);
 			}
 
-		auto reduce (R, T = Accumulator!R)(R range, T seed)
-			if (is_input_range!R)
+		auto reduce (R, T...)(R range, T seed)
+			if (is_input_range!R && T.length > 0)
 			{/*...}*/
-				// FUTURE static if (isRandomAccess) try to block and parallelize... or foreach (x; parallel(r))?
-				auto accumulator = seed;
+				auto accumulator = seed.tuple;
 
 				for (; not (range.empty); range.popFront)
-					static if (functions.length == 1)
-						accumulator = functions[0] (accumulator, range.front);
-					else foreach (i, f; functions)
+					foreach (i, f; functions)
 						accumulator[i] = functions[i] (accumulator[i], range.front);
 
-				return accumulator;
+				static if (accumulator.length == 1)
+					return accumulator[0];
+				else return accumulator;
 			}
 	}
 	unittest {/*...}*/
