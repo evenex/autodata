@@ -79,7 +79,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 
 				auto read_limits ()()
 					{/*...}*/
-						foreach (i; Count!(Domain!access))
+						foreach (i; Ordinal!(Domain!access))
 							size[i] = space.limit!i.width;
 					}
 				auto read_length ()()
@@ -118,10 +118,10 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 
 		import autodata.operators.slice;
 		import autodata.operators.range;
+		import autodata.functional: map;
+		import autodata.sequence: enumerate;
 
 		import std.conv;
-		import std.algorithm: map;
-		import std.range: enumerate;
 
 		static struct Nat
 			{/*...}*/
@@ -152,7 +152,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 					{/*...}*/
 						data[i] = x;
 					}
-				auto pull (R)(R range, size_t[2] limits)
+				auto pull (R)(R range, Interval!size_t limits)
 					{/*...}*/
 						foreach (i, j; enumerate (Nat[limits.left..limits.right]))
 							data[j] = range[i];
@@ -248,7 +248,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 					{/*...}*/
 						data[i] = x;
 					}
-				auto pull (R)(R range, size_t[2] limits)
+				auto pull (R)(R range, Interval!size_t limits)
 					{/*...}*/
 						foreach (i, j; enumerate (Nat[limits.left..limits.right]))
 							data[j] = range[i];

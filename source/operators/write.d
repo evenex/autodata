@@ -38,7 +38,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 				void pull_selected ()() {pull (space, selected);}
 				void pull_complete ()() if (Selected.length == 0) {pull (space, this[].bounds);}
 
-				Match!(push_selected, access_assign, pull_selected, pull_complete);
+				Try!(2, push_selected, access_assign, pull_selected, pull_complete);
 
 				return this[selected];
 			}
@@ -60,40 +60,33 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 							}
 					}
 					body {/*...}*/
+						alias FreeIndices = Extract!(q{index}, Filter!(λ!q{(Dim) = Dim.is_free}, Dimensions));
+
 						static if (Selected.length > 0)
-							alias Selection (int i) = Select!(Contains!(i, Dimensions),
+							alias Selection (int i) = Select!(Contains!(i, FreeIndices),
 								Select!(
-									is (Selected[IndexOf!(i, Dimensions)] == T[2], T),
+									is (Selected[IndexOf!(i, FreeIndices)] == Interval!T, T...),
 									typeof(bounds[i]),
 									typeof(bounds[i].left)
 								),
 								typeof(bounds[i].left)
 							);
-						else alias Selection (int i) = Select!(Contains!(i, Dimensions),
+						else alias Selection (int i) = Select!(Contains!(i, FreeIndices),
 							typeof(bounds[i]),
 							typeof(bounds[i].left)
 						);
 
-						Map!(Selection, Count!bounds)
+						Map!(Selection, Ordinal!bounds)
 							selection;
 
-						foreach (i; Count!bounds)
-							static if (is (typeof(selection[i]) == T[2], T))
-								{/*...}*/
-									static if (Selected.length == 0)
-										selection[i] = bounds[i];
-
-									else selection[i][] = bounds[i].left;
-								}
+						foreach (i; Ordinal!bounds)
+							static if (Selected.length == 0)
+								selection[i] = bounds[i];
 							else selection[i] = bounds[i].left;
 
 						static if (Selected.length > 0)
-							{/*...}*/
-								foreach (i,j; Dimensions)
-									static if (is (typeof(selection[j]) == T[2], T))
-										selection[j][] += selected[i][] - limit!i.left;
-									else selection[j] += selected[i] - limit!i.left;
-							}
+							foreach (i,j; FreeIndices)
+								selection[j] += selected[i] - limit!i.left;
 
 						return source.opIndexAssign (space, selection);
 					}
@@ -114,8 +107,11 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 		import autodata.operators.slice;
 		import autodata.operators.range;
 
-		import std.range: only, enumerate;
-		import std.algorithm: map;
+		import autodata.sequence: enumerate;
+		import autodata.functional: map;
+
+		import std.range: only;
+
 
 		static struct Nat
 			{/*...}*/
@@ -136,9 +132,10 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 
 				auto pull (int x, size_t i)
 					{/*...}*/
+					version (none)
 						data[i] = x;
 					}
-				auto pull (R)(R range, size_t[2] limits)
+				auto pull (R)(R range, Interval!size_t limits)
 					{/*...}*/
 						foreach (i, j; enumerate (Nat[limits.left..limits.right]))
 							data[j] = range[i];
@@ -176,7 +173,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 					{/*...}*/
 						data[i] = x;
 					}
-				void pull (R)(R range, size_t[2] limit)
+				void pull (R)(R range, Interval!size_t limit)
 					{/*...}*/
 						foreach (i; limit.left..limit.right)
 							{/*...}*/
@@ -225,7 +222,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 					{/*...}*/
 						data[i] = x;
 					}
-				auto pull (R)(R range, size_t[2] limits)
+				auto pull (R)(R range, Interval!size_t limits)
 					{/*...}*/
 						foreach (i, j; enumerate (Nat[limits.left..limits.right]))
 							data[j] = range[i];

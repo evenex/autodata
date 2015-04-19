@@ -46,7 +46,7 @@ template IndexOps (alias access, limits...)
 							type_error
 						);
 
-						static if (is (typeof(limit.identity) == LimitType[n], LimitType, size_t n))
+						static if (is (ExprType!limit == LimitType[n], LimitType, size_t n))
 							static assert (n == 2, 
 								array_error
 							);
@@ -56,16 +56,22 @@ template IndexOps (alias access, limits...)
 								type_error
 							);
 
-						else static assert (is (Domain!access[i] == Unqual!(typeof(limit.identity))), 
+						else static assert (
+							is (Domain!access[i] == Unqual!(ExprType!limit))
+							|| is (Domain!access[i] == ElementType!(Unqual!(ExprType!limit))),
 							type_error
 						);
 					}
 
 				foreach (i, limit; limits)
 					{/*bounds check}*/
+						static if (is (ElementType!(ExprType!limit) == void))
+							auto bounds = interval (ExprType!limit(0), limit);
+						else auto bounds = interval (limit);
+
 						assert (
-							selected[i].is_contained_in (limit.interval),
-							out_of_bounds_error (selected[i], limit.interval)
+							selected[i].is_contained_in (bounds),
+							out_of_bounds_error (selected[i], bounds)
 						);
 					}
 			}
@@ -151,19 +157,22 @@ template IndexOps (alias access, limits...)
 		assert (FloatingPointIndex()[~$]);
 		error (FloatingPointIndex()[$]);
 
-		static struct StringIndex
+		version (none)
 			{/*...}*/
-				auto access (string) {return true;}
+				static struct StringIndex
+					{/*...}*/
+						auto access (string) {return true;}
 
-				string[2] bounds = [`aardvark`, `zebra`];
+						string[2] bounds = [`aardvark`, `zebra`];
 
-				mixin IndexOps!(access, bounds);
+						mixin IndexOps!(access, bounds);
+					}
+				assert (StringIndex()[`monkey`]);
+				error (StringIndex()[`zzz`]);
+				assert (StringIndex()[$[1..$]]);
+				assert (StringIndex()[~$]);
+				error (StringIndex()[$]);
 			}
-		assert (StringIndex()[`monkey`]);
-		error (StringIndex()[`zzz`]);
-		assert (StringIndex()[$[1..$]]);
-		assert (StringIndex()[~$]);
-		error (StringIndex()[$]);
 
 		static struct MultiIndex
 			{/*...}*/

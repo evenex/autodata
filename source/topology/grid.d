@@ -25,7 +25,7 @@ struct Grid (S)
 
 				auto domain_transform (uint d)() {return space_limit!d.left + (point[d] * space_limit!d.width) / lengths[d];}
 
-				auto sample ()() {return space[Map!(domain_transform, Count!(typeof(point)))];}
+				auto sample ()() {return space[Map!(domain_transform, Ordinal!(typeof(point)))];}
 				auto stride ()() {return space[($*point[0])/lengths[0]];}
 
 				return Match!(sample, stride);

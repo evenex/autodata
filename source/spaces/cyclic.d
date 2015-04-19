@@ -2,6 +2,7 @@ module autodata.spaces.cyclic;
 
 import std.range: cycle; // TEMP
 import std.math;
+import std.conv;
 		import autodata.functional;
 
 /* traverse a range with elements rotated left by some number of positions 
@@ -32,125 +33,125 @@ auto adjacent_pairs (R)(R range)
 		return zip (range, range.rotate_elements);
 	}
 
-version (none):
-
 import autodata.meta;
 import autodata.operators;
 import autodata.core;
 		import std.stdio;
 
+size_t[2] limit (uint d : 0, R)(R range)
+	{/*...}*/
+		return [0, range.length];
+	}
+
 struct Cycle (R, Dims...)
 	{/*...}*/
-		enum is_boundary_pack (T) = is (typeof(T.Unpack) == Cons!(int, bool, bool));
-		static assert (All!(is_boundary_pack, Dims));
+		enum dimensionality = .dimensionality!R;
+		alias CyclicDims = Cons!(Dims[0].Unpack);
+		alias ModuloDims = Cons!(Dims[1].Unpack);
 
-		alias cyclic_dimensions = Map!(λ!q{(T) = T[0]}, Dims);
-
-		//////////
-
-		template Bounds (size_t i)
-			{/*...}*/
-				alias InfinityType (size_t j) = Select!(
-					Dims[IndexOf!(i, cyclic_dimensions)].Unpack[j],
-					Infinity, CoordinateType!R[i]
-				);
-
-				static if (Contains!(i, cyclic_dimensions))
-					alias Bounds = Tuple!(Map!(InfinityType, 1, 2));
-				else alias Bounds = CoordinateType!R[i][2];
-			}
-
-		Map!(Bounds, Iota!(dimensionality!R)) bounds;
-
+		alias Coord (uint d) = CoordinateType!R[d];
+		alias Slice (uint d) = Coord!d[2];
 		//////////
 
 		R space;
 
+		Map!(Coord, CyclicDims) offsets;
+		Map!(Slice, ModuloDims) bounds;
+
 		auto limit (size_t d)() const
+			if (not (Contains!(d, CyclicDims)))
 			{/*...}*/
-			//	static if (Contains!(d, cyclic_dimensions))
-			//		return;
-				//else return space[].limit!d;
 				return space[].limit!d;
 			}
-		auto length ()() const
-			if (Dims.length == 1)
+
+		struct Infinity (size_t d)
 			{/*...}*/
-				static if (Contains!(0, cyclic_dimensions))
-					return;
-				return space.length;
+				auto opUnary (string op : `~`)()
+					{/*...}*/
+						return start;
+					}
+
+				CoordinateType!R[d] start;
 			}
 
-		//////////
-
-		struct Infinity {}
-
-		struct Limit (size_t dim)
+		auto opDollar (size_t d)()
 			{/*...}*/
-				static if (is (Dims[IndexOf!(dim, cyclic_dimensions)] == T, T))
+				static if (not (Contains!(d, CyclicDims)))
 					{/*...}*/
-						static if (T.Unpack[1])
-							enum left = Infinity ();
-						else CoordinateType!R[dim] left;
+						auto dollar ()() {return space.opDollar!d;}
+						auto length ()() if (d == 0 && dimensionality == 1) 
+							{return space.length;}
 
-						static if (T.Unpack[2])
-							enum right = Infinity ();
-						else CoordinateType!R[dim] right;
-
-						auto opUnary (string op : `~`)()
-							{/*...}*/
-								return left;
-							}
-
-						this (typeof(left) left, typeof(right) right)
-							{/*...}*/
-								void assign_left ()() {this.left = left;}
-								void assign_right ()() {this.right = right;}
-								void no_op ()(){}
-
-								Match!(assign_left, no_op);
-								Match!(assign_right, no_op);
-							}
+						return Match!(dollar, length);
 					}
 				else {/*...}*/
-					autodata.operators.limit.Limit!(CoordinateType!R[dim])
-						limit;
-					alias limit this;
+					auto dollar ()() {return ~space.opDollar!d;}
+					auto zero ()() {return CoordinateType!R[d](0);}
+
+					return Infinity!d (Match!(dollar, zero));
 				}
 			}
 
-		auto opDollar (size_t dim)() const
+		auto opIndex (Selected...)(Selected selected)
 			{/*...}*/
-				return Limit!dim (bounds[dim].expand);
+				static if (Selected.length == 0)
+					{/*...}*/
+						return this;
+					}
+				else static if (Any!(λ!q{(T) = is (T == U[2], U) || is (T.Types)}, Selected))
+					{/*...}*/
+						alias Dims (alias filter) = Map!(
+							Pair!().First!Identity,
+							Filter!(filter, Enumerate!Selected)
+						);
+
+						alias Modulo = Dims!(λ!q{(alias pair) = is (pair.second == U[2], U)});
+						alias Cyclic = Dims!(λ!q{(alias pair) = is (pair.second.Types)});
+
+						return Cycle!(R, Pack!Cyclic, Pack!Modulo)(space);
+					}
+				else {/*...}*/
+					template get_point (uint i)
+						{/*...}*/
+							alias Coord = CoordinateType!R[i];
+
+							auto divide ()() if (Contains!(i, Cons!(CyclicDims, ModuloDims)))
+								in {/*...}*/
+									assert (space[].limit!i.width != Coord (0),
+										R.stringof~ ` has zero width along dimension ` ~i.text
+									);
+								}
+								body {/*...}*/
+									auto offset ()() if (Contains!(i, CyclicDims)) {return offsets[IndexOf!(i, CyclicDims)];}
+									auto bound ()() if (Contains!(i, ModuloDims)) {return bounds[IndexOf!(i, ModuloDims)].left;}
+
+									auto o = Match!(offset, bound);
+									auto p = selected[i];
+									auto w = space[].limit!i.width;
+
+									if (p < space[].limit!i.left)
+										return (o + p + w * (p/w + Coord (1))) % w;
+									else return (o + p) % w;
+								}
+							auto pass ()() if (not (Contains!(i, Cons!(CyclicDims, ModuloDims))))
+								{/*...}*/
+									return selected[i];
+								}
+								
+							alias get_point = Match!(divide, pass);
+						}
+
+					return space[Map!(get_point, Ordinal!Selected).tuple.expand];
+				}
 			}
 
-		//////////
-
-		template is_valid_slice (size_t dim)
+		Slice!d opSlice (size_t d)(Repeat!(2, Coord!d) slice)
 			{/*...}*/
-				enum is_valid_slice (T) = is (T == CoordinateType!R[dim]) || is (T == Limit!dim);
+				return [slice];
 			}
-
-		auto opSlice (size_t dim, T,U)(T left, U right)
-			//if (All!(is_valid_slice!dim, T, U))
-			in {/*...}*/
-				static if (is (T == Infinity!dim))
-					assert (left.is_negative);
-
-				static if (is (U == Infinity!dim))
-					assert (right.is_positive);
-			}
-			body {/*...}*/
-				static if (is (T == U) && is (T == CoordinateType!R[dim]))
-					return interval (left, right);
-				else return tuple (left, right);
-			}
-
-		auto opIndex (T...)(T indices)
+		auto opSlice (size_t d)(Coord!d left, Infinity!d right)
 			{/*...}*/
-				static if (T.length == 0)
-					return this;
-				//else
+				return tuple (left, right);
 			}
 	}
 auto cycle (S)(S space)
@@ -158,11 +159,15 @@ auto cycle (S)(S space)
 		return Cycle!(S, Pack!(0,true,true))(space);
 	}
 
+import autodata.spaces.product;
+version (autodata_devel)
 void main ()
 	{/*...}*/
 		import autodata.spaces.array;
-		auto x = Cycle!(Array!(int,2), Pack!(0,false,true))();
-		auto y = Cycle!(int[], Pack!(0,false,true))();
+		import autodata.meta.test;
+		auto a = [1,2,3].extrude ([4,5,6]).array;
+		auto x = a.Cycle!(Array!(int,2), Pack!(0,1), Pack!());
+		auto y = a.Cycle!(Array!(int,2), Pack!(0), Pack!());
 
 	//	pragma(msg, typeof(x.limit!0), typeof(x.limit!1));
 	//	pragma(msg, dimensionality!(typeof(x)), CoordinateType!(typeof(x)));
@@ -172,5 +177,25 @@ void main ()
 
 	//	assert ([1,2,3].cycle[5..10] == [2,3,1,2,3]);
 
-		writeln (is(typeof(float(real.infinity))));
+		no_error 	(a[2,2]);
+		error 		(a[3,3]);
+
+		no_error 	(x[2,2]);
+		no_error 	(x[3,3]);
+
+		no_error 	(y[3,2]);
+		error 		(y[3,3]);
+
+		auto z = [1,2,3].Cycle!(int[], Pack!(0), Pack!());
+
+		pragma(msg, typeof(z[]));
+		pragma(msg, typeof(z[2]));
+		pragma(msg, typeof(z[3..4]));
+		pragma(msg, typeof(z[0..$]));
 	}//
+
+static if (0)
+void main ()
+	{/*...}*/
+		
+	}

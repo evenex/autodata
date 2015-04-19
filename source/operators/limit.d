@@ -13,34 +13,49 @@ template LimitOps (limits...)
 	{/*...}*/
 		private {/*imports}*/
 			import autodata.meta;
+			import autodata.core.interval: Interval;
 		}
 
-		static assert (All!(is_const_function, Filter!(is_function, limits)),
-			full_name!(typeof(this))~ ` LimitOps: limit functions must be const`
-		);
-		static assert (All!(is_comparable, Map!(Codomain, Filter!(is_function, limits)), Filter!(Not!is_function, limits)),
-			full_name!(typeof(this))~ ` LimitOps: limit types must support comparison (<. >, <=, >=)`
-		);
+		struct Verification
+			{/*...}*/
+				mixin LambdaCapture;
+
+				static assert (All!(is_const_function, Filter!(is_function, limits)),
+					full_name!(typeof(this))~ ` LimitOps: limit functions must be const`
+				);
+				static assert (
+					All!(is_comparable, 
+						Map!(Λ!q{(T) = Select!(
+							is (ElementType!T == void),
+							T, ElementType!T
+						)}, 
+							Map!(ExprType, limits)
+						)
+					),
+					full_name!(typeof(this))~ ` LimitOps: limit types must support comparison (<. >, <=, >=)`
+				);
+			}
 
 		auto opDollar (size_t i)() // const REVIEW source/operators/limit.d(35): Error: incompatible types for ((0) : (this.bounds)): 'int' and 'const(int[2])'
 			{/*...}*/
-				alias Element () = typeof(limits[i][0]);
-				alias Identity () = typeof(limits[i].identity);
+				alias Element () = Repeat!(2, typeof(limits[i][0]));
+				alias Boundaries () = Cons!(typeof(limits[i].left), typeof(limits[i].right));
+				alias Identity () = Repeat!(2, typeof(limits[i].identity));
 
-				alias T = Match!(Element, Identity);
-
-				static if (is (typeof(limits[i].identity) == T[2]))
-					return Limit!T (limits[i]);
-
-				else return Limit!T ([T(0), limits[i]]);
+				return Limit!(Match!(Element, Boundaries, Identity))(limits[i]);
 			}
 	}
-struct Limit (T)
+struct Limit (T,U)
 	{/*...}*/
-		union {/*limit}*/
-			T[2] limit;
-			struct {T left, right;}
+		private {/* import}*/
+			import autodata.meta;
+			import autodata.core.interval;
 		}
+
+		Interval!(T,U) limit;
+
+		auto left () {return limit.left;}
+		auto right () {return limit.right;}
 
 		alias right this;
 
@@ -49,5 +64,12 @@ struct Limit (T)
 				static if (op is `~`)
 					return left;
 				else return mixin(op ~ q{right});
+			}
+
+		this (V)(V value)
+			{/*...}*/
+				static if (is (ElementType!V == void))
+					limit = interval (V(0), value);
+				else limit = interval (value);
 			}
 	}

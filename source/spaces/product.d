@@ -43,10 +43,10 @@ struct CartesianProduct (Spaces...)
 						alias projection = Match!(π_i, π_n);
 					}
 
-				return Map!(projection, Count!Spaces).tuple.flatten;
+				return Map!(projection, Ordinal!Spaces).tuple.flatten;
 			}
 
-		mixin SliceOps!(access, Map!(limit, Count!(Domain!access)), RangeOps);
+		mixin SliceOps!(access, Map!(limit, Ordinal!(Domain!access)), RangeOps);
 	}
 
 auto cartesian_product (S,R)(S left, R right)

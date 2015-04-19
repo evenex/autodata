@@ -59,3 +59,24 @@ template InitialType (T)
 	}
 
 alias CommonType = std.traits.CommonType;
+
+template Compose (Templates...)
+	{/*...}*/
+		static if (Templates.length > 1)
+			{/*...}*/
+				alias T = Templates[0];
+				alias U = Compose!(Templates[1..$]);
+
+				alias Compose (Args...) = T!(U!(Args));
+			}
+		else alias Compose = Templates[0];
+	}
+	unittest {/*...}*/
+		alias ArrayOf (T) = const(T[]);
+
+		alias C0 = Compose!(ElementType, ArrayOf, Unqual);
+		alias C1 = Compose!(Unqual, ArrayOf, ElementType);
+
+		static assert (is (C0!(int[5]) == int[5]));
+		static assert (is (C1!(int[5]) == int[]));
+	}

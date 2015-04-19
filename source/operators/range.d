@@ -10,16 +10,18 @@ module autodata.operators.range;
 */
 template RangeOps ()
 	{/*...}*/
-		static if (Dimensions.length == 1)
+		static if (Filter!(λ!q{(Dim) = Dim.is_free}, Dimensions).length == 1)
 			@property {/*...}*/
+				enum iterated_dimension = Filter!(λ!q{(Dim) = Dim.is_free}, Dimensions)[0].index;
+
 				auto ref front () {return this[~$];}
 				auto ref back () {return this[$-1];}
 
-				auto popFront () {++bounds[Dimensions[0]].left;}
-				auto popBack () {--bounds[Dimensions[0]].right;}
+				auto popFront () {++bounds[iterated_dimension].left;}
+				auto popBack () {--bounds[iterated_dimension].right;}
 
 				auto empty () {return length == 0;}
-				auto length () const {return bounds[Dimensions[0]].width;}
+				auto length () const {return bounds[iterated_dimension].width;}
 
 				auto save () {return this;}
 

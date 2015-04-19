@@ -31,6 +31,9 @@ template ElementType (S)
 		static if (is (typeof(S.init[CoordinateType!S.init]) == T, T))
 			alias ElementType = T;
 
+		else static if (is (S.Element == T, T))
+			alias ElementType = T;
+
 		else alias ElementType = std.range.ElementType!S;
 	}
 

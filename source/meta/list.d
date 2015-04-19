@@ -18,11 +18,20 @@ alias Repeat (size_t n, T...) = Cons!(T, Repeat!(n-1, T));
 alias Repeat (size_t n : 0, T...) = Cons!();
 
 ////
-alias Map = staticMap;
+template Map (alias F, T...)
+	if (T.length == 0)
+	{/*...}*/
+		alias Map = Cons!();
+	}
+template Map (alias F, T...)
+	if (T.length > 0)
+	{/*...}*/
+		alias Map = Cons!(F!(Unpack!(T[0])), Map!(F, T[1..$]));
+	}
 
-alias Count (T...) = Iota!(T.length);
+alias Ordinal (T...) = Iota!(T.length);
 
-alias Enumerate (T...) = Zip!(Count!T, T);
+alias Enumerate (T...) = Zip!(TList!(Ordinal!T), TList!T);
 
 template Sort (alias compare, T...)
 	{/*...}*/
@@ -44,10 +53,40 @@ template Sort (alias compare, T...)
 	}
 
 ////
-alias All = allSatisfy;
-alias Any = anySatisfy;
+template All (alias cond, T...)
+	if (T.length == 0)
+	{/*...}*/
+		enum All = true;
+	}
+template All (alias cond, T...)
+	if (T.length > 0)
+	{/*...}*/
+		enum All = cond!(Unpack!(T[0])) && All!(cond, T[1..$]);
+	}
+template Any (alias cond, T...)
+	if (T.length == 0)
+	{/*...}*/
+		enum Any = false;
+	}
+template Any (alias cond, T...)
+	if (T.length > 0)
+	{/*...}*/
+		enum Any = cond!(Unpack!(T[0])) || Any!(cond, T[1..$]);
+	}
 
-alias Filter = std.typetuple.Filter;
+template Filter (alias cond, T...)
+	if (T.length == 0)
+	{/*...}*/
+		alias Filter = Cons!();
+	}
+template Filter (alias cond, T...)
+	if (T.length > 0)
+	{/*...}*/
+		static if (cond!(Unpack!(T[0])))
+			alias Filter = Cons!(T[0], Filter!(cond, T[1..$]));
+		else alias Filter = Filter!(cond, T[1..$]);
+	}
+
 alias NoDuplicates = std.typetuple.NoDuplicates;
 
 template Reduce (alias f, T...)
@@ -69,7 +108,7 @@ template Scan (alias f, T...)
 				else alias Sweep = Reduce!(f, T[0..i+1]);
 			}
 
-		alias Scan = Map!(Sweep, Count!T);
+		alias Scan = Map!(Sweep, Ordinal!T);
 	}
 	unittest {/*...}*/
 		static assert (Scan!(Sum, 0,1,2,3,4,5) == Cons!(0,1,3,6,10,15));
@@ -86,48 +125,38 @@ alias IndexOf = staticIndexOf;
 enum Contains (T...) = IndexOf!(T[0], T[1..$]) > -1;
 
 ////
-template Zip (T...)
-	if (T.length % 2 == 0)
+template Zip (TLists...)
 	{/*...}*/
-		alias ToPair (size_t i) = Pair!(T[i], T[$/2 + i]);
+		enum n = TLists.length;
+		enum length = TLists[0].length;
 
-		alias Zip = Map!(ToPair, Iota!(T.length/2));
-	}
+		enum CheckLength (uint i) = TLists[i].length == TLists[0].length;
 
-template Pair () 
-	{/*...}*/
-		template First (alias predicate)
+		static assert (All!(Map!(CheckLength, Iota!n)));
+
+		template ToTList (uint i)
 			{/*...}*/
-				alias First (alias pair) = predicate!(pair.first);
+				alias ExtractAt (uint j) = Cons!(TLists[j].Unpack[i]);
+
+				alias ToTList = TList!(Map!(ExtractAt, Iota!n));
 			}
 
-		template Second (alias predicate)
-			{/*...}*/
-				alias Second (alias pair) = predicate!(pair.second);
-			}
-
-		template Both (alias predicate)
-			{/*...}*/
-				alias Both (alias pair) = predicate!(pair.first, pair.second);
-			}
-	}
-template Pair (T...)
-	if (T.length == 2)
-	{/*...}*/
-		static if (is (typeof({enum x = T[0];})))
-			enum first = T[0];
-		else alias first = T[0];
-		
-		static if (is (typeof({enum x = T[1];})))
-			enum second = T[1];
-		else alias second = T[1];
+		alias Zip = Map!(ToTList, Iota!length);
 	}
 
-struct Pack (T...) // TODO deprecate Pair, and overload Zip (T...) for Pack args and non-Pack args: non-Pack is implicitly 2 lists, Pack args is |Unpack| lists
+struct TList (T...)
 	{/*...}*/
 		alias Unpack = T;
 		alias Unpack this;
-		enum length = Unpack.length;
+		enum length = T.length;
+	}
+
+template Unpack (T...)
+	//if (T.length == 1) BUG this seems to turn Unpack from an alias into its own symbol, SUPER WEIRD, and then some Match!es get false negatives
+	{/*...}*/
+		static if (__traits(compiles, T[0].Unpack))
+			alias Unpack = Cons!(T[0].Unpack);
+		else alias Unpack = T;
 	}
 
 template InterleaveNLists (uint n, T...)
@@ -155,3 +184,12 @@ alias DeinterleaveNLists (uint n, T...) = InterleaveNLists!(T.length/n, T);
 
 alias Interleave (T...) = InterleaveNLists!(2,T);
 alias Deinterleave (T...) = DeinterleaveNLists!(2,T);
+
+template Extract (string member, T...)
+	{/*...}*/
+		static if (T.length == 0)
+			alias Extract = Cons!();
+		else mixin(q{
+			alias Extract = Cons!(T[0].} ~member~ q{, Extract!(member, T[1..$]));
+		});
+	}

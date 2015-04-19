@@ -28,7 +28,7 @@ struct Zipped (Spaces...)
 					{return spaces[i].map!identity[args];}
 
 				auto tuple ()() 
-					{return .tuple (Map!(point, Count!Spaces));}
+					{return .tuple (Map!(point, Ordinal!Spaces));}
 
 				auto zipped ()() if (
 					Any!(λ!q{(T) = is (T == U[2], U)}, Args)
@@ -52,7 +52,7 @@ struct Zipped (Spaces...)
 					}
 				CommonType!Args[2] array ()() {return [args];}
 
-				return Match!(Map!(attempt, Count!Spaces), array);
+				return Match!(Map!(attempt, Ordinal!Spaces), array);
 			}
 		auto opDollar (size_t d)()
 			{/*...}*/
@@ -68,7 +68,7 @@ struct Zipped (Spaces...)
 							}
 					}
 
-				return Match!(Map!(attempt, Count!Spaces));
+				return Match!(Map!(attempt, Ordinal!Spaces));
 			}
 		auto opEquals (S)(S that)
 			{/*...}*/
@@ -101,13 +101,13 @@ struct Zipped (Spaces...)
 			{/*...}*/
 				auto get (size_t i)() {return spaces[i].front;}
 
-				return tuple (Map!(get, Count!Spaces));
+				return tuple (Map!(get, Ordinal!Spaces));
 			}
 		auto back ()()
 			{/*...}*/
 				auto get (size_t i)() {return spaces[i].back;}
 
-				return tuple (Map!(get, Count!Spaces));
+				return tuple (Map!(get, Ordinal!Spaces));
 			}
 		auto popFront ()()
 			{/*...}*/
@@ -137,7 +137,7 @@ struct Zipped (Spaces...)
 							}
 					}
 
-				return Match!(Map!(get_length, Count!Spaces));
+				return Match!(Map!(get_length, Ordinal!Spaces));
 			}
 		auto limit (size_t i)() const
 			{/*...}*/
@@ -149,7 +149,7 @@ struct Zipped (Spaces...)
 							}
 					}
 
-				return Match!(Map!(get_limit, Count!Spaces));
+				return Match!(Map!(get_limit, Ordinal!Spaces));
 			}
 		auto limit ()() const
 			{/*...}*/
@@ -161,7 +161,7 @@ struct Zipped (Spaces...)
 							}
 					}
 
-				return Match!(Map!(get_limit, Count!Spaces));
+				return Match!(Map!(get_limit, Ordinal!Spaces));
 			}
 
 		invariant ()
@@ -181,7 +181,7 @@ struct Zipped (Spaces...)
 				);
 
 				foreach (d; Iota!(Dimensionalities[0]))
-					foreach (i; Count!Spaces)
+					foreach (i; Ordinal!Spaces)
 						{/*bounds check}*/
 							enum no_measure_error (int i) = `zip error: `
 								~Spaces[i].stringof

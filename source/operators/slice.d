@@ -1,5 +1,5 @@
 module autodata.operators.slice;
-
+// TODO document: Diagnostic 
 /* generate slicing operators with IndexOps
 
 	Requires:
@@ -35,10 +35,10 @@ template SliceOps (alias access, LimitsAndExtensions...)
 							);
 
 							static assert (
-								All!(Pair!().Both!is_implicitly_convertible,
+								All!(is_implicitly_convertible,
 									Zip!(
-										Map!(Error.Element, Selected),
-										Map!(Error.Element, Map!(ExprType, limits)),
+										TList!(Map!(Error.Element, Selected)),
+										TList!(Domain!access)
 									)
 								), Error.type_mismatch
 							);
@@ -46,12 +46,13 @@ template SliceOps (alias access, LimitsAndExtensions...)
 
 					foreach (i,_; selected)
 						{/*bounds check}*/
-							alias T = Unqual!(typeof(limits[i].identity));
+							alias T = Unqual!(ExprType!(limits[i]));
 
-							static if (is (T == U[2], U))
-								U[2] boundary = limits[i];
-							else static if (is (T == U, U))
-								T[2] boundary = [T(0), limits[i]];
+							static if (is (ElementType!T == void))
+								auto boundary = interval (T(0), limits[i]);
+							else auto boundary = interval (limits[i]);
+
+							alias U = ElementType!(typeof(boundary));
 
 							assert (
 								boundary.width > U(0),
@@ -70,7 +71,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 					static if (is (typeof(result) == Sub!T, T...))
 						{/*...}*/
 							foreach (i, limit; selected)
-								static if (is (typeof(limit) == U[2], U))
+								static if (is (typeof(limit) == Interval!U, U...))
 									assert (limit == result.bounds[i],
 										Error.out_of_bounds (limit, result.bounds[i])
 										~ ` (out)`
@@ -84,37 +85,36 @@ template SliceOps (alias access, LimitsAndExtensions...)
 						}
 				}
 				body {/*...}*/
-					enum is_proper_sub = Any!(λ!q{(T) = is (T == U[2], U)}, Selected);
+					mixin LambdaCapture;
+
+					enum is_proper_sub = Any!(λ!q{(T) = is (T == Interval!U, U...)}, Selected);
 					enum is_trivial_sub = Selected.length == 0;
 
 					static if (is_proper_sub || is_trivial_sub)
 						{/*...}*/
-							static if (is_proper_sub)
-								alias Subspace = Sub!(
-									Map!(Pair!().First!Identity,
-										Filter!(Pair!().Second!Identity,
-											Enumerate!(
-												Map!(λ!q{(T) = is (T == U[2], U)},
-													Selected
-												)
-											)
-										)
+							alias Subspace = Sub!(
+								Map!(Dimension,
+									Enumerate!(
+										Select!(is_proper_sub,
+											TList!Selected, 
+											/*else*/
+											TList!(Map!(
+												Λ!q{(T) = typeof(T.init.interval)}, 
+												Map!(ExprType, limits)
+											))
+										).Unpack
 									)
-								);
-							else alias Subspace = Sub!(Count!limits);
+								)
+							);
 
 							typeof(Subspace.bounds) bounds;
 
-							static if (is_proper_sub)
-								alias selection = selected;
-							else alias selection = limits;
-								
-							foreach (i, limit; selection)
-								static if (is (typeof(limit.identity) == T[2], T))
-									bounds[i] = limit;
-								else static if (is_proper_sub)
-									bounds[i][] = limit;
-								else bounds[i] = [typeof(limit.identity)(0), limit];
+							foreach (i, limit; Unpack!(Select!(is_proper_sub,
+								TList!selected, /*else*/ TList!limits
+							)))
+								static if (is_trivial_sub && is (ElementType!(ExprType!limit) == void))
+									bounds[i] = interval (ExprType!limit(0), limit);
+								else bounds[i] = interval (limit);
 
 							auto local_access ()() {return Subspace (&this, bounds);}
 							auto static_access ()() {return Subspace (null, bounds);}
@@ -125,146 +125,20 @@ template SliceOps (alias access, LimitsAndExtensions...)
 				}
 		}
 		public {/*opSlice}*/
-			alias Parameter (int i) = Domain!access[i];
-
-			Parameter!d[2] opSlice (size_t d)(Parameter!d i, Parameter!d j)
+			static auto opSlice (size_t d, T,U)(T i, U j)
 				{/*...}*/
-					return [i,j];
+					import std.conv: to;
+
+					alias Bounds = typeof(Source.init[].bounds[d]);
+
+					return interval (i.to!(Bounds.Left), j.to!(Bounds.Right));
 				}
 		}
 		public {/*Sub}*/
-			template SubGenerator (Dimensions...)
-				{/*...}*/
-					mixin LambdaCapture;
-
-					public {/*source}*/
-						Source* source;
-					}
-					public {/*bounds}*/
-						Map!(Λ!q{(T) = Select!(is (T == U[2], U), T, T[2])},
-							Map!(Unqual,
-								Map!(ExprType, limits)
-							)
-						) bounds;
-					}
-					public {/*limits}*/
-						auto limit (size_t dim)() const
-							{/*...}*/
-								alias T = Unqual!(ElementType!(typeof(bounds[Dimensions[dim]])));
-
-								auto multi ()() {return -origin[(Dimensions[dim])];}
-								auto uni   ()() {return -origin;}
-								auto zero  ()() {return T(0);}
-
-								T[2] boundary = [Repeat!(2, Match!(multi, uni, zero))];
-
-								boundary.right += bounds[Dimensions[dim]].width;
-
-								return boundary;
-							}
-						auto limit ()() const if (Dimensions.length == 1) {return limit!0;}
-
-						auto opDollar (size_t i)() const
-							{/*...}*/
-								return Limit!(typeof(limit!i.left))(limit!i);
-							}
-					}
-					public {/*opIndex}*/
-						typeof(this) opIndex ()
-							{/*...}*/
-								return this;
-							}
-						auto ref opIndex (Selected...)(Selected selected)
-							in {/*...}*/
-								alias Error = ErrorMessages!(Source, Tuple!Selected, limits);
-
-								version (all)
-									{/*type check}*/
-										static if (Selected.length > 0)
-											static assert (Selected.length == Dimensions.length,
-												Error.type_mismatch
-											);
-
-										static assert (
-											All!(Pair!().Both!is_implicitly_convertible,
-												Zip!(
-													Map!(Error.Element, Selected),
-													Map!(Error.Element, 
-														Map!(Λ!q{(int i) = typeof(limits[i].identity)}, Dimensions)
-													),
-												)
-											), Error.type_mismatch
-										);
-									}
-
-								foreach (i,_; selected)
-									{/*bounds check}*/
-										assert (
-											selected[i].is_contained_in (limit!i),
-											Error.out_of_bounds (selected[i], limit!i)
-										);
-									}
-							}
-							body {/*...}*/
-								static if (Any!(λ!q{(T) = is (T == U[2], U)}, Selected))
-									{/*...}*/
-										typeof(bounds) bounds;
-
-										foreach (i,_; bounds)
-											bounds[i] = [this.bounds[i].left, this.bounds[i].left];
-										
-										foreach (i, j; Dimensions)
-											static if (is (typeof(selected[i]) == T[2], T))
-												bounds[j][] += selected[i][] - limit!i.left;
-											else bounds[j][] += selected[i] - limit!i.left;
-
-										return Sub!(
-											Map!(Pair!().First!Identity,
-												Filter!(Pair!().Second!Identity,
-													Zip!(Dimensions,
-														Map!(λ!q{(T) = is (T == U[2], U)}, 
-															Selected
-														)
-													)
-												)
-											)
-										)(source, bounds);
-									}
-								else {/*...}*/
-									Map!(ElementType, typeof(bounds))
-										point;
-
-									foreach (i,_; typeof(bounds))
-										point[i] = bounds[i].left;
-
-									foreach (i,j; Dimensions)
-										point[j] += selected[i] - limit!i.left;
-
-									return source.opIndex (point);
-								}
-							}
-					}
-					public {/*opSlice}*/
-						alias Parameter (int i) = Domain!access[(Dimensions[i])];
-
-						Parameter!d[2] opSlice (size_t d)(Parameter!d i, Parameter!d j)
-							{/*...}*/
-								return [i,j];
-							}
-					}
-					public {/*ctor}*/
-						this (typeof(source) source, typeof(bounds) bounds)
-							{/*...}*/
-								this.source = source;
-								this.bounds = bounds;
-							}
-						@disable this ();
-					}
-				}
-
 			struct Sub (Dimensions...)
 				{/*...}*/
-					mixin SubGenerator!Dimensions sub;
+					mixin SubGenerator!(Filter!(λ!q{(Dim) = Dim.is_free}, Dimensions))
+						sub;
 
 					alias Element = Codomain!access;
 
@@ -289,11 +163,163 @@ template SliceOps (alias access, LimitsAndExtensions...)
 
 					mixin(extensions);
 				}
+
+			template SubGenerator (FreeDimensions...)
+				{/*...}*/
+					mixin LambdaCapture;
+
+					public {/*source}*/
+						Source* source;
+					}
+					public {/*bounds}*/
+						Extract!(q{Interval}, 
+							Sort!(λ!q{(T,U) = T.index < U.index},
+								Cons!(
+									FreeDimensions,
+									Filter!(λ!q{(Dim) = not (Contains!(Dim.index, Extract!(`index`, FreeDimensions)))},
+										Map!(Dimension,
+											Enumerate!(Domain!access)
+										),
+									)
+								)
+							)
+						)
+							bounds;
+					}
+					public {/*limits}*/
+						auto limit (size_t dim)() const
+							{/*...}*/
+								alias T = Unqual!(ElementType!(typeof(bounds[FreeDimensions[dim].index])));
+
+								auto multi ()() {return -origin[(FreeDimensions[dim].index)];}
+								auto uni   ()() {return -origin;}
+								auto zero  ()() {return T(0);}
+
+								auto left = Match!(multi, uni, zero);
+								auto right = left + bounds[FreeDimensions[dim].index].width;
+
+								return interval (left, right);
+
+							}
+						auto limit ()() const if (FreeDimensions.length == 1) {return limit!0;}
+
+						auto opDollar (size_t i)() const
+							{/*...}*/
+								return Limit!(typeof(limit!i.tupleof))(limit!i);
+							}
+					}
+					public {/*opIndex}*/
+						typeof(this) opIndex ()
+							{/*...}*/
+								return this;
+							}
+						auto ref opIndex (Selected...)(Selected selected)
+							in {/*...}*/
+								alias Error = ErrorMessages!(Source, Tuple!Selected, limits);
+
+								version (all)
+									{/*type check}*/
+										static if (Selected.length > 0)
+											static assert (Selected.length == FreeDimensions.length,
+												Error.type_mismatch
+											);
+
+										static assert (
+											All!(is_implicitly_convertible,
+												Zip!(
+													TList!(Map!(Error.Element, Selected)),
+													TList!(Extract!(q{Point}, FreeDimensions))
+												)
+											), Error.type_mismatch
+										);
+									}
+
+								foreach (i,_; selected)
+									{/*bounds check}*/
+										assert (
+											selected[i].is_contained_in (limit!i),
+											Error.out_of_bounds (selected[i], limit!i)
+										);
+									}
+							}
+							body {/*...}*/
+								static if (Any!(λ!q{(T) = is (T == Interval!U, U...)}, Selected))
+									{/*...}*/
+										auto bounds = this.bounds;
+
+										foreach (i, j; Extract!(q{index}, FreeDimensions))
+											bounds[j] = selected[i] - limit!i.left + bounds[j].left;
+
+										return Sub!(
+											Map!(
+												Λ!q{(uint i, T) = Dimension!(FreeDimensions[i].index, T)},
+												Enumerate!Selected
+											)
+										)(source, bounds);
+									}
+								else {/*...}*/
+									Domain!access point;
+
+									foreach (i,_; typeof(bounds))
+										point[i] = bounds[i].left;
+
+									foreach (i,j; Map!(λ!q{(uint k) = FreeDimensions[k].index}, Ordinal!Selected))
+										point[j] += selected[i] - limit!i.left;
+
+									return source.opIndex (point);
+								}
+							}
+					}
+					public {/*opSlice}*/
+						auto opSlice (size_t d, T,U)(T i, U j)
+							{/*...}*/
+								return source.opSlice!d (i,j);
+							}
+					}
+					public {/*ctor}*/
+						this (typeof(source) source, typeof(bounds) bounds)
+							{/*...}*/
+								this.source = source;
+								this.bounds = bounds;
+							}
+						@disable this ();
+					}
+				}
+		}
+		public {/*diagnostic}*/
+			template Diagnostic ()
+				{/*...}*/
+					pragma(msg, `slice diagnostic: `, typeof(this));
+
+					auto index_test ()
+						{/*...}*/
+							pragma(msg, "\t", typeof(this), `[] → `, typeof(this.opIndex ()));
+							pragma(msg, "\t", typeof(this), `[][] → `, typeof(this.opIndex ().opIndex ()));
+						}
+				}
 		}
 		private:
 		private {/*aliases}*/
 			alias Source = typeof(this);
 			alias limits = Filter!(has_identity, LimitsAndExtensions);
+
+			struct Dimension (uint dim_index, Selected)
+				{/*...}*/
+					enum index = dim_index;
+
+					alias Point = Domain!access[index];
+
+					alias Bound (bool is_infinite) = Select!(
+						is_infinite, Infinite!Point, /*else*/ Point
+					);
+
+					alias Interval = autodata.core.interval.Interval!(
+						Bound!(is (Selected.Left == Infinite!V, V)),
+						Bound!(is (Selected.Right == Infinite!V, V)),
+					);
+
+					enum is_free = not (is (Selected : Point));
+				}
 		}
 	}
 	unittest {/*...}*/
@@ -312,6 +338,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 
 				mixin SliceOps!(access, length);
 			}
+
 		assert (Basic()[0]);
 		assert (Basic()[][0]);
 		assert (Basic()[0..10][0]);
@@ -400,6 +427,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 			assert (not (is (typeof(StringIndex()[~$..$][~$]))));
 		}
 
+		version(none) {/*}*/
 		static struct MultiIndex // TODO: proper multi-index support once multiple alias this allowed
 			{/*...}*/
 				auto access_one (float) {return true;}
@@ -441,6 +469,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 		assert (is (typeof(MultiIndex()[cast(size_t)(~$)..cast(size_t)($)])));
 		assert (is (typeof(MultiIndex()[cast(float)(~$)..cast(float)($)])));
 		assert (not (is (typeof(MultiIndex()[cast(int)(~$)..cast(int)($)]))));
+		}
 
 		static struct MultiDimensional
 			{/*...}*/
@@ -525,6 +554,33 @@ template SliceOps (alias access, LimitsAndExtensions...)
 		assert (SubOrigin()[][0..3][-1.5]);
 		assert (SubOrigin()[~$..$][-$]);
 
+		static struct IntervalSub
+			{/*...}*/
+				auto access (size_t i)
+					{/*...}*/
+						return true;
+					}
+
+				auto bounds = interval!size_t (50, 75);
+
+				mixin SliceOps!(access, bounds);
+			}
+		assert (IntervalSub()[].limit!0.width == 25);
+
+		static struct InfiniteSub
+			{/*...}*/
+				auto access (size_t i)
+					{/*...}*/
+						return true;
+					}
+
+				auto bounds = interval (0UL, infinity); // BUG IT DOESNT LIKE THIS, IT SEES THE INFINITY BUT IT TURNS IT INTO THE BASE TYPE ANYWAY
+
+				mixin SliceOps!(access, bounds);
+			}
+		assert (InfiniteSub()[].limit!0.width == infinity);
+
+		version (none) {/*}*/
 		static struct MultiIndexSub // TODO: proper multi-index support once multiple alias this allowed
 			{/*...}*/
 				auto access_one (float) {return true;}
@@ -569,6 +625,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 		assert (MultiIndexSub()[cast(float)~$..$].bounds[0] == [-5, 0]);
 		assert (MultiIndexSub()[cast(float)~$..cast(float)$].bounds[0] == [-5, -5]);
 		//assert (MultiIndexSub()[cast(size_t)(~$)..cast(size_t)$][cast(size_t)(~$)]);
+		}
 	}
 
 package {/*error}*/
@@ -577,7 +634,7 @@ package {/*error}*/
 			import std.conv;
 			import autodata.meta;
 
-			alias Element (T) = ElementType!(Select!(is (T == U[2], U), T, T[2]));
+			alias Element (T) = Select!(is (ElementType!T == void), T, /*else*/ ElementType!T);
 
 			enum error_header = This.stringof~ `: `;
 

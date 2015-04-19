@@ -121,7 +121,7 @@ struct Queue (R, OnOverflow overflow_policy = OnOverflow.error)
 		private mixin OverflowPolicy;
 		private size_t[2] limit;
 	}
-	void main () {/*...}*/
+	unittest {/*...}*/
 		auto A = Queue!(int[])();
 
 		A.capacity = 5;

@@ -38,6 +38,14 @@ template Match (patterns...)
 			}
 		else alias Match = Instantiate!(Filtered[0]);
 	}
+template Try (uint pattern_to_force_on_failure, patterns...)
+	{/*...}*/
+		alias fallback = patterns[pattern_to_force_on_failure];
+
+		static if (!(is(typeof(Match!(patterns)))))
+			alias Try = fallback!();
+		else alias Try = Match!patterns;
+	}
 
 /* mixin overload priority will route calls to the given symbol 
 		to the first given mixin alias which can complete the call

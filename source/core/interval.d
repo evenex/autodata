@@ -2,6 +2,7 @@ module autodata.core.interval;
 
 private {/*import}*/
 	import std.algorithm: min, max;
+	import autodata.core.infinity;
 	import autodata.core.logic;
 	import autodata.meta;
 }
@@ -9,30 +10,181 @@ private {/*import}*/
 /* unless otherwise noted, intervals are half-open on the right side (for bounds checking) 
 */
 
-/* convenience constructor 
+/*
+	TODO doc Interval type (left, right, front, back)
 */
-CommonType!(T,U)[2] interval (T,U)(T left, U right)
-	if (not (is (CommonType!(T,U) == void)))
-	out (result) {/*...}*/
-		assert (result.is_valid_interval);
+struct Interval (LeftType, RightType)
+	{/*...}*/
+		alias Left = LeftType; alias Right = RightType;
+		static assert (is (InitialType!Left == InitialType!Right));
+
+		auto left = -Left ();
+		auto right = Right ();
+
+		alias Element = InitialType!Left;
+
+		auto opEquals (T...)(const Interval!T that) const
+			{/*...}*/
+				return this.left == that.left
+				&& this.right == that.right;
+			}
+		auto opEquals (T)(const T[2] that) const
+			{/*...}*/
+				return this.left == that[0]
+				&& this.right == that[1];
+			}
+
+		auto opBinary (string op, T)(T that)
+			out {assertion;}
+			body {/*...}*/
+				auto ret = this;
+
+				mixin(q{
+					ret } ~op~ q{= that;
+				});
+
+				return ret;
+			}
+		auto ref opOpAssign (string op)(Element point)
+			out {assertion;}
+			body {/*...}*/
+				mixin(q{
+					left } ~op~ q{= point;
+					right } ~op~ q{= point;
+				});
+
+				return this;
+			}
+		auto ref opOpAssign (string op, T...)(Interval!T interval)
+			out {assertion;}
+			body {/*...}*/
+				mixin(q{
+					left } ~op~ q{= interval.left;
+					right } ~op~ q{= interval.right;
+				});
+			}
+
+		auto ref opAssign (T...)(Interval!T interval)
+			out {assertion;}
+			body {/*...}*/
+				this.left = interval.left;
+				this.right = interval.right;
+
+				return this;
+			}
+		auto ref opAssign (T...)(Element point)
+			out {assertion;}
+			body {/*...}*/
+				this.left = this.right = point;
+
+				return this;
+			}
+
+		private void assertion () 
+			{/*...}*/
+				assert (left <= right, this.text ~ ` is out of order`);
+			}
+	}
+struct Interval (T : void)
+	{/*...}*/
+		alias Element = void;
+
+		auto left ()
+			{/*...}*/
+				return -infinity;
+			}
+		auto right ()
+			{/*...}*/
+				return infinity;
+			}
+
+		auto toString () const
+			{/*...}*/
+				return `[-inf..inf]`;
+			}
+	}
+alias Interval (T) = Interval!(T,T);
+	unittest {/*...}*/
+		import std.conv;
+
+		Interval!int x0;
+		Interval!uint x1;
+		Interval!(uint, Infinite!uint) x2;
+		static assert (not (is (Interval!(Infinite!uint, uint))));
+		static assert (not (is (Interval!(Infinite!int, Infinite!uint))));
+		Interval!(Infinite!int, Infinite!int) x3;
+
+		assert (x0.text == `[0..0]`);
+		assert (x1.text == `[0..0]`);
+		assert (x2.text == `[0..inf]`);
+		assert (x3.text == `[-inf..inf]`);
+
+		auto y0 = interval (1,2);
+		auto y1 = interval (1, infinity);
+		auto y2 = interval (-infinity, infinity);
+		auto y3 = interval!int (-infinity, infinity);
+		auto y4 = interval!real (-infinity, infinity);
+
+		assert (y0.text == `[1..2]`);
+		assert (y1.text == `[1..inf]`);
+		assert (y2.text == `[-inf..inf]`);
+		assert (y3.text == `[-inf..inf]`);
+		assert (y4.text == `[-inf..inf]`);
+	}
+
+/* interval constructors 
+*/
+auto interval (T)(Infinite!void left, Infinite!void right)
+	in {/*...}*/
+		assert (left.is_negative && right.is_positive);
 	}
 	body {/*...}*/
-		return [left, right];
+		return Interval!(Repeat!(2, Infinite!T))();
 	}
-auto interval (T)(T[2] interval)
-	out (result) {/*...}*/
-		assert (result.is_valid_interval);
+auto interval (Infinite!void left, Infinite!void right)
+	in {/*...}*/
+		assert (left.is_negative && right.is_positive);
 	}
 	body {/*...}*/
-		return interval;
+		return Interval!void ();
 	}
-auto interval (T)(T right)
+auto interval (T)(T[2] bounds)
+	{/*...}*/
+		return Interval!T (bounds[0], bounds[1]);
+	}
+auto interval (T,U)(T left, U right)
+	{/*...}*/
+		static if (is (T == Infinite!V, V))
+			{}
+		static if (is (U == Infinite!W, W))
+			{}
+
+		static if (is (V == void) && is (W == void))
+			static assert (0, `infinite interval declared without type`);
+
+		else static if (is (V == void))
+			return Interval!(Infinite!U, U)(-infinity!U, right);
+
+		else static if (is (W == void))
+			return Interval!(T, Infinite!T)(left, infinity!T);
+
+		else static if (is (V) && is (W))
+			return Interval!(T,U)(left, right);
+
+		else static if (is (V))
+			return Interval!(T, CommonType!(V,U))(left, right);
+
+		else static if (is (W))
+			return Interval!(CommonType!(T,W), U)(left, right);
+
+		else return Interval!(CommonType!(T,U))(left, right);
+	}
+auto interval (T)(T point)
 	if (not (is (T == U[2], U)))
-	out (result) {/*...}*/
-		assert (result.is_valid_interval);
-	}
-	body 	{/*...}*/
-		return interval (T(0), right);
+	{/*...}*/
+		static if (is (T == Interval!U, U...))
+			return point;
+		else return interval (point, point);
 	}
 	unittest {/*...}*/
 		auto a = interval (0, 10);
@@ -51,43 +203,31 @@ auto interval (T)(T right)
 		assert (c.left == 0);
 		assert (c.right == 6);
 		assert (c.width == 6);
-	}
 
-/* named access to first and second elements of T[2] 
-*/
-auto ref left (T)(auto ref T[2] interval)
-	in {/*...}*/
-		assert (interval.is_valid_interval);
-	}
-	body {/*...}*/
-		return interval[0];
-	}
-auto ref right (T)(auto ref T[2] interval)
-	in {/*...}*/
-		assert (interval.is_valid_interval);
-	}
-	body {/*...}*/
-		return interval[1];
+		auto d = interval (c);
+		assert (d.left == 0);
+		assert (d.right == 6);
+		assert (d.width == 6);
+
+		auto e = interval (-infinity!real, infinity!real);
+		assert (e.left == -infinity);
+		assert (e.right == real.infinity);
+		assert (e.width == infinity);
 	}
 
 /* distance between the endpoints of an interval
 */
-auto width (T)(T[2] interval)
-	in {/*...}*/
-		assert (interval.is_valid_interval);
-	}
-	body {/*...}*/
+auto width (T)(T interval)
+	if (is (T == Interval!V, V...))
+	{/*...}*/
 		return interval.right - interval.left;
 	}
 
 /* test if two intervals overlap 
 */
-bool overlaps (T)(T[2] a, T[2] b)
-	in {/*...}*/
-		assert (a.is_valid_interval);
-		assert (b.is_valid_interval);
-	}
-	body {/*...}*/
+bool overlaps (T,U)(T a, U b)
+	if (is (T == Interval!V, V...) && is (U == Interval!W, W...))
+	{/*...}*/
 		if (a.left < b.left)
 			return b.left < a.right;
 		else return a.left < b.right;
@@ -110,53 +250,67 @@ bool overlaps (T)(T[2] a, T[2] b)
 
 /* test if an interval is contained within another 
 */
-bool is_contained_in (T)(T[2] a, T[2] b)
-	in {/*...}*/
-		assert (a.is_valid_interval);
-		assert (b.is_valid_interval);
-	}
-	body {/*...}*/
+bool is_contained_in (T,U)(T a, U b)
+	if (is (T == Interval!V, V...) && is (U == Interval!W, W...))
+	{/*...}*/
 		return a.left >= b.left && a.right <= b.right;
 	}
 	unittest {/*...}*/
 		auto a = interval (0, 10);
 		auto b = interval (1, 5);
-		auto C = interval (10, 11);
-		auto D = interval (9, 17);
+		auto c = interval (10, 11);
+		auto d = interval (9, 17);
+		auto e = interval (-infinity, infinity);
 
 		assert (a.not!is_contained_in (b));
-		assert (a.not!is_contained_in (C));
-		assert (a.not!is_contained_in (D));
+		assert (a.not!is_contained_in (c));
+		assert (a.not!is_contained_in (d));
 
 		assert (b.is_contained_in (a));
-		assert (b.not!is_contained_in (C));
-		assert (b.not!is_contained_in (D));
+		assert (b.not!is_contained_in (c));
+		assert (b.not!is_contained_in (d));
 
-		assert (C.not!is_contained_in (a));
-		assert (C.not!is_contained_in (b));
-		assert (C.is_contained_in (D));
+		assert (c.not!is_contained_in (a));
+		assert (c.not!is_contained_in (b));
+		assert (c.is_contained_in (d));
 
-		assert (D.not!is_contained_in (a));
-		assert (D.not!is_contained_in (b));
-		assert (D.not!is_contained_in (C));
+		assert (d.not!is_contained_in (a));
+		assert (d.not!is_contained_in (b));
+		assert (d.not!is_contained_in (c));
+
+		assert (a.is_contained_in (e));
+		assert (b.is_contained_in (e));
+		assert (c.is_contained_in (e));
+		assert (d.is_contained_in (e));
+
+		assert (e.not!is_contained_in (a));
+		assert (e.not!is_contained_in (b));
+		assert (e.not!is_contained_in (c));
+		assert (e.not!is_contained_in (d));
 	}
 
 /* test if a point is contained within an interval 
 */
-bool is_contained_in (T)(T x, T[2] interval)
-	in {/*...}*/
-		assert (interval.is_valid_interval);
-	}
-	body {/*...}*/
-		return (interval.left <= x && x < interval.right)
-			|| (interval.left == interval.right && x == interval.left);
-	}
-
-/* test if an interval's endpoints are ordered 
-*/
-bool is_valid_interval (T)(T[2] interval)
+bool is_contained_in (T,U)(T point, U interval)
+	if (not (is (T == Interval!V, V...)) && is (U == Interval!W, W...))
 	{/*...}*/
-		return interval[0] <= interval[1];
+		static if (is (T == V[2], V))
+			{/*...}*/
+				auto x = point[0];
+				auto y = point[1];
+
+				bool y_check = (interval.left <= y && y < interval.right)
+					|| (interval.left == interval.right && y == interval.left);
+			}
+		else {/*...}*/
+			alias x = point;
+			bool y_check = true;
+		}
+
+		return y_check && (
+			(interval.left <= x && x < interval.right)
+			|| (interval.left == interval.right && x == interval.left)
+		);
 	}
 
 /* test if a point is between two values, inclusive 
@@ -168,11 +322,9 @@ bool between (T, U, V) (T t, U t0, V t1)
 
 /* clamp a value to an interval 
 */
-auto clamp (T,U)(T value, U[2] interval)
-	in {/*...}*/
-		assert (interval.is_valid_interval);
-	}
-	body {/*...}*/
+auto clamp (T,U)(T value, U interval)
+	if (is (U == Interval!W, W...))
+	{/*...}*/
 		value = max (value, interval.left);
 		value = min (value, interval.right);
 

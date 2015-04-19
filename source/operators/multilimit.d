@@ -14,31 +14,32 @@ private {/*imports}*/
 */
 template MultiLimitOps (size_t dim, limits...)
 	{/*...}*/
-		mixin LambdaCapture;
-
 		auto opDollar (size_t i: dim)()
 			{/*...}*/
-				alias Limits = Map!(Λ!q{(T...) = typeof(T[0].identity)}, limits);
+				mixin LambdaCapture;
+
+				alias Limits = Map!(ExprType, limits);
 
 				MultiLimit!(
 					Map!(ElementType,
-						Map!(Λ!q{(T) = Select!(is (T == U[2], U), T, T[2])},
+						Map!(Λ!q{(T) 
+							= Select!(is (T == U[2], U), ElementType!T, T)}, // TODO T[2]
 							Limits
 						)
 					)
 				) multilimit;
 
 				foreach (i, Lim; Limits)
-					static if (is (Lim == T[2], T))
-						multilimit.limits[i] = limits[i];
-					else multilimit.limits[i] = [Lim(0), limits[i]];
+					multilimit.limits[i] = limits[i].interval;
 
 				return multilimit;
 			}
 	}
 struct MultiLimit (T...)
 	{/*...}*/
-		Map!(Λ!q{(U) = U[2]}, T)
+		mixin LambdaCapture;
+
+		Map!(Λ!q{(U) = Interval!U}, T)
 			limits;
 
 		alias alt = opCast!(T[0]);

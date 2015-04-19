@@ -15,6 +15,9 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 		auto verified_limit_pull (S, Selected...)(S source, Selected selected)
 			in {/*...}*/
 				import std.conv: text;
+				import autodata.core.interval;
+
+				enum is_interval (T) = is (T == Interval!U, U...);
 
 				version (all)
 					{/*error messages}*/
@@ -22,7 +25,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 
 						enum type_mismatch_error = error_header
 							~ `cannot transfer ` ~S.stringof~ ` to `
-							~Filter!(λ!q{(T) = is (T == U[2], U)}, Selected).stringof
+							~Filter!(is_interval, Selected).stringof
 							~ ` subsource`;
 
 						auto size_mismatch_error (T,U)(T this_size, U that_size)
@@ -33,7 +36,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 							}
 					}
 
-				static if (not (Any!(λ!q{(T) = is (T == U[2], U)}, Selected)))
+				static if (not (Any!(is_interval, Selected)))
 					{}
 				else static if (is (typeof(source.limit!0)))
 					{/*...}*/
@@ -61,9 +64,12 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 
 						dimensions_check;
 
-						foreach (i,j; Map!(Pair!().First!Identity, 
-							Filter!(Pair!().Second!(λ!q{(T) = is (T == U[2], U)}),
-								Enumerate!Selected
+						foreach (i,j; Map!(λ!q{(bool _, uint i) = i},
+							Filter!(λ!q{(bool b, uint _) = b},
+								Zip!(
+									TList!(Map!(is_interval, Selected)),
+									TList!(Ordinal!Selected)
+								)
 							)
 						)) bounds_check!i (selected[j]);
 					}
@@ -86,7 +92,8 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 		import autodata.operators.write;
 		import autodata.operators.slice;
 		import autodata.operators.range;
-		import std.range: only, enumerate, retro;
+		import autodata.sequence: enumerate;
+		import std.range: only, retro;
 		import std.math: approx = approxEqual;
 
 		static struct Nat
@@ -110,7 +117,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 					{/*...}*/
 						data[i] = x;
 					}
-				auto pull (R)(R range, size_t[2] limits)
+				auto pull (R)(R range, Interval!size_t limits)
 					{/*...}*/
 						foreach (i, j; enumerate (Nat[limits.left..limits.right]))
 							data[j] = range[i];
@@ -139,7 +146,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 			{/*...}*/
 				mixin Basic A;
 
-				auto pull (string[], size_t[2]){}
+				auto pull (string[], Interval!size_t){}
 				auto pull (Args...)(Args args)
 					{A.pull (args);}
 			}
@@ -164,7 +171,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 				int[2] limits = [-1,2];
 				auto access (int i) {return data[i + 1];}
 
-				auto pull (R)(R r, int[2] x)
+				auto pull (R)(R r, Interval!int x)
 					{/*...}*/
 						foreach (i; x.left..x.right)
 							data[i + 1] = r[i - x.left];
@@ -202,19 +209,17 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 
 				enum size_t rows = 3, columns = 3;
 
-				alias Slice = size_t[2];
-
-				void pull (R)(R r, size_t[2] y, size_t x)
+				void pull (R)(R r, Interval!size_t y, size_t x)
 					{/*...}*/
 						foreach (i; y.left..y.right)
 							access (i,x) = r[i - y.left];
 					}
-				void pull (R)(R r, size_t y, size_t[2] x)
+				void pull (R)(R r, size_t y, Interval!size_t x)
 					{/*...}*/
 						foreach (j; x.left..x.right)
 							access (y,j) = r[j - x.left];
 					}
-				void pull (R)(R r, size_t[2] y, size_t[2] x)
+				void pull (R)(R r, Interval!size_t y, Interval!size_t x)
 					{/*...}*/
 						foreach (i; y.left..y.right)
 							pull (r[i - y.left, 0..$], i, x);
@@ -309,7 +314,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 					{/*...}*/
 						maps ~= (t) => t == x? y : t;
 					}
-				auto pull (R)(R range, double[2] domain)
+				auto pull (R)(R range, Interval!double domain)
 					{/*...}*/
 						if (domain.left == 0.0 && domain.right == 1.0)
 							maps = null;
