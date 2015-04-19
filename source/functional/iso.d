@@ -114,17 +114,8 @@ struct Mapped (Domain, alias f, Parameters...)
 				}
 			void context ()
 				{/*...}*/
-					template Dimensions (size_t i = 0)
-						{/*...}*/
-							static if (is (typeof(Domain.limit!i)))
-								alias Dimensions = Cons!(i, Dimensions!(i+1));
-							else alias Dimensions = Cons!();
-						}
-
-					alias Coord (int i) = ElementType!(typeof(Domain.limit!i.identity));
-
 					static if (is (typeof(domain.limit!0)))
-						auto subdomain = domain[Map!(Coord, Dimensions!()).init];
+						auto subdomain = domain[CoordinateType!Domain.init];
 					else static if (is (typeof(domain.front.identity)))
 						auto subdomain = domain.front;
 					else static assert (0, `map error: `

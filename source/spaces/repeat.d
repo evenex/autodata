@@ -5,16 +5,16 @@ private {/*import}*/
 	import autodata.operators;
 }
 
-struct Repeated (T, size_t dim)
+struct Repeated (T, Dims...)
 	{/*...}*/
 		T value;
-		Repeat!(dim, size_t) lengths;
+		Dims lengths;
 
 		auto limit (size_t d)() const
 			{/*...}*/
-				return interval (lengths[d]);
+				return interval (0, lengths[d]);
 			}
-		size_t length (size_t d)() const
+		auto length (size_t d)() const
 			{/*...}*/
 				return lengths[d];
 			}
@@ -23,40 +23,41 @@ struct Repeated (T, size_t dim)
 				return value;
 			}
 
-		auto front ()() if (dim == 1)
+		auto front ()() if (Dims.length == 1)
 			{/*...}*/
 				return value;
 			}
-		void popFront ()() if (dim == 1)
+		void popFront ()() if (Dims.length == 1)
 			{/*...}*/
 				lengths[0]--;
 			}
-		bool empty ()() if (dim == 1)
+		bool empty ()() if (Dims.length == 1)
 			{/*...}*/
 				return lengths[0] == 0;
 			}
-		auto length ()() const if (dim == 1)
+		auto length ()() const if (Dims.length == 1)
 			{/*...}*/
 				return length!0;
 			}
 		alias back = front;
 		alias popBack = popFront;
 
-		bool opEquals (R)(R range) if (dim == 1)
+		bool opEquals (R)(R range) if (Dims.length == 1)
 			{/*...}*/
 				return this[] == range;
 			}
 
-		mixin SliceOps!(access, Map!(length, Iota!dim), RangeOps);
+		mixin SliceOps!(access, Map!(length, Ordinal!Dims), RangeOps);
 	}
 
 auto repeat (T, U...)(T value, U lengths)
-	if (All!(is_integral, U))
+	if (All!(Compose!(is_integral, InitialType), U))
 	{/*...}*/
-		return Repeated!(T, U.length)(value, lengths);
+		return Repeated!(T, U)(value, lengths);
 	}
-	unittest {/*...}*/
+	void main () {/*...}*/
 		import autodata.functional;
+		import autodata.core;
 
 		auto x = 6.repeat (3);
 		auto y = 1.repeat (2,2,2);
@@ -70,5 +71,6 @@ auto repeat (T, U...)(T value, U lengths)
 		assert (x.front == 6);
 		assert (x.map!(q => q*2) == [12, 12, 12]);
 
+		auto z = 9.repeat (infinity!int); // TODO auto alias infinity to infinity!long instead of infinity!void?
 		// TODO test repeat infinity
 	}

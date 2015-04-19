@@ -15,10 +15,8 @@ private {/*import}*/
 */
 enum is_interval (T) = is (T == Interval!U, U...);
 
-/*
-	TODO doc Interval type (left, right, front, back)
-*/
 struct Interval (LeftType, RightType)
+	if (All!(Not!is_const, LeftType, RightType))
 	{/*...}*/
 		alias Left = LeftType; alias Right = RightType;
 		static assert (is (InitialType!Left == InitialType!Right));
@@ -29,6 +27,11 @@ struct Interval (LeftType, RightType)
 		alias Element = InitialType!Left;
 
 		mixin IntervalBase;
+	}
+template Interval (Left, Right)
+	if (Any!(is_const, Left, Right))
+	{/*...}*/
+		alias Interval = Interval!(Unqual!Left, Unqual!Right);
 	}
 struct Interval (T : void)
 	{/*...}*/

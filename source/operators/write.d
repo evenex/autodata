@@ -38,7 +38,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 				void pull_selected ()() {pull (space, selected);}
 				void pull_complete ()() if (Selected.length == 0) {pull (space, this[].bounds);}
 
-				Try!(2, push_selected, access_assign, pull_selected, pull_complete);
+				Match!(push_selected, access_assign, pull_selected, pull_complete);
 
 				return this[selected];
 			}

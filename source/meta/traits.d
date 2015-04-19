@@ -25,6 +25,11 @@ enum is_class (T...) = is(T[0] == class);
 */
 enum is_template (T...) = __traits(isTemplate, T[0]);
 
+/*
+	test if a type is const 
+*/
+enum is_const (T...) = is (T[0] == const(T[0]));
+
 /* test if a symbol refers to a function 
 */
 template is_function (T...)

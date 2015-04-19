@@ -38,7 +38,6 @@ auto adjacent_pairs (R)(R range)
 		return zip (range, range.rotate_elements);
 	}
 
-
 struct Cycle (R, uint[] cyclic_dims)
 	{/*...}*/
 		R space;
