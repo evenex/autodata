@@ -17,8 +17,6 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 				import std.conv: text;
 				import autodata.core.interval;
 
-				enum is_interval (T) = is (T == Interval!U, U...);
-
 				version (all)
 					{/*error messages}*/
 						enum error_header = full_name!(typeof(this))~ `: `;
@@ -64,14 +62,12 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 
 						dimensions_check;
 
-						foreach (i,j; Map!(λ!q{(bool _, uint i) = i},
-							Filter!(λ!q{(bool b, uint _) = b},
-								Zip!(
-									TList!(Map!(is_interval, Selected)),
-									TList!(Ordinal!Selected)
-								)
+						foreach (i,j; Map!(Second, Filter!(First,
+							Zip!(
+								TList!(Map!(is_interval, Selected)),
+								TList!(Ordinal!Selected)
 							)
-						)) bounds_check!i (selected[j]);
+						))) bounds_check!i (selected[j]);
 					}
 				else static if (is (typeof(source.length.identity)) && not (is (typeof(this[selected].limit!1))))
 					{/*...}*/
@@ -84,7 +80,8 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 				return pull (source, selected);
 			}
 
-		mixin WriteOps!(verified_limit_pull, access, LimitsAndExtensions);
+		mixin WriteOps!(verified_limit_pull, access, LimitsAndExtensions)
+			write_ops;
 	}
 	unittest {/*...}*/
 		import autodata.core;

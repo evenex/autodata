@@ -22,7 +22,7 @@ struct CartesianProduct (Spaces...)
 				enum i = LimitOffsets.length - 1;
 				enum d = LimitOffsets[0] - 1;
 
-				size_t[2] get_length ()() if (d == 0) {return [0, spaces[i].length];}
+				Interval!size_t get_length ()() if (d == 0) {return interval (0, spaces[i].length);}
 				auto get_limit ()() {return spaces[i].limit!d;}
 
 				return Match!(get_limit, get_length);

@@ -65,7 +65,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 						static if (Selected.length > 0)
 							alias Selection (int i) = Select!(Contains!(i, FreeIndices),
 								Select!(
-									is (Selected[IndexOf!(i, FreeIndices)] == Interval!T, T...),
+									is_interval!(Selected[IndexOf!(i, FreeIndices)]),
 									typeof(bounds[i]),
 									typeof(bounds[i].left)
 								),
@@ -97,7 +97,17 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 					}
 			}
 
-		mixin SliceOps!(access, LimitsAndExtensions, SubWriteOps);
+		mixin SliceOps!(access, LimitsAndExtensions, SubWriteOps)
+			slice_ops;
+
+		template Diagnostic (Space = typeof(this))
+			{/*...}*/
+				alias Previous = slice_ops.Diagnostic!();
+
+				pragma(msg, `write diagnostic: `, typeof(this));
+
+				pragma (msg, "\tpulling ", Space, ` → `, typeof (pull (Space.init[], this[].bounds)));
+			}
 	}
 	unittest {/*...}*/
 		import std.conv: to, text;

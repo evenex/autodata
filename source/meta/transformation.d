@@ -72,11 +72,20 @@ template Compose (Templates...)
 		else alias Compose = Templates[0];
 	}
 	unittest {/*...}*/
-		alias ArrayOf (T) = const(T[]);
+		import autodata.meta.introspection;
 
-		alias C0 = Compose!(ElementType, ArrayOf, Unqual);
-		alias C1 = Compose!(Unqual, ArrayOf, ElementType);
+		alias ArrayOf (T) = T[];
+		alias Const (T) = const(T);
 
-		static assert (is (C0!(int[5]) == int[5]));
-		static assert (is (C1!(int[5]) == int[]));
+		alias C0 = Compose!(ElementType, ArrayOf);
+		alias C1 = Compose!(ArrayOf, ElementType);
+		alias C2 = Compose!(ElementType, Const, C0);
+		alias C3 = Compose!(ArrayOf, Unqual, C2);
+
+		alias T = int[5];
+
+		static assert (is (C0!T == int[5]));
+		static assert (is (C1!T == int[]));
+		static assert (is (C2!T == const(int)));
+		static assert (is (C3!T == int[]));
 	}

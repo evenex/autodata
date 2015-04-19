@@ -79,7 +79,8 @@ template IndexOps (alias access, limits...)
 				return access (selected);
 			}
 
-		mixin LimitOps!limits;
+		mixin LimitOps!limits
+			limit_ops;
 	}
 	unittest {/*...}*/
 		import autodata.meta.test;

@@ -29,7 +29,7 @@ struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 			{/*...}*/
 				pull (range, i, i+1);
 			}
-		void pull (R)(R range, size_t[2] interval)
+		void pull (R)(R range, Interval!size_t interval)
 			{/*...}*/
 				auto i = interval.left, j = interval.right;
 

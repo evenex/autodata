@@ -18,7 +18,7 @@ struct Grid (S)
 				auto space_limit (uint d)()
 					{/*...}*/
 						auto limit ()() {return space.limit!d;}
-						typeof(space.length)[2] length ()() if (d == 0) {return [0, space.length];}
+						auto length ()() if (d == 0) {return interval (0, space.length);}
 
 						return Match!(limit, length);
 					}
@@ -31,9 +31,9 @@ struct Grid (S)
 				return Match!(sample, stride);
 			}
 
-		size_t[2] limit (uint d)() const
+		auto limit (uint d)() const
 			{/*...}*/
-				return [0, lengths[d]];
+				return interval (0, lengths[d]);
 			}
 
 		mixin SliceOps!(access, Map!(limit, Iota!(dimensionality!S)), RangeOps);

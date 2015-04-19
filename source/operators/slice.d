@@ -22,7 +22,8 @@ template SliceOps (alias access, LimitsAndExtensions...)
 		}
 		public:
 		public {/*opIndex}*/
-			mixin IndexOps!(access, limits) indexing;
+			mixin IndexOps!(access, limits) 
+				index_ops;
 
 			auto ref opIndex (Selected...)(Selected selected)
 				in {/*...}*/
@@ -71,7 +72,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 					static if (is (typeof(result) == Sub!T, T...))
 						{/*...}*/
 							foreach (i, limit; selected)
-								static if (is (typeof(limit) == Interval!U, U...))
+								static if (is_interval!(typeof(limit)))
 									assert (limit == result.bounds[i],
 										Error.out_of_bounds (limit, result.bounds[i])
 										~ ` (out)`
@@ -87,12 +88,12 @@ template SliceOps (alias access, LimitsAndExtensions...)
 				body {/*...}*/
 					mixin LambdaCapture;
 
-					enum is_proper_sub = Any!(λ!q{(T) = is (T == Interval!U, U...)}, Selected);
+					enum is_proper_sub = Any!(is_interval, Selected);
 					enum is_trivial_sub = Selected.length == 0;
 
 					static if (is_proper_sub || is_trivial_sub)
 						{/*...}*/
-							alias Subspace = Sub!(
+							alias Subspace = Sub!(Source,
 								Map!(Dimension,
 									Enumerate!(
 										Select!(is_proper_sub,
@@ -121,7 +122,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 
 							return Match!(local_access, static_access);
 						}
-					else return indexing.opIndex (selected);
+					else return index_ops.opIndex (selected);
 				}
 		}
 		public {/*opSlice}*/
@@ -135,7 +136,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 				}
 		}
 		public {/*Sub}*/
-			struct Sub (Dimensions...)
+			struct Sub (Source, Dimensions...)
 				{/*...}*/
 					mixin SubGenerator!(Filter!(λ!q{(Dim) = Dim.is_free}, Dimensions))
 						sub;
@@ -243,14 +244,14 @@ template SliceOps (alias access, LimitsAndExtensions...)
 									}
 							}
 							body {/*...}*/
-								static if (Any!(λ!q{(T) = is (T == Interval!U, U...)}, Selected))
+								static if (Any!(is_interval, Selected))
 									{/*...}*/
 										auto bounds = this.bounds;
 
 										foreach (i, j; Extract!(q{index}, FreeDimensions))
 											bounds[j] = selected[i] - limit!i.left + bounds[j].left;
 
-										return Sub!(
+										return Sub!(Source,
 											Map!(
 												Λ!q{(uint i, T) = Dimension!(FreeDimensions[i].index, T)},
 												Enumerate!Selected
@@ -291,11 +292,8 @@ template SliceOps (alias access, LimitsAndExtensions...)
 				{/*...}*/
 					pragma(msg, `slice diagnostic: `, typeof(this));
 
-					auto index_test ()
-						{/*...}*/
-							pragma(msg, "\t", typeof(this), `[] → `, typeof(this.opIndex ()));
-							pragma(msg, "\t", typeof(this), `[][] → `, typeof(this.opIndex ().opIndex ()));
-						}
+					pragma(msg, "\t", typeof(this), `[] → `, typeof(this.opIndex ()));
+					pragma(msg, "\t", typeof(this), `[][] → `, typeof(this.opIndex ().opIndex ()));
 				}
 		}
 		private:

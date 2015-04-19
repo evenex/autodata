@@ -111,7 +111,8 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 				return this;
 			}
 
-		mixin TransferOps!(pull, access, LimitsAndExtensions);
+		mixin TransferOps!(pull, access, LimitsAndExtensions)
+			transfer_ops;
 	}
 	unittest {/*...}*/
 		import autodata.memory;

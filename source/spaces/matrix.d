@@ -13,17 +13,17 @@ struct Matrix (T, uint n_rows, uint n_cols)
 			{/*...}*/
 				return data[row*n_cols + col];
 			}
-		void pull (M)(M matrix, size_t row, size_t[2] cols)
+		void pull (M)(M matrix, size_t row, Interval!size_t cols)
 			{/*...}*/
 				foreach (j; cols.left..cols.right)
 					data[row*n_cols + j] = matrix[j - cols.left];
 			}
-		void pull (M)(M matrix, size_t[2] rows, size_t col)
+		void pull (M)(M matrix, Interval!size_t rows, size_t col)
 			{/*...}*/
 				foreach (i; rows.left..rows.right)
 					data[i*n_cols + col] = matrix[i - rows.left];
 			}
-		void pull (M)(M matrix, size_t[2] rows, size_t[2] cols)
+		void pull (M)(M matrix, Interval!size_t rows, Interval!size_t cols)
 			{/*...}*/
 				foreach (i; rows.left..rows.right)
 					pull (matrix[i - rows.left, ~$..$], i, cols);

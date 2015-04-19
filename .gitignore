@@ -1,0 +1,4 @@
+*.swp
+autodata
+dub.selections.json
+.dub*

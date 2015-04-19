@@ -44,14 +44,14 @@ struct Array (T, uint dimensions = 1)
 		void pull (S, U...)(S space, U region)
 			if (U.length == dimensions)
 			{/*...}*/
-				alias open = Map!(λ!q{(T) = is (T == U[2], U)}, U);
+				alias open = Map!(is_interval, U);
 
-				Repeat!(dimensions, size_t[2]) bounds;
+				Repeat!(dimensions, Interval!size_t) bounds;
 				{/*init}*/
 					foreach (i; Iota!dimensions)
 						static if (open[i])
-							bounds[i] = region[i].to!(size_t[2]);
-						else bounds[i] = [region[i], region[i]+1].to!(size_t[2]);
+							bounds[i] = region[i];
+						else bounds[i] = interval (region[i], region[i]+1);
 				}
 
 				size_t[dimensions] stride;
@@ -97,12 +97,12 @@ struct Array (T, uint dimensions = 1)
 
 								data[offset] = space[
 									Map!(get_index,
-										Map!(Pair!().First!Identity,
-											Filter!(Pair!().Second!Identity,
+										Map!(First,
+											Filter!(Second,
 												Enumerate!open
 											)
 										)
-									).tuple.expand // REVIEW tuple.expand idiom
+									)//.tuple.expand // REVIEW tuple.expand idiom
 								];
 							}
 						void input_range ()()

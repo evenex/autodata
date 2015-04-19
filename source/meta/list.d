@@ -159,6 +159,19 @@ template Unpack (T...)
 		else alias Unpack = T;
 	}
 
+template First (T...)
+	{/*...}*/
+		static if (is (typeof((){enum U = T[0];})))
+			enum First = T[0];
+		else alias First = T[0];
+	}
+template Second (T...)
+	{/*...}*/
+		static if (is (typeof((){enum U = T[1];})))
+			enum Second = T[1];
+		else alias Second = T[1];
+	}
+
 template InterleaveNLists (uint n, T...)
 	if (T.length % n == 0)
 	{/*...}*/

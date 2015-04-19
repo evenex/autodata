@@ -43,7 +43,7 @@ template CoordinateType (S)
 	{/*...}*/
 		template Coord (size_t i)
 			{/*...}*/
-				static if (is (typeof(S.opIndex.limit!i.identity) == T[2], T))
+				static if (is (typeof(S.opIndex.limit!i.identity).Element == T, T))
 					alias Coord = T;
 
 				else static if (i == 0 && is (typeof(S.init[0])))
@@ -70,9 +70,7 @@ template dimensionality (S)
 				else enum count = 0;
 			}
 
-		static if (is (typeof(S.dimensionality) : size_t))
-			enum dimensionality = S.dimensionality;
-		else enum dimensionality = count!();
+		enum dimensionality = count!();
 	}
 
 /* get the fully qualified name of a type, including its containing module 

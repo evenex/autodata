@@ -11,6 +11,11 @@ private {/*import}*/
 */
 
 /*
+	TODO doc
+*/
+enum is_interval (T) = is (T == Interval!U, U...);
+
+/*
 	TODO doc Interval type (left, right, front, back)
 */
 struct Interval (LeftType, RightType)
@@ -23,101 +28,37 @@ struct Interval (LeftType, RightType)
 
 		alias Element = InitialType!Left;
 
-		auto opEquals (T...)(const Interval!T that) const
-			{/*...}*/
-				return this.left == that.left
-				&& this.right == that.right;
-			}
-		auto opEquals (T)(const T[2] that) const
-			{/*...}*/
-				return this.left == that[0]
-				&& this.right == that[1];
-			}
-
-		auto opBinary (string op, T)(T that)
-			out {assertion;}
-			body {/*...}*/
-				auto ret = this;
-
-				mixin(q{
-					ret } ~op~ q{= that;
-				});
-
-				return ret;
-			}
-		auto ref opOpAssign (string op)(Element point)
-			out {assertion;}
-			body {/*...}*/
-				mixin(q{
-					left } ~op~ q{= point;
-					right } ~op~ q{= point;
-				});
-
-				return this;
-			}
-		auto ref opOpAssign (string op, T...)(Interval!T interval)
-			out {assertion;}
-			body {/*...}*/
-				mixin(q{
-					left } ~op~ q{= interval.left;
-					right } ~op~ q{= interval.right;
-				});
-			}
-
-		auto ref opAssign (T...)(Interval!T interval)
-			out {assertion;}
-			body {/*...}*/
-				this.left = interval.left;
-				this.right = interval.right;
-
-				return this;
-			}
-		auto ref opAssign (T...)(Element point)
-			out {assertion;}
-			body {/*...}*/
-				this.left = this.right = point;
-
-				return this;
-			}
-
-		private void assertion () 
-			{/*...}*/
-				assert (left <= right, this.text ~ ` is out of order`);
-			}
+		mixin IntervalBase;
 	}
 struct Interval (T : void)
 	{/*...}*/
 		alias Element = void;
 
-		auto left ()
+		static left ()
 			{/*...}*/
 				return -infinity;
 			}
-		auto right ()
+		static right ()
 			{/*...}*/
 				return infinity;
 			}
 
-		auto toString () const
-			{/*...}*/
-				return `[-inf..inf]`;
-			}
+		mixin IntervalBase;
 	}
 alias Interval (T) = Interval!(T,T);
 	unittest {/*...}*/
-		import std.conv;
-
 		Interval!int x0;
 		Interval!uint x1;
 		Interval!(uint, Infinite!uint) x2;
-		static assert (not (is (Interval!(Infinite!uint, uint))));
 		static assert (not (is (Interval!(Infinite!int, Infinite!uint))));
 		Interval!(Infinite!int, Infinite!int) x3;
 
-		assert (x0.text == `[0..0]`);
-		assert (x1.text == `[0..0]`);
-		assert (x2.text == `[0..inf]`);
-		assert (x3.text == `[-inf..inf]`);
+		enum inf = real.infinity;
+
+		assert (x0 == [0, 0]);
+		assert (x1 == [0, 0]);
+		assert (x2 == [0, inf]);
+		assert (x3 == [-inf, inf]);
 
 		auto y0 = interval (1,2);
 		auto y1 = interval (1, infinity);
@@ -125,11 +66,11 @@ alias Interval (T) = Interval!(T,T);
 		auto y3 = interval!int (-infinity, infinity);
 		auto y4 = interval!real (-infinity, infinity);
 
-		assert (y0.text == `[1..2]`);
-		assert (y1.text == `[1..inf]`);
-		assert (y2.text == `[-inf..inf]`);
-		assert (y3.text == `[-inf..inf]`);
-		assert (y4.text == `[-inf..inf]`);
+		assert (y0 == [1, 2]);
+		assert (y1 == [1, inf]);
+		assert (y2 == [-inf, inf]);
+		assert (y3 == [-inf, inf]);
+		assert (y4 == [-inf, inf]);
 	}
 
 /* interval constructors 
@@ -200,14 +141,14 @@ auto interval (T)(T point)
 		assert (b.width == 15);
 
 		auto c = interval (6);
-		assert (c.left == 0);
+		assert (c.left == 6);
 		assert (c.right == 6);
-		assert (c.width == 6);
+		assert (c.width == 0);
 
 		auto d = interval (c);
-		assert (d.left == 0);
+		assert (d.left == 6);
 		assert (d.right == 6);
-		assert (d.width == 6);
+		assert (d.width == 0);
 
 		auto e = interval (-infinity!real, infinity!real);
 		assert (e.left == -infinity);
@@ -330,3 +271,70 @@ auto clamp (T,U)(T value, U interval)
 
 		return value;
 	}
+
+private {/*impl}*/
+	template IntervalBase ()
+		{/*...}*/
+			auto opEquals (T...)(const Interval!T that) const
+				{/*...}*/
+					return this.left == that.left
+					&& this.right == that.right;
+				}
+			auto opEquals (T)(const T[2] that) const
+				{/*...}*/
+					return this.left == that[0]
+					&& this.right == that[1];
+				}
+
+			auto opBinary (string op, T)(T that)
+				out {assertion;}
+				body {/*...}*/
+					auto ret = this;
+
+					mixin(q{
+						ret } ~op~ q{= that;
+					});
+
+					return ret;
+				}
+			auto ref opOpAssign (string op)(Element point)
+				out {assertion;}
+				body {/*...}*/
+					mixin(q{
+						left } ~op~ q{= point;
+						right } ~op~ q{= point;
+					});
+
+					return this;
+				}
+			auto ref opOpAssign (string op, T...)(Interval!T interval)
+				out {assertion;}
+				body {/*...}*/
+					mixin(q{
+						left } ~op~ q{= interval.left;
+						right } ~op~ q{= interval.right;
+					});
+				}
+
+			auto ref opAssign (T...)(Interval!T interval)
+				out {assertion;}
+				body {/*...}*/
+					this.left = interval.left;
+					this.right = interval.right;
+
+					return this;
+				}
+			auto ref opAssign (T...)(Element point)
+				out {assertion;}
+				body {/*...}*/
+					this.left = this.right = point;
+
+					return this;
+				}
+
+			private void assertion () 
+				{/*...}*/
+					assert (left <= right, this.text ~ ` is out of order`);
+				}
+		}
+}

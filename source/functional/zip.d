@@ -31,7 +31,7 @@ struct Zipped (Spaces...)
 					{return .tuple (Map!(point, Ordinal!Spaces));}
 
 				auto zipped ()() if (
-					Any!(λ!q{(T) = is (T == U[2], U)}, Args)
+					Any!(is_interval, Args)
 					|| Args.length == 0
 				)
 					{return Zipped!(typeof(tuple.identity).Types)(tuple.expand);}
@@ -50,7 +50,7 @@ struct Zipped (Spaces...)
 								return Match!(multi, single);
 							}
 					}
-				CommonType!Args[2] array ()() {return [args];}
+				auto array ()() {return interval (args);}
 
 				return Match!(Map!(attempt, Ordinal!Spaces), array);
 			}
@@ -79,14 +79,14 @@ struct Zipped (Spaces...)
 			not (Contains!(void, Map!(ElementType, Spaces)))
 			&& is (typeof(length.identity) : size_t)
 		) // HACK foreach tuple expansion causes compiler segfault on template range ops, opApply is workaround
-			int opApply (int delegate(Map!(ElementType, Spaces)) op)
+			int opApply (int delegate(Map!(ElementType, Spaces)) f)
 				{/*...}*/
 					int result = 0;
 
 					for (auto i = 0; i < length; ++i)
 						{/*...}*/
-							int expand ()() {return result = op (this[i].expand);}
-							int closed ()() {return result = op (this[i]);}
+							int expand ()() {return result = f(this[i].expand);}
+							int closed ()() {return result = f(this[i]);}
 
 							if (Match!(expand, closed))
 								break;

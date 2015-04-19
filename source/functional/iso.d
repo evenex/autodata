@@ -26,7 +26,7 @@ struct Mapped (Domain, alias f, Parameters...)
 				auto slice_all ()() if (Args.length == 0) {return domain;}
 				auto get_point ()() {return domain[args];}
 				auto get_space ()() {return domain.opIndex (args);}
-				auto get_range ()() if (Args.length == 1) {return domain[args[0][0]..args[0][1]];}
+				auto get_range ()() if (Args.length == 1) {return domain[args[0].left..args[0].right];}
 
 				auto subdomain = Match!(slice_all, get_point, get_space, get_range);
 
@@ -40,7 +40,7 @@ struct Mapped (Domain, alias f, Parameters...)
 			{/*...}*/
 				auto multi ()() {return domain.opSlice!d (args);}
 				auto single ()() if (d == 0) {return domain.opSlice (args);}
-				CommonType!Args[2] index ()() {return [args];}
+				auto index ()() {return interval (args);}
 
 				return Match!(multi, single, index);
 			}
