@@ -135,6 +135,16 @@ struct Infinite (T)
 					&& this.is_negative == that.is_negative;
 			}
 
+		auto opCast (U)() const
+			if (is (U == Infinite!V, V))
+			{/*...}*/
+				auto inf = U ();
+
+				static if (is (typeof((){enum _ = U.is_negative;})))
+					return inf;
+				else return is_positive? inf : -inf;
+			}
+
 		auto toString () const
 			{/*...}*/
 				if (is_negative)
@@ -153,6 +163,15 @@ struct Infinite (T)
 
 		enum value = T(real.infinity);
 		alias value this;
+	}
+
+/*
+	identity alias 
+*/
+template Infinite (T)
+	if (is (T == Infinite!U, U))
+	{/*...}*/
+		alias Infinite = T;
 	}
 
 unittest {/*...}*/

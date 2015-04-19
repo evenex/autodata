@@ -22,10 +22,7 @@ struct CartesianProduct (Spaces...)
 				enum i = LimitOffsets.length - 1;
 				enum d = LimitOffsets[0] - 1;
 
-				Interval!size_t get_length ()() if (d == 0) {return interval (0, spaces[i].length);}
-				auto get_limit ()() {return spaces[i].limit!d;}
-
-				return Match!(get_limit, get_length);
+				return spaces[i].limit!d;
 			}
 
 		auto access (Map!(CoordinateType, Spaces) point)

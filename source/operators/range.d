@@ -15,10 +15,10 @@ template RangeOps ()
 				enum iterated_dimension = Filter!(λ!q{(Dim) = Dim.is_free}, Dimensions)[0].index;
 
 				auto ref front () {return this[~$];}
-				auto ref back () {return this[$-1];}
+				auto ref back ()() {return this[$-1];}
 
 				auto popFront () {++bounds[iterated_dimension].left;}
-				auto popBack () {--bounds[iterated_dimension].right;}
+				auto popBack ()() {--bounds[iterated_dimension].right;}
 
 				auto empty () {return length == 0;}
 				auto length () const {return bounds[iterated_dimension].width;}

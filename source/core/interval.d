@@ -272,6 +272,14 @@ auto clamp (T,U)(T value, U interval)
 		return value;
 	}
 
+/*
+	measure the limit of ranges
+*/
+Interval!size_t limit (uint i : 0, S)(const S space)
+	{/*...}*/
+		return interval!size_t (0, space.length);
+	}
+
 private {/*impl}*/
 	template IntervalBase ()
 		{/*...}*/

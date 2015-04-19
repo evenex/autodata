@@ -130,9 +130,23 @@ template SliceOps (alias access, LimitsAndExtensions...)
 				{/*...}*/
 					import std.conv: to;
 
-					alias Bounds = typeof(Source.init[].bounds[d]);
+					alias Left = T;
 
-					return interval (i.to!(Bounds.Left), j.to!(Bounds.Right));
+					static if (is (U == Limit!(_0, Right), _0, Right))
+						{}
+					else alias Right = U;
+
+					alias Bounds = typeof(limits[d].interval);
+
+					static if (is (Bounds.Left == Infinite!V, V) && not (is (Left == Infinite!_, _)))
+						auto left = i.to!V;
+					else auto left = i.to!(Bounds.Left);
+
+					static if (is (Bounds.Right == Infinite!W, W) && not (is (Right == Infinite!_, _)))
+						auto right = j.to!W;
+					else auto right = j.to!(Bounds.Right);
+
+					return interval (left, right);
 				}
 		}
 		public {/*Sub}*/
@@ -634,7 +648,7 @@ package {/*error}*/
 
 			alias Element (T) = Select!(is (ElementType!T == void), T, /*else*/ ElementType!T);
 
-			enum error_header = This.stringof~ `: `;
+			enum error_header = `● ` ~This.stringof~ ` ▬▶ `;
 
 			enum type_mismatch = error_header
 				~Map!(Element, Selected.Types).stringof~ ` does not convert to ` ~Map!(Element, Map!(ExprType, limits)).stringof;

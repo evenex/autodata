@@ -77,17 +77,8 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 			body {/*...}*/
 				Domain!allocate size;
 
-				auto read_limits ()()
-					{/*...}*/
-						foreach (i; Ordinal!(Domain!access))
-							size[i] = space.limit!i.width;
-					}
-				auto read_length ()()
-					{/*...}*/
-						size[0] = space.length;
-					}
-
-				Match!(read_limits, read_length);
+				foreach (i; Ordinal!(Domain!access))
+					size[i] = space.limit!i.width;
 
 				allocate (size);
 

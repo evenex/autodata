@@ -69,4 +69,6 @@ auto repeat (T, U...)(T value, U lengths)
 
 		assert (x.front == 6);
 		assert (x.map!(q => q*2) == [12, 12, 12]);
+
+		// TODO test repeat infinity
 	}

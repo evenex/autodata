@@ -15,15 +15,7 @@ struct Grid (S)
 
 		ElementType!S access (typeof(lengths) point)
 			{/*...}*/
-				auto space_limit (uint d)()
-					{/*...}*/
-						auto limit ()() {return space.limit!d;}
-						auto length ()() if (d == 0) {return interval (0, space.length);}
-
-						return Match!(limit, length);
-					}
-
-				auto domain_transform (uint d)() {return space_limit!d.left + (point[d] * space_limit!d.width) / lengths[d];}
+				auto domain_transform (uint d)() {return space.limit!d.left + (point[d] * space.limit!d.width) / lengths[d];}
 
 				auto sample ()() {return space[Map!(domain_transform, Ordinal!(typeof(point)))];}
 				auto stride ()() {return space[($*point[0])/lengths[0]];}
