@@ -57,8 +57,8 @@ template IndexOps (alias access, limits...)
 							);
 
 						else static assert (
-							is (Domain!access[i] == Finite!(Unqual!(ExprType!limit)))
-							|| is (Domain!access[i] == ElementType!(Unqual!(ExprType!limit))),
+							is (Unqual!(Domain!access[i]) == Unqual!(Finite!(ExprType!limit)))
+							|| is (Unqual!(Domain!access[i]) == Unqual!(ElementType!(ExprType!limit))),
 							type_error
 						);
 					}
