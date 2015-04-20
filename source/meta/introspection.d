@@ -28,7 +28,10 @@ alias CommonType = std.traits.CommonType;
 */
 template ElementType (S)
 	{/*...}*/
-		static if (is (typeof(S.init[CoordinateType!S.init]) == T, T))
+		static if (
+			CoordinateType!S.length > 0 
+			&& is (typeof(S.init[CoordinateType!S.init]) == T, T)
+		)
 			alias ElementType = T;
 
 		else static if (is (S.Element == T, T))
