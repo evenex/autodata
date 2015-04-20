@@ -18,13 +18,13 @@ auto rotate_elements (int dim = -1, R)(R range, int positions = 1)
 		auto n = range.length;
 
 		if (n > 0)
-			assert ((-positions + (positions/n + 1) * n) % n >= 0);
+			assert ((-positions + (abs (positions)/n) * n) % n >= 0);
 	}
 	body {/*...}*/
 		auto n = range.length;
 
 		return range.cycle
-			.drop ((-positions + (positions/n + 1) * n) % n)
+			.drop ((-positions + (abs (positions)/n) * n) % n)
 			.take (n);
 	}
 	unittest {/*...}*/
@@ -37,8 +37,14 @@ auto rotate_elements (int dim = -1, R)(R range, int positions = 1)
 */
 auto adjacent_pairs (R)(R range)
 	{/*...}*/
-		return zip (range, range.rotate_elements);
+		return zip (range, range.rotate_elements (-1));
 	}
+	void main ()
+		{/*...}*/
+			import std.stdio;
+
+			writeln (["abc", "def", "ghi", "jkl", "mno"].adjacent_pairs.map!((a,b) => [a,b]));
+		}
 
 struct Cycle (R, uint[] cyclic_dims)
 	{/*...}*/
@@ -151,5 +157,3 @@ auto cycle (uint[] dim = [], S)(S space)
 		assert (c.limit!1.width == infinity);
 		assert (c.limit!2.width == infinity);
 	}
-
-	void main (){}

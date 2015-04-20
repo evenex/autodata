@@ -152,9 +152,8 @@ struct TList (T...)
 	}
 
 template Unpack (T...)
-	//if (T.length == 1) BUG this seems to turn Unpack from an alias into its own symbol, SUPER WEIRD, and then some Match!es get false negatives
 	{/*...}*/
-		static if (__traits(compiles, T[0].Unpack))
+		static if (is (T[0] == TList!U, U...))
 			alias Unpack = Cons!(T[0].Unpack);
 		else alias Unpack = T;
 	}

@@ -28,7 +28,7 @@ struct Mapped (Domain, alias f, Parameters...)
 				auto get_space ()() {return domain.opIndex (args);}
 				auto get_range ()() if (Args.length == 1) {return domain[args[0].left..args[0].right];}
 
-				auto subdomain = Try!(1, slice_all, get_point, get_space, get_range);
+				auto subdomain = Match!(slice_all, get_point, get_space, get_range);
 
 				auto map_point ()() {return apply (subdomain);}
 				auto map_tuple ()() {return apply (subdomain.expand);}

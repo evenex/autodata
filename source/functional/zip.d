@@ -75,6 +75,7 @@ struct Zipped (Spaces...)
 				return this.equal (that);
 			}
 
+			pragma(msg, Unpack!(Spaces[1]));
 		static if (
 			not (Contains!(void, Map!(ElementType, Spaces)))
 			&& is (typeof(length.identity) : size_t)

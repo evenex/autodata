@@ -1,7 +1,10 @@
 module autodata.operators.range;
 
 /*
-	TODO
+	mixes range primitives into a struct
+	all primitives act as forwarding calls and will be overridden by an existing definition
+	save will pass saved_fields into constructor after base.save
+	opEquals assumes the space has SliceOps with RangeExt
 */
 template RangeOps (alias base, alias length, saved_fields...)
 	{/*...}*/
