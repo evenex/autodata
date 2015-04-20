@@ -75,7 +75,6 @@ struct Zipped (Spaces...)
 				return this.equal (that);
 			}
 
-			pragma(msg, Unpack!(Spaces[1]));
 		static if (
 			not (Contains!(void, Map!(ElementType, Spaces)))
 			&& is (typeof(length.identity) : size_t)
@@ -170,11 +169,11 @@ struct Zipped (Spaces...)
 				import std.algorithm: find;
 				import std.array: replace;
 
-				mixin LambdaCapture;
-
 				alias Dimensionalities = Map!(dimensionality, Spaces);
 
-				static assert (All!(λ!q{(int d) = d == Dimensionalities[0]}, Dimensionalities),
+				enum same_dimensionality (int d) = d == Dimensionalities[0];
+
+				static assert (All!(same_dimensionality, Dimensionalities),
 					`zip error: dimension mismatch! ` 
 					~Interleave!(Spaces, Dimensionalities)
 						.stringof[`tuple(`.length..$-1]

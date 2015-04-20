@@ -86,21 +86,20 @@ template SliceOps (alias access, LimitsAndExtensions...)
 						}
 				}
 				body {/*...}*/
-					mixin LambdaCapture;
-
 					enum is_proper_sub = Any!(is_interval, Selected);
 					enum is_trivial_sub = Selected.length == 0;
 
 					static if (is_proper_sub || is_trivial_sub)
 						{/*...}*/
+							alias IntervalType (T) = typeof(T.init.interval);
+
 							alias Subspace = Sub!(Source,
 								Map!(Dimension,
 									Enumerate!(
 										Select!(is_proper_sub,
 											TList!Selected, 
 											/*else*/
-											TList!(Map!(
-												Λ!q{(T) = typeof(T.init.interval)}, 
+											TList!(Map!(IntervalType,
 												Map!(ExprType, limits)
 											))
 										).Unpack

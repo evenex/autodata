@@ -39,12 +39,12 @@ auto adjacent_pairs (R)(R range)
 	{/*...}*/
 		return zip (range, range.rotate_elements (-1));
 	}
-	void main ()
-		{/*...}*/
-			import std.stdio;
-
-			writeln (["abc", "def", "ghi", "jkl", "mno"].adjacent_pairs.map!((a,b) => [a,b]));
-		}
+	unittest {/*...}*/
+		static assert (
+			[0,1,2,3,4].adjacent_pairs.map!((a,b) => [a,b])
+			== [[0,1],[1,2],[2,3],[3,4],[4,0]]
+		);
+	}
 
 struct Cycle (R, uint[] cyclic_dims)
 	{/*...}*/
