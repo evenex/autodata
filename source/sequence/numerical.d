@@ -18,7 +18,7 @@ struct Nat
 				return i;
 			}
 
-		mixin SliceOps!(access, length, RangeOps);
+		mixin SliceOps!(access, length, RangeExt);
 	}
 	unittest {/*...}*/
 		auto N = ℕ[];

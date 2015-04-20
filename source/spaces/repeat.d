@@ -24,37 +24,40 @@ struct Repeated (T, Dims...)
 					return interval (0, Infinite!(Dims[d])());
 				else return interval (0, lengths[IndexOf!(d, Map!(First, FiniteDims))]);
 			}
-		auto access (Map!(InitialType, Dims))
+		auto access (Map!(Finite, Dims))
 			{/*...}*/
 				return value;
 			}
 
-		auto front ()() if (Dims.length == 1)
+		static if (Dims.length == 1)
 			{/*...}*/
-				return value;
-			}
-		void popFront ()() if (Dims.length == 1)
-			{/*...}*/
-				static if (FiniteDims.length > 0)
-					lengths[0]--;
-			}
-		bool empty ()() if (Dims.length == 1)
-			{/*...}*/
-				return length == 0;
-			}
-		auto length ()() const if (Dims.length == 1)
-			{/*...}*/
-				return limit!0.width;
-			}
-		alias back = front;
-		alias popBack = popFront;
+				auto front ()()
+					{/*...}*/
+						return value;
+					}
+				void popFront ()()
+					{/*...}*/
+						static if (FiniteDims.length > 0)
+							lengths[0]--;
+					}
 
-		bool opEquals (R)(R range) if (Dims.length == 1)
-			{/*...}*/
-				return this[] == range;
+				alias back = front;
+				alias popBack = popFront;
+
+				auto length ()()
+					{/*...}*/
+						return limit!0.width;
+					}
+
+				auto save ()()
+					{/*...}*/
+						return this;
+					}
+
+				mixin RangeOps!(null, length);
 			}
 
-		mixin SliceOps!(access, Map!(limit, Ordinal!Dims), RangeOps);
+		mixin SliceOps!(access, Map!(limit, Ordinal!Dims), RangeExt);
 	}
 auto repeat (T, U...)(T value, U lengths)
 	{/*...}*/
@@ -67,7 +70,7 @@ auto repeat (T, U...)(T value, U lengths)
 
 		alias Lengths = Map!(Compose!(ExprType, force_length), Ordinal!U);
 
-		static assert (All!(Compose!(is_integral, InitialType), Lengths));
+		static assert (All!(Compose!(is_integral, Finite), Lengths));
 
 		return Repeated!(T, Lengths)(
 			value, 
@@ -78,7 +81,7 @@ auto repeat (T, U...)(T value, U lengths)
 			)
 		);
 	}
-	void main () {/*...}*/
+	unittest {/*...}*/
 		import autodata.functional;
 		import autodata.core;
 

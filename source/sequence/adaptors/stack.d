@@ -88,7 +88,7 @@ struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 				_length = 0;
 			}
 
-		mixin TransferOps!(pull, access, length, RangeOps);
+		mixin TransferOps!(pull, access, length, RangeExt);
 
 		private mixin OverflowPolicy;
 		private size_t _length;

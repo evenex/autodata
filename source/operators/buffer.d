@@ -123,7 +123,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 					}
 				enum length = size_t.max;
 
-				static mixin SliceOps!(access, length, RangeOps);
+				static mixin SliceOps!(access, length, RangeExt);
 			}
 
 		static struct Basic

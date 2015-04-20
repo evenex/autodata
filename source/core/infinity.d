@@ -174,6 +174,14 @@ template Infinite (T)
 		alias Infinite = T;
 	}
 
+/*
+	inverse alias 
+*/
+alias Finite (T) = Select!(
+	is (T == Infinite!U, U),
+	Unwrapped!T, T
+);
+
 unittest {/*...}*/
 	Infinite!int i;
 	Infinite!uint u;

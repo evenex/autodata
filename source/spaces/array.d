@@ -122,7 +122,7 @@ struct Array (T, uint dimensions = 1)
 				this.lengths = lengths;
 			}
 
-		mixin BufferOps!(allocate, pull, access, lengths, RangeOps);
+		mixin BufferOps!(allocate, pull, access, lengths, RangeExt);
 	}
 	unittest {/*...}*/
 		auto x = Array!int ();

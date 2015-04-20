@@ -43,7 +43,7 @@ struct CartesianProduct (Spaces...)
 				return Map!(projection, Ordinal!Spaces).tuple.flatten;
 			}
 
-		mixin SliceOps!(access, Map!(limit, Ordinal!(Domain!access)), RangeOps);
+		mixin SliceOps!(access, Map!(limit, Ordinal!(Domain!access)), RangeExt);
 	}
 
 auto cartesian_product (S,R)(S left, R right)

@@ -8,27 +8,29 @@ private {/*import}*/
 	import autodata.core;
 	import autodata.sequence;
 	import autodata.functional;
+	import autodata.topology;
 }
 
 /* traverse a range with elements rotated left by some number of positions 
 */
-auto rotate_elements (R)(R range, int positions = 1)
+auto rotate_elements (int dim = -1, R)(R range, int positions = 1)
 	in {/*...}*/
 		auto n = range.length;
 
 		if (n > 0)
-			assert (positions.sgn * (positions + n) % n > 0);
+			assert ((-positions + (positions/n + 1) * n) % n >= 0);
 	}
 	body {/*...}*/
 		auto n = range.length;
 
-		if (n == 0)
-			return std.array.array (typeof(range.cycle[0..0]).init); // TEMP std.array.array
-
-		auto i = positions.sgn * (positions + n) % n;
-		
-		// TEMP cache to get dimensionality, need to do something about this later
-		return std.array.array (range.cycle[i..n+i]);
+		return range.cycle
+			.drop ((-positions + (positions/n + 1) * n) % n)
+			.take (n);
+	}
+	unittest {/*...}*/
+		assert ([1,2,3,4].rotate_elements[] == [4,1,2,3]);
+		assert ([1,2,3,4].rotate_elements[] == [1,2,3,4].rotate_elements);
+		assert ([1,2,3,4].rotate_elements (-1) == [1,2,3,4].rotate_elements (3));
 	}
 
 /* pair each element with its successor in the range, and the last element with the first 
@@ -67,7 +69,17 @@ struct Cycle (R, uint[] cyclic_dims)
 				else return space.limit!i;
 			}
 
-		mixin SliceOps!(access, Map!(limit, Iota!(dimensionality!R)), RangeOps);
+		mixin SliceOps!(access, Map!(limit, Iota!(dimensionality!R)), RangeExt);
+
+		static if (cyclic_dims.length == 1)
+			{/*range ops}*/
+				auto length ()() const
+					{/*...}*/
+						return limit!0.width;
+					}
+
+				mixin RangeOps!(space, length);
+			}
 	}
 auto cycle (uint[] dim = [], S)(S space)
 	{/*...}*/
@@ -139,3 +151,5 @@ auto cycle (uint[] dim = [], S)(S space)
 		assert (c.limit!1.width == infinity);
 		assert (c.limit!2.width == infinity);
 	}
+
+	void main (){}

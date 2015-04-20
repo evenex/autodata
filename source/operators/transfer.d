@@ -101,7 +101,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 					}
 				enum length = size_t.max;
 
-				static mixin SliceOps!(access, length, RangeOps);
+				static mixin SliceOps!(access, length, RangeExt);
 			}
 
 		template Basic ()

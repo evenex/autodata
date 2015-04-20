@@ -19,12 +19,12 @@ struct Interval (LeftType, RightType)
 	if (All!(Not!is_const, LeftType, RightType))
 	{/*...}*/
 		alias Left = LeftType; alias Right = RightType;
-		static assert (is (InitialType!Left == InitialType!Right));
+		static assert (is (Finite!Left == Finite!Right));
 
 		auto left = -Left ();
 		auto right = Right ();
 
-		alias Element = InitialType!Left;
+		alias Element = Finite!Left;
 
 		mixin IntervalBase;
 	}
@@ -298,15 +298,22 @@ private {/*impl}*/
 				}
 
 			auto opBinary (string op, T)(T that)
+				if (not (is_interval!T))
 				out {assertion;}
 				body {/*...}*/
-					auto ret = this;
-
-					mixin(q{
-						ret } ~op~ q{= that;
+					return mixin(q{
+						this } ~op~ q{ that.interval
 					});
-
-					return ret;
+				}
+			auto opBinary (string op, T...)(Interval!T that)
+				out {assertion;}
+				body {/*...}*/
+					return mixin(q{
+						interval (
+							this.left } ~op~ q{ that.left,
+							this.right } ~op~ q{ that.right,
+						)
+					});
 				}
 			auto ref opOpAssign (string op)(Element point)
 				out {assertion;}

@@ -251,7 +251,7 @@ struct Zipped (Spaces...)
 
 					enum size_t rows = 3, columns = 3;
 
-					mixin SliceOps!(access, rows, columns, RangeOps);
+					mixin SliceOps!(access, rows, columns, RangeExt);
 				}
 
 			auto a = MultiDimensional();

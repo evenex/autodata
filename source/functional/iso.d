@@ -28,7 +28,7 @@ struct Mapped (Domain, alias f, Parameters...)
 				auto get_space ()() {return domain.opIndex (args);}
 				auto get_range ()() if (Args.length == 1) {return domain[args[0].left..args[0].right];}
 
-				auto subdomain = Match!(slice_all, get_point, get_space, get_range);
+				auto subdomain = Try!(1, slice_all, get_point, get_space, get_range);
 
 				auto map_point ()() {return apply (subdomain);}
 				auto map_tuple ()() {return apply (subdomain.expand);}
@@ -172,7 +172,7 @@ struct Mapped (Domain, alias f, Parameters...)
 					auto access (size_t i) {return data[i];}
 					auto length () const {return data.length;}
 
-					mixin SliceOps!(access, length, RangeOps);
+					mixin SliceOps!(access, length, RangeExt);
 				}
 			auto z = Basic()[].map!(i => 2*i);
 
@@ -194,7 +194,7 @@ struct Mapped (Domain, alias f, Parameters...)
 
 					enum size_t rows = 3, columns = 3;
 
-					mixin SliceOps!(access, rows, columns, RangeOps);
+					mixin SliceOps!(access, rows, columns, RangeExt);
 				}
 			auto m = MultiDimensional()[];
 			auto w = MultiDimensional()[].map!(i => 2*i);

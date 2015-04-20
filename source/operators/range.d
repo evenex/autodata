@@ -1,14 +1,47 @@
 module autodata.operators.range;
 
-/* generate random access range primitives
+/*
+	TODO
+*/
+template RangeOps (alias base, alias length, saved_fields...)
+	{/*...}*/
+		auto front ()()
+			{/*...}*/
+				return base.front;
+			}
+		auto popFront ()()
+			{/*...}*/
+				base.popFront;
+			}
+		auto back ()()
+			{/*...}*/
+				return base.back;
+			}
+		auto popBack ()()
+			{/*...}*/
+				base.popBack;
+			}
+		auto empty ()()
+			{/*...}*/
+				return length == 0;
+			}
+		auto save ()()
+			{/*...}*/
+				return typeof(this)(base.save, saved_fields);
+			}
+		bool opEquals (R)(R range)
+			{/*...}*/
+				return this[] == range;
+			}
+	}
 
-	This is an extension template meant to be used in a Sub structure.
+/* extension template meant to generate random access range primitives in a Sub structure
 
 	Note that, in Phobos, the resulting range will only qualify as bidirectional
 	because std.range.isRandomAccessRange does not handle template or non-property range primitives,
 	although the range does meet the definition of random access as given in D range references.
 */
-template RangeOps ()
+template RangeExt ()
 	{/*...}*/
 		static if (Filter!(λ!q{(Dim) = Dim.is_free}, Dimensions).length == 1)
 			@property {/*...}*/
@@ -42,7 +75,7 @@ template RangeOps ()
 				auto access (size_t i) {return data[i];}
 				auto length () const {return data.length;}
 
-				mixin SliceOps!(access, length, RangeOps);
+				mixin SliceOps!(access, length, RangeExt);
 			}
 		assert (Basic()[].length == 4);
 		assert (Basic()[0..$/2].length == 2);
@@ -64,7 +97,7 @@ template RangeOps ()
 
 				enum size_t rows = 3, columns = 3;
 
-				mixin SliceOps!(access, rows, columns, RangeOps);
+				mixin SliceOps!(access, rows, columns, RangeExt);
 			}
 		assert (MultiDimensional()[0..$, 0].length == 3);
 		assert (MultiDimensional()[0, 0..$].length == 3);
