@@ -20,7 +20,7 @@ struct Zipped (Spaces...)
 
 		auto opIndex (Args...)(Args args)
 			{/*...}*/
-				auto point (size_t i)() 
+				auto point (uint i)() 
 					{return spaces[i].map!identity[args];}
 
 				auto tuple ()() 
@@ -30,11 +30,11 @@ struct Zipped (Spaces...)
 					Any!(is_interval, Args)
 					|| Args.length == 0
 				)
-					{return Zipped!(typeof(tuple.identity).Types)(tuple.expand);}
+					{return Zipped!(ExprType!(tuple).Types)(tuple.expand);}
 
 				return Match!(zipped, tuple);
 			}
-		auto opSlice (size_t d, Args...)(Args args)
+		auto opSlice (uint d, Args...)(Args args)
 			{/*...}*/
 				template attempt (uint i)
 					{/*...}*/
@@ -50,7 +50,7 @@ struct Zipped (Spaces...)
 
 				return Match!(Map!(attempt, Ordinal!Spaces), array);
 			}
-		auto opDollar (size_t d)()
+		auto opDollar (uint d)()
 			{/*...}*/
 				template attempt (uint i)
 					{/*...}*/
@@ -95,13 +95,13 @@ struct Zipped (Spaces...)
 
 		auto front ()()
 			{/*...}*/
-				auto get (size_t i)() {return spaces[i].front;}
+				auto get (uint i)() {return spaces[i].front;}
 
 				return tuple (Map!(get, Ordinal!Spaces));
 			}
 		auto back ()()
 			{/*...}*/
-				auto get (size_t i)() {return spaces[i].back;}
+				auto get (uint i)() {return spaces[i].back;}
 
 				return tuple (Map!(get, Ordinal!Spaces));
 			}
@@ -135,7 +135,7 @@ struct Zipped (Spaces...)
 
 				return Match!(Map!(get_length, Ordinal!Spaces));
 			}
-		auto limit (size_t i)() const
+		auto limit (uint i)() const
 			{/*...}*/
 				template get_limit (uint j)
 					{/*...}*/
@@ -186,7 +186,7 @@ struct Zipped (Spaces...)
 							static if (is (typeof(spaces[0].limit!d)))
 								auto base = spaces[0].limit!d;
 
-							else static if (d == 0 && is (typeof(spaces[0].length.identity) : size_t))
+							else static if (d == 0 && is (ExprType!(spaces[0].length) : size_t))
 								size_t[2] base = [0, spaces[0].length];
 
 							else static assert (0, no_measure_error!i);
@@ -195,7 +195,7 @@ struct Zipped (Spaces...)
 							static if (is (typeof(spaces[i].limit!d)))
 								auto lim = spaces[i].limit!d;
 
-							else static if (d == 0 && is (typeof(spaces[i].length.identity) : size_t))
+							else static if (d == 0 && is (ExprType!(spaces[i].length) : size_t))
 								size_t[2] lim = [0, spaces[i].length];
 
 							else static assert (0, no_measure_error!i);
