@@ -15,9 +15,8 @@ struct CartesianProduct (Spaces...)
 
 		auto limit (size_t d)() const
 			{/*...}*/
-				mixin LambdaCapture;
-
-				alias LimitOffsets = Offsets[0..$ - Filter!(λ!q{(int i) = d < i}, Offsets).length + 1];
+				enum exceeds_d (int i) = d < i;
+				alias LimitOffsets = Offsets[0..$ - Filter!(exceeds_d, Offsets).length + 1];
 					
 				enum i = LimitOffsets.length - 1;
 				enum d = LimitOffsets[0] - 1;

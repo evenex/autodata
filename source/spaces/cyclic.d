@@ -95,52 +95,52 @@ auto cycle (uint[] dim = [], S)(S space)
 
 		return Cycle!(S, d)(space);
 	}
-	unittest {/*...}*/
+	void main () {/*...}*/
 		import autodata.spaces.array;
 		import autodata.spaces.product;
 		import autodata.meta.test;
 
-		auto x = [1,2,3].cycle;
+		enum x = [1,2,3].cycle;
 
-		assert (x.limit!0.width == infinity);
+		static assert (x.limit!0.width == infinity);
 
-		assert (x[0] == x[3]);
-		assert (x[1] == x[4]);
-		assert (x[2] == x[5]);
+		static assert (x[0] == x[3]);
+		static assert (x[1] == x[4]);
+		static assert (x[2] == x[5]);
 
-		assert (x[][0] == x[][3]);
-		assert (x[][1] == x[][4]);
-		assert (x[][2] == x[][5]);
+		static assert (x[][0] == x[][3]);
+		static assert (x[][1] == x[][4]);
+		static assert (x[][2] == x[][5]);
 
-		assert (x[0..infinity!size_t].limit!0.width == infinity);
-		assert (x[0..infinity].limit!0.width == infinity);
+		static assert (x[0..infinity!size_t].limit!0.width == infinity);
+		static assert (x[0..infinity].limit!0.width == infinity);
 
-		auto y = x[7..11];
-		auto z = x[6..10];
+		enum y = x[7..11];
+		enum z = x[6..10];
 
-		assert (z.length == y.length);
-		assert (z.length == 4);
+		static assert (z.length == y.length);
+		static assert (z.length == 4);
 
-		assert (y[0] == z[1]);
-		assert (y[1] == z[2]);
-		assert (y[2] == z[3]);
-		assert (y[3] == z[1]);
+		static assert (y[0] == z[1]);
+		static assert (y[1] == z[2]);
+		static assert (y[2] == z[3]);
+		static assert (y[3] == z[1]);
 
-		auto a = ℕ[0..10].by (ℕ[0..10])
+		enum a = ℕ[0..10].by (ℕ[0..10])
 			.map!((a,b) => [a,b])
 			.cycle;
 
-		assert (a.limit!0.width == infinity);
-		assert (a.limit!1.width == infinity);
+		static assert (a.limit!0.width == infinity);
+		static assert (a.limit!1.width == infinity);
 
-		auto b = a[18..20, 9..$];
+		enum b = a[18..20, 9..$];
 
-		assert (b.limit!0.width == 2);
-		assert (b.limit!1.width == infinity);
+		static assert (b.limit!0.width == 2);
+		static assert (b.limit!1.width == infinity);
 
-		assert (b[0,0] == [8,9]);
-		assert (b[0,1] == [8,0]);
-		assert (b[$-1, 2] == [9,1]);
+		static assert (b[0,0] == [8,9]);
+		static assert (b[0,1] == [8,0]);
+		static assert (b[$-1, 2] == [9,1]);
 
 		/* cannot index a point at infinity 
 		*/
@@ -149,11 +149,11 @@ auto cycle (uint[] dim = [], S)(S space)
 		/*
 			passing a compile-time array of indices to cycle specifies which dimensions to cycle
 		*/
-		auto c = ℕ[2..4].by (ℕ[5..7]).by (ℕ[66..71])
+		enum c = ℕ[2..4].by (ℕ[5..7]).by (ℕ[66..71])
 			.map!((a,b,c) => [a,b,c])
 			.cycle!([1,2]);
 
-		assert (c.limit!0.width == 2);
-		assert (c.limit!1.width == infinity);
-		assert (c.limit!2.width == infinity);
+		static assert (c.limit!0.width == 2);
+		static assert (c.limit!1.width == infinity);
+		static assert (c.limit!2.width == infinity);
 	}
