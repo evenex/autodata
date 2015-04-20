@@ -57,7 +57,7 @@ template IndexOps (alias access, limits...)
 							);
 
 						else static assert (
-							is (Domain!access[i] == Unqual!(ExprType!limit))
+							is (Domain!access[i] == InitialType!(Unqual!(ExprType!limit)))
 							|| is (Domain!access[i] == ElementType!(Unqual!(ExprType!limit))),
 							type_error
 						);
@@ -66,7 +66,7 @@ template IndexOps (alias access, limits...)
 				foreach (i, limit; limits)
 					{/*bounds check}*/
 						static if (is (ElementType!(ExprType!limit) == void))
-							auto bounds = interval (ExprType!limit(0), limit);
+							auto bounds = interval (InitialType!(ExprType!limit)(0), limit);
 						else auto bounds = interval (limit);
 
 						assert (
