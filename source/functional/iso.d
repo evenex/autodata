@@ -12,7 +12,10 @@ private {/*import}*/
 template map (alias f)
 	{/*...}*/
 		auto map (Domain, Parameters...)(Domain domain, Parameters parameters)
-			{/*...}*/
+			in {/*...}*/
+				static assert (not (is (ElementType!Domain == void)));
+			}
+			body {/*...}*/
 				return Mapped!(Domain, f, Parameters)(domain, parameters);
 			}
 	}
