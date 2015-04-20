@@ -21,30 +21,19 @@ T identity (T)(T that)
 alias Instantiate (alias symbol) = symbol!();
 
 /* given a set of zero-parameter templates, invoke the first which successfully compiles 
+	the final pattern is considered to be the fallback pattern,
+	and if no pattern successfully compiles, the final pattern is forced
+	to expose the resultant error messages.
+	this final pattern will typically be a diagnostic or a common path,
+	or else the natural "last-resort" fallback in a given sequence of patterns to try
 */
 template Match (patterns...)
 	{/*...}*/
 		alias Filtered = Filter!(λ!q{(alias pattern) = __traits(compiles, pattern!())}, patterns);
 
 		static if (Filtered.length == 0)
-			{/*...}*/
-				import std.array: replace;
-
-				static assert (0, 
-					`none of ` ~patterns.stringof
-					.replace (`()`, ``)
-					~ ` could be matched`
-				);
-			}
+			{pragma(msg, Instantiate!(patterns[$-1]));}
 		else alias Match = Instantiate!(Filtered[0]);
-	}
-template Try (uint pattern_to_force_on_failure, patterns...)
-	{/*...}*/
-		alias fallback = patterns[pattern_to_force_on_failure];
-
-		static if (!(is(typeof(Match!(patterns)))))
-			alias Try = fallback!();
-		else alias Try = Match!patterns;
 	}
 
 /* mixin overload priority will route calls to the given symbol 
