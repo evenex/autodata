@@ -69,17 +69,6 @@ auto repeat (T, U...)(T value, U lengths)
 
 		static assert (All!(Compose!(is_integral, InitialType), Lengths));
 
-		pragma(msg, U, ` → `, Lengths);
-
-		pragma(msg, Enumerate!U.stringof
-		);
-		pragma(msg, 
-			Map!(Compose!(force_length, First),
-				Filter!(Not!(λ!q{(uint i, Length) = __traits(hasMember, Length, `is_infinite`)}), 
-					Enumerate!U
-				)
-			)
-		);
 		return Repeated!(T, Lengths)(
 			value, 
 			Map!(Compose!(force_length, First),
