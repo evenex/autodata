@@ -64,8 +64,8 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 
 						foreach (i,j; Map!(Second, Filter!(First,
 							Zip!(
-								TList!(Map!(is_interval, Selected)),
-								TList!(Ordinal!Selected)
+								Pack!(Map!(is_interval, Selected)),
+								Pack!(Ordinal!Selected)
 							)
 						))) bounds_check!i (selected[j]);
 					}

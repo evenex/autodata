@@ -31,7 +31,7 @@ template Map (alias F, T...)
 
 alias Ordinal (T...) = Iota!(T.length);
 
-alias Enumerate (T...) = Zip!(TList!(Ordinal!T), TList!T);
+alias Enumerate (T...) = Zip!(Pack!(Ordinal!T), Pack!T);
 
 template Sort (alias compare, T...)
 	{/*...}*/
@@ -125,26 +125,26 @@ alias IndexOf = staticIndexOf;
 enum Contains (T...) = IndexOf!(T[0], T[1..$]) > -1;
 
 ////
-template Zip (TLists...)
+template Zip (Packs...)
 	{/*...}*/
-		enum n = TLists.length;
-		enum length = TLists[0].length;
+		enum n = Packs.length;
+		enum length = Packs[0].length;
 
-		enum CheckLength (uint i) = TLists[i].length == TLists[0].length;
+		enum CheckLength (uint i) = Packs[i].length == Packs[0].length;
 
 		static assert (All!(Map!(CheckLength, Iota!n)));
 
-		template ToTList (uint i)
+		template ToPack (uint i)
 			{/*...}*/
-				alias ExtractAt (uint j) = Cons!(TLists[j].Unpack[i]);
+				alias ExtractAt (uint j) = Cons!(Packs[j].Unpack[i]);
 
-				alias ToTList = TList!(Map!(ExtractAt, Iota!n));
+				alias ToPack = Pack!(Map!(ExtractAt, Iota!n));
 			}
 
-		alias Zip = Map!(ToTList, Iota!length);
+		alias Zip = Map!(ToPack, Iota!length);
 	}
 
-struct TList (T...)
+struct Pack (T...)
 	{/*...}*/
 		alias Unpack = T;
 		alias Unpack this;
@@ -153,7 +153,7 @@ struct TList (T...)
 
 template Unpack (T...)
 	{/*...}*/
-		static if (is (T[0] == TList!U, U...))
+		static if (is (T[0] == Pack!U, U...))
 			alias Unpack = Cons!(T[0].Unpack);
 		else alias Unpack = T;
 	}

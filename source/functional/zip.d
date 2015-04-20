@@ -13,10 +13,6 @@ private {/*import}*/
 /* join several spaces together transverse-wise, 
 	into a space of tuples of the elements of the original spaces 
 */
-auto zip (Spaces...)(Spaces spaces)
-	{/*...}*/
-		return Zipped!Spaces (spaces);
-	}
 struct Zipped (Spaces...)
 	{/*...}*/
 		Spaces spaces;
@@ -211,6 +207,10 @@ struct Zipped (Spaces...)
 							);
 						}
 			}
+	}
+auto zip (Spaces...)(Spaces spaces)
+	{/*...}*/
+		return Zipped!Spaces (spaces);
 	}
 	unittest {/*...}*/
 		import autodata.meta.test;

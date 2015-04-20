@@ -38,8 +38,8 @@ template SliceOps (alias access, LimitsAndExtensions...)
 							static assert (
 								All!(is_implicitly_convertible,
 									Zip!(
-										TList!(Map!(Error.Element, Selected)),
-										TList!(Domain!access)
+										Pack!(Map!(Error.Element, Selected)),
+										Pack!(Domain!access)
 									)
 								), Error.type_mismatch
 							);
@@ -97,9 +97,9 @@ template SliceOps (alias access, LimitsAndExtensions...)
 								Map!(Dimension,
 									Enumerate!(
 										Select!(is_proper_sub,
-											TList!Selected, 
+											Pack!Selected, 
 											/*else*/
-											TList!(Map!(IntervalType,
+											Pack!(Map!(IntervalType,
 												Map!(ExprType, limits)
 											))
 										).Unpack
@@ -110,7 +110,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 							typeof(Subspace.bounds) bounds;
 
 							foreach (i, limit; Unpack!(Select!(is_proper_sub,
-								TList!selected, /*else*/ TList!limits
+								Pack!selected, /*else*/ Pack!limits
 							)))
 								static if (is_trivial_sub && is (ElementType!(ExprType!limit) == void))
 									bounds[i] = interval (ExprType!limit(0), limit);
@@ -241,8 +241,8 @@ template SliceOps (alias access, LimitsAndExtensions...)
 										static assert (
 											All!(is_implicitly_convertible,
 												Zip!(
-													TList!(Map!(Error.Element, Selected)),
-													TList!(Extract!(q{Point}, FreeDimensions))
+													Pack!(Map!(Error.Element, Selected)),
+													Pack!(Extract!(q{Point}, FreeDimensions))
 												)
 											), Error.type_mismatch
 										);

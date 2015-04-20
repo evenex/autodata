@@ -28,9 +28,9 @@ auto rotate_elements (int dim = -1, R)(R range, int positions = 1)
 			.take (n);
 	}
 	unittest {/*...}*/
-		assert ([1,2,3,4].rotate_elements[] == [4,1,2,3]);
-		assert ([1,2,3,4].rotate_elements[] == [1,2,3,4].rotate_elements);
-		assert ([1,2,3,4].rotate_elements (-1) == [1,2,3,4].rotate_elements (3));
+		static assert ([1,2,3,4].rotate_elements[] == [4,1,2,3]);
+		static assert ([1,2,3,4].rotate_elements[] == [1,2,3,4].rotate_elements);
+		static assert ([1,2,3,4].rotate_elements (-1) == [1,2,3,4].rotate_elements (3));
 	}
 
 /* pair each element with its successor in the range, and the last element with the first 
@@ -95,7 +95,7 @@ auto cycle (uint[] dim = [], S)(S space)
 
 		return Cycle!(S, d)(space);
 	}
-	void main () {/*...}*/
+	unittest {/*...}*/
 		import autodata.spaces.array;
 		import autodata.spaces.product;
 		import autodata.meta.test;
