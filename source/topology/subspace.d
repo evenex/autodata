@@ -77,9 +77,9 @@ struct Drop (R, T...)
 	}
 auto take (R, T...)(R space, T lengths)
 	{/*...}*/
-		return Take!(R,T)(space, lengths);
+		return Take!(R, Map!(Unqual, T))(space, lengths);
 	}
 auto drop (R, T...)(R space, T offsets)
 	{/*...}*/
-		return Drop!(R,T)(space, offsets);
+		return Drop!(R, Map!(Unqual, T))(space, offsets);
 	}
