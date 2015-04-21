@@ -3,9 +3,6 @@ module autodata.meta.resolution;
 private {/*import}*/
 	import std.conv;
 	import std.range: join;
-
-	import autodata.meta.lambda;
-	import autodata.meta.list;
 }
 
 /* generic identity transform 
@@ -29,11 +26,11 @@ alias Instantiate (alias symbol) = symbol!();
 */
 template Match (patterns...)
 	{/*...}*/
-		alias Filtered = Filter!(λ!q{(alias pattern) = __traits(compiles, pattern!())}, patterns);
-
-		static if (Filtered.length == 0)
+		static if (__traits(compiles, Instantiate!(patterns[0])))
+			alias Match = Instantiate!(patterns[0]);
+		else static if (patterns.length == 1)
 			{pragma(msg, Instantiate!(patterns[$-1]));}
-		else alias Match = Instantiate!(Filtered[0]);
+		else alias Match = Match!(patterns[1..$]);
 	}
 
 /* mixin overload priority will route calls to the given symbol 

@@ -91,7 +91,13 @@ template SliceOps (alias access, LimitsAndExtensions...)
 
 					static if (is_proper_sub || is_trivial_sub)
 						{/*...}*/
-							alias IntervalType (T) = typeof(T.init.interval);
+							template IntervalType (T)
+								{/*...}*/
+									alias Point () = typeof(T.init.interval);
+									alias Zero () = typeof(interval (Finite!T(0), T.init));
+								
+									alias IntervalType = Match!(Point, Zero);
+								}
 
 							alias Subspace = Sub!(Source,
 								Map!(Dimension,
@@ -113,7 +119,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 								Pack!selected, /*else*/ Pack!limits
 							)))
 								static if (is_trivial_sub && is (ElementType!(ExprType!limit) == void))
-									bounds[i] = interval (ExprType!limit(0), limit);
+									bounds[i] = interval (Finite!(ExprType!limit)(0), limit);
 								else bounds[i] = interval (limit);
 
 							auto local_access ()() {return Subspace (&this, bounds);}
@@ -307,6 +313,8 @@ template SliceOps (alias access, LimitsAndExtensions...)
 
 					pragma(msg, "\t", typeof(this), `[] → `, typeof(this.opIndex ()));
 					pragma(msg, "\t", typeof(this), `[][] → `, typeof(this.opIndex ().opIndex ()));
+
+					pragma(msg, typeof(this), `: slicing OK`);
 				}
 		}
 		private:
