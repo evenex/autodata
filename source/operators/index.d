@@ -79,6 +79,13 @@ template IndexOps (alias access, limits...)
 				return access (selected);
 			}
 
+		template Diagnostic ()
+			{/*...}*/
+				pragma(msg, `index diagnostic: `, typeof(this));
+
+				pragma(msg, "\t", typeof(this), `[`, Domain!access ,`] → `, typeof(this.opIndex (Domain!access.init)));
+			}
+
 		mixin LimitOps!limits
 			limit_ops;
 	}

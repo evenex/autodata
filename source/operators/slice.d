@@ -309,12 +309,12 @@ template SliceOps (alias access, LimitsAndExtensions...)
 		public {/*diagnostic}*/
 			template Diagnostic ()
 				{/*...}*/
+					alias Previous = index_ops.Diagnostic!();
+
 					pragma(msg, `slice diagnostic: `, typeof(this));
 
 					pragma(msg, "\t", typeof(this), `[] → `, typeof(this.opIndex ()));
 					pragma(msg, "\t", typeof(this), `[][] → `, typeof(this.opIndex ().opIndex ()));
-
-					pragma(msg, typeof(this), `: slicing OK`);
 				}
 		}
 		private:
