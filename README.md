@@ -5,6 +5,8 @@ autodata
   * operate on them with a rich set of functional primitives
 
 ---
+(pre-alpha version 0.1)
+
 ##overview
 a __space__ is a data set with an n-dimensional index: `I₀ × I₁ × ⋯ × Iₙ₋₁ → T`,
 > where `T` is any data type,  
@@ -17,12 +19,12 @@ __autodata__ generates spatial interfaces through `*Ops` mixin templates:
 ```d
 struct Space
 {
-	auto access (size_t i)
+	auto access (uint i)
 	{
 		return i;
 	}
 
-	size_t length = 100;
+	uint length = 100;
 
 	mixin IndexOps!(access, length);
 }
@@ -35,12 +37,12 @@ so this code is equivalent to the previous listing:
 ```d
 struct Space
 {
-	auto zxcvbn (size_t i)
+	auto zxcvbn (uint i)
 	{
 		return i;
 	}
 
-	size_t qwerty = 100;
+	uint qwerty = 100;
 
 	mixin IndexOps!(zxcvbn, qwerty);
 }
@@ -66,12 +68,12 @@ With __autodata__, we can extend `Space` to support slicing simply by changing `
 ```d
 struct Space
 {
-	auto access (size_t i)
+	auto access (uint i)
 	{
 		return i;
 	}
 
-	size_t length = 100;
+	uint length = 100;
 
 	mixin SliceOps!(access, length);
 }
@@ -89,12 +91,12 @@ Boundaries need not start at 0, either:
 ```d
 struct Space
 {
-	auto access (size_t i)
+	auto access (uint i)
 	{
 		return i;
 	}
 
-	size_t[2] span = [100, 200];
+	uint[2] span = [100, 200];
 
 	mixin SliceOps!(access, span);
 }
@@ -116,13 +118,13 @@ Extending Space to multiple dimensions is trivial:
 ```d
 struct Space
 {
-	auto access (size_t i, size_t j)
+	auto access (uint i, uint j)
 	{
 		return i + j;
 	}
 
-	size_t x_length = 10;
-	size_t y_length = 10;
+	uint x_length = 10;
+	uint y_length = 10;
 
 	mixin SliceOps!(access, x_length, y_length);
 }
@@ -175,6 +177,7 @@ writeln (RSpace()[0..51][$/2]); // output: 25.5
 ```
 
 The length operator `$` normally denotes the right-side boundary of a range.  
+When the left-side boundary is 0 (as with most ranges), this is equivalent to the length.  
 In __autodata__, `$` can be inverted with `~` to get the left-side boundary:
 
 ```d
@@ -191,12 +194,12 @@ We can use this to extend the `Sub!Space` object to support `RandomAccessRange` 
 ```d
 struct Space
 {
-	auto access (size_t i)
+	auto access (uint i)
 	{
 		return i;
 	}
 
-	size_t length = 100;
+	uint length = 100;
 
 	mixin SliceOps!(access, length, RangeExt);
 }
@@ -205,7 +208,7 @@ struct Space
 The extension template `RangeExt` enables:
 
 ```d
-static assert (isRandomAccesRange!(typeof(Space()[])));
+static assert (isRandomAccessRange!(typeof(Space()[])));
 
 foreach (i; Space()[71..75])
 	write (i, `, `); // output: 71, 72, 73, 74,
@@ -221,13 +224,13 @@ writeln (Space()[55..60] == [55,56,57,58,59]); // output: true
 ```d
 struct Space
 {
-	auto access (size_t i, size_t j)
+	auto access (uint i, uint j)
 	{
 		return i + j;
 	}
 
-	size_t x_length = 10;
-	size_t y_length = 10;
+	uint x_length = 10;
+	uint y_length = 10;
 
 	mixin SliceOps!(access, x_length, y_length, RangeExt);
 }
@@ -242,5 +245,49 @@ Any zero-parameter template (ordinary mixins or enum strings) can be used to ext
 
 ---
 ##functional api
-__autodata__ provides a set of composable primitives for operating on n-dimensional data types.
+__autodata__ provides a set of composable primitives for operating on n-dimensional data types.  
+
+The familiar `map`, `filter`, `reduce`, and `zip` are all available:
+
+```d
+struct Space
+{
+	static:
+
+	auto access (uint i, uint j)
+	{
+		return i + j;
+	}
+
+	enum x_length = 12;
+	enum y_length = 8;
+
+	mixin SliceOps!(access, x_length, y_length, RangeExt);
+}
+
+writeln (Space[$/2, $/2]); // output: 10
+
+writeln (Space[].map!(x => x*2)[$/2, $/2]); // output: 20
+
+writeln (
+	zip (
+		Space[],
+		Space[].map!(x => x*2)
+	)[$/2, $/2]
+); // output: Tuple!(uint, uint)(10, 20)
+
+writeln (Space[0, ~$..$].reduce!max); // output: 7
+
+writeln (Space[0, ~$..$].filter!(x => x % 2)); // output: [1, 3, 5, 7]
+```
+
+Several Phobos range adaptors have been rebuilt for n-dimensions:
+
+```d
+auto x = zip (
+	Space[].cycle[12..18, 10..12],
+	6.repeat (6,2)
+).take (2,2).drop (1,1).array;
+
 // TODO
+```
