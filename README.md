@@ -32,24 +32,28 @@ struct Space
 These names can be anything you want, (as long as its not a reserved D operator overloading keyword)  
 so this code is equivalent to the previous listing:
 
-	struct Space
+```d
+struct Space
+{
+	auto zxcvbn (size_t i)
 	{
-		auto zxcvbn (size_t i)
-		{
-			return i;
-		}
-
-		size_t qwerty = 100;
-
-		mixin IndexOps!(zxcvbn, qwerty);
+		return i;
 	}
+
+	size_t qwerty = 100;
+
+	mixin IndexOps!(zxcvbn, qwerty);
+}
+```
 
 Both will enable bounds-checked indexing operations:
 
-	writeln (Space()[40]); // output: 40
-	writeln (Space()[$-1]); // output: 99
-	writeln (Space()[101]); // error! out of bounds
-	writeln (Space()[$]); // error! out of bounds
+```d
+writeln (Space()[40]); // output: 40
+writeln (Space()[$-1]); // output: 99
+writeln (Space()[101]); // error! out of bounds
+writeln (Space()[$]); // error! out of bounds
+```
 
 ---
 
@@ -59,14 +63,16 @@ More likely, you will need to define multiple overloads for `opIndex`, an `opSli
 <br>
 With __autodata__, we can extend `Space` to support slicing by changing `IndexOps` to `SliceOps`:
 
-	struct Space
+```d
+struct Space
+{
+	auto access (size_t i)
 	{
-		auto access (size_t i)
-		{
-			return i;
-		}
-
-		size_t length = 100;
-
-		mixin SliceOps!(access, length);
+		return i;
 	}
+
+	size_t length = 100;
+
+	mixin SliceOps!(access, length);
+}
+```
