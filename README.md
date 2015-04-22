@@ -12,7 +12,7 @@ a __space__ is a data set with an n-dimensional index: `I₀ × I₁ × ⋯ × I
 
 ---
      
-__autodata__ generates spatial interfaces through \*Ops mixin templates:
+__autodata__ generates spatial interfaces through `*Ops` mixin templates:
 
 ```d
 struct Space
@@ -85,6 +85,30 @@ writeln (Space()[50..100][0]); // output: 50
 writeln (Space()[75..101]); // error! out of bounds
 ```
 
+Boundaries need not start at 0, either:
+```d
+struct Space
+{
+	auto access (size_t i)
+	{
+		return i;
+	}
+
+	size_t[2] span = [100, 200];
+
+	mixin SliceOps!(access, span);
+}
+
+writeln (Space()[0]); // error! out of bounds
+writeln (Space()[100]); // output: 100
+```
+
+Though, without further modification (see: extensions), slices will start at 0. <!--REVIEW mention extensions and special symbols like "origin"-->
+
+```d
+writeln (Space()[][0]); // output: 100
+```
+
 ---
 
 Extending Space to multiple dimensions is trivial:
@@ -116,7 +140,51 @@ writeln (Space()[$-1, $-1]); // output: 18
 
 ---
 
-Ops provide a mechanism for injecting custom behavior into subspaces.  
+__autodata__ also supports negative and non-integer indices:
+
+```d
+struct ISpace
+{
+	auto access (int i)
+	{
+		return i;
+	}
+
+	auto axis = [-10, 10];
+
+	mixin SliceOps!(access, axis);
+}
+
+writeln (ISpace()[-5]); // output: -5
+writeln (ISpace()[-7..7][0]); // output: -7
+
+struct RSpace
+{
+	auto access (double i)
+	{
+		return i;
+	}
+
+	auto length = 100.0;
+
+	mixin SliceOps!(access, axis);
+}
+
+writeln (RSpace()[33.3]); // output: 33.3
+writeln (RSpace()[0..51][$/2]); // output: 25.5
+```
+
+The length operator `$` normally denotes the right-side boundary of a range.  
+In __autodata__, `$` can be inverted with `~` to get the left-side boundary:
+
+```d
+writeln (ISpace()[~$..0][0]); // output: -5
+writeln (RSpace()[~$]); // output: 0.0
+```
+
+---
+
+__autodata__ provides a mechanism for injecting custom behavior into subspaces.  
 We can use this to extend the `Sub!Space` object to support `RandomAccessRange` operations:
 
 ```d
