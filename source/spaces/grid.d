@@ -1,4 +1,4 @@
-module autodata.topology.grid;
+module autodata.spaces.grid;
 
 private {/*imports}*/
 	import std.conv;
@@ -17,7 +17,7 @@ struct Grid (S)
 			{/*...}*/
 				auto domain_transform (uint d)() {return space.limit!d.left + (point[d] * space.limit!d.width) / lengths[d];}
 
-				auto sample ()() {return space[Map!(domain_transform, Ordinal!(typeof(point)))];}
+				auto sample ()() {return space[Map!(domain_transform, Ordinal!(typeof(point)))];}// REVIEW why does it work without tuple.expand?
 				auto stride ()() {return space[($*point[0])/lengths[0]];}
 
 				return Match!(sample, stride);

@@ -8,7 +8,7 @@ private {/*import}*/
 	import autodata.core;
 	import autodata.sequence;
 	import autodata.functional;
-	import autodata.topology;
+	import autodata.spaces.take_drop;
 }
 
 /* traverse a range with elements rotated left by some number of positions 
@@ -59,7 +59,7 @@ struct Cycle (R, uint[] cyclic_dims)
 						else return coords[i];
 					}
 
-				return space[Map!(coord, Ordinal!coords).tuple.expand];
+				return space[Map!(coord, Ordinal!coords).tuple.expand]; // REVIEW .tuple.expand idiom required in some spots, not in others... need to find out why
 			}
 		auto limit (uint i)() const
 			{/*...}*/

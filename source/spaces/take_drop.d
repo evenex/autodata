@@ -1,4 +1,4 @@
-module autodata.topology.subspace;
+module autodata.spaces.take_drop;
 
 private {/*import}*/
 	import autodata.meta;

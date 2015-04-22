@@ -9,5 +9,4 @@ import autodata.meta;
 import autodata.operators;
 import autodata.patterns;
 import autodata.sequence;
-import autodata.spaces; // TODO   vv
-import autodata.topology; // TODO ^^
+import autodata.spaces;
