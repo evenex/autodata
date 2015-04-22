@@ -14,6 +14,7 @@ a __space__ is a data set with an n-dimensional index: `I₀ × I₁ × ⋯ × I
      
 __autodata__ generates spatial interfaces through \*Ops mixin templates:
 
+```d
 	struct Space
 	{
 		auto access (size_t i)
@@ -25,6 +26,7 @@ __autodata__ generates spatial interfaces through \*Ops mixin templates:
 
 		mixin IndexOps!(access, length);
 	}
+```
 
 `IndexOps` is passed the indexing function (`access`) and the boundaries of the space (`length`).  
 These names can be anything you want, (as long as its not a reserved D operator overloading keyword)  
