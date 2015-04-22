@@ -8,7 +8,7 @@ autodata
 ##overview
 a __space__ is a data set with an n-dimensional index: `I₀ × I₁ × ⋯ × Iₙ → T`,
 > where `T` is any data type,  
-> and each `Iᵢ` is an additive group. <!--- REVIEW: with manual origin, maybe only a monoid is required --> 
+> and each `Iᵢ` is an additive group. <!-- REVIEW: with manual origin, maybe only a monoid is required --> 
 
 ---
      
@@ -76,3 +76,140 @@ struct Space
 	mixin SliceOps!(access, length);
 }
 ```
+
+Now, we can slice `Space`:
+
+```d
+writeln (Space()[0..100][0]); // output: 0
+writeln (Space()[50..100][0]); // output: 50
+writeln (Space()[75..101]); // error! out of bounds
+```
+
+---
+
+Extending Space to multiple dimensions is trivial:
+
+```d
+struct Space
+{
+	auto access (size_t i, size_t j)
+	{
+		return i + j;
+	}
+
+	size_t x_length = 10;
+	size_t y_length = 10;
+
+	mixin SliceOps!(access, x_length, y_length);
+}
+```
+
+```d
+writeln (Space()[0, 0]); // output: 0
+writeln (Space()[5, 7]); // output: 12
+writeln (Space()[5, 10]); // error! out of bounds
+
+writeln (Space()[5..7, 7..10][0, 0]); // output: 12
+writeln (Space()[5..$, 7][0]); // output: 12
+writeln (Space()[$-1, $-1]); // output: 18
+```
+
+---
+
+Ops provide a mechanism for injecting custom behavior into subspaces.  
+We can use this to extend the `Sub!Space` object to support `RandomAccessRange` operations:
+
+```d
+struct Space
+{
+	auto access (size_t i)
+	{
+		return i;
+	}
+
+	size_t length = 100;
+
+	mixin SliceOps!(access, length, RangeExt);
+}
+```
+
+The extension template `RangeExt` enables:
+
+```d
+static assert (isRandomAccesRange!(typeof(Space()[])));
+
+foreach (i; Space()[71..75])
+	write (i, `, `); // output: 71, 72, 73, 74,
+
+foreach_reverse (i; Space()[97..100])
+	write (i, `, `); // output: 99, 98, 97
+
+writeln (Space()[55..60] == [55,56,57,58,59]); // output: true
+```
+
+`RangeExt` will also turn any 1-dimensional slice of an n-dimensional space into a `RandomAccessRange`:
+
+```d
+struct Space
+{
+	auto access (size_t i, size_t j)
+	{
+		return i + j;
+	}
+
+	size_t x_length = 10;
+	size_t y_length = 10;
+
+	mixin SliceOps!(access, x_length, y_length, RangeExt);
+}
+
+```
+```d
+foreach (i; Space()[2, 3..7])
+	writeln (i, `, `); // output: 5, 6, 7, 8
+```
+
+---
+
+Any zero-parameter template (ordinary mixins or enum strings) can be used to extend a subspace. <!-- REVIEW there's a lot more to say, and even this probably belongs in its own section. maybe just put "for more on subspace extensions" as a link to a separate man page -->
+
+```d
+template MaxExt ()
+{
+	typeof(this[0]) cached_max;
+	bool max_is_cached;
+
+	auto max ()
+	{
+		if (!max_is_cached)
+		{
+			foreach (i; this[])
+				if (i > cached_max)
+					cached_max = i;
+
+			max_is_cached = true;
+		}
+		return cached_max;
+	}
+}
+
+struct Space
+{
+	auto access (size_t i)
+	{
+		return i;
+	}
+
+	size_t length = 100;
+
+	mixin SliceOps!(access, length, RangeExt, MaxExt);
+
+	mixin MaxExt;
+}
+
+writeln (Space().max); // output: 99
+writeln (Space()[].max); // output: 99
+writeln (Space()[20..40].max); // output: 39
+```
+
+---
