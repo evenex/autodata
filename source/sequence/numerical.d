@@ -1,6 +1,7 @@
 module autodata.sequence.numerical;
 
 private {/*import}*/
+	import autodata.core;
 	import autodata.operators;
 }
 
@@ -11,7 +12,7 @@ struct Nat
 	{/*...}*/
 		static:
 
-		enum size_t length = size_t.max;
+		enum length = infinity!size_t;
 
 		size_t access (size_t i)
 			{/*...}*/
