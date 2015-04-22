@@ -8,7 +8,7 @@ autodata
 ##overview
 a __space__ is a data set with an n-dimensional index: `I₀ × I₁ × ⋯ × Iₙ → T`,
 > where `T` is any data type,  
-> and each `Iᵢ` is an additive group. <!-- REVIEW: with manual origin, maybe only a monoid is required --> 
+> and each `Iᵢ` is an additive group. <!--- REVIEW: with manual origin, maybe only a monoid is required --> 
 
 ---
      
