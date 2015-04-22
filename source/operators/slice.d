@@ -126,6 +126,10 @@ template SliceOps (alias access, LimitsAndExtensions...)
 							auto static_access ()() {return Subspace (null, bounds);}
 
 							return Match!(local_access, static_access);
+
+							//auto local_base ()() {return &this;}
+							//auto static_base ()() {return null;}
+							// return Subspace (Match!(local_base, static_base), Map!(selection, Ordinal!limits));
 						}
 					else return index_ops.opIndex (selected);
 				}
@@ -162,26 +166,23 @@ template SliceOps (alias access, LimitsAndExtensions...)
 
 					alias Element = Codomain!access;
 
-					static extensions ()
-						{/*...}*/
-							import std.conv: to;
-							import std.range: join;
+					mixin((){/*...})*/
+						import std.conv: to;
+						import std.range: join;
 
-							string[] code;
+						string[] code;
 
-							foreach (i, extension; Filter!(Not!has_identity, LimitsAndExtensions))
-								static if (is (typeof(extension!().identity) == string))
-									code ~= q{
-										mixin(} ~ __traits(identifier, extension) ~ q{!());
-									};
-								else code ~= q{
-									mixin } ~ __traits(identifier, extension) ~ q{;
+						foreach (i, extension; Filter!(Not!has_identity, LimitsAndExtensions))
+							static if (is (typeof(extension!().identity) == string))
+								code ~= q{
+									mixin(} ~ __traits(identifier, extension) ~ q{!());
 								};
+							else code ~= q{
+								mixin } ~ __traits(identifier, extension) ~ q{;
+							};
 
-							return code.join.to!string;
-						}
-
-					mixin(extensions);
+						return code.join.to!string;
+					}());
 				}
 
 			template SubGenerator (FreeDimensions...)
@@ -196,7 +197,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 							Sort!(λ!q{(T,U) = T.index < U.index},
 								Cons!(
 									FreeDimensions,
-									Filter!(λ!q{(Dim) = not (Contains!(Dim.index, Extract!(`index`, FreeDimensions)))},
+									Filter!(λ!q{(Dim) = not (Contains!(Dim.index, Extract!(q{index}, FreeDimensions)))},
 										Map!(Dimension,
 											Enumerate!(Domain!access)
 										),
@@ -263,38 +264,17 @@ template SliceOps (alias access, LimitsAndExtensions...)
 									}
 							}
 							body {/*...}*/
-								static if (Any!(is_interval, Selected))
+								auto selection (uint i)()
 									{/*...}*/
-										auto boundary (uint i)()
-											{/*...}*/
-												enum j = IndexOf!(i, Extract!(q{index}, FreeDimensions));
+										enum j = IndexOf!(i, Extract!(q{index}, FreeDimensions));
 
-												auto range ()() {return interval (selected[j] - limit!j.left + bounds[i].left);}
-												auto point ()() {return bounds[i];}
+										auto offset ()() {return selected[j] - limit!j.left + bounds[i].left;}
+										auto stable ()() {return bounds[i].left;}
 
-												return Match!(range, point);
-											}
-
-										return Sub!(Source,
-											Map!(
-												Λ!q{(uint i, T) = Dimension!(FreeDimensions[i].index, T)},
-												Enumerate!Selected
-											)
-										)(source, Map!(boundary, Ordinal!limits));
+										return Match!(offset, stable);
 									}
-								else {/*...}*/
-									auto point (uint i)()
-										{/*...}*/
-											enum j = IndexOf!(i, Extract!(q{index}, FreeDimensions));
 
-											auto offset ()() {return bounds[i].left + selected[j] - limit!j.left;}
-											auto stable ()() {return bounds[i].left;}
-
-											return Match!(offset, stable);
-										}
-
-									return source.opIndex (Map!(point, Ordinal!limits));
-								}
+								return source.opIndex (Map!(selection, Ordinal!limits));
 							}
 					}
 					public {/*opSlice}*/
