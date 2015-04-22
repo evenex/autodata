@@ -348,7 +348,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 				}
 		}
 	}
-	void main () {/*...}*/
+	unittest {/*...}*/
 		import autodata.meta.test;
 		import autodata.core;
 		import autodata.operators.multilimit;
