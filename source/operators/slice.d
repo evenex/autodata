@@ -50,7 +50,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 							alias T = Unqual!(ExprType!(limits[i]));
 
 							static if (is (ElementType!T == void))
-								auto boundary = interval (T(0), limits[i]);
+								auto boundary = interval (Finite!T(0), limits[i]);
 							else auto boundary = interval (limits[i]);
 
 							alias U = ElementType!(typeof(boundary));
@@ -141,7 +141,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 						{}
 					else alias Right = U;
 
-					alias Bounds = typeof(limits[d].interval);
+					alias Bounds = typeof(this[].bounds[d]);
 
 					static if (is (Bounds.Left == Infinite!V, V) && not (is (Left == Infinite!_, _)))
 						auto left = i.to!V;
@@ -265,28 +265,35 @@ template SliceOps (alias access, LimitsAndExtensions...)
 							body {/*...}*/
 								static if (Any!(is_interval, Selected))
 									{/*...}*/
-										auto bounds = this.bounds;
+										auto boundary (uint i)()
+											{/*...}*/
+												enum j = IndexOf!(i, Extract!(q{index}, FreeDimensions));
 
-										foreach (i, j; Extract!(q{index}, FreeDimensions))
-											bounds[j] = selected[i] - limit!i.left + bounds[j].left;
+												auto range ()() {return interval (selected[j] - limit!j.left + bounds[i].left);}
+												auto point ()() {return bounds[i];}
+
+												return Match!(range, point);
+											}
 
 										return Sub!(Source,
 											Map!(
 												Λ!q{(uint i, T) = Dimension!(FreeDimensions[i].index, T)},
 												Enumerate!Selected
 											)
-										)(source, bounds);
+										)(source, Map!(boundary, Ordinal!limits));
 									}
 								else {/*...}*/
-									Domain!access point;
+									auto point (uint i)()
+										{/*...}*/
+											enum j = IndexOf!(i, Extract!(q{index}, FreeDimensions));
 
-									foreach (i,_; typeof(bounds))
-										point[i] = bounds[i].left;
+											auto offset ()() {return bounds[i].left + selected[j] - limit!j.left;}
+											auto stable ()() {return bounds[i].left;}
 
-									foreach (i,j; Map!(λ!q{(uint k) = FreeDimensions[k].index}, Ordinal!Selected))
-										point[j] += selected[i] - limit!i.left;
+											return Match!(offset, stable);
+										}
 
-									return source.opIndex (point);
+									return source.opIndex (Map!(point, Ordinal!limits));
 								}
 							}
 					}
@@ -341,7 +348,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 				}
 		}
 	}
-	unittest {/*...}*/
+	void main () {/*...}*/
 		import autodata.meta.test;
 		import autodata.core;
 		import autodata.operators.multilimit;
