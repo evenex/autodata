@@ -342,7 +342,7 @@ private {/*impl}*/
 
 					return this;
 				}
-			auto ref opAssign (T...)(Element point)
+			auto ref opAssign ()(Element point)
 				out {assertion;}
 				body {/*...}*/
 					this.left = this.right = point;
