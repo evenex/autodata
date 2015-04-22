@@ -53,9 +53,9 @@ bool is_infinite (T)(T x)
 struct Infinite (T)
 	if (is_integral!T || is (T == void))
 	{/*...}*/
-		static if (is_signed!T || is (T == void))
-			bool is_negative;
-		else enum is_negative = false;
+		static if (is_unsigned!T)
+			enum is_negative = false;
+		else bool is_negative;
 
 		auto is_positive () const {return not (is_negative);}
 
@@ -65,9 +65,12 @@ struct Infinite (T)
 			{/*...}*/
 				static if (op == `+`)
 					return this;
-				else static if (op == `-` && (is_signed!T || is (T == void)))
-					return Infinite (true);
-				else static assert (0, `cannot construct ` ~op ~ Infinite.stringof);
+				else static if (op == `-`)
+					{/*...}*/
+						static if (is_unsigned!T)
+							static assert (0, `cannot construct ` ~op ~ Infinite.stringof);
+						else return Infinite (true);
+					}
 			}
 		auto opBinary (string op, U)(U that) const
 			{/*...}*/

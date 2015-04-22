@@ -124,7 +124,7 @@ auto interval (T,U)(T left, U right)
 		else return Interval!(CommonType!(T,U))(left, right);
 	}
 auto interval (T)(T point)
-	if (not (is (T == U[2], U)))
+	if (not (is (T == U[2], U) || is (T == Infinite!U, U)))
 	{/*...}*/
 		static if (is (T == Interval!U, U...))
 			return point;
