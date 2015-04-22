@@ -61,7 +61,7 @@ The above could be accomplished by renaming `access` to `opIndex` and writing a 
 You'll have to, at the very least, overload `opSlice` (using D's old overloading syntax, which precludes multidimensional support).  
 More likely, you will need to define multiple overloads for `opIndex`, an `opSlice` template for returning some interval type, a sliced subspace type, and bounds checking logic for everything.  
 <br>
-With __autodata__, we can extend `Space` to support slicing by changing `IndexOps` to `SliceOps`:
+With __autodata__, we can extend `Space` to support slicing simply by changing `IndexOps` to `SliceOps`:
 
 ```d
 struct Space
@@ -178,11 +178,12 @@ The length operator `$` normally denotes the right-side boundary of a range.
 In __autodata__, `$` can be inverted with `~` to get the left-side boundary:
 
 ```d
-writeln (ISpace()[~$..0][0]); // output: -5
+writeln (ISpace()[~$]); // output: -5
 writeln (RSpace()[~$]); // output: 0.0
 ```
 
 ---
+##range interop
 
 __autodata__ provides a mechanism for injecting custom behavior into subspaces.  
 We can use this to extend the `Sub!Space` object to support `RandomAccessRange` operations:
@@ -237,47 +238,9 @@ foreach (i; Space()[2, 3..7])
 	writeln (i, `, `); // output: 5, 6, 7, 8
 ```
 
----
-
-Any zero-parameter template (ordinary mixins or enum strings) can be used to extend a subspace. <!-- REVIEW there's a lot more to say, and even this probably belongs in its own section. maybe just put "for more on subspace extensions" as a link to a separate man page -->
-
-```d
-template MaxExt ()
-{
-	typeof(this[0]) cached_max;
-	bool max_is_cached;
-
-	auto max ()
-	{
-		if (!max_is_cached)
-		{
-			foreach (i; this[])
-				if (i > cached_max)
-					cached_max = i;
-
-			max_is_cached = true;
-		}
-		return cached_max;
-	}
-}
-
-struct Space
-{
-	auto access (size_t i)
-	{
-		return i;
-	}
-
-	size_t length = 100;
-
-	mixin SliceOps!(access, length, RangeExt, MaxExt);
-
-	mixin MaxExt;
-}
-
-writeln (Space().max); // output: 99
-writeln (Space()[].max); // output: 99
-writeln (Space()[20..40].max); // output: 39
-```
+Any zero-parameter template (ordinary mixins or enum strings) can be used to extend a subspace. <!-- TODO link to extensions manpage -->
 
 ---
+##functional api
+__autodata__ provides a set of composable primitives for operating on n-dimensional data types.
+// TODO
