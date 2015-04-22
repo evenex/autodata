@@ -2,7 +2,7 @@ autodata
 ======
 ####a system for working with n-dimensional data types
   * automatically generate checked, consistent interfaces
-  * operate on them with a rich set of functional primitives
+* operate on them with a rich set of functional primitives
 ---
 ##overview
 a __space__ is a data set with an n-dimensional index: `I₀ × I₁ × ⋯ × Iₙ → T`,
