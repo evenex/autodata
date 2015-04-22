@@ -1,7 +1,7 @@
 autodata
 ======
 ####a system for working with n-dimensional data types
-  * ###automatically generate checked, consistent interfaces
+  * automatically generate checked, consistent interfaces
   * operate on them with a rich set of functional primitives
 ---
 ##overview
