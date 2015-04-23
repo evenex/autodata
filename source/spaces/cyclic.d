@@ -46,11 +46,11 @@ auto adjacent_pairs (R)(R range)
 		);
 	}
 
-struct Cycle (R, uint[] cyclic_dims)
+struct Cycle (S, uint[] cyclic_dims)
 	{/*...}*/
-		R space;
+		S space;
 
-		auto access (CoordinateType!R coords)
+		auto access (CoordinateType!S coords)
 			{/*...}*/
 				auto coord (uint i)()
 					{/*...}*/
@@ -63,7 +63,7 @@ struct Cycle (R, uint[] cyclic_dims)
 			}
 		auto limit (uint i)() const
 			{/*...}*/
-				alias Coord = CoordinateType!R[i];
+				alias Coord = CoordinateType!S[i];
 
 				static if (cyclic_dims.contains (i))
 					return Interval!(
@@ -75,9 +75,9 @@ struct Cycle (R, uint[] cyclic_dims)
 				else return space.limit!i;
 			}
 
-		mixin SliceOps!(access, Map!(limit, Iota!(dimensionality!R)), RangeExt);
+		mixin SliceOps!(access, Map!(limit, Iota!(dimensionality!S)), RangeExt);
 
-		static if (cyclic_dims.length == 1)
+		static if (dimensionality!S == 1)
 			{/*range ops}*/
 				auto length ()() const
 					{/*...}*/
@@ -87,11 +87,11 @@ struct Cycle (R, uint[] cyclic_dims)
 				mixin RangeOps!(space, length);
 			}
 	}
-auto cycle (uint[] dim = [], S)(S space)
+auto cycle (uint[] cyclic_dims = [], S)(S space)
 	{/*...}*/
-		static if (dim.empty)
+		static if (cyclic_dims.empty)
 			enum d = [Iota!(dimensionality!S)];
-		else alias d = dim;
+		else alias d = cyclic_dims;
 
 		return Cycle!(S, d)(space);
 	}
