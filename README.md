@@ -10,7 +10,7 @@ autodata
 ##overview
 a __space__ is a data set with an n-dimensional index: `I₀ × I₁ × ⋯ × Iₙ₋₁ → T`,
 > where `T` is any data type,  
-> and each `Iᵢ` is an additive group. <!-- REVIEW: with manual origin, maybe only a monoid is required --> 
+> and each `Iᵢ` is an additive group.
 
 ---
      
@@ -105,7 +105,7 @@ writeln (Space()[0]); // error! out of bounds
 writeln (Space()[100]); // output: 100
 ```
 
-Though, without further modification (see: extensions), slices will start at 0. <!--REVIEW mention extensions and special symbols like "origin"-->
+Though, without further modification (TODO: document extensions), slices will start at 0.
 
 ```d
 writeln (Space()[][0]); // output: 100
