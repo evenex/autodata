@@ -289,5 +289,28 @@ auto x = zip (
 	6.repeat (6,2)
 ).take (2,2).drop (1,1).array;
 
-// TODO
+writeln (x[0,0]); // output: Tuple!(uint, int)(4, 6)
 ```
+
+As well as some new ones:
+
+```d
+writeln (
+	cartesian_product (Space[], Space[], Space[])
+		[0,1,2,3,4,5]
+); // output: Tuple!(uint, uint, uint)(1, 5, 9)
+
+writeln (
+	Real[0..1].by (Real[0..1])
+		.grid (100, 100)
+		[50, 25]
+); // output: Tuple!(double, double)(0.5, 0.25)
+```
+
+##TODO
+(in no particular order)
+
+1. grid is a first step towards a general interpolation adaptor
+2. expand scope to trees, grids, possibly lattices
+3. tagging axes with enum string labels
+4. along!i to transform an n-D space into a 1-D space (the i'th axis) containing (n-1)-D spaces
