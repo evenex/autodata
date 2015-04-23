@@ -212,7 +212,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 							{/*...}*/
 								alias T = Unqual!(ElementType!(typeof(bounds[FreeDimensions[dim].index])));
 
-								auto multi ()() {return -origin[(FreeDimensions[dim].index)];}
+								auto multi ()() {return -origin[FreeDimensions[dim].index];} // REVIEW this is more of a limit offset than an origin... but its equivalent to an origin in some cases
 								auto uni   ()() {return -origin;}
 								auto zero  ()() {return T(0);}
 
@@ -268,7 +268,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 									{/*...}*/
 										enum j = IndexOf!(i, Extract!(q{index}, FreeDimensions));
 
-										auto offset ()() {return selected[j] - limit!j.left + bounds[i].left;}
+										auto offset ()() {return selected[j] - limit!j.left + bounds[i].left;} /// REVIEW b.left - lim.left ≡ origin
 										auto stable ()() {return bounds[i].left;}
 
 										return Match!(offset, stable);
@@ -642,7 +642,7 @@ package {/*error}*/
 
 			alias Element (T) = Select!(is (ElementType!T == void), T, /*else*/ ElementType!T);
 
-			enum error_header = `● ` ~This.stringof~ ` ▬▶ `;
+			enum error_header = `█▶ ` ~This.stringof~ ` ▬▶ `;
 
 			enum type_mismatch = error_header
 				~Map!(Element, Selected.Types).stringof~ ` does not convert to ` ~Map!(Element, Map!(ExprType, limits)).stringof;
