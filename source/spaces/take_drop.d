@@ -15,8 +15,12 @@ struct Take (R, T...)
 			{/*...}*/
 				return space[coord];
 			}
+		auto limit (uint d)() const
+			{/*...}*/
+				return interval!(CoordinateType!R[d]) (0, lengths[d]);
+			}
 
-		mixin SliceOps!(access, lengths, RangeExt);
+		mixin SliceOps!(access, Map!(limit, Ordinal!T), RangeExt);
 
 		static if (T.length == 1)
 			{/*range ops}*/
@@ -48,11 +52,13 @@ struct Drop (R, T...)
 
 		auto access (CoordinateType!R coord)
 			{/*...}*/
-				return space[offsets[0] + coord[0]];
+				auto point (uint i)(){return offsets[i] + coord[i];}
+
+				return space[Map!(point, Ordinal!T)];
 			}
 		auto limit (uint d)() const
 			{/*...}*/
-				return interval (0, space.limit!d.right - offsets[d]);
+				return interval!(CoordinateType!R[d]) (0, space.limit!d.right - offsets[d]);
 			}
 
 		mixin SliceOps!(access, Map!(limit, Ordinal!T), RangeExt);
