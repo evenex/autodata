@@ -580,7 +580,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 						return true;
 					}
 
-				auto bounds = interval (0UL, infinity); // BUG IT DOESNT LIKE THIS, IT SEES THE INFINITY BUT IT TURNS IT INTO THE BASE TYPE ANYWAY
+				auto bounds = interval (0UL, infinity);
 
 				mixin SliceOps!(access, bounds);
 			}
