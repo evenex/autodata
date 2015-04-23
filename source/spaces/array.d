@@ -44,22 +44,16 @@ struct Array (T, uint dimensions = 1)
 		void pull (S, U...)(S space, U region)
 			if (U.length == dimensions)
 			{/*...}*/
-				alias open = Map!(is_interval, U);
+				auto boundary (uint i)()
+					{/*...}*/
+						auto open ()() if (is_interval!(U[i])) {return region[i];}
+						auto closed ()() {return interval (region[i], region[i]+1);}
 
-				Repeat!(dimensions, Interval!size_t) bounds;
-				{/*init}*/
-					foreach (i; Iota!dimensions)
-						static if (open[i])
-							bounds[i] = region[i];
-						else bounds[i] = interval (region[i], region[i]+1);
-				}
+						return Match!(open, closed);
+					}
 
-				size_t[dimensions] stride;
-				{/*init}*/
-					foreach (i; Iota!dimensions[1..$])
-						stride[i] = length!(i-1);
-					stride[0] = 1;
-				}
+				Repeat!(dimensions, Interval!size_t) 
+					bounds = Map!(boundary, Iota!dimensions);
 
 				size_t[dimensions] index;
 
@@ -90,19 +84,22 @@ struct Array (T, uint dimensions = 1)
 					{/*...}*/
 						void indexed ()()
 							{/*...}*/
-								auto get_index (size_t i)()
+								auto get_index (uint i)()
 									{/*...}*/
-										return index[i];
+										return index[i].to!(CoordinateType!S[i]);
 									}
 
 								data[offset] = space[
 									Map!(get_index,
 										Map!(First,
 											Filter!(Second,
-												Enumerate!open
+												Zip!(
+													Pack!(Ordinal!U),
+													Pack!(Map!(is_interval, U))
+												)
 											)
 										)
-									)//.tuple.expand // REVIEW tuple.expand idiom
+									).tuple.expand
 								];
 							}
 						void input_range ()()
@@ -111,6 +108,7 @@ struct Array (T, uint dimensions = 1)
 								space.popFront;
 							}
 
+						indexed ();
 						Match!(indexed, input_range);
 
 						advance;
