@@ -2,3 +2,4 @@
 autodata
 dub.selections.json
 .dub*
+*test.d
