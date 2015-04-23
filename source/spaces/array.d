@@ -52,8 +52,7 @@ struct Array (T, uint dimensions = 1)
 						return Match!(open, closed);
 					}
 
-				Repeat!(dimensions, Interval!size_t) 
-					bounds = Map!(boundary, Iota!dimensions);
+				auto bounds = Map!(boundary, Iota!dimensions).tuple.expand;
 
 				size_t[dimensions] index;
 
@@ -105,7 +104,6 @@ struct Array (T, uint dimensions = 1)
 								space.popFront;
 							}
 
-						indexed ();
 						Match!(indexed, input_range);
 
 						advance;
