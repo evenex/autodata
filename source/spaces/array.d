@@ -93,10 +93,7 @@ struct Array (T, uint dimensions = 1)
 									Map!(get_index,
 										Map!(First,
 											Filter!(Second,
-												Zip!(
-													Pack!(Ordinal!U),
-													Pack!(Map!(is_interval, U))
-												)
+												Enumerate!(Map!(is_interval, U))
 											)
 										)
 									).tuple.expand
