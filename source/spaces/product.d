@@ -19,9 +19,9 @@ struct CartesianProduct (Spaces...)
 				alias LimitOffsets = Offsets[0..$ - Filter!(exceeds_d, Offsets).length + 1];
 					
 				enum i = LimitOffsets.length - 1;
-				enum d = LimitOffsets[0] - 1;
+				enum j = LimitOffsets[0] - 1;
 
-				return spaces[i].limit!d;
+				return spaces[i].limit!j;
 			}
 
 		auto access (Map!(CoordinateType, Spaces) point)
@@ -45,7 +45,7 @@ struct CartesianProduct (Spaces...)
 		mixin SliceOps!(access, Map!(limit, Ordinal!(Domain!access)), RangeExt);
 	}
 
-auto cartesian_product (S,R)(S left, R right)
+auto cartesian_product (S,R...)(S left, R right)
 	{/*...}*/
 		static if (is (S == CartesianProduct!T, T...))
 			return CartesianProduct!(T,R)(left.spaces, right);
