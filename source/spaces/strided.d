@@ -4,79 +4,89 @@ private {/*import}*/
 	import std.conv: to;
 	import std.range.primitives: front, back, popFront, popBack, empty;
 	import autodata.meta;
+	import autodata.core;
+	import autodata.operators;
+	import autodata.sequence;
 }
 
-/* iterate over a range, skipping a fixed number of elements each iteration 
+/* reindex a space to skip over a fixed width in the given dimensions
 */
-struct Stride (R) // TODO multidimensional support
+struct Stride (S, uint[] strided_dims, Widths...)
 	{/*...}*/
-		R range;
+		S space;
+		private Widths widths;
 
-		private size_t width;
-
-		this (R range, size_t width)
+		auto access (Repeat!(dimensionality!S, size_t) point)
 			{/*...}*/
-				this.range = range;
-				this.width = width;
-			}
+				auto coordinate (uint i)()
+					{/*...}*/
+						auto stride ()() {return widths[strided_dims.count_until (i)];}
+						auto stable ()() {return 1;}
 
-		const @property length ()
-			{/*...}*/
-				return range.length / width;
-			}
-
-		static if (is_input_range!R)
-			{/*...}*/
-				auto ref front ()
-					{/*...}*/
-						return range.front;
-					}
-				void popFront ()
-					{/*...}*/
-						foreach (_; 0..width)
-							range.popFront;
-					}
-				bool empty () const
-					{/*...}*/
-						return range.length < width;
+						return point[i] * Match!(stride, stable);
 					}
 
-				static assert (is_input_range!Stride);
+				return space[Map!(coordinate, Iota!(dimensionality!S)).tuple.expand];
 			}
-		static if (is_forward_range!R)
+		auto limit (uint i)() const
 			{/*...}*/
-				@property save ()
+				auto stride ()() {return interval (1, widths[strided_dims.count_until (i)]);}
+				auto stable ()() {return 1;}
+
+				return space.limit!i / Match!(stride, stable);
+			}
+
+		mixin SliceOps!(access, Map!(limit, Iota!(dimensionality!S)), RangeExt);
+
+		static if (dimensionality!S == 1)
+			{/*range ops}*/
+				auto length ()() const if (dimensionality!S == 1)
 					{/*...}*/
-						return this;
+						return limit!0.width;
+					}
+				void popFront ()()
+					{/*...}*/
+						foreach (_; 0..widths[0])
+							space.popFront;
+					}
+				void popBack ()()
+					{/*...}*/
+						foreach (_; 0..widths[0])
+							space.popBack;
 					}
 
-				static assert (is_forward_range!Stride);
+				mixin RangeOps!(space, length, widths);
 			}
-		static if (is_bidirectional_range!R)
-			{/*...}*/
-				auto ref back ()
-					{/*...}*/
-						return range.back;
-					}
-				void popBack ()
-					{/*...}*/
-						foreach (_; 0..width)
-							range.popBack;
-					}
-
-				static assert (is_bidirectional_range!Stride);
-			}
-
-		auto opIndex () // REVIEW necessary for dimensionality
-			{/*...}*/
-				return this;
-			}
-
-		invariant() {/*}*/
-			assert (width != 0, `width must be nonzero`);
-		}
 	}
-auto stride (R,T)(R range, T stride)
-	{/*...}*/
-		return Stride!R (range, stride.to!size_t);
+auto stride (uint[] strided_dims = [], R, Widths...)(R space, Widths widths)
+	in {/*...}*/
+		static assert (Widths.length == strided_dims.length || strided_dims.length == 0, 
+			`number of strided dimensions does not match number of stride widths given`
+		);
+	}
+	body {/*...}*/
+		static if (strided_dims.empty)
+			enum d = [Iota!(dimensionality!R)];
+		else alias d = strided_dims;
+
+		return Stride!(R, d, Widths)(space, widths);
+	}
+	unittest {/*...}*/
+		import autodata.functional;
+		import autodata.sequence;
+		import autodata.spaces.product;
+
+		assert ([1,2,3,4,5,6,7,8,9].stride (3) == [1,4,7]);
+
+		auto x = ℕ[0..100].by (ℕ[0..100]).stride (4, 20);
+
+		assert (x[~$..$, 0].map!(x => x[0]) == [0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96]);
+		assert (x[0, ~$..$].map!(x => x[1]) == [0, 20, 40, 60, 80]);
+
+		auto y = ℕ[0..100].by (ℕ[0..100]).stride!([1])(20);
+
+		assert (y[~$..$, 0].map!(x => x[0]) == ℕ[0..100]);
+		assert (y[0, ~$..$].map!(x => x[1]) == [0, 20, 40, 60, 80]);
+
+		static assert (not (is (typeof(ℕ[0..100].by (ℕ[0..100]).stride!([1])(20, 4)))));
 	}
