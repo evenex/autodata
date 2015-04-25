@@ -1,7 +1,6 @@
 module autodata;
 
 public:
-import autodata.async;
 import autodata.core;
 import autodata.functional;
 import autodata.memory;
