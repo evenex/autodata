@@ -38,11 +38,13 @@ template LimitOps (limits...)
 
 		auto opDollar (size_t i)() // const REVIEW source/operators/limit.d(35): Error: incompatible types for ((0) : (this.bounds)): 'int' and 'const(int[2])'
 			{/*...}*/
-				alias Element () = Repeat!(2, typeof(limits[i][0]));
-				alias Boundaries () = Cons!(typeof(limits[i].left), typeof(limits[i].right));
-				alias Identity () = Repeat!(2, typeof(limits[i].identity));
+				alias T = Unqual!(ExprType!(limits[i]));
 
-				return Limit!(Match!(Element, Boundaries, Identity))(limits[i]);
+				static if (is (ElementType!T == void))
+					auto limit ()() {return interval (Finite!T(0), limits[i]);}
+				else auto limit ()() {return interval (limits[i]);}
+
+				return Limit!(typeof(limit.left), typeof(limit.right))(limit);
 			}
 	}
 struct Limit (T,U)
@@ -50,6 +52,7 @@ struct Limit (T,U)
 		private {/* import}*/
 			import autodata.meta;
 			import autodata.core.interval;
+			import autodata.core.infinity;
 		}
 
 		Interval!(T,U) limit;
@@ -64,12 +67,5 @@ struct Limit (T,U)
 				static if (op is `~`)
 					return left;
 				else return mixin(op ~ q{right});
-			}
-
-		this (V)(V value)
-			{/*...}*/
-				static if (is (ElementType!V == void))
-					limit = interval (V(0), value);
-				else limit = interval (value);
 			}
 	}
