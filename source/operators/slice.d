@@ -210,16 +210,21 @@ template SliceOps (alias access, LimitsAndExtensions...)
 					public {/*limits}*/
 						auto limit (size_t dim)() const
 							{/*...}*/
-								alias T = Unqual!(ElementType!(typeof(bounds[FreeDimensions[dim].index])));
+								enum i = FreeDimensions[dim].index;
 
-								auto multi ()() {return -origin[FreeDimensions[dim].index];} // REVIEW this is more of a limit offset than an origin... but its equivalent to an origin in some cases
-								auto uni   ()() {return -origin;}
-								auto zero  ()() {return T(0);}
+								alias T = Unqual!(ElementType!(typeof(bounds)[i]));
 
-								auto left = Match!(multi, uni, zero);
-								auto right = left + bounds[FreeDimensions[dim].index].width;
+								auto multi    ()() {return -origin[i];}
+								auto uni      ()() {return -origin;}
+								auto inf_zero ()() {return bounds[i].left.is_infinite? bounds[i].left : T(0);}
 
-								return interval (left, right);
+								alias left = Match!(multi, uni, inf_zero);
+
+								return interval (left,
+									bounds[i].right.is_infinite? 
+										bounds[i].right
+										: left + bounds[FreeDimensions[dim].index].width
+								);
 
 							}
 						auto limit ()() const if (FreeDimensions.length == 1) {return limit!0;}
@@ -268,8 +273,26 @@ template SliceOps (alias access, LimitsAndExtensions...)
 									{/*...}*/
 										enum j = IndexOf!(i, Extract!(q{index}, FreeDimensions));
 
-										auto offset ()() {return selected[j] - limit!j.left + bounds[i].left;} /// REVIEW b.left - lim.left ≡ origin
-										auto stable ()() {return bounds[i].left;}
+										template inf_check (alias value)
+											{/*...}*/
+												auto inf_check ()() {return value.is_infinite? Finite!(ExprType!value)(0) : value;}
+											}
+
+
+										auto bound ()() {return bounds[i].left;}
+
+										alias left_bound = Match!(inf_check!bound, bound);
+
+
+										auto multi ()() {return origin[i];}
+										auto uni   ()() {return origin;}
+										auto lim   ()() {return -limit!j.left;}
+
+										auto left_limit ()() {return Match!(multi, uni, inf_check!lim, lim);}
+
+
+										auto offset ()() {return selected[j] + left_limit + left_bound;}
+										auto stable ()() {return left_bound;}
 
 										return Match!(offset, stable);
 									}
