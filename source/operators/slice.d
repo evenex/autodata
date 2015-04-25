@@ -273,23 +273,18 @@ template SliceOps (alias access, LimitsAndExtensions...)
 									{/*...}*/
 										enum j = IndexOf!(i, Extract!(q{index}, FreeDimensions));
 
-										template inf_check (alias value)
+										template inf (alias value)
 											{/*...}*/
-												auto inf_check ()() {return value.is_infinite? Finite!(ExprType!value)(0) : value;}
+												auto inf ()() {return value.is_infinite? Finite!(ExprType!value)(0) : value;}
 											}
 
+										auto bnd ()() {return bounds[i].left;}
+										auto left_bound ()() {return Match!(inf!bnd, bnd);}
 
-										auto bound ()() {return bounds[i].left;}
-
-										alias left_bound = Match!(inf_check!bound, bound);
-
-
-										auto multi ()() {return origin[i];}
-										auto uni   ()() {return origin;}
-										auto lim   ()() {return -limit!j.left;}
-
-										auto left_limit ()() {return Match!(multi, uni, inf_check!lim, lim);}
-
+										auto mlt ()() {return origin[i];}
+										auto uni ()() {return origin;}
+										auto lim ()() {return -limit!j.left;}
+										auto left_limit ()() {return Match!(mlt, uni, inf!lim, lim);}
 
 										auto offset ()() {return selected[j] + left_limit + left_bound;}
 										auto stable ()() {return left_bound;}
