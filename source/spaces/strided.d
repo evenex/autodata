@@ -58,7 +58,7 @@ struct Stride (S, uint[] strided_dims, Widths...)
 				mixin RangeOps!(space, length, widths);
 			}
 	}
-auto stride (uint[] strided_dims = [], R, Widths...)(R space, Widths widths)
+auto stride (uint[] strided_dims = [], S, Widths...)(S space, Widths widths)
 	in {/*...}*/
 		static assert (Widths.length == strided_dims.length || strided_dims.length == 0, 
 			`number of strided dimensions does not match number of stride widths given`
@@ -66,10 +66,10 @@ auto stride (uint[] strided_dims = [], R, Widths...)(R space, Widths widths)
 	}
 	body {/*...}*/
 		static if (strided_dims.empty)
-			enum d = [Iota!(dimensionality!R)];
+			enum d = [Iota!(dimensionality!S)];
 		else alias d = strided_dims;
 
-		return Stride!(R, d, Widths)(space, widths);
+		return Stride!(S, d, Widths)(space, widths);
 	}
 	unittest {/*...}*/
 		import autodata.functional;
