@@ -4,12 +4,6 @@ private {/*import}*/
 	import std.conv;
 }
 
-// TODO space diagnostic
-// typeof(r.opIndex)
-// answer: why won't this pull?
-// 		why can't I index?
-//		what's behind cannot infer opSlice message?
-
 /* suppress stderr while in scope 
 */
 string error_suppression (int line = __LINE__)()

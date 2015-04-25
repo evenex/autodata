@@ -432,24 +432,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 		assert (FloatingPointIndex()[~$..$][~$]);
 		error (FloatingPointIndex()[2*~$..2*$][~$]);
 
-		// REVIEW disabled by 0-width check
 		version (none) {/*}*/
-			static struct StringIndex
-				{/*...}*/
-					auto access (string) {return true;}
-
-					string[2] bounds = [`aardvark`, `zebra`];
-
-					mixin SliceOps!(access, bounds);
-				}
-			assert (StringIndex()[`monkey`]);
-			assert (is (typeof(StringIndex()[`fox`..`rabbit`])));
-			assert (not (is (typeof(StringIndex()[`fox`..`rabbit`][`kitten`]))));
-			assert (is (typeof(StringIndex()[~$..$])));
-			assert (not (is (typeof(StringIndex()[~$..$][~$]))));
-		}
-
-		version(none) {/*}*/
 		static struct MultiIndex // TODO: proper multi-index support once multiple alias this allowed
 			{/*...}*/
 				auto access_one (float) {return true;}
@@ -491,6 +474,52 @@ template SliceOps (alias access, LimitsAndExtensions...)
 		assert (is (typeof(MultiIndex()[cast(size_t)(~$)..cast(size_t)($)])));
 		assert (is (typeof(MultiIndex()[cast(float)(~$)..cast(float)($)])));
 		assert (not (is (typeof(MultiIndex()[cast(int)(~$)..cast(int)($)]))));
+		}
+		version (none) {/*}*/
+		static struct MultiIndexSub
+			{/*...}*/
+				auto access_one (float) {return true;}
+				auto access_two (size_t) {return true;}
+
+				float[2] bounds_one = [-5, 5];
+				size_t length_two = 8;
+
+				enum LimitRouting () = 
+					q{float[2] float_limits (){return [limit!0.left * 5/4. - 5, limit!0.right * 5/4. - 5];}}
+					q{size_t[2] size_t_limits (){return limit!0;}}
+					q{mixin MultiLimitOps!(0, size_t_limits, float_limits) C;}
+					q{alias opDollar = C.opDollar;}
+				;
+
+				template IndexMap () {auto opIndex (float) {return true;}}
+				enum IndexRouting () = 
+					q{mixin IndexMap mapping;}
+					q{mixin(function_overload_priority!(`opIndex`, sub, mapping));}
+				;
+
+				mixin SliceOps!(access_one, bounds_one) A;
+				mixin SliceOps!(access_two, length_two, IndexRouting, LimitRouting) B;
+				mixin MultiLimitOps!(0, length_two, bounds_one) C; 
+
+				mixin(function_overload_priority!(
+					`opIndex`, B, A)
+				);
+				mixin(template_function_overload_priority!(
+					`opSlice`, B, A)
+				);
+				alias opDollar = C.opDollar;
+			}
+		assert (MultiIndexSub()[][7]);
+		assert (MultiIndexSub()[][-5.0]);
+		assert (MultiIndexSub()[2..4][0.0]);
+		assert (MultiIndexSub()[~$..$][0.0]);
+		assert (MultiIndexSub()[2..4].bounds[0] == [2, 4]);
+		assert (MultiIndexSub()[~$..4].bounds[0] == [0, 4]);
+		assert (MultiIndexSub()[~$..1.0].bounds[0] == [0, 1]);
+		assert (MultiIndexSub()[cast(float)~$..1.0].bounds[0] == [-5, 1]);
+		assert (MultiIndexSub()[cast(float)~$..$].bounds[0] == [-5, 0]);
+		assert (MultiIndexSub()[cast(float)~$..cast(float)$].bounds[0] == [-5, -5]);
+		//assert (MultiIndexSub()[cast(size_t)(~$)..cast(size_t)$][cast(size_t)(~$)]);
 		}
 
 		static struct MultiDimensional
@@ -601,53 +630,6 @@ template SliceOps (alias access, LimitsAndExtensions...)
 				mixin SliceOps!(access, bounds);
 			}
 		assert (InfiniteSub()[].limit!0.width == infinity);
-
-		version (none) {/*}*/
-		static struct MultiIndexSub // TODO: proper multi-index support once multiple alias this allowed
-			{/*...}*/
-				auto access_one (float) {return true;}
-				auto access_two (size_t) {return true;}
-
-				float[2] bounds_one = [-5, 5];
-				size_t length_two = 8;
-
-				enum LimitRouting () = 
-					q{float[2] float_limits (){return [limit!0.left * 5/4. - 5, limit!0.right * 5/4. - 5];}}
-					q{size_t[2] size_t_limits (){return limit!0;}}
-					q{mixin MultiLimitOps!(0, size_t_limits, float_limits) C;}
-					q{alias opDollar = C.opDollar;}
-				;
-
-				template IndexMap () {auto opIndex (float) {return true;}}
-				enum IndexRouting () = 
-					q{mixin IndexMap mapping;}
-					q{mixin(function_overload_priority!(`opIndex`, sub, mapping));}
-				;
-
-				mixin SliceOps!(access_one, bounds_one) A;
-				mixin SliceOps!(access_two, length_two, IndexRouting, LimitRouting) B;
-				mixin MultiLimitOps!(0, length_two, bounds_one) C; 
-
-				mixin(function_overload_priority!(
-					`opIndex`, B, A)
-				);
-				mixin(template_function_overload_priority!(
-					`opSlice`, B, A)
-				);
-				alias opDollar = C.opDollar;
-			}
-		assert (MultiIndexSub()[][7]);
-		assert (MultiIndexSub()[][-5.0]);
-		assert (MultiIndexSub()[2..4][0.0]);
-		assert (MultiIndexSub()[~$..$][0.0]);
-		assert (MultiIndexSub()[2..4].bounds[0] == [2, 4]);
-		assert (MultiIndexSub()[~$..4].bounds[0] == [0, 4]);
-		assert (MultiIndexSub()[~$..1.0].bounds[0] == [0, 1]);
-		assert (MultiIndexSub()[cast(float)~$..1.0].bounds[0] == [-5, 1]);
-		assert (MultiIndexSub()[cast(float)~$..$].bounds[0] == [-5, 0]);
-		assert (MultiIndexSub()[cast(float)~$..cast(float)$].bounds[0] == [-5, -5]);
-		//assert (MultiIndexSub()[cast(size_t)(~$)..cast(size_t)$][cast(size_t)(~$)]);
-		}
 	}
 
 package {/*error}*/

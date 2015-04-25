@@ -23,7 +23,7 @@ template MultiLimitOps (size_t dim, limits...)
 				MultiLimit!(
 					Map!(ElementType,
 						Map!(Λ!q{(T) 
-							= Select!(is (T == U[2], U), ElementType!T, T)}, // TODO T[2]
+							= Select!(is (T == Interval!U, U...) || is (T == U[2], U), ElementType!T, T)},
 							Limits
 						)
 					)

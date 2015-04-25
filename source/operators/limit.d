@@ -36,7 +36,7 @@ template LimitOps (limits...)
 				);
 			}
 
-		auto opDollar (size_t i)() // const REVIEW source/operators/limit.d(35): Error: incompatible types for ((0) : (this.bounds)): 'int' and 'const(int[2])'
+		auto opDollar (size_t i)() // BUG const - cannot be const without 'this', it happens in static methods... 
 			{/*...}*/
 				alias T = Unqual!(ExprType!(limits[i]));
 
