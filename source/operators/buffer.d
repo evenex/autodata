@@ -31,7 +31,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 
 		ref opAssign ()(auto ref this space)
 			{/*...}*/
-				import autodata.memory;
+				import autodata.core.blit;
 
 				static if (__traits(isRef, space))
 					space.blit (this);
@@ -106,7 +106,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 			transfer_ops;
 	}
 	unittest {/*...}*/
-		import autodata.memory;
+		import autodata.core.blit;
 
 		import autodata.operators.slice;
 		import autodata.operators.range;
@@ -279,12 +279,4 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 		assert (b.length == 0);
 
 		// alternatively, this can be accomplished through the use of lifetime management wrappers
-		Lifetime.Unique!Basic c, d;
-		c = N;
-		assert (c.length == 25);
-		d = c;
-		assert (d.length == 25);
-		assert (c.length == 0);
-		d = null;
-		assert (d.length == 0);
 	}

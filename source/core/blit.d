@@ -1,4 +1,4 @@
-module autodata.memory.transfer;
+module autodata.core.blit;
 
 private {/*imports}*/
 	import std.algorithm;
