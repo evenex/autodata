@@ -15,106 +15,15 @@ struct Array (T, uint dimensions = 1)
 	{/*...}*/
 		T[] data;
 
-		inout ptr () {return data.ptr;}
-
 		Repeat!(dimensions, size_t) lengths;
 
-		auto length ()() const
-			if (dimensions == 1)
-			{/*...}*/
-				return length!0;
-			}
-		auto length (uint d)() const
-			{/*...}*/
-				return lengths[d];
-			}
-		ref access (Repeat!(dimensions, size_t) index)
-			{/*...}*/
-				size_t offset = 0;
-				size_t stride = 1;
-
-				foreach (i; Iota!dimensions)
-					{/*...}*/
-						offset += index[i] * stride;
-						stride *= length!i;
-					}
-
-				return data[offset];
-			}
-		void pull (S, U...)(S space, U region)
-			if (U.length == dimensions)
-			{/*...}*/
-				auto boundary (uint i)()
-					{/*...}*/
-						auto open ()() if (is_interval!(U[i])) {return region[i];}
-						auto closed ()() {return interval (region[i], region[i]+1);}
-
-						return Match!(open, closed);
-					}
-
-				auto bounds = Map!(boundary, Iota!dimensions).tuple.expand;
-
-				size_t[dimensions] index;
-
-				size_t offset ()
-					{/*...}*/
-						size_t offset = 0;
-						size_t stride = 1;
-
-						foreach (i, length; lengths)
-							{/*...}*/
-								offset += (bounds[i].left + index[i]) * stride;
-								stride *= length;
-							}
-
-						return offset;
-					}
-				void advance (uint i = 0)()
-					{/*...}*/
-						if (++index[i] >= bounds[i].width)
-							static if (i+1 < index.length)
-								{/*...}*/
-									index[i] = 0;
-									advance!(i+1);
-								}
-					}
-
-				while (index[$-1] < bounds[$-1].width)
-					{/*...}*/
-						void indexed ()()
-							{/*...}*/
-								auto get_index (uint i)()
-									{/*...}*/
-										return index[i].to!(CoordinateType!S[i]);
-									}
-
-								data[offset] = space[
-									Map!(get_index,
-										Map!(First,
-											Filter!(Second,
-												Enumerate!(Map!(is_interval, U))
-											)
-										)
-									).tuple.expand
-								];
-							}
-						void input_range ()()
-							{/*...}*/
-								data[offset] = space.front;
-								space.popFront;
-							}
-
-						Match!(indexed, input_range);
-
-						advance;
-					}
-			}
 		void allocate (Repeat!(dimensions, size_t) lengths)
 			{/*...}*/
 				data = new T[lengths.product];
 				this.lengths = lengths;
 			}
 
+		mixin MemoryBackedStore!(data, lengths);
 		mixin BufferOps!(allocate, pull, access, lengths, RangeExt);
 	}
 	unittest {/*...}*/
@@ -161,6 +70,63 @@ struct Array (T, uint dimensions = 1)
 		]);
 	}
 
+struct StaticArray (T, sizes...)
+	{/*...}*/
+		T[product (sizes)] data;
+
+		alias data this; // TODO improve multidim support - revealing the raw, flattened data is not correct for 2+ dim case
+
+		alias lengths = Reverse!(Map!(λ!q{(size_t i) = i}, sizes));
+
+		ref opAssign (S)(S space)
+			{/*...}*/
+				this[] = space;
+
+				return this;
+			}
+		this (S)(S space)
+			{/*...}*/
+				this = space;
+			}
+
+		mixin MemoryBackedStore!(data, lengths);
+		mixin TransferOps!(pull, access, lengths, RangeExt);
+	}
+auto static_array (uint[] dims, S)(S space)
+	{/*...}*/
+		template ArrayToCons (uint[] arr)
+			{/*...}*/
+				static if (arr.empty)
+					alias ArrayToCons = Cons!();
+				else alias ArrayToCons = Cons!(arr[0], ArrayToCons!(arr[1..$]));
+			}
+
+		return StaticArray!(ElementType!S, ArrayToCons!dims)(space);
+	}
+	unittest {/*...}*/
+		import std.range: only;
+
+		StaticArray!(int, 2) x;
+
+		assert (x[] == [0, 0]);
+
+		x[0..2] = only (5, 6);
+
+		assert (x[] == [5, 6]);
+
+		x[] += 5;
+
+		assert (x[] == [10, 11]);
+
+		StaticArray!(int, 4) y = [1,2,3,4];
+
+		assert (y[] == [1, 2, 3, 4]);
+
+		auto z = [9,8,7].static_array!([3]);
+
+		assert (z[] == [9, 8, 7]);
+	}
+
 /* allocate an array from data 
 */
 auto array (S)(S space)
@@ -201,3 +167,101 @@ auto array_view (T, U...)(T* ptr, U dims)
 
 		return array;
 	}
+
+private {/*impl}*/
+	template MemoryBackedStore (alias data, lengths...)
+		{/*...}*/
+			inout ptr () {return data.ptr;}
+
+			auto length ()() const
+				if (lengths.length == 1)
+				{/*...}*/
+					return length!0;
+				}
+			auto length (uint d)() const
+				{/*...}*/
+					return lengths[d];
+				}
+			ref access (typeof(lengths) index)
+				{/*...}*/
+					size_t offset = 0;
+					size_t stride = 1;
+
+					foreach (i; Ordinal!(typeof(lengths)))
+						{/*...}*/
+							offset += index[i] * stride;
+							stride *= length!i;
+						}
+
+					return data[offset];
+				}
+			void pull (S, U...)(S space, U region)
+				if (U.length == lengths.length)
+				{/*...}*/
+					auto boundary (uint i)()
+						{/*...}*/
+							auto open ()() if (is_interval!(U[i])) {return region[i];}
+							auto closed ()() {return interval (region[i], region[i]+1);}
+
+							return Match!(open, closed);
+						}
+
+					auto bounds = Map!(boundary, Ordinal!lengths).tuple.expand;
+
+					size_t[lengths.length] index;
+
+					size_t offset ()
+						{/*...}*/
+							size_t offset = 0;
+							size_t stride = 1;
+
+							foreach (i, length; lengths)
+								{/*...}*/
+									offset += (bounds[i].left + index[i]) * stride;
+									stride *= length;
+								}
+
+							return offset;
+						}
+					void advance (uint i = 0)()
+						{/*...}*/
+							if (++index[i] >= bounds[i].width)
+								static if (i+1 < index.length)
+									{/*...}*/
+										index[i] = 0;
+										advance!(i+1);
+									}
+						}
+
+					while (index[$-1] < bounds[$-1].width)
+						{/*...}*/
+							void indexed ()()
+								{/*...}*/
+									auto get_index (uint i)()
+										{/*...}*/
+											return index[i].to!(CoordinateType!S[i]);
+										}
+
+									data[offset] = space[
+										Map!(get_index,
+											Map!(First,
+												Filter!(Second,
+													Enumerate!(Map!(is_interval, U))
+												)
+											)
+										).tuple.expand
+									];
+								}
+							void input_range ()()
+								{/*...}*/
+									data[offset] = space.front;
+									space.popFront;
+								}
+
+							Match!(indexed, input_range);
+
+							advance;
+						}
+				}
+		}
+}
