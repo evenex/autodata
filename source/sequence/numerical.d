@@ -3,6 +3,7 @@ module autodata.sequence.numerical;
 private {/*import}*/
 	import autodata.core;
 	import autodata.operators;
+	import autodata.meta;
 }
 
 /* the set¹ of natural numbers 
@@ -10,16 +11,7 @@ private {/*import}*/
 */
 struct Nat
 	{/*...}*/
-		static:
-
-		enum length = infinity!size_t;
-
-		size_t access (size_t i)
-			{/*...}*/
-				return i;
-			}
-
-		mixin SliceOps!(access, length, RangeExt);
+		static mixin SliceOps!(identity!size_t, infinity!size_t, RangeExt);
 	}
 	unittest {/*...}*/
 		auto N = ℕ[];
@@ -38,16 +30,9 @@ struct Nat
 */
 struct Real
 	{/*...}*/
-		static:
-
 		enum double[2] boundary = [-double.infinity, double.infinity];
 
-		double access (double x)
-			{/*...}*/
-				return x;
-			}
-
-		mixin SliceOps!(access, boundary);
+		static mixin SliceOps!(identity!double, boundary);
 	}
 
 alias ℕ = Nat;
