@@ -15,7 +15,7 @@ T identity (T)(T that)
 
 /* instantiate a zero-parameter template
 */
-alias Instantiate (alias symbol) = symbol!();
+alias Instantiate (alias symbol, Args...) = symbol!Args;
 
 /* given a set of zero-parameter templates, invoke the first which successfully compiles 
 	the final pattern is considered to be the fallback pattern,
