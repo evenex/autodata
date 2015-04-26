@@ -61,7 +61,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 							);
 							assert (
 								selected[i].is_contained_in (boundary),
-								Error.out_of_bounds (selected[i], boundary)
+								Error.out_of_bounds (i, selected[i], boundary)
 								~ ` (in)`
 							);
 						}
@@ -74,13 +74,13 @@ template SliceOps (alias access, LimitsAndExtensions...)
 							foreach (i, limit; selected)
 								static if (is_interval!(typeof(limit)))
 									assert (limit == result.bounds[i],
-										Error.out_of_bounds (limit, result.bounds[i])
+										Error.out_of_bounds (i, limit, result.bounds[i])
 										~ ` (out)`
 									);
 								else assert (
 									limit == result.bounds[i].left
 									&& limit == result.bounds[i].right,
-									Error.out_of_bounds (limit, result.bounds[i])
+									Error.out_of_bounds (i, limit, result.bounds[i])
 									~ ` (out)`
 								);
 						}
@@ -264,7 +264,7 @@ template SliceOps (alias access, LimitsAndExtensions...)
 									{/*bounds check}*/
 										assert (
 											selected[i].is_contained_in (limit!i),
-											Error.out_of_bounds (selected[i], limit!i)
+											Error.out_of_bounds (i, selected[i], limit!i)
 										);
 									}
 							}
@@ -645,8 +645,8 @@ package {/*error}*/
 			enum type_mismatch = error_header
 				~Map!(Element, Selected.Types).stringof~ ` does not convert to ` ~Map!(Element, Map!(ExprType, limits)).stringof;
 
-			static out_of_bounds (T, U)(T arg, U limit) 
-				{return error_header~ `bounds exceeded! ` ~arg.text~ ` not in ` ~limit.text;}
+			static out_of_bounds (T, U)(uint dim, T arg, U limit) 
+				{return error_header~ `bounds exceeded on dimension ` ~dim.text~ `! ` ~arg.text~ ` not in ` ~limit.text;}
 
 			enum zero_width_boundary (size_t dim) = error_header~ ` dimension ` ~dim.text~ ` has zero width`;
 		}

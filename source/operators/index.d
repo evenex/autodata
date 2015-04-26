@@ -32,8 +32,8 @@ template IndexOps (alias access, limits...)
 						`: ` ~Map!(ExprType, limits).stringof
 						~ ` !→ ` ~Domain!access.stringof;
 
-						auto out_of_bounds_error (Arg, Lim)(Arg arg, Lim limit) 
-							{return error_header~ `bounds exceeded! ` ~arg.text~ ` not in ` ~limit.text;}
+						auto out_of_bounds_error (Arg, Lim)(uint dim, Arg arg, Lim limit) 
+							{return error_header~ `bounds exceeded on dimensions ` ~dim.text~ `! ` ~arg.text~ ` not in ` ~limit.text;}
 					}
 
 				static assert (not (is (Codomain!access == void)), 
@@ -71,7 +71,7 @@ template IndexOps (alias access, limits...)
 
 						assert (
 							selected[i].is_contained_in (bounds),
-							out_of_bounds_error (selected[i], bounds)
+							out_of_bounds_error (i, selected[i], bounds)
 						);
 					}
 			}
