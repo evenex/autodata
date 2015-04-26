@@ -17,6 +17,8 @@ alias Iota (size_t l, size_t r) = staticIota!(l,r);
 alias Repeat (size_t n, T...) = Cons!(T, Repeat!(n-1, T));
 alias Repeat (size_t n : 0, T...) = Cons!();
 
+alias Reverse = std.typetuple.Reverse;
+
 ////
 template Map (alias F, T...)
 	if (T.length == 0)
