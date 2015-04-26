@@ -118,11 +118,15 @@ auto static_array (uint[] dims, S)(S space)
 
 		assert (x[] == [10, 11]);
 
-		StaticArray!(int, 4) y = [1,2,3,4];
+		x[0..1] -= 5;
+
+		assert (x[] == [5, 11]);
+
+		StaticArray!(int, 4) y = only (1,2,3,4);
 
 		assert (y[] == [1, 2, 3, 4]);
 
-		auto z = [9,8,7].static_array!([3]);
+		auto z = only (9,8,7).static_array!([3]);
 
 		assert (z[] == [9, 8, 7]);
 	}
