@@ -1,4 +1,5 @@
 *.swp
+*.swo
 autodata
 dub.selections.json
 .dub*
