@@ -313,4 +313,3 @@ writeln (
 1. grid is a first step towards a general interpolation adaptor
 2. expand scope to trees, grids, possibly lattices
 3. tagging axes with enum string labels
-4. along!i to transform an n-D space into a 1-D space (the i'th axis) containing (n-1)-D spaces
