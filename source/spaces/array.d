@@ -23,8 +23,7 @@ struct Array (T, uint dimensions = 1)
 				this.lengths = lengths;
 			}
 
-		mixin MemoryBackedStore!(data, lengths);
-		mixin BufferOps!(allocate, pull, access, lengths, RangeExt);
+		mixin MemoryBackedStore!(Pack!(BufferOps, allocate), data, lengths);
 	}
 	unittest {/*...}*/
 		auto x = Array!int ();
@@ -89,8 +88,7 @@ struct StaticArray (T, sizes...)
 				this = space;
 			}
 
-		mixin MemoryBackedStore!(data, lengths);
-		mixin TransferOps!(pull, access, lengths, RangeExt);
+		mixin MemoryBackedStore!(Pack!TransferOps, data, lengths);
 	}
 auto static_array (uint[] dims, S)(S space)
 	{/*...}*/
@@ -173,7 +171,7 @@ auto array_view (T, U...)(T* ptr, U dims)
 	}
 
 private {/*impl}*/
-	template MemoryBackedStore (alias data, lengths...)
+	template MemoryBackedStore (OpsPack, alias data, lengths...)
 		{/*...}*/
 			inout ptr () {return data.ptr;}
 
@@ -267,5 +265,9 @@ private {/*impl}*/
 							advance;
 						}
 				}
+
+			alias Ops = OpsPack.Unpack[0];
+
+			mixin Ops!(OpsPack.Unpack[1..$], pull, access, lengths, RangeExt);
 		}
 }
