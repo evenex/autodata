@@ -1,9 +1,11 @@
 module autodata.spaces.along;
 
-import autodata;
-
-import std.conv;
-import std.stdio;
+private {/*import}*/
+	import autodata.sequence;
+	import autodata.meta;
+	import autodata.operators;
+	import std.conv;
+}
 
 struct Along (uint axis, S)
 	{/*...}*/
@@ -30,6 +32,8 @@ auto along (uint axis, S)(S space)
 		return Along!(axis, S)(space);
 	}
 	unittest {/*...}*/
+		import autodata;
+
 		auto x = ℕ[8..12].map!(x => 2*x)
 			.by (ℕ[10..13].map!(x => x/2));
 
