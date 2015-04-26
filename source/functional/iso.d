@@ -294,14 +294,15 @@ struct Mapped (Domain, alias f, Parameters...)
 		}
 	}
 
-/* modify a range in-place 
+/*
+	modify a space in place
 */
-ref transform (alias op, R)(ref R range)
+auto ref apply (alias op, S, Args...)(auto ref S space, Args args)
 	{/*...}*/
-		auto tuple ()() {return op (range.unzip.expand);}
-		auto apply ()() {return op (range);}
+		void tuple ()() {op (space.unzip.expand, args);}
+		void forward ()() {op (space, args);}
 
-		range[] = Match!(tuple, apply);
+		Match!(tuple, forward);
 
-		return range;
+		return space;
 	}
