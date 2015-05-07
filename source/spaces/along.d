@@ -31,7 +31,7 @@ auto along (uint axis, S)(S space)
 	{/*...}*/
 		return Along!(axis, S)(space);
 	}
-	void main () {/*...}*/
+	unittest {/*...}*/
 		import autodata;
 
 		auto x = ℕ[8..12].map!(x => 2*x)
