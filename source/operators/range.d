@@ -46,9 +46,9 @@ template RangeOps (alias base, alias length, saved_fields...)
 */
 template RangeExt ()
 	{/*...}*/
-		static if (Filter!(λ!q{(Dim) = Dim.is_free}, Dimensions).length == 1)
+		static if (Filter!(λ!q{(Axis) = Axis.is_free}, Axes).length == 1)
 			@property {/*...}*/
-				enum iterated_dimension = Filter!(λ!q{(Dim) = Dim.is_free}, Dimensions)[0].index;
+				enum iterated_dimension = Filter!(λ!q{(Axis) = Axis.is_free}, Axes)[0].index;
 
 				auto ref front () {return this[~$];}
 				auto ref back ()() {return this[$-1];}

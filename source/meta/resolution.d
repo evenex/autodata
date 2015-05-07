@@ -17,6 +17,15 @@ T identity (T)(T that)
 */
 alias Instantiate (alias symbol, Args...) = symbol!Args;
 
+/* instantiate a zero-parameter mixin template
+*/
+template Mixin (T...)
+	{/*...}*/
+		alias Mix = T[0];
+
+		mixin Mix;
+	}
+
 /* given a set of zero-parameter templates, invoke the first which successfully compiles 
 	the final pattern is considered to be the fallback pattern,
 	and if no pattern successfully compiles, the final pattern is forced

@@ -60,7 +60,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 							}
 					}
 					body {/*...}*/
-						alias FreeIndices = Extract!(q{index}, Filter!(λ!q{(Dim) = Dim.is_free}, Dimensions));
+						alias FreeIndices = Extract!(q{index}, Filter!(λ!q{(Axis) = Axis.is_free}, Axes));
 
 						static if (Selected.length > 0)
 							alias Selection (int i) = Select!(Contains!(i, FreeIndices),
@@ -119,6 +119,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 
 		import autodata.sequence: enumerate;
 		import autodata.functional: map;
+		import autodata.core;
 
 		import std.range: only;
 

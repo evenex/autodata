@@ -10,5 +10,4 @@ import autodata.spaces.orthotope;
 import autodata.spaces.product;
 import autodata.spaces.repeat;
 import autodata.spaces.strided;
-import autodata.spaces.take_drop;
 import autodata.spaces.vector;

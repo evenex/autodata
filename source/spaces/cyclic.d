@@ -23,11 +23,12 @@ auto rotate_elements (int dim = -1, R)(R range, int positions = 1)
 	body {/*...}*/
 		auto n = range.length;
 
-		return range.cycle
-			.drop ((-positions + (abs (positions)/n) * n) % n)
-			.take (n);
+		return range.cycle[n - positions..n + n - positions];
 	}
 	unittest {/*...}*/
+		assert ([1,2,3,4].rotate_elements[] == [4,1,2,3]);
+		assert ([1,2,3,4].rotate_elements[] == [1,2,3,4].rotate_elements);
+		assert ([1,2,3,4].rotate_elements (-1) == [1,2,3,4].rotate_elements (3));
 		static assert ([1,2,3,4].rotate_elements[] == [4,1,2,3]);
 		static assert ([1,2,3,4].rotate_elements[] == [1,2,3,4].rotate_elements);
 		static assert ([1,2,3,4].rotate_elements (-1) == [1,2,3,4].rotate_elements (3));
@@ -75,7 +76,7 @@ struct Cycle (S, uint[] cyclic_dims)
 				else return space.limit!i;
 			}
 
-		mixin SliceOps!(access, Map!(limit, Iota!(dimensionality!S)), RangeExt);
+		mixin AdaptorOps!(access, Map!(limit, Iota!(dimensionality!S)), RangeExt);
 
 		static if (dimensionality!S == 1)
 			{/*range ops}*/

@@ -31,7 +31,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 
 		ref opAssign ()(auto ref this space)
 			{/*...}*/
-				import autodata.core.blit;
+				import autodata.core.mem;
 
 				static if (__traits(isRef, space))
 					space.blit (this);
@@ -106,12 +106,13 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 			transfer_ops;
 	}
 	unittest {/*...}*/
-		import autodata.core.blit;
+		import autodata.core.mem;
 
 		import autodata.operators.slice;
 		import autodata.operators.range;
 		import autodata.functional: map;
 		import autodata.sequence: enumerate;
+		import autodata.core;
 
 		import std.conv;
 

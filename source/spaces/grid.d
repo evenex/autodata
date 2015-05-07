@@ -28,7 +28,7 @@ struct Grid (S)
 				return interval (0, lengths[d]);
 			}
 
-		mixin SliceOps!(access, Map!(limit, Iota!(dimensionality!S)), RangeExt);
+		mixin AdaptorOps!(access, Map!(limit, Iota!(dimensionality!S)), RangeExt);
 	}
 auto grid (S, T...)(S space, T cells)
 	{/*...}*/

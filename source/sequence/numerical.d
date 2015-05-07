@@ -10,9 +10,7 @@ private {/*import}*/
 	1. actually a subset of cardinality 2⁶⁴
 */
 struct Nat
-	{/*...}*/
-		static mixin SliceOps!(identity!size_t, infinity!size_t, RangeExt);
-	}
+	{static mixin AdaptorOps!(identity!size_t, infinity!size_t, RangeExt);}
 	unittest {/*...}*/
 		auto N = ℕ[];
 		assert (ℕ[0..10] == [0,1,2,3,4,5,6,7,8,9]);
@@ -29,11 +27,7 @@ struct Nat
 	1. actually the doubles
 */
 struct Real
-	{/*...}*/
-		enum double[2] boundary = [-double.infinity, double.infinity];
-
-		static mixin SliceOps!(identity!double, boundary);
-	}
+	{static mixin AdaptorOps!(identity!double, interval (-double.infinity, double.infinity));}
 
 alias ℕ = Nat;
 alias ℝ = Real;

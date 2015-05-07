@@ -12,12 +12,12 @@ template IndexOps (alias access, limits...)
 		private {/*imports}*/
 			import autodata.operators.limit;
 			import autodata.meta;
-			import autodata.core;
 		}
 
 		auto ref Codomain!access opIndex (Domain!access selected)
 			in {/*...}*/
 				import std.conv: text;
+				import autodata.core;
 
 				version (all)
 					{/*error messages}*/

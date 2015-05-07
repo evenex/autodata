@@ -19,7 +19,7 @@ struct Orthotope (Intervals...)
 				return bounds[i];
 			}
 
-		mixin SliceOps!(access, Map!(limit, Ordinal!Intervals), RangeExt);
+		mixin AdaptorOps!(access, Map!(limit, Ordinal!Intervals), RangeExt);
 	}
 auto orthotope (Intervals...)(Intervals intervals)
 	{/*...}*/

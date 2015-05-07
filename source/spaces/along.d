@@ -11,7 +11,7 @@ struct Along (uint axis, S)
 	{/*...}*/
 		S space;
 
-		auto access (ElementType!(ExprType!(space[].limit!axis)) index)
+		auto access (CoordinateType!S[axis] index)
 			{/*...}*/
 				enum coord (uint i) = i == axis? q{index} : q{~$..$};
 
@@ -25,13 +25,13 @@ struct Along (uint axis, S)
 				return space.limit!axis;
 			}
 
-		mixin SliceOps!(access, limit!0);
+		mixin AdaptorOps!(access, limit!0, RangeExt);
 	}
 auto along (uint axis, S)(S space)
 	{/*...}*/
 		return Along!(axis, S)(space);
 	}
-	unittest {/*...}*/
+	void main () {/*...}*/
 		import autodata;
 
 		auto x = ℕ[8..12].map!(x => 2*x)

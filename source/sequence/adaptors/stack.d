@@ -2,6 +2,7 @@ module autodata.sequence.adaptors.stack;
 
 private {/*imports}*/
 	import std.conv: text;
+	import autodata.core;
 	import autodata.operators;
 	import autodata.sequence.adaptors.policy;
 	import autodata.sequence.adaptors.common;

@@ -69,66 +69,6 @@ struct Array (T, uint dimensions = 1)
 		]);
 	}
 
-struct StaticArray (T, sizes...)
-	{/*...}*/
-		T[product (sizes)] data;
-
-		alias data this; // TODO improve multidim support - revealing the raw, flattened data is not correct for 2+ dim case
-
-		alias lengths = Reverse!(Map!(λ!q{(size_t i) = i}, sizes));
-
-		ref opAssign (S)(S space)
-			{/*...}*/
-				this[] = space;
-
-				return this;
-			}
-		this (S)(S space)
-			{/*...}*/
-				this = space;
-			}
-
-		mixin MemoryBackedStore!(Pack!TransferOps, data, lengths);
-	}
-auto static_array (uint[] dims, S)(S space)
-	{/*...}*/
-		template ArrayToCons (uint[] arr)
-			{/*...}*/
-				static if (arr.empty)
-					alias ArrayToCons = Cons!();
-				else alias ArrayToCons = Cons!(arr[0], ArrayToCons!(arr[1..$]));
-			}
-
-		return StaticArray!(ElementType!S, ArrayToCons!dims)(space);
-	}
-	unittest {/*...}*/
-		import std.range: only;
-
-		StaticArray!(int, 2) x;
-
-		assert (x[] == [0, 0]);
-
-		x[0..2] = only (5, 6);
-
-		assert (x[] == [5, 6]);
-
-		x[] += 5;
-
-		assert (x[] == [10, 11]);
-
-		x[0..1] -= 5;
-
-		assert (x[] == [5, 11]);
-
-		StaticArray!(int, 4) y = only (1,2,3,4);
-
-		assert (y[] == [1, 2, 3, 4]);
-
-		auto z = only (9,8,7).static_array!([3]);
-
-		assert (z[] == [9, 8, 7]);
-	}
-
 /* allocate an array from data 
 */
 auto array (S)(S space)

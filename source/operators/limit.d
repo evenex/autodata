@@ -38,6 +38,8 @@ template LimitOps (limits...)
 
 		auto opDollar (size_t i)() // BUG const - cannot be const without 'this', it happens in static methods... 
 			{/*...}*/
+				import autodata.core;
+
 				alias T = Unqual!(ExprType!(limits[i]));
 
 				static if (is (ElementType!T == void))
