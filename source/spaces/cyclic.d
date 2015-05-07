@@ -8,7 +8,6 @@ private {/*import}*/
 	import autodata.core;
 	import autodata.sequence;
 	import autodata.functional;
-	import autodata.spaces.take_drop;
 }
 
 /* traverse a range with elements rotated left by some number of positions 
