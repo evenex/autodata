@@ -13,7 +13,7 @@ module autodata.operators.write;
 		then this push will take priority over the pull, in order to enable potentially expensive-to-access source data sets
 		to perform optimized writes.
 */
-template WriteOps (alias pull, alias access, LimitsAndExtensions...)
+template WriteOps (alias pull, alias SubOperators, alias access, LimitsAndExtensions...)
 	{/*...}*/
 		private {/*imports}*/
 			import autodata.operators.slice;
@@ -43,7 +43,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 				return this[selected];
 			}
 
-		template SubWriteOps ()
+		template SubWriteExt ()
 			{/*...}*/
 				auto ref opIndexAssign (S, string file = __FILE__, int line = __LINE__, Selected...)(S space, Selected selected)
 					in {/*...}*/
@@ -97,7 +97,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 					}
 			}
 
-		mixin SliceOps!(access, LimitsAndExtensions, SubWriteOps)
+		mixin SubOperators!(access, LimitsAndExtensions, SubWriteExt)
 			slice_ops;
 
 		template Diagnostic (Space = typeof(this))
@@ -107,6 +107,8 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 				pragma(msg, `write diagnostic: `, typeof(this));
 
 				pragma (msg, "\tpulling ", Space, ` → `, typeof (pull (Space.init[], this[].bounds)));
+				pragma (msg, "\t[]= ", Space, ` → `, typeof (this.opIndexAssign (Space.init[], this[].bounds)));
+				pragma (msg, "\t[][]= ", Space, ` → `, typeof (this.opIndex.opIndexAssign (Space.init[], this[].bounds)));
 			}
 	}
 	unittest {/*...}*/
@@ -157,7 +159,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 						return data[i];
 					}
 
-				mixin WriteOps!(pull, access, length);
+				mixin WriteOps!(pull, SliceOps, access, length);
 			}
 
 		Basic x;
@@ -211,7 +213,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 						};
 					}
 
-				mixin WriteOps!(pull, access, length, PushExtension);
+				mixin WriteOps!(pull, SliceOps, access, length, PushExtension);
 			}
 		int[5] y = [1,1,1,1,1];
 		Push()[].push (y);
@@ -259,7 +261,7 @@ template WriteOps (alias pull, alias access, LimitsAndExtensions...)
 							}
 					}
 
-				mixin WriteOps!(pull, access, length, Pointer, Length);
+				mixin WriteOps!(pull, SliceOps, access, length, Pointer, Length);
 			}
 		Pull z;
 		assert (z[0] == 0);

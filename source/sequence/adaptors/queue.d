@@ -116,7 +116,7 @@ struct Queue (R, OnOverflow overflow_policy = OnOverflow.error)
 				limit[0] = limit[1] = 0;
 			}
 
-		mixin TransferOps!(pull, access, length, RangeExt);
+		mixin TransferOps!(pull, SliceOps, access, length, RangeExt);
 
 		private mixin OverflowPolicy;
 		private size_t[2] limit;

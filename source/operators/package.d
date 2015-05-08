@@ -2,6 +2,7 @@ module autodata.operators;
 
 public:
 import autodata.operators.buffer;
+import autodata.operators.forward;
 import autodata.operators.index;
 import autodata.operators.limit;
 import autodata.operators.multilimit;

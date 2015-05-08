@@ -47,7 +47,7 @@ struct Matrix (T, uint n_rows, uint n_cols)
 			}
 		// TODO matrix ops as necessary
 
-		mixin TransferOps!(pull, access, n_rows, n_cols, RangeExt);
+		mixin TransferOps!(pull, SliceOps, access, n_rows, n_cols, RangeExt);
 	}
 	unittest {/*...}*/
 		Matrix!(double, 2, 2) a, b;

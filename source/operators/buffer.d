@@ -102,7 +102,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 				return this;
 			}
 
-		mixin TransferOps!(pull, access, LimitsAndExtensions)
+		mixin TransferOps!(pull, SliceOps, access, LimitsAndExtensions)
 			transfer_ops;
 	}
 	unittest {/*...}*/

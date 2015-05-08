@@ -6,7 +6,7 @@ module autodata.operators.transfer;
 		WriteOps requirements.
 		Unlike with WriteOps, the element types, dimensionalities, and sizes of the transfer source and target data sets must match.
 */
-template TransferOps (alias pull, alias access, LimitsAndExtensions...)
+template TransferOps (alias pull, alias SubOperators, alias access, LimitsAndExtensions...)
 	{/*...}*/
 		private {/*imports}*/
 			import autodata.operators.write;
@@ -80,7 +80,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 				return pull (source, selected);
 			}
 
-		mixin WriteOps!(verified_limit_pull, access, LimitsAndExtensions)
+		mixin WriteOps!(verified_limit_pull, SubOperators, access, LimitsAndExtensions)
 			write_ops;
 	}
 	unittest {/*...}*/
@@ -128,12 +128,12 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 		static struct WriteBasic
 			{/*...}*/
 				mixin Basic;
-				mixin WriteOps!(pull, access, length);
+				mixin WriteOps!(pull, SliceOps, access, length);
 			}
 		static struct TransferBasic
 			{/*...}*/
 				mixin Basic;
-				mixin TransferOps!(pull, access, length);
+				mixin TransferOps!(pull, SliceOps, access, length);
 			}
 
 		no_error (WriteBasic()[0..3] = [1,2,3,4]);
@@ -150,12 +150,12 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 		static struct AltWrite
 			{/*...}*/
 				mixin AlternativePull;
-				mixin WriteOps!(pull, access, length);
+				mixin WriteOps!(pull, SliceOps, access, length);
 			}
 		static struct AltTransfer
 			{/*...}*/
 				mixin AlternativePull;
-				mixin TransferOps!(pull, access, length);
+				mixin TransferOps!(pull, SliceOps, access, length);
 			}
 
 		assert (is (typeof(AltWrite()[0..3] = [`hello`]))); // won't do input type check - who knows if we're assigning to a space of tagged unions?
@@ -178,7 +178,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 						data[x + 1] = r;
 					}
 
-				mixin TransferOps!(pull, access, limits);
+				mixin TransferOps!(pull, SliceOps, access, limits);
 			}
 		Negative x;
 		assert (x[-1] == `one`);
@@ -222,7 +222,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 							pull (r[i - y.left, 0..$], i, x);
 					}
 
-				mixin TransferOps!(pull, access, rows, columns);
+				mixin TransferOps!(pull, SliceOps, access, rows, columns);
 			}
 		MultiDimensional y;
 		assert (y.matrix == [
@@ -320,7 +320,7 @@ template TransferOps (alias pull, alias access, LimitsAndExtensions...)
 							range[t - domain.left] : t;
 					}
 
-				mixin TransferOps!(pull, access, length);
+				mixin TransferOps!(pull, SliceOps, access, length);
 			}
 		static struct SqDomain
 			{/*...}*/
