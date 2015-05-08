@@ -33,11 +33,10 @@ struct Mapped (Domain, alias f, Parameters...)
 
 				auto subdomain = Match!(slice_all, get_space, get_range, get_point);
 
-				auto map_point ()() {return apply (subdomain);}
-				auto map_tuple ()() {return apply (subdomain.expand);}
-				auto map_space ()() {return remap (subdomain);}
+				auto apply ()() {return fmap_apply (subdomain);}
+				auto remap ()() {return fmap_remap (subdomain);}
 
-				return Match!(map_point, map_tuple, map_space);
+				return Match!(apply, remap);
 			}
 		auto opSlice (size_t d, Args...)(Args args)
 			{/*...}*/
@@ -64,17 +63,11 @@ struct Mapped (Domain, alias f, Parameters...)
 
 		auto front ()()
 			{/*...}*/
-				auto single_front ()() {return apply (domain.front);}
-				auto tuple_front  ()() {return apply (domain.front.expand);}
-
-				return Match!(single_front, tuple_front);
+				return fmap_apply (domain.front);
 			}
 		auto back ()()
 			{/*...}*/
-				auto single_back ()() {return apply (domain.back);}
-				auto tuple_back  ()() {return apply (domain.back.expand);}
-
-				return Match!(single_back, tuple_back);
+				return fmap_apply (domain.back);
 			}
 		auto popFront ()()
 			{/*...}*/
@@ -106,35 +99,16 @@ struct Mapped (Domain, alias f, Parameters...)
 			}
 
 		private {/*...}*/
-			auto apply (Point...)(Point point)
-				if (is (Point == Cons!(ElementType!Domain)) || is (Tuple!Point == ElementType!Domain))
+			auto fmap_apply (ElementType!Domain point)
 				{/*...}*/
-					return f (point, parameters);
+					auto tuple ()() {return f (point.expand, parameters);}
+					auto value ()() {return f (point, parameters);}
+
+					return Match!(tuple, value);
 				}
-			auto remap (Subdomain...)(Subdomain subdomain)
+			auto fmap_remap (Subdomain...)(Subdomain subdomain)
 				{/*...}*/
 					return Mapped!(Subdomain, f, Parameters)(subdomain, parameters);
-				}
-			void context ()
-				{/*...}*/
-					static if (is (typeof(domain.limit!0)))
-						auto subdomain = domain[CoordinateType!Domain.init];
-					else static if (is (typeof(domain.front.identity)))
-						auto subdomain = domain.front;
-					else static assert (0, `map error: `
-						~Domain.stringof~ ` is not a range (no front) or a space (no limit!i)`
-					);
-
-					static if (is (typeof (f (subdomain))))
-						cast(void) f (subdomain);
-					else static if (is (typeof (f (subdomain.expand))))
-						cast(void) f (subdomain.expand);
-
-					assert (0, `this function exists only to force the compiler`
-						` to capture the context of local functions`
-						` or functions using local symbols,`
-						` and is not meant to be invoked`
-					);
 				}
 		}
 	}
