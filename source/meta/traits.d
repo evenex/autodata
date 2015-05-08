@@ -50,6 +50,10 @@ template is_const_function (T...)
 		enum is_const_function = Match!(yes, no);
 	}
 
+/* test if a function is a lambda
+*/
+enum is_lambda_function (alias f) = (is_function!f || is_template!f) && __traits(identifier, f)[0..`__lambda`.length] == `__lambda`;
+
 /* test if a symbol has a numeric type 
 */
 template has_numeric_type (T...)
