@@ -68,7 +68,7 @@ template vector (size_t n)
 
 /* componentwise map to a new vector 
 */
-auto map_field (alias f, V, Args...)(V v, Args args)
+auto vmap (alias f, V, Args...)(V v, Args args)
 	if (is (V == Vector!(n,T), size_t n, T))
 	{/*...}*/
 		Vector!(V.length, typeof(f (v[0], args))) mapped;
@@ -130,7 +130,7 @@ struct Vector (size_t n, Component = double)
 
 				return ret;
 			}
-		auto opBinaryRight (string op, V)(V v)
+		auto opBinaryRight (string op, V)(V v) // XXX CommutativeAlgebra
 			{/*...}*/
 				auto lhs = v.vector!n;
 				auto rhs = this;
@@ -284,11 +284,11 @@ struct Vector (size_t n, Component = double)
 		// mapping
 		u *= -1;
 		assert (u == [-2, -3, -4, -5]);
-		assert (u.map_field!abs == [2, 3, 4, 5]);
-		assert (vector (1, -2, 3, -4).map_field!sgn == [1, -1, 1, -1]);
+		assert (u.vmap!abs == [2, 3, 4, 5]);
+		assert (vector (1, -2, 3, -4).vmap!sgn == [1, -1, 1, -1]);
 		static sq = (int x) => x^^2;
-		assert (vector (1, -2, 3, -4).map_field!sq == [1, 4, 9, 16]);
-		assert (vector (1, 2, 3, 4).map_field!(i => i/2.0) == [0.5, 1, 1.5, 2]);
+		assert (vector (1, -2, 3, -4).vmap!sq == [1, 4, 9, 16]);
+		assert (vector (1, 2, 3, 4).vmap!(i => i/2.0) == [0.5, 1, 1.5, 2]);
 
 		// components and swizzling
 		assert (u.x == -2);
@@ -314,7 +314,7 @@ struct Vector (size_t n, Component = double)
 		u[0..2] = q;
 		assert (u == [-2,-3,-1,-5]);
 
-		v[] = u.map_field!(to!int);
+		v[] = u.vmap!(to!int);
 		assert (v == [-2,-3,-1,-5]);
 
 		u[1..4] -= v[1..4].Vector!(3, float)[];
