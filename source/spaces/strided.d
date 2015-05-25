@@ -78,15 +78,15 @@ auto stride (uint[] strided_dims = [], S, Widths...)(S space, Widths widths)
 
 		assert ([1,2,3,4,5,6,7,8,9].stride (3) == [1,4,7]);
 
-		auto x = ℕ[0..100].by (ℕ[0..100]).stride (4, 20);
+		auto x = Nat[0..100].by (Nat[0..100]).stride (4, 20);
 
 		assert (x[~$..$, 0].map!(x => x[0]) == [0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96]);
 		assert (x[0, ~$..$].map!(x => x[1]) == [0, 20, 40, 60, 80]);
 
-		auto y = ℕ[0..100].by (ℕ[0..100]).stride!([1])(20);
+		auto y = Nat[0..100].by (Nat[0..100]).stride!([1])(20);
 
-		assert (y[~$..$, 0].map!(x => x[0]) == ℕ[0..100]);
+		assert (y[~$..$, 0].map!(x => x[0]) == Nat[0..100]);
 		assert (y[0, ~$..$].map!(x => x[1]) == [0, 20, 40, 60, 80]);
 
-		static assert (not (is (typeof(ℕ[0..100].by (ℕ[0..100]).stride!([1])(20, 4)))));
+		static assert (not (is (typeof(Nat[0..100].by (Nat[0..100]).stride!([1])(20, 4)))));
 	}

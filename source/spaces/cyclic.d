@@ -126,7 +126,7 @@ auto cycle (uint[] cyclic_dims = [], S)(S space)
 		static assert (y[2] == z[3]);
 		static assert (y[3] == z[1]);
 
-		enum a = ℕ[0..10].by (ℕ[0..10])
+		enum a = Nat[0..10].by (Nat[0..10])
 			.map!((a,b) => [a,b])
 			.cycle;
 
@@ -149,7 +149,7 @@ auto cycle (uint[] cyclic_dims = [], S)(S space)
 		/*
 			passing a compile-time array of indices to cycle specifies which dimensions to cycle
 		*/
-		enum c = ℕ[2..4].by (ℕ[5..7]).by (ℕ[66..71])
+		enum c = Nat[2..4].by (Nat[5..7]).by (Nat[66..71])
 			.map!((a,b,c) => [a,b,c])
 			.cycle!([1,2]);
 

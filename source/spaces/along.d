@@ -34,8 +34,8 @@ auto along (uint axis, S)(S space)
 	unittest {/*...}*/
 		import autodata;
 
-		auto x = ℕ[8..12].map!(x => 2*x)
-			.by (ℕ[10..13].map!(x => x/2));
+		auto x = Nat[8..12].map!(x => 2*x)
+			.by (Nat[10..13].map!(x => x/2));
 
 		assert (x.along!1[0].map!((a,b) => a) == [16, 18, 20, 22]);
 		assert (x.along!0[0].map!((a,b) => b) == [5, 5, 6]);

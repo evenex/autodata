@@ -13,5 +13,5 @@ private {/*import}*/
 auto enumerate (R)(R range)
 	if (is_input_range!R && has_length!R)
 	{/*...}*/
-		return zip (ℕ[0..range.length], range);
+		return zip (Nat[0..range.length], range);
 	}

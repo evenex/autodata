@@ -12,15 +12,15 @@ private {/*import}*/
 struct Nat
 	{static mixin AdaptorOps!(identity!size_t, infinity!size_t, RangeExt);}
 	unittest {/*...}*/
-		auto N = ℕ[];
-		assert (ℕ[0..10] == [0,1,2,3,4,5,6,7,8,9]);
-		assert (ℕ[4..9] == [4,5,6,7,8]);
+		auto N = Nat[];
+		assert (Nat[0..10] == [0,1,2,3,4,5,6,7,8,9]);
+		assert (Nat[4..9] == [4,5,6,7,8]);
 
 		assert (N[4..9][1..4] == [5,6,7]);
 		assert (N[4..9][1..4][1] == 6);
 
 		for (auto i = 0; i < 10; ++i)
-			assert (ℕ[0..10][i] == i);
+			assert (Nat[0..10][i] == i);
 	}
 
 /* the set of real¹ numbers 
@@ -28,6 +28,3 @@ struct Nat
 */
 struct Real
 	{static mixin AdaptorOps!(identity!double, interval (-double.infinity, double.infinity));}
-
-alias ℕ = Nat;
-alias ℝ = Real;
