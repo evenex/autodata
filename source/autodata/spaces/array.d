@@ -148,6 +148,10 @@ private {/*impl}*/
 		void pull (S, U...)(S space, U region)
 		if (U.length == lengths.length)
 		{
+			static assert (is (ElementType!S : T),
+				typeof(this).stringof ~ ` cannot read space of ` ~ ElementType!S.stringof
+			);
+
 			auto boundary (uint i)()
 			{
 				auto open ()() if (is_interval!(U[i])) {return region[i];}
