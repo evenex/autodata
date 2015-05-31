@@ -9,5 +9,6 @@ import autodata.spaces.matrix;
 import autodata.spaces.orthotope;
 import autodata.spaces.product;
 import autodata.spaces.repeat;
+import autodata.spaces.sequence;
 import autodata.spaces.strided;
 import autodata.spaces.vector;

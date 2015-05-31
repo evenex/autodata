@@ -1,11 +1,14 @@
 {
 	"name": "autodata",
 	"description": "generic data processing toolkit",
-	"copyright": "Copyright © 2014-2015, Vlad Levenfeld",
-	"authors": ["Vlad Levenfeld"],
-	"targetType": "executable",
-	"buildRequirements": ["disallowDeprecations"],
-	"buildOptions": ["debugInfo", "alwaysStackFrame"],
-	"_buildOptions": ["releaseMode", "optimize", "inline", "noBoundsCheck"],
-	"postBuildCommands": ["echo '<>>'"]
+	"copyright": "Copyright © 2015, vlad",
+	"authors": ["vlad"],
+	"dependencies": {
+		"meta": "~master",
+		"infinity": "~master",
+		"interval": "~master"
+	},	
+	"postBuildCommands": ["echo '<>>'"],
+	"targetType" : "executable",
+	"dflags": ["-main"]
 }
