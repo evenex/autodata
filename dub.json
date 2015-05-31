@@ -1,14 +1,14 @@
 {
 	"name": "autodata",
 	"description": "generic data processing toolkit",
-	"copyright": "Copyright © 2015, vlad",
-	"authors": ["vlad"],
+	"copyright": "Copyright © 2015, Vlad Levenfeld",
+	"authors": ["Vlad Levenfeld"],
+	"license": "MIT",
 	"dependencies": {
 		"meta": "~master",
 		"infinity": "~master",
 		"interval": "~master"
 	},	
-	"postBuildCommands": ["echo '<>>'"],
 	"targetType" : "executable",
 	"dflags": ["-main"]
 }
