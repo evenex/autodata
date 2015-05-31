@@ -19,6 +19,11 @@ struct Array (T, uint dimensions = 1)
 
 	Repeat!(dimensions, size_t) lengths;
 
+	auto limit (uint i)() const
+	{
+		return lengths[i];
+	}
+
 	void allocate (Repeat!(dimensions, size_t) lengths)
 	{
 		data = new T[lengths.product];
