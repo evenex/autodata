@@ -501,13 +501,13 @@ template SubOps (alias SourceTransform, alias access, LimitsAndExtensions...)
 	private {//verification
 		struct Verification
 		{
-			import std.traits: Select;
+			import std.traits: Select, fullyQualifiedName;
 			import autodata.traits;
 
 			mixin LambdaCapture;
 
 			static assert (All!(is_const_function, Filter!(is_function, limits)),
-				full_name!(typeof(this))~ ` LimitOps: limit functions must be const`
+				fullyQualifiedName!(typeof(this))~ ` LimitOps: limit functions must be const`
 			);
 			static assert (
 				All!(is_comparable, 
