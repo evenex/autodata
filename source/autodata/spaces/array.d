@@ -8,6 +8,7 @@ private {//import
 	import autodata.operators;
 	import autodata.spaces.sequence;
 	import autodata.traits;
+	import autodata.tuple;
 
 	import evx.interval;
 	import evx.meta;
