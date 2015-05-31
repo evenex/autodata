@@ -9,6 +9,5 @@
 		"infinity": "~master",
 		"interval": "~master"
 	},	
-	"targetType" : "executable",
-	"dflags": ["-main"]
+	"targetType" : "executable"
 }
