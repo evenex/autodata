@@ -122,6 +122,13 @@ struct Filtered (R, alias match)
 			seek_back;
 	}
 
+	bool opEquals (S)(S that)
+	{
+		import std.algorithm: equal;
+
+		return this.equal (that);
+	}
+
 	private {//seek
 		void seek_front ()
 		{
