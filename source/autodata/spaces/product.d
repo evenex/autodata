@@ -49,10 +49,10 @@ struct ProductSpace (Spaces...)
 
 auto product_space (S,R...)(S left, R right)
 {
-	static if (is (S == CartesianProduct!T, T...))
-		return CartesianProduct!(T,R)(left.spaces, right);
+	static if (is (S == ProductSpace!T, T...))
+		return ProductSpace!(T,R)(left.spaces, right);
 
-	else return CartesianProduct!(S,R)(left, right);
+	else return ProductSpace!(S,R)(left, right);
 }
 unittest {
 	import autodata.functional; 
