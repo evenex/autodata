@@ -9,7 +9,7 @@ private {/*import}*/
 	import evx.interval;
 }
 
-struct CartesianProduct (Spaces...)
+struct ProductSpace (Spaces...)
 {
 	alias Offsets = Scan!(Sum, Map!(dimensionality, Spaces));
 
@@ -44,10 +44,10 @@ struct CartesianProduct (Spaces...)
 		return Map!(projection, Ordinal!Spaces).tuple.flatten;
 	}
 
-	mixin SliceOps!(access, Map!(limit, Ordinal!(Domain!access)), RangeExt);
+	mixin AdaptorOps!(access, Map!(limit, Ordinal!(Domain!access)), RangeExt);
 }
 
-auto cartesian_product (S,R...)(S left, R right)
+auto product_space (S,R...)(S left, R right)
 {
 	static if (is (S == CartesianProduct!T, T...))
 		return CartesianProduct!(T,R)(left.spaces, right);
@@ -79,7 +79,7 @@ unittest {
 	assert (p[2,2,2,1] == tuple (18,3,5));
 }
 
-alias by = cartesian_product;
+alias by = product_space;
 
 auto extrude (S,R)(S space, R extrusion)
 if (dimensionality!R == 1)
