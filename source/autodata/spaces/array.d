@@ -22,7 +22,7 @@ struct Array (T, uint dimensions = 1)
 
 	auto limit (uint i)() const
 	{
-		return lengths[i];
+		return interval (0, lengths[i]);
 	}
 
 	void allocate (Repeat!(dimensions, size_t) lengths)
