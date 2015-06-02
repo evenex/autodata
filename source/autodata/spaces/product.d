@@ -5,6 +5,7 @@ private {/*import}*/
 	import autodata.operators;
 	import autodata.traits;
 	import autodata.tuple;
+	import autodata.spaces.orthotope;
 	import evx.meta;
 	import evx.interval;
 }
@@ -81,9 +82,11 @@ unittest {
 
 alias by = product_space;
 
-auto extrude (S,R)(S space, R extrusion)
-if (dimensionality!R == 1)
+auto extrude (S,T)(S space, T extrusion)
 {
-	return space.by (extrusion)
-		.map!((e,_) => e);
+	auto a ()() if (is_interval!T) {return extrusion;}
+	auto b ()() {return interval (T(0), extrusion);}
+
+	return space.by (orthotope (Match!(a,b)))
+		.lens!`expand[0]`;
 }

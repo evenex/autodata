@@ -7,6 +7,7 @@ private {/*imports}*/
 	import evx.interval;
 	import evx.meta;
 }
+
 struct Orthotope (Intervals...)
 {
 	Intervals bounds;

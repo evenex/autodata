@@ -71,7 +71,7 @@ unittest {
 	import autodata.spaces;
 
 	auto test = Array!(int, 2)(
-		[1,2,3].extrude (Nat[0..3])
+		[1,2,3].extrude (3)
 	);
 
 	assert (test.lexi == [1,2,3,1,2,3,1,2,3]);
