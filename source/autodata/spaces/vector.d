@@ -69,7 +69,7 @@ template vector (size_t n)
 
 /* componentwise map to a new vector 
 */
-auto vmap (alias f, size_t n, T, Args...)(Vector!(n,T) v, Args args)
+auto fmap (alias f, size_t n, T, Args...)(Vector!(n,T) v, Args args)
 {
 	Vector!(n, typeof(f (v[0], args))) mapped;
 
@@ -284,11 +284,11 @@ unittest {
 	// mapping
 	u *= -1;
 	assert (u == [-2, -3, -4, -5]);
-	assert (u.vmap!abs == [2, 3, 4, 5]);
-	assert (vector (1, -2, 3, -4).vmap!sgn == [1, -1, 1, -1]);
+	assert (u.fmap!abs == [2, 3, 4, 5]);
+	assert (vector (1, -2, 3, -4).fmap!sgn == [1, -1, 1, -1]);
 	static sq = (int x) => x^^2;
-	assert (vector (1, -2, 3, -4).vmap!sq == [1, 4, 9, 16]);
-	assert (vector (1, 2, 3, 4).vmap!(i => i/2.0) == [0.5, 1, 1.5, 2]);
+	assert (vector (1, -2, 3, -4).fmap!sq == [1, 4, 9, 16]);
+	assert (vector (1, 2, 3, 4).fmap!(i => i/2.0) == [0.5, 1, 1.5, 2]);
 
 	// components and swizzling
 	assert (u.x == -2);
@@ -314,7 +314,7 @@ unittest {
 	u[0..2] = q;
 	assert (u == [-2,-3,-1,-5]);
 
-	v[] = u.vmap!(to!int);
+	v[] = u.fmap!(to!int);
 	assert (v == [-2,-3,-1,-5]);
 
 	u[1..4] -= v[1..4].Vector!(3, float)[];
