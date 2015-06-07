@@ -30,7 +30,7 @@ struct Lexicographic (S)
 
 	Repeat!(dimensionality!S, size_t) index;
 
-	auto front ()
+	auto ref front ()
 	{
 		auto idx (uint i)()
 		{
