@@ -88,7 +88,7 @@ struct Laminated (R, uint n)
 	R range;
 	Repeat!(n, size_t) lengths;
 
-	auto access (typeof(lengths) coord)
+	auto ref access (typeof(lengths) coord)
 	{
 		return range[
 			zip (only (coord), only (1, lengths[0..$-1]))
