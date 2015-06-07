@@ -97,7 +97,7 @@ struct Laminated (R, uint n)
 	}
 	auto limit (uint i)() const
 	{
-		return lengths[i];
+		return interval (0, lengths[i]);
 	}
 
 	mixin AdaptorOps!(access, Map!(limit, Iota!n), RangeExt);
