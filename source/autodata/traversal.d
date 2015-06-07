@@ -37,7 +37,7 @@ struct Lexicographic (S)
 			return index[i] + space.limit!i.left;
 		}
 
-		return space[Map!(idx, Ordinal!index)];
+		return space[Map!(idx, Ordinal!index).tuple.expand];
 	}
 	auto popFront ()
 	{
