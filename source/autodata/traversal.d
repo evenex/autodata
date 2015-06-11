@@ -30,14 +30,26 @@ struct Lexicographic (S)
 
 	Repeat!(dimensionality!S, size_t) index;
 
-	auto ref front ()
+	auto index_tuple () const
 	{
 		auto idx (uint i)()
 		{
 			return index[i] + space.limit!i.left;
 		}
 
-		return space[Map!(idx, Ordinal!index).tuple.expand];
+		return Map!(idx, Ordinal!index).tuple;
+	}
+
+	auto access (size_t i)
+	{
+		auto coord (uint j)() {return i / space.limit!j.width;}
+
+		return space[Map!(coord, Iota!(dimensionality!S)).tuple.expand];
+	}
+
+	auto ref front ()
+	{
+		return space[index_tuple.expand];
 	}
 	auto popFront ()
 	{
@@ -64,6 +76,18 @@ struct Lexicographic (S)
 
 		return this.equal (range);
 	}
+
+	auto length () const // REVIEW abstract into volume
+	{
+		auto dims (uint i)()
+		{
+			return space.limit!i.width;
+		}
+
+		return product (Map!(dims, Iota!(dimensionality!S)));
+	}
+
+	mixin AdaptorOps!(access, length, RangeExt);
 }
 auto lexicographic (S)(S space)
 {
@@ -78,6 +102,8 @@ unittest {
 	);
 
 	assert (test.lexi == [1,2,3,1,2,3,1,2,3]);
+	assert (test.lexi[0] == test[0,0]);
+	assert (test.lexi[6] == test[2,0]);
 }
 
 /*
