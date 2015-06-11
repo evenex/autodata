@@ -103,8 +103,9 @@ struct Mapped (Domain, alias f, Parameters...)
 		{
 			auto tuple ()() {return f (point.expand, parameters);}
 			auto value ()() {return f (point, parameters);}
+			auto error ()() {pragma(msg, `error: type mismatch, `, __traits(identifier, f), ` is not a function of `, typeof(point));}
 
-			return Match!(tuple, value);
+			return Match!(tuple, value, error);
 		}
 		auto map_remap (Subdomain...)(Subdomain subdomain)
 		{
