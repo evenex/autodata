@@ -211,6 +211,12 @@ struct Vector (size_t n, Component = double)
 	{
 		return components.text;
 	}
+	auto tuple ()
+	{
+		import autodata.tuple;
+
+		return *(cast(Tuple!(Repeat!(n, Component))*)(components.ptr));
+	}
 }
 unittest {
 	import std.algorithm: equal;
