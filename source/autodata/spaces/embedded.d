@@ -2,18 +2,17 @@ module autodata.spaces.embedded;
 
 private { // imports
 	import autodata.traits;
+	import autodata.operators;
 	import autodata.spaces.orthotope;
 	import evx.meta;
 	import evx.interval;
 }
 
 // TODO doc
-// TODO test
 struct Embedded (Outer, Inner)
 {
 	Outer outer;
 	Inner inner;
-	CoordinateType!Outer origin;
 
 	auto access (CoordinateType!Outer coord)
 	{
@@ -28,14 +27,27 @@ struct Embedded (Outer, Inner)
 
 	mixin AdaptorOps!(access, Map!(limit, Iota!(dimensionality!Outer)));
 }
-auto embed (Outer, Inner, Coord...)(Outer outer, Inner inner, Coord origin)
+auto embed (Outer, Inner)(Outer outer, Inner inner)
 {
-	foreach (i,_; Coord)
+	foreach (i; Iota!(dimensionality!Outer))
 		static assert (
-			is (Coord[i] : CoordinateType!Outer[i])
-			&& is (Coord[i] : CoordinateType!Inner[i]),
+			is (CoordinateType!Inner[i] : CoordinateType!Outer[i]),
 			`coordinate type mismatch`
 		);
 	
-	return Embedded!(Outer, Inner)(outer, inner, origin);
+	return Embedded!(Outer, Inner)(outer, inner);
+}
+unittest {
+	import autodata.functional;
+
+	auto x = ortho (interval (-1f, 1f), interval (-1f, 1f))
+		.embed (
+			map!((x,y) => tuple(2*x, 2*y))(
+				ortho (interval (0f, 0.5f), interval (0f, 0.5f))
+			)
+		);
+
+	assert (x[-0.1f, -0.1f] == tuple(-0.1f, -0.1f));
+	assert (x[0.4f, 0.4f] == tuple(0.8f, 0.8f));
+	assert (x[0.6f, 0.6f] == tuple(0.6f, 0.6f));
 }

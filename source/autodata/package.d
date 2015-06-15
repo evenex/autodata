@@ -8,5 +8,3 @@ import autodata.spaces;
 import autodata.traits;
 import autodata.traversal;
 import autodata.tuple;
-
-void main (){}
