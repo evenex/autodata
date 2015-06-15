@@ -15,7 +15,7 @@ template map (alias f)
 	auto map (Domain, Parameters...)(Domain domain, Parameters parameters)
 	in {
 		static assert (not (is (ElementType!Domain == void)),
-			(Domain.stringof)~` contains no elements to map`
+			(Domain.stringof)~` contains no mappable elements`
 		);
 	}
 	body {
@@ -103,7 +103,7 @@ struct Mapped (Domain, alias f, Parameters...)
 		{
 			auto tuple ()() {return f (point.expand, parameters);}
 			auto value ()() {return f (point, parameters);}
-			auto error ()() {pragma(msg, `error: type mismatch, `, __traits(identifier, f), ` is not a function of `, typeof(point));}
+			auto error ()() {pragma(msg, `error: type mismatch, `, __traits(identifier, f), ` is not a function of `, Cons!(typeof(point), typeof(parameters)));}
 
 			return Match!(tuple, value, error);
 		}

@@ -2,6 +2,7 @@ module autodata.traversal;
 
 private {//import
 	import std.range: only;
+	import std.conv: to;
 
 	import evx.meta;
 	import evx.interval;
@@ -27,8 +28,7 @@ if (is_input_range!R && has_length!R)
 struct Lexicographic (S)
 {
 	S space;
-
-	Repeat!(dimensionality!S, size_t) index;
+	CoordinateType!S index;
 
 	auto index_tuple () const
 	{
@@ -42,7 +42,7 @@ struct Lexicographic (S)
 
 	auto access (size_t i)
 	{
-		auto coord (uint j)() {return i / space.limit!j.width;}
+		auto coord (uint j)() {return (i / space.limit!j.width).to!(typeof(index[j]));}
 
 		return space[Map!(coord, Iota!(dimensionality!S)).tuple.expand];
 	}
@@ -84,7 +84,7 @@ struct Lexicographic (S)
 			return space.limit!i.width;
 		}
 
-		return product (Map!(dims, Iota!(dimensionality!S)));
+		return product (Map!(dims, Iota!(dimensionality!S))).to!size_t;
 	}
 
 	mixin AdaptorOps!(access, length, RangeExt);

@@ -22,9 +22,35 @@ struct Orthotope (Intervals...)
 		return bounds[i];
 	}
 
-	mixin AdaptorOps!(access, Map!(limit, Ordinal!Intervals), RangeExt);
+	mixin template InOperator ()
+	{
+		auto opBinaryRight (string op : `in`)(Domain!access coords)
+		{
+			auto coord_contained (int i = Intervals.length - 1)()
+			{
+				static if (i == -1)
+					return true;
+				else 
+					return coords[i].is_contained_in (this.limit!i)
+						&& coord_contained!(i-1)
+						;
+			}
+
+			return coord_contained;
+		}
+		auto opBinaryRight (string op : `in`, T)(T vector)
+		{
+			auto coord (uint i)() {return vector[i];}
+
+			return opBinary!`in` (Map!(coord, Ordinal!Intervals));
+		}
+	}
+
+	mixin InOperator;
+	mixin AdaptorOps!(access, Map!(limit, Ordinal!Intervals), RangeExt, InOperator);
 }
 auto orthotope (Intervals...)(Intervals intervals)
+if (All!(is_interval, Intervals))
 {
 	return Orthotope!Intervals (intervals);
 }
@@ -37,6 +63,13 @@ unittest {
 		== [[5.6, 10], [5.6, 11], [5.6, 12], [5.6, 13]]
 	);
 
+}
+auto orthotope (S)(S space)
+if (not (is_interval!S))
+{
+	auto lim (uint i)() {return space.limit!i;}
+
+	return orthotope (Map!(lim, Iota!(dimensionality!S)));
 }
 
 alias ortho = orthotope;

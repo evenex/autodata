@@ -89,8 +89,9 @@ struct Sub (Source, Axes...)
 				auto multi    ()() {return -origin[i];}
 				auto uni      ()() {return -origin;}
 				auto inf_zero ()() {return bounds[i].left.is_infinite? bounds[i].left : T(0);}
+				auto inf_only ()() {assert (bounds[i].left.is_infinite); return bounds[i].left;}
 
-				alias left = Match!(multi, uni, inf_zero);
+				alias left = Match!(multi, uni, inf_zero, inf_only);
 
 				return interval (left,
 					bounds[i].right.is_infinite? 
@@ -518,7 +519,7 @@ template SubOps (alias SourceTransform, alias access, LimitsAndExtensions...)
 						Map!(ExprType, limits)
 					)
 				),
-				full_name!(typeof(this))~ ` LimitOps: limit types must support comparison (<. >, <=, >=)`
+				fullyQualifiedName!(typeof(this))~ ` LimitOps: limit types must support comparison (<. >, <=, >=)`
 			);
 		}
 	}
@@ -760,7 +761,7 @@ package {//error
 
 		alias Element (T) = Select!(is (ElementType!T == void), T, /*else*/ ElementType!T);
 
-		enum error_header = `█▶ ` ~This.stringof~ ` ▬▶ `;
+		enum error_header = `██ ` ~This.stringof~ ` ██ `;
 
 		enum type_mismatch = error_header
 			~Map!(Element, Selected.Types).stringof~ ` does not convert to ` ~Map!(Element, Limits).stringof;

@@ -24,7 +24,7 @@ struct Maybe (T)
 			return true;
 	}
 
-	auto toString () const
+	auto toString ()() const
 	{
 		import std.conv : text;
 
