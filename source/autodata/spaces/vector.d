@@ -116,6 +116,7 @@ struct Vector (size_t n, Component = double)
 		else static assert (0);
 	}
 	auto opBinary (string op, V)(V v)
+	if (Contains!(op, `+`,`-`,`*`,`/`,`^^`))
 	{
 		auto lhs = this;
 		auto rhs = v.vector!n;
@@ -131,6 +132,7 @@ struct Vector (size_t n, Component = double)
 		return ret;
 	}
 	auto opBinaryRight (string op, V)(V v) // XXX CommutativeAlgebra
+	if (Contains!(op, `+`,`-`,`*`,`/`,`^^`))
 	{
 		auto lhs = v.vector!n;
 		auto rhs = this;
