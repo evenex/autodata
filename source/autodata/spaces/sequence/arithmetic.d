@@ -62,6 +62,32 @@ auto diff (R)(R range)
 		.map!((a,b) => a - b);
 }
 
+private enum OptimizedSide {min, max}
+
+/*
+	get the min and max of a set of 1 or more parameters
+*/
+template optimum (OptimizedSide side)
+{
+	auto optimum (T...)(T args)
+	{
+		enum choice = side == OptimizedSide.min? 1 : 0;
+
+		static if (T.length == 1)
+			return args[0];
+		else
+			return optimum (
+				args[0] > args[1]?
+					args[choice] 
+					: args[(choice + 1)%2]
+				, args[2..$]
+			);
+	}
+}
+alias min = optimum!(OptimizedSide.min);
+alias max = optimum!(OptimizedSide.max);
+
+
 unittest {
 	assert ([1,2,3,4].sum == 10);
 	assert (sum (1,2,3,4) == 10);
