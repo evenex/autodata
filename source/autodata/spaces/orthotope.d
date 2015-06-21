@@ -1,6 +1,7 @@
 module autodata.spaces.orthotope;
 
 private {/*imports}*/
+	import std.conv : to;
 	import autodata.operators;
 	import autodata.traits;
 	import autodata.tuple;
@@ -40,9 +41,9 @@ struct Orthotope (Intervals...)
 		}
 		auto opBinaryRight (string op : `in`, T)(T vector)
 		{
-			auto coord (uint i)() {return vector[i];}
+			auto coord (uint i)() {return vector[i].to!(Domain!access[i]);}
 
-			return opBinary!`in` (Map!(coord, Ordinal!Intervals));
+			return opBinaryRight!`in` (Map!(coord, Ordinal!Intervals));
 		}
 	}
 
@@ -63,6 +64,10 @@ unittest {
 		== [[5.6, 10], [5.6, 11], [5.6, 12], [5.6, 13]]
 	);
 
+	assert (0 in ortho (interval (0,11)));
+	assert (10 in ortho (interval (0,11)));
+	assert (11 !in ortho (interval (0,11)));
+	assert (-1 !in ortho (interval (0,11)));
 }
 auto orthotope (S)(S space)
 if (not (is_interval!S))
