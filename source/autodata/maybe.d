@@ -1,5 +1,9 @@
 module autodata.maybe;
 
+private {//imports
+	import autodata.functional;
+}
+
 struct Maybe (T)
 {
 	T value;
@@ -53,4 +57,11 @@ T[1] to_list (T)(Maybe!T x)
 	if (x.exists)
 		return [x.value];
 	else return typeof(return).init;
+}
+auto flatmap (alias f, R)(R r)
+{
+	static if (is (ElementType!R == Maybe!(T,U), T,U))
+		return r.filter!(m => m.exists).map!(m => m.get!T).map!f;
+	else
+		static assert (0);
 }
