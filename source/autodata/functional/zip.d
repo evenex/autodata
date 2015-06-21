@@ -6,8 +6,10 @@ private {//import
 	import std.conv: text;
 	import std.algorithm: equal;
 	import evx.interval;
+	import evx.infinity;
 	import evx.meta;
 	import autodata.functional.iso;
+	import autodata.spaces.sequence.arithmetic: min, max;
 	import autodata.traits;
 }
 
@@ -120,7 +122,15 @@ struct Zipped (LengthPolicy length_policy, Spaces...)
 	}
 	auto empty ()()
 	{
-		return spaces[0].empty;
+		import std.algorithm : any;
+		import std.range : only;
+
+		auto is_empty (uint i)(){return spaces[i].empty;}
+
+		static if (length_policy == LengthPolicy.strict)
+			return spaces[0].empty;
+		else static if (length_policy == LengthPolicy.trunc)
+			return any (Map!(is_empty, Ordinal!Spaces).only);
 	}
 	auto save ()()
 	{
@@ -157,18 +167,40 @@ struct Zipped (LengthPolicy length_policy, Spaces...)
 
 		alias limits = Map!(get_limit, Ordinal!Spaces);
 
-		auto shortest ()() if (length_policy == LengthPolicy.trunc)
-		{
-			return reduce!((a,b) => a.width < b.width? a:b)
-				(MatchAll!limits)
-				;
-		}
-		auto first ()() if (length_policy == LengthPolicy.strict)
-		{
-			return Match!limits;
-		}
+		auto left (uint j)() {return spaces[j].limit!i.left;}
+		auto right (uint j)() {return spaces[j].limit!i.right;}
 
-		return Match!(shortest, first);
+		static if (length_policy == LengthPolicy.trunc)
+		{
+			enum is_finite (T) = is (T == Finite!T);
+
+			alias WidthType (T) = typeof(T.init.width);
+
+			alias all_finite (alias side) = Map!(Compose!(side, First),
+				Filter!(Compose!(is_finite, Second),
+					Enumerate!(
+						Map!(Compose!(WidthType, ExprType),
+							limits
+						)
+					)
+				)
+			);
+
+			auto finite ()() 
+				{return interval (max(all_finite!left), min(all_finite!right));}
+			auto l_inf ()()
+				{return interval (-infinity!(ExprType!(left!0)), min(all_finite!right));}
+			auto r_inf ()()
+				{return interval (max(all_finite!left), infinity!(ExprType!(right!0)));}
+			auto infinite ()()
+				{return interval (-infinity!(ExprType!(left!0)), infinity!(ExprType!(right!0)));}
+
+				r_inf;
+
+			return Match!(finite, infinite, r_inf, l_inf);
+		}
+		else static if (length_policy == LengthPolicy.strict)
+			return Match!limits;
 	}
 
 	invariant () {
@@ -190,7 +222,7 @@ struct Zipped (LengthPolicy length_policy, Spaces...)
 
 /* zip, assuming all of the spaces have equal limits
 */
-auto strict_zip (Spaces...)(Spaces spaces)
+auto zip_strict (Spaces...)(Spaces spaces)
 in {
 	alias Dimensionalities = Map!(dimensionality, Spaces);
 
@@ -228,14 +260,48 @@ body {
 
 /* zip, taking the limit of the intersection of the zipped spaces
 */
-auto trunc_zip (Spaces...)(Spaces spaces)
-{
+auto zip_trunc (Spaces...)(Spaces spaces)
+in {
+	alias Dimensionalities = Map!(dimensionality, Spaces);
+
+	foreach (d; Iota!(Dimensionalities[0]))
+		foreach (i; Ordinal!Spaces)
+			{//bounds check
+				enum no_measure_error (int i) = `zip error: `
+					~Spaces[i].stringof
+					~ ` does not define limit or integral length (const)`;
+			}
+}
+body {
 	return Zipped!(LengthPolicy.trunc, Spaces)(spaces);
+}
+unittest {
+	import autodata.spaces;
+
+	alias T = Tuple!(size_t, size_t);
+
+	auto a = Nat[0..9];
+	auto b = Nat[2..5];
+	auto c = Nat[4..6];
+	auto d = Nat[0..infinity];
+
+	auto z1 = zip_trunc (a,b);
+
+	assert (z1.limit!0 == [0,3]);
+	assert (z1[] == [T(0,2), T(1,3), T(2,4)]);
+
+	auto z2 = zip_trunc (a,c);
+	assert (z2.limit!0 == [0,2]);
+	assert (z2[] == [T(0,4), T(1,5)]);
+
+	auto z3 = zip_trunc (a,d);
+	assert (z3.limit!0 == a.limit!0);
+	assert (z3[] == zip (a,a));
 }
 
 /* default zip
 */
-alias zip = strict_zip;
+alias zip = zip_strict;
 unittest {
 	import std.exception;
 	import autodata.operators;
