@@ -6,6 +6,7 @@ private { // imports
 	import autodata.spaces.orthotope;
 	import evx.meta;
 	import evx.interval;
+	static import std.functional;
 }
 
 // TODO doc
@@ -37,6 +38,7 @@ auto embed (Outer, Inner)(Outer outer, Inner inner)
 	
 	return Embedded!(Outer, Inner)(outer, inner);
 }
+alias embedded_in = std.functional.reverseArgs!embed;
 unittest {
 	import autodata.functional;
 
