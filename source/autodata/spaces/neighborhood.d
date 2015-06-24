@@ -1,3 +1,5 @@
+module autodata.spaces.neighborhood;
+
 private {// imports
     import evx.interval;
     import evx.meta;

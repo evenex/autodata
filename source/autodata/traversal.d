@@ -1,7 +1,6 @@
 module autodata.traversal;
 
 private {//import
-	import std.range: only;
 	import std.conv: to;
 
 	import evx.meta;
@@ -11,6 +10,7 @@ private {//import
 	import autodata.functional;
 	import autodata.operators;
 	import autodata.spaces.sequence;
+	import autodata.spaces.only;
 }
 
 /* generate a foreach index for a custom range 
