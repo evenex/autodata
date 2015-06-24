@@ -293,3 +293,19 @@ auto lens (string member, S)(auto ref S space)
 
 	return space.map!get;
 }
+
+/*
+    eagerly apply a function to each item in a range
+*/
+auto ref each (alias f, R)(auto ref R range)
+{
+    foreach (ref item; range)
+    {
+        auto value ()() {cast(void) f (item);}
+        auto tuple ()() {cast(void) f (item.expand);}
+
+        Match!(value, tuple);
+    }
+
+    return range;
+}

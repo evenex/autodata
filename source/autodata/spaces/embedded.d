@@ -6,7 +6,7 @@ private { // imports
 	import autodata.spaces.orthotope;
 	import evx.meta;
 	import evx.interval;
-	static import std.functional;
+	import std.traits : CommonType;
 }
 
 // TODO doc
@@ -32,13 +32,19 @@ auto embed (Outer, Inner)(Outer outer, Inner inner)
 {
 	foreach (i; Iota!(dimensionality!Outer))
 		static assert (
-			is (CoordinateType!Inner[i] : CoordinateType!Outer[i]),
-			`coordinate type mismatch`
+			not (is (CommonType!(CoordinateType!Inner[i], CoordinateType!Outer[i]) == void)),
+			`coordinate type mismatch: `
+			~CoordinateType!Inner[i].stringof~
+			` != `
+			~CoordinateType!Outer[i].stringof
 		);
 	
 	return Embedded!(Outer, Inner)(outer, inner);
 }
-alias embedded_in = std.functional.reverseArgs!embed;
+auto embedded_in (Inner, Outer)(Inner inner, Outer outer)
+{
+	return outer.embed (inner);
+}
 unittest {
 	import autodata.functional;
 

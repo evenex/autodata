@@ -78,3 +78,5 @@ if (not (is_interval!S))
 }
 
 alias ortho = orthotope;
+
+auto index_zip (S)(S space){return zip (space.orthotope, space);} // REVIEW name

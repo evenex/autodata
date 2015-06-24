@@ -7,6 +7,8 @@ import autodata.spaces.cyclic;
 import autodata.spaces.embedded;
 import autodata.spaces.grid;
 import autodata.spaces.matrix;
+import autodata.spaces.neighborhood;
+import autodata.spaces.only;
 import autodata.spaces.orthotope;
 import autodata.spaces.product;
 import autodata.spaces.repeat;
