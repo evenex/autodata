@@ -1,6 +1,6 @@
 module autodata.operators.transfer;
 
-/* generate WriteOps with input bounds checking
+/** generate WriteOps with input bounds checking
 	
 	Requires:
 		WriteOps requirements.
@@ -84,6 +84,7 @@ template TransferOps (alias pull, alias SubOperators, alias access, LimitsAndExt
 	mixin WriteOps!(verified_limit_pull, SubOperators, access, LimitsAndExtensions)
 		write_ops;
 }
+///
 unittest {
 	import evx.meta;
 	import evx.interval;

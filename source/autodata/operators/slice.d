@@ -1,23 +1,295 @@
 module autodata.operators.slice;
 
-/* generate slicing operators with IndexOps
-
-	Requires:
-		IndexOps requirements.
-		In order to use indexing on sliced structures (referred to as Sub structures), 
-			the measure type must form a group under addition (i.e. + and - operators are supported, and return a value of the measure type)
-
-	Optional:
-		A set of uninstantiated, parameterless templates to extend the Sub structure.
-		Templates which resolve to a string upon instantiation will be mixed in as strings,
-		otherwise they are mixed in as templates.
-		Since symbols defined by string mixins have a higher resolution priority than template mixins,
-		this can be used to gain an additional degree of control over the semantics of the Sub structure.
-*/
-
 private {//imports
 	import evx.meta;
 	import evx.interval;
+}
+
+/** generate indexing, slicing, and limit operators inside of a datatype definition
+    
+    Returns:
+        A space with the aformentioned capabilities.
+
+        The limit operators work like this:
+        
+        r.limit!i will return an interval representing the half-open bounds of the space along the i'th dimension
+
+        $ will refer to the right side of the limit, which can be negated with ~$ to attain the left side.
+
+        The slicing operators return a Sub structure. Any Sub structure contains a member alias Souce which refers to the type from which it is derived.
+
+        If SliceOps are mixed in, the Sub structure contains a pointer to the original space. This allows slices to act as lightweight references but you must be careful not to let the original space get moved or go out of scope.
+
+        If AdaptorOps are mixed in, the Sub structure contains a copy of the original space.
+
+	Requires:
+		An alias to a non-template access function.
+
+            The function's parameters will be the coordinate type of the space.
+
+        Following that, a set of limits equal in number to the number of access function parameters.
+
+            The limits may be intervals, static arrays of length 2, or plain values.
+
+            The base type of the limit must form a group under addition (i.e. + and - operators are supported, and return a value of the measure type).
+
+	Optional:
+
+		A set of uninstantiated, parameterless templates to extend the Sub structure.
+
+		Templates which resolve to a string upon instantiation will be mixed in as strings,
+
+		otherwise they are mixed in as templates.
+
+		Since symbols defined by string mixins have a higher resolution priority than template mixins,
+
+		this can be used to gain an additional degree of control over the semantics of the Sub structure.
+*/
+template SliceOps (alias access, LimitsAndExtensions...)
+{
+	private {//imports
+		import evx.meta;
+	}
+
+	mixin SubOps!(Λ!q{(U) = U*}, access, LimitsAndExtensions);
+}
+/**
+    ditto
+*/
+template AdaptorOps (alias access, LimitsAndExtensions...)
+{
+	private {//imports
+		import evx.meta;
+	}
+
+	mixin SubOps!(Identity, access, LimitsAndExtensions);
+}
+///
+unittest {
+	import std.exception;
+	import evx.infinity;
+
+	auto error (T)(lazy T stmt){assertThrown!Error (stmt);}
+	auto no_error (T)(lazy T stmt){assertNotThrown!Error (stmt);}
+
+	static struct Basic
+	{
+		auto access (size_t i)
+		{
+			return true;
+		}
+
+		size_t length = 100;
+
+		mixin SliceOps!(access, length);
+	}
+
+	assert (Basic()[40]);
+	error (Basic()[101]);
+	assert (Basic()[$-1]);
+	assert (Basic()[~$]);
+	error (Basic()[$]);
+	assert (Basic()[0]);
+	assert (Basic()[][0]);
+	assert (Basic()[0..10][0]);
+	assert (Basic()[][0..10][0]);
+	assert (Basic()[~$..$][0]);
+	assert (Basic()[~$..$][~$]);
+	error (Basic()[~$..2*$][0]);
+
+	static struct RefAccess
+	{
+		enum size_t length = 256;
+
+		int[length] data;
+
+		ref access (size_t i)
+		{
+			return data[i];
+		}
+
+		mixin SliceOps!(access, length);
+	}
+	RefAccess ref_access;
+	assert (ref_access[5] == 0);
+	ref_access[3..10][2] = 1;
+	assert (ref_access[5] == 1);
+
+	static struct LengthFunction
+	{
+		auto access (size_t) {return true;}
+		size_t length () const {return 100;}
+
+		mixin SliceOps!(access, length);
+	}
+	assert (LengthFunction()[40]);
+	error (LengthFunction()[101]);
+	assert (LengthFunction()[$-1]);
+	assert (LengthFunction()[~$]);
+	error (LengthFunction()[$]);
+	assert (LengthFunction()[0]);
+	assert (LengthFunction()[][0]);
+	assert (LengthFunction()[0..10][0]);
+	assert (LengthFunction()[][0..10][0]);
+	assert (LengthFunction()[~$..$][0]);
+	assert (LengthFunction()[~$..$][~$]);
+	error (LengthFunction()[~$..2*$][0]);
+
+	static struct NegativeIndex
+	{
+		auto access (int) {return true;}
+
+		int[2] bounds = [-99, 100];
+
+		mixin SliceOps!(access, bounds);
+	}
+	assert (NegativeIndex()[-25]);
+	error (NegativeIndex()[-200]);
+	assert (NegativeIndex()[$-25]);
+	assert (NegativeIndex()[~$]);
+	error (NegativeIndex()[$]);
+	assert (NegativeIndex()[-99]);
+	assert (NegativeIndex()[-40..10][0]);
+	assert (NegativeIndex()[][0]);
+	assert (NegativeIndex()[][0..199][0]);
+	assert (NegativeIndex()[~$..$][~$]);
+	error (NegativeIndex()[~2*$..$][0]);
+
+	static struct FloatingPointIndex
+	{
+		auto access (float) {return true;}
+
+		float[2] bounds = [-1,1];
+
+		mixin SliceOps!(access, bounds);
+	}
+	assert (FloatingPointIndex()[0.5]);
+	error (FloatingPointIndex()[-2.0]);
+	assert (FloatingPointIndex()[$-0.5]);
+	assert (FloatingPointIndex()[~$]);
+	error (FloatingPointIndex()[$]);
+	assert (FloatingPointIndex()[-0.5]);
+	assert (FloatingPointIndex()[-0.2..1][0]);
+	assert (FloatingPointIndex()[][0.0]);
+	assert (FloatingPointIndex()[][0.0..0.8][0]);
+	assert (FloatingPointIndex()[~$..$][~$]);
+	error (FloatingPointIndex()[2*~$..2*$][~$]);
+
+	static struct MultiDimensional
+	{
+		auto access (size_t, size_t) {return true;}
+
+		size_t rows = 3;
+		size_t columns = 3;
+
+		mixin SliceOps!(access, rows, columns);
+	}
+	assert (MultiDimensional()[$-1, 2]);
+	assert (MultiDimensional()[1, $-2]);
+	assert (MultiDimensional()[$-1, $-2]);
+	assert (MultiDimensional()[~$, ~$]);
+	error (MultiDimensional()[$, 2]);
+	error (MultiDimensional()[1, $]);
+	error (MultiDimensional()[$, $]);
+	assert (MultiDimensional()[1,2]);
+	assert (MultiDimensional()[][1,2]);
+	assert (MultiDimensional()[][][1,2]);
+	assert (MultiDimensional()[0..3, 1..2][1,0]);
+	assert (MultiDimensional()[0..3, 1][1]);
+	assert (MultiDimensional()[0, 2..3][0]);
+	assert (MultiDimensional()[][0..3, 1..2][1,0]);
+	assert (MultiDimensional()[][0..3, 1][1]);
+	assert (MultiDimensional()[][0, 2..3][0]);
+	assert (MultiDimensional()[0..3, 1..2][1..3, 0..1][1,0]);
+	assert (MultiDimensional()[0..3, 1][1..3][1]);
+	assert (MultiDimensional()[0, 2..3][0..1][0]);
+	assert (MultiDimensional()[~$..$, ~$..$][~$, ~$]);
+	assert (MultiDimensional()[~$..$, ~$][~$]);
+	assert (MultiDimensional()[~$, ~$..$][~$]);
+
+	static struct ExtendedSub
+	{
+		auto access (size_t i)
+		{
+			return true;
+		}
+
+		size_t length = 100;
+
+		template Length ()
+		{
+			@property length () const
+			{
+				return bounds[0].right - bounds[0].left;
+			}
+		}
+
+		mixin SliceOps!(access, length,	Length);
+	}
+	assert (ExtendedSub()[].length == 100);
+	assert (ExtendedSub()[][].length == 100);
+	assert (ExtendedSub()[0..10].length == 10);
+	assert (ExtendedSub()[10..20].length == 10);
+	assert (ExtendedSub()[~$/2..$/2].length == 50);
+	assert (ExtendedSub()[][0..10].length == 10);
+	assert (ExtendedSub()[][10..20].length == 10);
+	assert (ExtendedSub()[][~$/2..$/2].length == 50);
+
+	static struct SubOrigin
+	{
+		auto access (double i)
+		{
+			return true;
+		}
+
+		double measure = 10;
+
+		template Origin ()
+		{
+			@property origin () const
+			{
+				return bounds.width/2;
+			}
+		}
+
+		mixin SliceOps!(access, measure, Origin);
+	}
+	assert (SubOrigin()[].origin == 5);
+	assert (SubOrigin()[].limit == [-5,5]);
+	assert (SubOrigin()[][-5]);
+	assert (SubOrigin()[0..3].origin == 1.5);
+	assert (SubOrigin()[0..3].limit == [-1.5, 1.5]);
+	assert (SubOrigin()[0..3][-1.5]);
+	assert (SubOrigin()[][0..3].origin == 1.5);
+	assert (SubOrigin()[][0..3].limit == [-1.5, 1.5]);
+	assert (SubOrigin()[][0..3][-1.5]);
+	assert (SubOrigin()[~$..$][-$]);
+
+	static struct IntervalSub
+	{
+		auto access (size_t i)
+		{
+			return true;
+		}
+
+		auto bounds = interval!size_t (50, 75);
+
+		mixin SliceOps!(access, bounds);
+	}
+	assert (IntervalSub()[].limit!0.width == 25);
+
+	static struct InfiniteSub
+	{
+		auto access (size_t i)
+		{
+			return true;
+		}
+
+		auto bounds = interval (0UL, infinity);
+
+		mixin SliceOps!(access, bounds);
+	}
+	assert (InfiniteSub()[].limit!0.width == infinity);
 }
 
 struct Limit (T,U)
@@ -208,23 +480,6 @@ struct Sub (Source, Axes...)
 
 		return code.join.to!string;
 	}());
-}
-
-template SliceOps (T...)
-{
-	private {//imports
-		import evx.meta;
-	}
-
-	mixin SubOps!(Λ!q{(U) = U*}, T);
-}
-template AdaptorOps (T...)
-{
-	private {//imports
-		import evx.meta;
-	}
-
-	mixin SubOps!(Identity, T);
 }
 
 template SubOps (alias SourceTransform, alias access, LimitsAndExtensions...)
@@ -523,233 +778,6 @@ template SubOps (alias SourceTransform, alias access, LimitsAndExtensions...)
 			);
 		}
 	}
-}
-
-unittest {
-	import std.exception;
-	import evx.infinity;
-
-	auto error (T)(lazy T stmt){assertThrown!Error (stmt);}
-	auto no_error (T)(lazy T stmt){assertNotThrown!Error (stmt);}
-
-	static struct Basic
-	{
-		auto access (size_t i)
-		{
-			return true;
-		}
-
-		size_t length = 100;
-
-		mixin SliceOps!(access, length);
-	}
-
-	assert (Basic()[40]);
-	error (Basic()[101]);
-	assert (Basic()[$-1]);
-	assert (Basic()[~$]);
-	error (Basic()[$]);
-	assert (Basic()[0]);
-	assert (Basic()[][0]);
-	assert (Basic()[0..10][0]);
-	assert (Basic()[][0..10][0]);
-	assert (Basic()[~$..$][0]);
-	assert (Basic()[~$..$][~$]);
-	error (Basic()[~$..2*$][0]);
-
-	static struct RefAccess
-	{
-		enum size_t length = 256;
-
-		int[length] data;
-
-		ref access (size_t i)
-		{
-			return data[i];
-		}
-
-		mixin SliceOps!(access, length);
-	}
-	RefAccess ref_access;
-	assert (ref_access[5] == 0);
-	ref_access[3..10][2] = 1;
-	assert (ref_access[5] == 1);
-
-	static struct LengthFunction
-	{
-		auto access (size_t) {return true;}
-		size_t length () const {return 100;}
-
-		mixin SliceOps!(access, length);
-	}
-	assert (LengthFunction()[40]);
-	error (LengthFunction()[101]);
-	assert (LengthFunction()[$-1]);
-	assert (LengthFunction()[~$]);
-	error (LengthFunction()[$]);
-	assert (LengthFunction()[0]);
-	assert (LengthFunction()[][0]);
-	assert (LengthFunction()[0..10][0]);
-	assert (LengthFunction()[][0..10][0]);
-	assert (LengthFunction()[~$..$][0]);
-	assert (LengthFunction()[~$..$][~$]);
-	error (LengthFunction()[~$..2*$][0]);
-
-	static struct NegativeIndex
-	{
-		auto access (int) {return true;}
-
-		int[2] bounds = [-99, 100];
-
-		mixin SliceOps!(access, bounds);
-	}
-	assert (NegativeIndex()[-25]);
-	error (NegativeIndex()[-200]);
-	assert (NegativeIndex()[$-25]);
-	assert (NegativeIndex()[~$]);
-	error (NegativeIndex()[$]);
-	assert (NegativeIndex()[-99]);
-	assert (NegativeIndex()[-40..10][0]);
-	assert (NegativeIndex()[][0]);
-	assert (NegativeIndex()[][0..199][0]);
-	assert (NegativeIndex()[~$..$][~$]);
-	error (NegativeIndex()[~2*$..$][0]);
-
-	static struct FloatingPointIndex
-	{
-		auto access (float) {return true;}
-
-		float[2] bounds = [-1,1];
-
-		mixin SliceOps!(access, bounds);
-	}
-	assert (FloatingPointIndex()[0.5]);
-	error (FloatingPointIndex()[-2.0]);
-	assert (FloatingPointIndex()[$-0.5]);
-	assert (FloatingPointIndex()[~$]);
-	error (FloatingPointIndex()[$]);
-	assert (FloatingPointIndex()[-0.5]);
-	assert (FloatingPointIndex()[-0.2..1][0]);
-	assert (FloatingPointIndex()[][0.0]);
-	assert (FloatingPointIndex()[][0.0..0.8][0]);
-	assert (FloatingPointIndex()[~$..$][~$]);
-	error (FloatingPointIndex()[2*~$..2*$][~$]);
-
-	static struct MultiDimensional
-	{
-		auto access (size_t, size_t) {return true;}
-
-		size_t rows = 3;
-		size_t columns = 3;
-
-		mixin SliceOps!(access, rows, columns);
-	}
-	assert (MultiDimensional()[$-1, 2]);
-	assert (MultiDimensional()[1, $-2]);
-	assert (MultiDimensional()[$-1, $-2]);
-	assert (MultiDimensional()[~$, ~$]);
-	error (MultiDimensional()[$, 2]);
-	error (MultiDimensional()[1, $]);
-	error (MultiDimensional()[$, $]);
-	assert (MultiDimensional()[1,2]);
-	assert (MultiDimensional()[][1,2]);
-	assert (MultiDimensional()[][][1,2]);
-	assert (MultiDimensional()[0..3, 1..2][1,0]);
-	assert (MultiDimensional()[0..3, 1][1]);
-	assert (MultiDimensional()[0, 2..3][0]);
-	assert (MultiDimensional()[][0..3, 1..2][1,0]);
-	assert (MultiDimensional()[][0..3, 1][1]);
-	assert (MultiDimensional()[][0, 2..3][0]);
-	assert (MultiDimensional()[0..3, 1..2][1..3, 0..1][1,0]);
-	assert (MultiDimensional()[0..3, 1][1..3][1]);
-	assert (MultiDimensional()[0, 2..3][0..1][0]);
-	assert (MultiDimensional()[~$..$, ~$..$][~$, ~$]);
-	assert (MultiDimensional()[~$..$, ~$][~$]);
-	assert (MultiDimensional()[~$, ~$..$][~$]);
-
-	static struct ExtendedSub
-	{
-		auto access (size_t i)
-		{
-			return true;
-		}
-
-		size_t length = 100;
-
-		template Length ()
-		{
-			@property length () const
-			{
-				return bounds[0].right - bounds[0].left;
-			}
-		}
-
-		mixin SliceOps!(access, length,	Length);
-	}
-	assert (ExtendedSub()[].length == 100);
-	assert (ExtendedSub()[][].length == 100);
-	assert (ExtendedSub()[0..10].length == 10);
-	assert (ExtendedSub()[10..20].length == 10);
-	assert (ExtendedSub()[~$/2..$/2].length == 50);
-	assert (ExtendedSub()[][0..10].length == 10);
-	assert (ExtendedSub()[][10..20].length == 10);
-	assert (ExtendedSub()[][~$/2..$/2].length == 50);
-
-	static struct SubOrigin
-	{
-		auto access (double i)
-		{
-			return true;
-		}
-
-		double measure = 10;
-
-		template Origin ()
-		{
-			@property origin () const
-			{
-				return bounds.width/2;
-			}
-		}
-
-		mixin SliceOps!(access, measure, Origin);
-	}
-	assert (SubOrigin()[].origin == 5);
-	assert (SubOrigin()[].limit == [-5,5]);
-	assert (SubOrigin()[][-5]);
-	assert (SubOrigin()[0..3].origin == 1.5);
-	assert (SubOrigin()[0..3].limit == [-1.5, 1.5]);
-	assert (SubOrigin()[0..3][-1.5]);
-	assert (SubOrigin()[][0..3].origin == 1.5);
-	assert (SubOrigin()[][0..3].limit == [-1.5, 1.5]);
-	assert (SubOrigin()[][0..3][-1.5]);
-	assert (SubOrigin()[~$..$][-$]);
-
-	static struct IntervalSub
-	{
-		auto access (size_t i)
-		{
-			return true;
-		}
-
-		auto bounds = interval!size_t (50, 75);
-
-		mixin SliceOps!(access, bounds);
-	}
-	assert (IntervalSub()[].limit!0.width == 25);
-
-	static struct InfiniteSub
-	{
-		auto access (size_t i)
-		{
-			return true;
-		}
-
-		auto bounds = interval (0UL, infinity);
-
-		mixin SliceOps!(access, bounds);
-	}
-	assert (InfiniteSub()[].limit!0.width == infinity);
 }
 
 package {//error

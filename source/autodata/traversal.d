@@ -13,17 +13,32 @@ private {//import
 	import autodata.spaces.only;
 }
 
-/* generate a foreach index for a custom range 
-	this exploits the automatic tuple foreach index unpacking trick which is obscure and under controversy
-	reference: https://issues.dlang.org/show_bug.cgi?id=7361
+/** pair each element in a range with its index.
+
+	foreach exploits the automatic tuple foreach index unpacking trick which is obscure and under controversy
+
+	<a href="https://issues.dlang.org/show_bug.cgi?id=7361">reference</a>
 */
 auto enumerate (R)(R range)
 if (is_input_range!R && has_length!R)
 {
 	return zip (Nat[0..range.length], range);
 }
+///
+unittest {
+    auto xs = only (1,2,3,4);
 
-/* lexicographic traversal
+    assert (not (__traits(compiles, (){  
+        foreach (i, x; xs)
+            assert (x);
+    })));
+
+    foreach (i, x; enumerate (xs))
+        assert (x);
+}
+
+/** lexicographic traversal
+    over n-dimensional spaces indexed by integral types
 */
 struct Lexicographic (S)
 {
@@ -89,11 +104,18 @@ struct Lexicographic (S)
 
 	mixin AdaptorOps!(access, length, RangeExt);
 }
+/**
+    ditto
+*/
 auto lexicographic (S)(S space)
 {
 	return Lexicographic!S (space);
 }
+/**
+    ditto
+*/
 alias lexi = lexicographic;
+///
 unittest {
 	import autodata.spaces;
 
@@ -106,8 +128,8 @@ unittest {
 	assert (test.lexi[6] == test[2,0]);
 }
 
-/*
-	reshapes a 1D range into an nD space by breaking it into rows of the given lengths
+/**
+	reshape a 1D range into an n-dimensional space by breaking it into rows of the given lengths
 */
 struct Laminated (R, uint n)
 {
@@ -128,10 +150,14 @@ struct Laminated (R, uint n)
 
 	mixin AdaptorOps!(access, Map!(limit, Iota!n), RangeExt);
 }
+/**
+    ditto
+*/
 auto laminate (R, T...)(R range, T lengths)
 {
 	return Laminated!(R, T.length)(range, lengths);
 }
+///
 unittest {
 	auto a = [1,2,3,4].laminate (2,2);
 

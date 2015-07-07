@@ -3,11 +3,13 @@ module autodata.operators.buffer;
 /** generate RAII ctor/dtor and copy/free assignment operators from allocate function, with TransferOps 
 	move/copy semantics are customizable via composition with lifetime templates
 
+    SliceOps are used internally, so be careful not to let the source go out of scope.
+
 	Requires:
 		TransferOps requirements.
 		The allocate symbol must resolve to a function (which may be a template and/or an overload set)
 		which takes the measure types, in order, as parameters (same as access).
-		After invoking the allocate symbol, the limits of the dataset must be consistent with the parameters passed.
+		After invoking the allocate symbol, the limits of the base buffer must be consistent with the parameters passed.
 */
 template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtensions...)
 {

@@ -1,44 +1,6 @@
 module autodata.operators.range;
 
-/*
-	mixes range primitives into a struct
-	all primitives act as forwarding calls and will be overridden by an existing definition
-	save will pass saved_fields into constructor after base.save
-	opEquals assumes the space has SliceOps with RangeExt
-*/
-template RangeOps (alias base, alias length, saved_fields...)
-{
-	auto front ()()
-	{
-		return base.front;
-	}
-	auto popFront ()()
-	{
-		base.popFront;
-	}
-	auto back ()()
-	{
-		return base.back;
-	}
-	auto popBack ()()
-	{
-		base.popBack;
-	}
-	auto empty ()()
-	{
-		return length == 0;
-	}
-	auto save ()()
-	{
-		return typeof(this)(base.save, saved_fields);
-	}
-	bool opEquals (R)(R range)
-	{
-		return this[] == range;
-	}
-}
-
-/* extension template meant to generate random access range primitives in a Sub structure
+/** extension template meant to generate random access range primitives in a Sub structure
 
 	Note that, in Phobos, the resulting range will only qualify as bidirectional
 	because std.range.isRandomAccessRange does not handle template or non-property range primitives,
@@ -68,6 +30,7 @@ template RangeExt ()
 		}
 	}
 }
+///
 unittest {
 	import autodata.operators.slice;
 
@@ -108,4 +71,76 @@ unittest {
 	foreach (_; MultiDimensional()[0, 0..$]){}
 	foreach_reverse (_; MultiDimensional()[0..$, 0]){}
 	foreach_reverse (_; MultiDimensional()[0, 0..$]){}
+}
+
+/**
+	mixes range primitives into a struct
+
+	all primitives act as forwarding calls and will be overridden by an existing definition
+	save will pass saved_fields into constructor after base.save
+	opEquals assumes the space has SliceOps with RangeExt
+
+    RangeOps can be mixed in to the base space, while RangeExt is meant to be passed in as a Sub Extension.
+
+    Using them together will equip a space with range ops,
+    while using just RangeExt will equip only the Sub with range ops
+*/
+template RangeOps (alias base, alias length, saved_fields...)
+{
+	auto front ()()
+	{
+		return base.front;
+	}
+	auto popFront ()()
+	{
+		base.popFront;
+	}
+	auto back ()()
+	{
+		return base.back;
+	}
+	auto popBack ()()
+	{
+		base.popBack;
+	}
+	auto empty ()()
+	{
+		return length == 0;
+	}
+	auto save ()()
+	{
+		return typeof(this)(base.save, saved_fields);
+	}
+	bool opEquals (R)(R range)
+	{
+		return this[] == range;
+	}
+}
+///
+unittest {
+    import autodata.operators.slice;
+
+    struct T
+    {
+        int[] range = [1,2,3,4];
+
+        auto length () const
+        {
+            return range.length;
+        }
+
+        auto access (size_t i)
+        {
+            return range[i];
+        }
+
+        mixin SliceOps!(access, length, RangeExt);
+        mixin RangeOps!(range, length);
+    }
+
+    T t;
+
+    import std.algorithm: equal;
+
+    assert (t == [1,2,3,4]);
 }

@@ -1,12 +1,13 @@
 module autodata.operators.write;
 
-/* generate index/slice assignment from a pull template, with SliceOps 
+/** generate index/slice assignment from a pull template, with SliceOps 
 
 	Requires:
-		SliceOps requirements.
 		The pull symbol should resolve to a function (which may be a template and/or an overload set),
 		which takes a source data object as the first parameter,
 		and the indices and/or intervals of assignment as subsequent parameters.
+
+        The SubOperators argument should be either AdaptorOps or SliceOps. This will determine whether subspaces will be values or references.
 
 	Optional:
 		If the source data set defines a "push" primitive which accepts the Sub structure of the target data set as a parameter,
@@ -107,6 +108,7 @@ template WriteOps (alias pull, alias SubOperators, alias access, LimitsAndExtens
 		pragma (msg, "\t[][]= ", Space, ` → `, typeof (this.opIndex.opIndexAssign (Space.init[], this[].bounds)));
 	}
 }
+///
 unittest {
 	import std.conv: to, text;
 
@@ -175,44 +177,44 @@ unittest {
 	assert (x[4] == 6);
 
 	static struct Push
-		{/*...}*/
-			enum size_t length = 256;
+    {
+        enum size_t length = 256;
 
-			int[length] data;
+        int[length] data;
 
-			void pull (int x, size_t i)
-				{/*...}*/
-					data[i] = x;
-				}
-			void pull (R)(R range, Interval!size_t limit)
-				{/*...}*/
-					foreach (i; limit.left..limit.right)
-						{/*...}*/
-							data[i] = range.front;
-							range.popFront;
-						}
-				}
+        void pull (int x, size_t i)
+        {
+            data[i] = x;
+        }
+        void pull (R)(R range, Interval!size_t limit)
+        {
+            foreach (i; limit.left..limit.right)
+            {
+                data[i] = range.front;
+                range.popFront;
+            }
+        }
 
-			ref access (size_t i)
-				{/*...}*/
-					return data[i];
-				}
+        ref access (size_t i)
+        {
+            return data[i];
+        }
 
-			template PushExtension ()
-				{/*...}*/
-					enum PushExtension = q{
-						void push (R)(auto ref R range)
-							{/*...}*/
-								auto ptr = range.ptr;
+        template PushExtension ()
+        {
+            enum PushExtension = q{
+                void push (R)(auto ref R range)
+                {
+                    auto ptr = range.ptr;
 
-								foreach (i; 0..range.length)
-									ptr[i] = 2;
-							}
-					};
-				}
+                    foreach (i; 0..range.length)
+                        ptr[i] = 2;
+                }
+            };
+        }
 
-			mixin WriteOps!(pull, SliceOps, access, length, PushExtension);
-		}
+        mixin WriteOps!(pull, SliceOps, access, length, PushExtension);
+    }
 	int[5] y = [1,1,1,1,1];
 	Push()[].push (y);
 	assert (y[] == [2,2,2,2,2]);
@@ -224,43 +226,43 @@ unittest {
 	assert (x[9] == 0);
 
 	static struct Pull
-		{/*...}*/
-			enum size_t length = 256;
+    {
+        enum size_t length = 256;
 
-			int[length] data;
+        int[length] data;
 
-			auto pull (int x, size_t i)
-				{/*...}*/
-					data[i] = x;
-				}
-			auto pull (R)(R range, Interval!size_t limits)
-				{/*...}*/
-					foreach (i, j; enumerate (Nat[limits.left..limits.right]))
-						data[j] = range[i];
-				}
+        auto pull (int x, size_t i)
+        {
+            data[i] = x;
+        }
+        auto pull (R)(R range, Interval!size_t limits)
+        {
+            foreach (i, j; enumerate (Nat[limits.left..limits.right]))
+                data[j] = range[i];
+        }
 
-			ref access (size_t i)
-				{/*...}*/
-					return data[i];
-				}
+        ref access (size_t i)
+        {
+            return data[i];
+        }
 
-			template Pointer ()
-				{/*...}*/
-					auto ptr ()
-						{/*...}*/
-							return source.data.ptr + bounds[0].left;
-						}
-				}
-			template Length ()
-				{/*...}*/
-					auto length () const
-						{/*...}*/
-							return limit!0.width;
-						}
-				}
+        template Pointer ()
+        {
+            auto ptr ()
+            {
+                return source.data.ptr + bounds[0].left;
+            }
+        }
+        template Length ()
+        {
+            auto length () const
+            {
+                return limit!0.width;
+            }
+        }
 
-			mixin WriteOps!(pull, SliceOps, access, length, Pointer, Length);
-		}
+        mixin WriteOps!(pull, SliceOps, access, length, Pointer, Length);
+    }
 	Pull z;
 	assert (z[0] == 0);
 	assert (z[9] == 0);
