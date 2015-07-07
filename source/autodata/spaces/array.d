@@ -4,11 +4,11 @@ private {//import
 	import std.range.primitives: front, back, popFront, popBack, empty;
 	import std.conv: to;
 
-	import autodata.functional;
+	import autodata.morphism;
 	import autodata.operators;
 	import autodata.spaces.sequence;
 	import autodata.traits;
-	import autodata.tuple;
+	import autodata.functor.tuple;
 
 	import evx.interval;
 	import evx.meta;

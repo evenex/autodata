@@ -3,10 +3,10 @@ module autodata.spaces.completed;
 private {//imports
 	import evx.meta;
 	import evx.interval;
-	import autodata.maybe;
+	import autodata.functor.maybe;
 	import autodata.traits;
 	import autodata.operators;
-	import autodata.functional;
+	import autodata.morphism;
 	import std.range.primitives: front, back;
 	import std.algorithm: max, min;
 	import std.traits: KeyType, ValueType;

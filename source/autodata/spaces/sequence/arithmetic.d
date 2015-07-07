@@ -3,7 +3,7 @@ module autodata.spaces.sequence.arithmetic;
 private {//import
 	import std.range.primitives: front, back, popFront, popBack, empty;
 
-	import autodata.functional;
+	import autodata.morphism;
 	import autodata.traits;
 
 	import evx.meta;

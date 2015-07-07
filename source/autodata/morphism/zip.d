@@ -1,4 +1,4 @@
-module autodata.functional.zip;
+module autodata.morphism.zip;
 
 private {//import
 	import std.typecons: Tuple, tuple;
@@ -8,8 +8,8 @@ private {//import
 	import evx.interval;
 	import evx.infinity;
 	import evx.meta;
-	import autodata.functional.iso;
-	import autodata.spaces.sequence.arithmetic: min, max;
+	import autodata.morphism.iso;
+	import autodata.spaces.sequence.arithmetic: min, max; // REVIEW
 	import autodata.traits;
 }
 

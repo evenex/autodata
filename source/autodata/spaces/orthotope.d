@@ -4,7 +4,7 @@ private {/*imports}*/
 	import std.conv : to;
 	import autodata.operators;
 	import autodata.traits;
-	import autodata.tuple;
+	import autodata.functor.tuple;
 	import evx.interval;
 	import evx.meta;
 }
@@ -56,7 +56,7 @@ if (All!(is_interval, Intervals))
 	return Orthotope!Intervals (intervals);
 }
 unittest {
-	import autodata.functional;
+	import autodata.morphism;
 
 	assert (
 		ortho (interval (3.9, 10.9), interval (10, 14))[5.6, ~$..$]
@@ -80,5 +80,5 @@ if (not (is_interval!S))
 alias ortho = orthotope;
 
 //TEMP
-import autodata.functional.zip;
+import autodata.morphism.zip;
 auto index_zip (S)(S space){return zip (space.orthotope, space);} // REVIEW name

@@ -7,7 +7,7 @@ private {//import
 	import evx.interval;
 
 	import autodata.traits;
-	import autodata.functional;
+	import autodata.morphism;
 	import autodata.operators;
 	import autodata.spaces.sequence;
 	import autodata.spaces.only;

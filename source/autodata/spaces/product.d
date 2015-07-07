@@ -1,10 +1,10 @@
 module autodata.spaces.product;
 
 private {/*import}*/
-	import autodata.functional;
+	import autodata.morphism;
 	import autodata.operators;
 	import autodata.traits;
-	import autodata.tuple;
+	import autodata.functor.tuple;
 	import autodata.spaces.orthotope;
 	import evx.meta;
 	import evx.interval;
@@ -56,7 +56,7 @@ auto product_space (S,R...)(S left, R right)
 	else return ProductSpace!(S,R)(left, right);
 }
 unittest {
-	import autodata.functional; 
+	import autodata.morphism; 
 
 	int[3] x = [1,2,3];
 	int[3] y = [4,5,6];
@@ -88,5 +88,5 @@ auto extrude (S,T)(S space, T extrusion)
 	auto b ()() {return interval (T(0), extrusion);}
 
 	return space.by (orthotope (Match!(a,b)))
-		.lens!`expand[0]`;
+		.extract!`expand[0]`;
 }

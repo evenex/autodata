@@ -1,3 +1,6 @@
+/**
+    a set of traits specialized for spaces, but applicable to ranges
+*/
 module autodata.traits;
 
 private {//import
@@ -8,7 +11,7 @@ private {//import
 	import evx.interval;
 }
 
-/* get the element type, which a space contains 
+/** get the type of element contained in a space
 */
 template ElementType (S)
 {
@@ -28,7 +31,7 @@ template ElementType (S)
 	);
 }
 
-/* get the coordinate type of a space, which can be used to index into the space 
+/** get the types which index into the space 
 */
 template CoordinateType (S)
 {
@@ -46,7 +49,7 @@ template CoordinateType (S)
 	alias CoordinateType = Map!(Coord, Iota!(dimensionality!S));
 }
 
-/* get the number of dimensions of a space 
+/** get the number of values required to index an element within a space 
 */
 template dimensionality (S)
 {

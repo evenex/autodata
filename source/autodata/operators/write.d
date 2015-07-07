@@ -113,7 +113,7 @@ unittest {
 	import autodata.operators.slice;
 	import autodata.operators.range;
 
-	import autodata.functional: map;
+	import autodata.morphism: map;
 	import evx.interval;
 
 	import std.range: only, enumerate;

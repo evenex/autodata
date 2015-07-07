@@ -5,7 +5,7 @@ private {/*import}*/
 
 	import autodata.operators;
 	import autodata.spaces.sequence;
-	import autodata.functional;
+	import autodata.morphism;
 	import autodata.traits;
 
 	import evx.meta;

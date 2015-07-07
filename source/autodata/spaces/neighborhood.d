@@ -5,12 +5,13 @@ private {// imports
     import evx.meta;
     import evx.infinity;
     import autodata.traits;
-    import autodata.functional;
+    import autodata.morphism;
     import autodata.spaces.sequence;
     import autodata.spaces.embedded;
     import autodata.spaces.orthotope;
+    import autodata.spaces.reindexed;
     import autodata.spaces.repeat;
-    import autodata.spaces.vector;
+    import autodata.functor.vector;
 }
 
 auto neighborhood (alias boundary_condition = _ => ElementType!S.init, S, T, uint n)(S space, Vector!(n,T) origin, T radius)
@@ -22,15 +23,10 @@ auto neighborhood (alias boundary_condition = _ => ElementType!S.init, S, T, uin
     alias infinite = Repeat!(n, interval (-infinity!T, infinity!T));
     alias stencil = Repeat!(n, diameter);
 
-    static index_into (R)(Vector!(n,T) index, R outer_space)
-    {
-        return outer_space[index.tuple.expand];
-    }
-
     return stencil.orthotope
-        .map!(typeof(origin))
+        .map!(Vector!(n,T))
         .map!sum (origin)
-        .map!index_into (
+        .index_into (
             space.embedded_in (
                 infinite.orthotope
                     .map!boundary_condition 

@@ -82,7 +82,7 @@ auto repeat (T, U...)(T value, U lengths)
 	);
 }
 unittest {
-	import autodata.functional;
+	import autodata.morphism;
 
 	auto x = 6.repeat (3);
 	auto y = 1.repeat (2,2,2);

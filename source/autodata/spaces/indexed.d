@@ -3,7 +3,7 @@ module autodata.spaces.indexed;
 private {
 	import evx.meta;
 	import evx.interval;
-	import autodata.functional;
+	import autodata.morphism;
 	import autodata.traits;
 }
 

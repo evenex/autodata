@@ -1,4 +1,7 @@
-module autodata.functional.cata;
+/**
+    provides higher-order functions which consume a list
+*/
+module autodata.morphism.cata;
 
 private {//
 	import std.typecons: Tuple, tuple;
@@ -10,7 +13,7 @@ private {//
 	import autodata.traits;
 }
 
-/* accumulate a value over a range using a binary function 
+/** accumulate a value over a range using a binary function 
 */
 template reduce (functions...)
 if (functions.length > 0)
@@ -45,6 +48,7 @@ if (functions.length > 0)
 		else return accumulator;
 	}
 }
+///
 unittest {
 	auto a = [1, 2, 3];
 
@@ -56,16 +60,6 @@ unittest {
 	) == tuple(6, -4, 0));
 }
 
-/* traverse the subrange consisting only of elements which match a given criteria 
-*/
-template filter (alias match)
-{
-	auto filter (R)(R range)
-	if (is_input_range!R)
-	{
-		return Filtered!(R, match)(range);
-	}
-}
 struct Filtered (R, alias match)
 {
 	R range;
@@ -150,6 +144,17 @@ struct Filtered (R, alias match)
 			}
 	}
 }
+/** traverse the subrange consisting only of elements which match a given criteria 
+*/
+template filter (alias match)
+{
+	auto filter (R)(R range)
+	if (is_input_range!R)
+	{
+		return Filtered!(R, match)(range);
+	}
+}
+///
 unittest {
 	auto a = [1, 2, 3, 4];
 

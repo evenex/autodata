@@ -6,7 +6,7 @@ private {/*import}*/
 	import autodata.operators;
 	import autodata.spaces.sequence;
 	import autodata.traits;
-	import autodata.tuple;
+	import autodata.functor.tuple;
 	import evx.meta;
 	import evx.interval;
 }
@@ -74,7 +74,7 @@ body {
 	return Stride!(S, d, Widths)(space, widths);
 }
 unittest {
-	import autodata.functional;
+	import autodata.morphism;
 	import autodata.spaces.sequence;
 	import autodata.spaces.product;
 

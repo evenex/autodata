@@ -1,6 +1,6 @@
 module autodata.operators.buffer;
 
-/* generate RAII ctor/dtor and copy/free assignment operators from allocate function, with TransferOps 
+/** generate RAII ctor/dtor and copy/free assignment operators from allocate function, with TransferOps 
 	move/copy semantics are customizable via composition with lifetime templates
 
 	Requires:
@@ -107,9 +107,10 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 	mixin TransferOps!(pull, SliceOps, access, LimitsAndExtensions)
 		transfer_ops;
 }
+///
 unittest {
 	import autodata.operators;
-	import autodata.functional;
+	import autodata.morphism;
 	import evx.interval;
 	import evx.meta;
 

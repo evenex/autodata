@@ -1,4 +1,7 @@
-module autodata.functional.iso;
+/**
+    provides higher order functions which produce a space or range which is structurally isomorphic to the original
+*/
+module autodata.morphism.iso;
 
 private {//import
 	import std.range.primitives: front, back, popFront, popBack, empty;
@@ -8,20 +11,63 @@ private {//import
 	import autodata.traits;
 }
 
-/* apply a given function to the elements in a space 
+/**
+	apply an aliased function to an entire range or space at a time
 */
-template map (alias f)
+auto ref apply (alias f, S, Partial...)(auto ref S space, Partial args)
 {
-	auto map (Domain, Parameters...)(Domain domain, Parameters parameters)
-	in {
-		static assert (not (is (ElementType!Domain == void)),
-			`███ `~(Domain.stringof)~` has no ElementType`
-		);
-	}
-	body {
-		return Mapped!(Domain, f, Parameters)(domain, parameters);
-	}
+	void tuple ()() {f(space.unzip.expand, args);}
+	void forward ()() {f(space, args);}
+
+	Match!(tuple, forward);
+
+	return space;
 }
+///
+unittest {
+    alias T = int;
+
+    T[] xs = [1,2,3,4];
+
+    xs.apply!((ref T[] xs, T[] tail) => xs ~= tail)([5,6,7]);
+
+    assert (xs == [1,2,3,4,5,6,7]);
+}
+
+/**
+    eagerly apply a function to each item in a range
+*/
+auto ref each (alias f, R, Partial...)(auto ref R range, Partial args)
+{
+    foreach (ref item; range)
+    {
+        auto value ()() {cast(void) f (item, args);}
+        auto tuple ()() {cast(void) f (item.expand, args);}
+
+        Match!(value, tuple);
+    }
+
+    return range;
+}
+///
+unittest {
+   alias T = int;
+
+   T[] xs = [1,2,3,4];
+
+   T a;
+
+   xs.each!(x => a += x);
+
+   assert (a == 10);
+
+   a = 0;
+
+   xs.each!((x,y) => a += x*y)(10);
+
+   assert (a == 100);
+}
+
 struct Mapped (Domain, alias f, Parameters...)
 {
 	Domain domain;
@@ -113,6 +159,22 @@ struct Mapped (Domain, alias f, Parameters...)
 		}
 	}
 }
+
+/** lazily apply a function to the elements in a range or space 
+*/
+template map (alias f)
+{
+	auto map (Domain, Parameters...)(Domain domain, Parameters parameters)
+	in {
+		static assert (not (is (ElementType!Domain == void)),
+			`███ `~(Domain.stringof)~` has no ElementType`
+		);
+	}
+	body {
+		return Mapped!(Domain, f, Parameters)(domain, parameters);
+	}
+}
+///
 unittest {
 	import std.range: only;
 	import autodata.operators;
@@ -207,7 +269,7 @@ unittest {
 		auto sq = FloatingPoint()[].map!(x => x*x);
 		assert (sq[0.5] == 0.25);
 	}
-	{/*local}*/
+	{/*local variables}*/
 		static static_variable = 7;
 		assert (x[].map!(i => i + static_variable)[0..4] == [8,9,10,11]);
 
@@ -240,12 +302,12 @@ unittest {
 		static assert (typeof(a).sizeof == (int[]).sizeof + (void*).sizeof); // template lambda makes room for the context pointer but doesn't save it... weird.
 		static assert (typeof(b).sizeof == (int[]).sizeof); // static function omits context pointer
 	}
-	{/*params}*/
+	{/*partial function application}*/
 		static r () @nogc {return only (1,2,3).map!((a,b,c) => a + b + c)(3, 2);}
 
 		assert (r == [6,7,8]);
 	}
-	{/*alias}*/
+	{/*aliasing}*/
 		alias fmap = map!(x => x*x);
 
 		assert (fmap ([1,2]) == [1,4]);
@@ -255,7 +317,7 @@ unittest {
 
 		assert (gmap ([1,2]) == [0,1]);
 	}
-	{/*compose}*/
+	{/*functor composition}*/
 		auto a = x[].map!(x => x*x);
 		auto b = a.map!(x => x*x);
 
@@ -269,43 +331,59 @@ unittest {
 	}
 }
 
-/*
-	modify a space in place
+/**
+    map a setter function over a space, leaving the element type unchanged.
 */
-auto ref apply (alias op, S, Args...)(auto ref S space, Args args)
+auto over (string member, alias f, S, Partial...)(auto ref S space, Partial args)
 {
-	void tuple ()() {op (space.unzip.expand, args);}
-	void forward ()() {op (space, args);}
+    alias T = ElementType!S;
 
-	Match!(tuple, forward);
-
-	return space;
-}
-
-/* map a space of elements to a space of their named members
-*/
-auto lens (string member, S)(auto ref S space)
-{
-	static get (ElementType!S element)
-	{
-		return mixin(q{element.}~(member));
-	}
-
-	return space.map!get;
-}
-
-/*
-    eagerly apply a function to each item in a range
-*/
-auto ref each (alias f, R)(auto ref R range)
-{
-    foreach (ref item; range)
+    static T set (T element, Partial args)
     {
-        auto value ()() {cast(void) f (item);}
-        auto tuple ()() {cast(void) f (item.expand);}
+        mixin(q{element.}~(member)) = f(mixin(q{element.}~(member)), args);
 
-        Match!(value, tuple);
+        return element;
     }
 
-    return range;
+	return space.map!set (args);
+}
+///
+unittest {
+    import std.array;
+
+    struct T {int x = 5, y = 10;}
+
+    T[] ts = new T[10];
+
+    ts = ts.over!(`x`, x => x*x).array;
+
+    foreach (t; ts)
+        assert (t.x == 25);
+
+    ts = ts.over!(`y`, (y,z) => y*z)(10).array;
+
+    foreach (t; ts)
+        assert (t.y == 100);
+}
+
+/**
+    extract a range of properties from a range of containing elements
+*/
+auto extract (string member, S)(auto ref S space)
+{
+    static get (ElementType!S element)
+    {
+        return mixin(q{element.}~(member));
+    }
+
+    return space.map!get;
+}
+///
+unittest {
+    struct T {int x = 5, y = 10;}
+
+    T[] ts = new T[10];
+
+    foreach (x; ts.extract!`x`)
+        assert (x == 5);
 }
