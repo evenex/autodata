@@ -1,7 +1,6 @@
 module autodata.morphism.zip;
 
 private {//import
-    import std.typecons: Tuple, tuple;
     import std.range.primitives: front, back, popFront, popBack, empty;
     import std.conv: text;
     import std.algorithm: equal;
@@ -9,8 +8,9 @@ private {//import
     import evx.infinity;
     import evx.meta;
     import autodata.morphism.iso;
-    import autodata.spaces.sequence.arithmetic: min, max; // REVIEW
+    import autodata.list.arithmetic: min, max;
     import autodata.traits;
+    import autodata.functor.tuple;
 }
 
 enum LengthPolicy {strict, trunc}
@@ -80,18 +80,21 @@ struct Zipped (LengthPolicy length_policy, Spaces...)
         not (Contains!(void, Map!(ElementType, Spaces)))
         && is (typeof(length.identity) : size_t)
     ) // HACK foreach tuple expansion causes compiler segfault on template range ops, opApply is workaround
-        int opApply (int delegate(Map!(ElementType, Spaces)) f)
+        int opApply (int delegate(Map!(Compose!(Flatten, ElementType), Spaces)) f)
         {
             int result = 0;
 
             for (auto i = 0; i < length; ++i)
-                {/*...}*/
-                    int expand ()() {return result = f(this[i].expand);}
-                    int closed ()() {return result = f(this[i]);}
+            {
+                int closed ()() {return result = f(this[i]);}
+                int expand ()() {return result = f(this[i].expand);}
+                int flat   ()() {return result = f(this[i].flatten.expand);}
 
-                    if (Match!(expand, closed))
-                        break;
-                }
+                alias applied = Match!(expand, closed, flat);
+
+                if (applied)
+                    break;
+            }
 
             return result;
         }
@@ -375,7 +378,7 @@ body {
 }
 ///
 unittest {
-    import autodata.spaces;
+    import autodata.list;
 
     alias T = Tuple!(size_t, size_t);
 

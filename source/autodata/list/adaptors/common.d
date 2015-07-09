@@ -1,4 +1,4 @@
-module autodata.spaces.sequence.adaptors.common;
+module autodata.list.adaptors.common;
 
 private {//import
 	import autodata.traits;

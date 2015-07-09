@@ -4,7 +4,7 @@ private {/*import}*/
 	import std.math;
 
 	import autodata.operators;
-	import autodata.spaces.sequence;
+	import autodata.list;
 	import autodata.morphism;
 	import autodata.traits;
 

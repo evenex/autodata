@@ -1,5 +1,8 @@
-module autodata.spaces.sequence.adaptors.policy;
+module autodata.list.adaptors.policy;
 
+/**
+    policy to determine how an adaptor reacts to appending past the capacity.
+*/
 enum OnOverflow {reallocate, discard, error}
 
 package template OverflowPolicy ()

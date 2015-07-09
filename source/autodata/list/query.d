@@ -1,4 +1,4 @@
-module autodata.spaces.sequence.query;
+module autodata.list.query;
 
 private {//imports
 	import std.range;
@@ -6,23 +6,23 @@ private {//imports
 	import std.conv;
 }
 
-/* check if a range contains a value 
+/** check if a range contains a value 
 */
 alias contains = std.algorithm.canFind;
 
-/* check if a value is contained in a range 
+/** check if a value is contained in a range 
 */
 alias contained_in = std.functional.reverseArgs!contains;
 
-/* check if any elements in a range meet a given criteria 
+/** check if any elements in a range meet a given criteria 
 */
 alias any = std.algorithm.any;
 
-/* check if all elements in a range meet a given criteria 
+/** check if all elements in a range meet a given criteria 
 */
 alias all = std.algorithm.all;
 
-/* explicitly count the number of elements in an input_range 
+/** explicitly count the number of elements in an input_range 
 */
 size_t count (alias criteria = _ => true, R)(R range)
 if (is_input_range!R)
@@ -35,11 +35,11 @@ if (is_input_range!R)
 	return count;
 }
 
-/* count the number of elements in an input_range until a given element is found 
+/** count the number of elements in an input_range until a given element is found 
 */
 alias count_until = std.algorithm.countUntil;
 
-/* slice a range before a mark 
+/** slice a range before a mark 
 */
 auto ref before (R,S)(R range, S mark)
 {
@@ -47,12 +47,16 @@ auto ref before (R,S)(R range, S mark)
 
 	return range[0..$-L];
 }
+/**
+    ditto
+*/
 auto ref before (alias condition, R)(R range)
 {
 	auto L = range.find!condition.length;
 
 	return range[0..$-L];
 }
+///
 unittest {
 	auto x = [1,2,3];
 
@@ -62,7 +66,7 @@ unittest {
 	assert (x.before (4) == x.before!(i => i == 4));
 }
 
-/* split a range before and including a mark 
+/** split a range before and including a mark 
 	if the mark is not found, 
 */
 auto ref up_to (R,S)(R range, S mark)
@@ -73,6 +77,9 @@ auto ref up_to (R,S)(R range, S mark)
 		return range[0..$-L+1];
 	else return range;
 }
+/**
+    ditto
+*/
 auto ref up_to (alias condition, R)(R range)
 {
 	auto L = range.find!condition.length;
@@ -81,6 +88,7 @@ auto ref up_to (alias condition, R)(R range)
 		return range[0..$-L+1];
 	else return range;
 }
+///
 unittest {
 	auto x = [1,2,3];
 
@@ -90,7 +98,7 @@ unittest {
 	assert (x.up_to (4) == x.up_to!(i => i == 4));
 }
 
-/* split a range after a mark 
+/** split a range after a mark 
 */
 auto ref after (R,S)(R range, S mark)
 {
@@ -100,6 +108,9 @@ auto ref after (R,S)(R range, S mark)
 		return range[$-L+1..$];
 	else return range[0..0];
 }
+/**
+    ditto
+*/
 auto ref after (alias condition, R)(R range)
 {
 	auto L = range.find!condition.length;
@@ -108,6 +119,7 @@ auto ref after (alias condition, R)(R range)
 		return range[$-L+1..$];
 	else return range[0..0];
 }
+///
 unittest {
 	auto x = [1,2,3];
 
@@ -117,7 +129,7 @@ unittest {
 	assert (x.after (4) == x.after!(i => i == 4));
 }
 
-/* slice a range including and after a mark 
+/** slice a range including and after a mark 
 */
 auto ref up_from (R,S)(R range, S mark)
 {
@@ -127,6 +139,9 @@ auto ref up_from (R,S)(R range, S mark)
 		return range[$-L..$];
 	else return range[0..0];
 }
+/**
+    ditto
+*/
 auto ref up_from (alias condition, R)(R range)
 {
 	auto L = range.find!condition.length;
@@ -135,6 +150,7 @@ auto ref up_from (alias condition, R)(R range)
 		return range[$-L..$];
 	else return range[0..0];
 }
+///
 unittest {
 	auto x = [1,2,3];
 
@@ -144,7 +160,7 @@ unittest {
 	assert (x.up_from (4) == x.up_from!(i => i == 4));
 }
 
-/* take a slice of a range that matches a given mark 
+/** take a slice of a range that matches a given mark 
 */
 auto ref containing (R,S)(R range, S mark)
 {

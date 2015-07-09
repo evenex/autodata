@@ -6,7 +6,7 @@ private {//import
 
 	import autodata.morphism;
 	import autodata.operators;
-	import autodata.spaces.sequence;
+	import autodata.list;
 	import autodata.traits;
 	import autodata.functor.tuple;
 

@@ -6,7 +6,7 @@ private {// imports
     import evx.infinity;
     import autodata.traits;
     import autodata.morphism;
-    import autodata.spaces.sequence;
+    import autodata.list;
     import autodata.spaces.embedded;
     import autodata.spaces.orthotope;
     import autodata.spaces.reindexed;

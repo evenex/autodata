@@ -9,24 +9,121 @@ private {//import
 	import autodata.traits;
 	import autodata.morphism;
 	import autodata.operators;
-	import autodata.spaces.sequence;
-	import autodata.spaces.only;
+	import autodata.list;
+	import autodata.spaces.orthotope;
 }
 
-/** pair each element in a range with its index.
+// REVIEW why are these coming through
+alias min = autodata.list.min;
+alias max = autodata.list.max;
 
-	foreach exploits the automatic tuple foreach index unpacking trick which is obscure and under controversy
+/** 
+    pair each element in a space with its index.
+
+	foreach exploits the automatic tuple foreach index unpacking trick which is obscure and under some controversy
 
 	<a href="https://issues.dlang.org/show_bug.cgi?id=7361">reference</a>
+*/
+auto index (S)(S space)
+{
+    auto space_limit (uint i)()
+    {
+        return space.limit!i;
+    }
+
+	return zip (
+        Map!(space_limit, Iota!(dimensionality!S)).orthotope,
+        space
+    );
+}
+///
+unittest {
+    auto s = [1,2,3,4].laminate (2,2).index;
+
+    assert (s[0,0] == tuple(tuple(0,0), 1));
+    assert (s[1,0] == tuple(tuple(1,0), 2));
+    assert (s[0,1] == tuple(tuple(0,1), 3));
+    assert (s[1,1] == tuple(tuple(1,1), 4));
+}
+
+/**
+    swap the two elements in a tuple indexed by i and j
+*/
+auto swap (uint i, uint j, T...)(Tuple!T args)
+{
+    enum a = min (i,j);
+    enum b = max (i,j);
+
+    return tuple (args[0..a], args[b], args[a+1..b], args[a], args[b+1..$]);
+}
+///
+unittest {
+    assert (swap!(0,5)(tuple(0,1,2,3,4,5)) == tuple(5,1,2,3,4,0));
+    assert (swap!(3,2)(tuple(0,1,2,3,4,5)) == tuple(0,1,3,2,4,5));
+}
+
+// REVIEW SOMEWHERE ELSE
+struct Transposed (uint x, uint y, S)
+{
+    S space;
+
+    enum a = min (x,y);
+    enum b = max (x,y);
+
+    enum dims = dimensionality!S;
+
+    alias CoordIndices = Swap!(a,b, Iota!dims);
+    alias Coords = Swap!(a,b, CoordinateType!S);
+
+    auto access (Coords coord)
+    {
+        return space[swap!(a,b)(coord.tuple).expand];
+    }
+
+    auto limit (uint i)() const
+    {
+        return space.limit!(CoordIndices[i]);
+    }
+
+    mixin AdaptorOps!(access, Map!(limit, Iota!dims), RangeExt);
+}
+/**
+    swap the positions of two dimensions in a space.
+
+    defaults to a typical 2D transposition
+*/
+auto transpose (uint x = 0, uint y = 1, S)(S space)
+{
+    return Transposed!(x,y,S)(space);
+}
+///
+unittest {
+    auto x = [
+        1,2,
+        3,4
+    ].laminate (2,2);
+
+    auto y = x.transpose;
+
+    assert (x[0..2, 0] == [1,2]);
+    assert (x[0..2, 1] == [3,4]);
+
+    assert (y[0..2, 0] == [1,3]);
+    assert (y[0..2, 1] == [2,4]);
+}
+
+// REVIEW SOMEWHERE ELSE
+/**
+    index, for 1D ranges
 */
 auto enumerate (R)(R range)
 if (is_input_range!R && has_length!R)
 {
-	return zip (Nat[0..range.length], range);
+    return index (range);
 }
 ///
 unittest {
-    auto xs = only (1,2,3,4);
+    auto xs = list (1,2,3,4);
 
     assert (not (__traits(compiles, (){  
         foreach (i, x; xs)
@@ -34,10 +131,12 @@ unittest {
     })));
 
     foreach (i, x; enumerate (xs))
-        assert (x);
+        assert (x + i);
 }
 
-/** lexicographic traversal
+// REVIEW TO RESHAPE
+/** 
+    lexicographic traversal
     over n-dimensional spaces indexed by integral types
 */
 struct Lexicographic (S)
@@ -117,17 +216,18 @@ auto lexicographic (S)(S space)
 alias lexi = lexicographic;
 ///
 unittest {
-	import autodata.spaces;
-
-	auto test = Array!(int, 2)(
-		[1,2,3].extrude (3)
-	);
+	auto test = [
+        1,2,3,
+        1,2,3,
+        1,2,3,
+    ].laminate (3,3);
 
 	assert (test.lexi == [1,2,3,1,2,3,1,2,3]);
 	assert (test.lexi[0] == test[0,0]);
 	assert (test.lexi[6] == test[2,0]);
 }
 
+// REVIEW TO RESHAPE
 /**
 	reshape a 1D range into an n-dimensional space by breaking it into rows of the given lengths
 */
@@ -139,7 +239,7 @@ struct Laminated (R, uint n)
 	auto ref access (typeof(lengths) coord)
 	{
 		return range[
-			zip (only (coord), only (1, lengths[0..$-1]))
+			zip (list (coord), list (1, lengths[0..$-1]))
 				.map!product.sum
 		];
 	}

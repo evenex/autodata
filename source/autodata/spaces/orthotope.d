@@ -79,6 +79,3 @@ if (not (is_interval!S))
 
 alias ortho = orthotope;
 
-//TEMP
-import autodata.morphism.zip;
-auto index_zip (S)(S space){return zip (space.orthotope, space);} // REVIEW name

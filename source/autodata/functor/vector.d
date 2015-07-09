@@ -4,37 +4,37 @@
 module autodata.functor.vector;
 
 private {/*import}*/
-	import std.conv: to, text;
-	import std.range.primitives: empty;
-	import std.algorithm: count_until = countUntil;
-	import std.range: join, ElementType;
-	import std.traits: CommonType;
-	import evx.meta;
-	import autodata.functor.tuple;
+    import std.conv: to, text;
+    import std.range.primitives: empty;
+    import std.algorithm: count_until = countUntil;
+    import std.range: join, ElementType;
+    import std.traits: CommonType;
+    import evx.meta;
+    import autodata.functor.tuple;
 }
 
 /** convenience constructors
 */
 template vector ()
 {
-	auto vector (T, uint n)(T[n] v)
+    auto vector (T, uint n)(T[n] v)
     {
         return Vector!(n,T)(v);
     }
-	auto vector (V)(V v)
+    auto vector (V)(V v)
     if (is (V : Vector!(n,T), T, size_t n))
     {
         return v;
     }
-	auto vector (V)(V v)
+    auto vector (V)(V v)
     if (is (typeof(v.tupleof) == T, T))
     {
         alias T = typeof(v.tupleof);
 
         return Vector!(T.length, CommonType!T)(v.tupleof);
     }
-	auto vector (T...)(T args)
-    {/*...}*/
+    auto vector (T...)(T args)
+    {
         return Vector!(T.length, CommonType!T)(args);
     }
 }
@@ -43,34 +43,34 @@ template vector ()
 */
 template vector (size_t n)
 {
-	auto vector (V)(V v) // REFACTOR FOR OVERLOAD ROUTING
-	{
-		static if (is (V : Vector!(n,T), T))
-		{
-			return v;
-		}
-		else static if (is (V : T[n], T))
-		{
-			return Vector!(n,T)(v);
-		}
-		else static if (not (is (ElementType!V == void)))
-		{
-			return Vector!(n, ElementType!V)(v);
-		}
-		else static if (is (typeof(v + v * v)))
-		{
-			return Vector!(n,V)(v);
-		}
-		else static if (is (typeof(v.tupleof) == T, T))
-		{
-			return Vector!(n, CommonType!T)(v.tupleof);
-		}
-		else static assert (0, `cannot construct vector from ` ~V.stringof);
-	}
-	auto vector (T...)(T args)
-	{
-		return Vector!(n, CommonType!T)(args);
-	}
+    auto vector (V)(V v) // REFACTOR FOR OVERLOAD ROUTING
+    {
+        static if (is (V : Vector!(n,T), T))
+        {
+            return v;
+        }
+        else static if (is (V : T[n], T))
+        {
+            return Vector!(n,T)(v);
+        }
+        else static if (not (is (ElementType!V == void)))
+        {
+            return Vector!(n, ElementType!V)(v);
+        }
+        else static if (is (typeof(v + v * v)))
+        {
+            return Vector!(n,V)(v);
+        }
+        else static if (is (typeof(v.tupleof) == T, T))
+        {
+            return Vector!(n, CommonType!T)(v.tupleof);
+        }
+        else static assert (0, `cannot construct vector from ` ~V.stringof);
+    }
+    auto vector (T...)(T args)
+    {
+        return Vector!(n, CommonType!T)(args);
+    }
 }
 ///
 unittest
@@ -107,12 +107,12 @@ unittest
 */
 auto fmap (alias f, size_t n, T, Args...)(Vector!(n,T) v, Args args)
 {
-	Vector!(n, typeof(f (v[0], args))) mapped;
+    Vector!(n, typeof(f (v[0], args))) mapped;
 
-	foreach (i; Iota!n)
-		mapped[i] = f(v[i], args);
+    foreach (i; Iota!n)
+        mapped[i] = f(v[i], args);
 
-	return mapped;
+    return mapped;
 }
 ///
 unittest 
@@ -139,11 +139,14 @@ unittest
 */
 struct Vector (size_t n, Component)
 {
-	enum length = n;
+    /**
+        the length of the vector
+    */
+    enum length = n;
 
-	Unqual!Component[n] components;
-	alias components this;
-	@disable Component front ();
+    Unqual!Component[n] components;
+    alias components this;
+    @disable Component front ();
 
     /**
         arithmetic operators are lifted to work elementwise,
@@ -159,75 +162,75 @@ struct Vector (size_t n, Component)
     /**
        ditto 
     */
-	auto opUnary (string op)()
-	{
-		static if (op.length == 1)
-		{
-			static if (op == `+`)
-				return this;
-			else {
-				Vector ret;
+    auto opUnary (string op)()
+    {
+        static if (op.length == 1)
+        {
+            static if (op == `+`)
+                return this;
+            else {
+                Vector ret;
 
-				mixin(q{
-					ret.components[] = } ~op~ q{ this.components[];
-			});
+                mixin(q{
+                    ret.components[] = } ~op~ q{ this.components[];
+            });
 
-				return ret;
-			}
-		}
-		else static if (op.length == 2)
-		{
-			mixin(q{
-				} ~op~ q{ this.components[];
-			});
+                return ret;
+            }
+        }
+        else static if (op.length == 2)
+        {
+            mixin(q{
+                } ~op~ q{ this.components[];
+            });
 
-			return this;
-		}
-		else static assert (0);
-	}
+            return this;
+        }
+        else static assert (0);
+    }
     /**
        ditto 
     */
-	auto opBinary (string op, V)(V v)
-	if (Contains!(op, arithmetic_ops))
-	{
-		auto lhs = this;
-		auto rhs = v.vector!n;
+    auto opBinary (string op, V)(V v)
+    if (Contains!(op, arithmetic_ops))
+    {
+        auto lhs = this;
+        auto rhs = v.vector!n;
 
-		alias T = typeof(mixin(q{lhs[0] } ~op~ q{ rhs[0]}));
-		Vector!(n,T) ret;
+        alias T = typeof(mixin(q{lhs[0] } ~op~ q{ rhs[0]}));
+        Vector!(n,T) ret;
 
-		foreach (i; Iota!n)
-			mixin(q{
-				ret[i] = lhs[i] } ~op~ q{ rhs[i];
-			});
+        foreach (i; Iota!n)
+            mixin(q{
+                ret[i] = lhs[i] } ~op~ q{ rhs[i];
+            });
 
-		return ret;
-	}
+        return ret;
+    }
     /**
        ditto 
     */
-	auto opBinaryRight (string op, V)(V v)
-	if (Contains!(op, arithmetic_ops))
-	{
-		auto lhs = v.vector!n;
-		auto rhs = this;
+    auto opBinaryRight (string op, V)(V v)
+    if (Contains!(op, arithmetic_ops))
+    {
+        auto lhs = v.vector!n;
+        auto rhs = this;
 
-		mixin(q{
-			return lhs } ~op~ q{ rhs;
-		});
-	}
+        mixin(q{
+            return lhs } ~op~ q{ rhs;
+        });
+    }
     /**
        ditto 
     */
-	auto ref opOpAssign (string op, V)(V v)
-	{
-		mixin(q{
-			this = this } ~op~ q{ v;
-		});
+    auto ref opOpAssign (string op, V)(V v)
+    {
+        mixin(q{
+            this = this } ~op~ q{ v;
+        });
 
-		return this;
-	}
+        return this;
+    }
     ///
     unittest {
         // compile-time ops
@@ -314,41 +317,41 @@ struct Vector (size_t n, Component)
     /**
         ditto
     */
-	auto ref swizzle (string elements)()
-	{
-		alias Sets = SwizzleSets;
-		
-		static code (string set)()
-		{
-			string[] code;
+    auto ref swizzle (string elements)()
+    {
+        alias Sets = SwizzleSets;
+        
+        static code (string set)()
+        {
+            string[] code;
 
-			foreach (component; elements)
-				if (set.count_until (component) >= 0)
-					code ~= q{components[} ~ set.count_until (component).text ~ q{]};
-				else return ``;
+            foreach (component; elements)
+                if (set.count_until (component) >= 0)
+                    code ~= q{components[} ~ set.count_until (component).text ~ q{]};
+                else return ``;
 
-			auto indices = code.join (`, `).text;
+            auto indices = code.join (`, `).text;
 
-			static if (elements.length == 1)
-				return q{
-					return } ~ indices ~ q{;
-				};
-			else return q{
-				return vector (} ~ indices ~ q{);
-			}; 
-		}
+            static if (elements.length == 1)
+                return q{
+                    return } ~ indices ~ q{;
+                };
+            else return q{
+                return vector (} ~ indices ~ q{);
+            }; 
+        }
 
-		foreach (i, set; Sets)
-			static if (code!set.empty)
-				continue;
-			else mixin(code!set);
+        foreach (i, set; Sets)
+            static if (code!set.empty)
+                continue;
+            else mixin(code!set);
 
-		enum swizzle_from (string set) = code!set.not!empty;
+        enum swizzle_from (string set) = code!set.not!empty;
 
-		static assert (Any!(swizzle_from, Sets), `no property ` ~elements~ ` for ` ~typeof(this).stringof);
+        static assert (Any!(swizzle_from, Sets), `no property ` ~elements~ ` for ` ~typeof(this).stringof);
 
-		assert (0);
-	}
+        assert (0);
+    }
     /**
         ditto
     */
@@ -377,37 +380,37 @@ struct Vector (size_t n, Component)
 
     /**
     */
-	this (Repeat!(n, Component) args)
-	{
-		foreach (i; Iota!n)
-			components[i] = args[i];
-	}
+    this (Repeat!(n, Component) args)
+    {
+        foreach (i; Iota!n)
+            components[i] = args[i];
+    }
     /**
         ditto
     */
-	this (Component component)
-	{
-		foreach (i; Iota!n)
-			components[i] = component;
-	}
+    this (Component component)
+    {
+        foreach (i; Iota!n)
+            components[i] = component;
+    }
     /**
         ditto
     */
-	this (Component[n] components)
-	{
-		this.components = components;
-	}
+    this (Component[n] components)
+    {
+        this.components = components;
+    }
     /**
         ditto
     */
-	this (R)(R range)
-	in {
-		assert (range.length == n);
-	}
-	body {
-		foreach (i; Iota!n)
-			components[i] = range[i];
-	}
+    this (R)(R range)
+    in {
+        assert (range.length == n);
+    }
+    body {
+        foreach (i; Iota!n)
+            components[i] = range[i];
+    }
     ///
     unittest {
         enum a = Cons!(1,2,3,4);
@@ -429,15 +432,15 @@ struct Vector (size_t n, Component)
     /**
         converts the vector into a binary-compatible tuple
     */
-	auto tuple ()
-	{
+    auto tuple ()
+    {
         auto component (uint i)()
         {
             return components[i];
         }
 
-		return Map!(component, Iota!n).tuple;
-	}
+        return Map!(component, Iota!n).tuple;
+    }
     ///
     unittest {
         // compile-time tuple interop

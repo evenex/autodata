@@ -8,7 +8,7 @@ private { // import
     import autodata.traits;
     import autodata.operators;
     import autodata.functor.tuple;
-    import autodata.spaces.sequence;
+    import autodata.list;
     import autodata.spaces.orthotope;
     import autodata.functor.vector;
 }

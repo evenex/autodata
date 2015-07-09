@@ -1,14 +1,17 @@
-module autodata.spaces.sequence.adaptors.stack;
+module autodata.list.adaptors.stack;
 
 private {//imports
 	import std.conv: text;
 	import autodata.traits;
 	import autodata.operators;
-	import autodata.spaces.sequence.adaptors.policy;
-	import autodata.spaces.sequence.adaptors.common;
+	import autodata.list.adaptors.policy;
+	import autodata.list.adaptors.common;
 	import evx.interval;
 }
 
+/**
+    appendable stack wrapper for a list which supports element assignment
+*/
 struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 {
 	R store;
@@ -17,20 +20,32 @@ struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 	mixin AdaptorCapacity;
 	mixin AdaptorCtor;
 
+    /**
+        gives the length of the queue (as opposed to the length of the backing store)
+    */
 	auto length () const
 	{
 		return _length;
 	}
 
+    /**
+        provides index assignment operators
+    */
 	auto ref access (size_t i)
 	{
 		return store[i];
 	}
 
+    /**
+        provides slice assignment operators
+    */
 	void pull (R)(R range, size_t i)
 	{
 		pull (range, i, i+1);
 	}
+    /**
+        ditto
+    */
 	void pull (R)(R range, Interval!size_t interval)
 	{
 		auto i = interval.left, j = interval.right;
@@ -41,8 +56,10 @@ struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 		Match!(pulled, iterated);
 	}
 
-	/* push */
-	auto ref opOpAssign (string op : `~`, S)(S range)
+    /**
+        push appends a single element or all the elements in a given range to the top of the stack
+    */
+	auto ref push (S)(S range)
 	if (not (is (S : ElementType!R)))
 	{
 		if (exit_on_overflow (range.length))
@@ -54,7 +71,10 @@ struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 
 		return this;
 	}
-	auto ref opOpAssign (string op : `~`, T)(T element)
+    /**
+        ditto
+    */
+	auto ref push (T)(T element)
 	if (is (T : ElementType!R))
 	{
 		if (exit_on_overflow (1))
@@ -67,8 +87,10 @@ struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 		return this;
 	}
 
-	/* pop */
-	auto ref opOpAssign (string op : `-`)(size_t count)
+    /**
+        pop removes count elements from the top of the stack, or 1 element if no count is given
+    */
+	auto ref pop (size_t count)
 	in {
 		assert (count <= length,
 			`attempted to pop ` ~ count.text ~ ` from ` ~ Stack.stringof ~ ` of length ` ~ length.text
@@ -79,12 +101,30 @@ struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 
 		return this;
 	}
-	auto ref opUnary (string op : `--`)()
+    /**
+        ditto
+    */
+	auto ref pop ()
 	{
 		return this -= 1;
 	}
 
-	/* clear */
+    /**
+        aliased to push
+    */
+	alias opOpAssign (string op : `~`) = push;
+    /**
+        aliased to pop
+    */
+    alias opOpAssign (string op : `-`) = pop;
+    /**
+        ditto
+    */
+	alias opUnary (string op : `--`) = pop;
+
+    /**
+        sets the length of the queue to 0
+    */
 	auto clear ()
 	{
 		_length = 0;
@@ -95,6 +135,7 @@ struct Stack (R, OnOverflow overflow_policy = OnOverflow.error)
 	private mixin OverflowPolicy;
 	private size_t _length;
 }
+///
 unittest {
 	auto A = Stack!(int[])();
 

@@ -4,7 +4,7 @@ private {/*import}*/
 	import std.conv: to;
 	import std.range.primitives: front, back, popFront, popBack, empty;
 	import autodata.operators;
-	import autodata.spaces.sequence;
+	import autodata.list;
 	import autodata.traits;
 	import autodata.functor.tuple;
 	import evx.meta;
@@ -75,7 +75,7 @@ body {
 }
 unittest {
 	import autodata.morphism;
-	import autodata.spaces.sequence;
+	import autodata.list;
 	import autodata.spaces.product;
 
 	assert ([1,2,3,4,5,6,7,8,9].stride (3) == [1,4,7]);
