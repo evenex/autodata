@@ -13,7 +13,8 @@ private {/*import}*/
     import autodata.functor.tuple;
 }
 
-/** convenience constructors
+/** 
+    convenience constructors
 */
 template vector ()
 {
@@ -100,7 +101,8 @@ unittest {
     assert (z == y);
 }
 
-/** functor map for vectors
+/** 
+    functor map for vectors
     Returns:
         a new vector with f applied componentwise with optional curried arguments
 */
@@ -133,7 +135,8 @@ unittest {
     static assert (is (typeof(u.fmap!(to!double)) == Vector!(4, double)));
 }
 
-/** generic vector type
+/**
+    generic vector type
 */
 struct Vector (size_t n, Component)
 {
@@ -331,18 +334,15 @@ struct Vector (size_t n, Component)
             auto indices = code.join (`, `).text;
 
             static if (elements.length == 1)
-                return q{
-                    return } ~ indices ~ q{;
-                };
-            else return q{
-                return vector (} ~ indices ~ q{);
-            }; 
+                return indices;
+            else 
+                return q{vector (}~(indices)~q{)}; 
         }
 
         foreach (i, set; Sets)
             static if (code!set.empty)
                 continue;
-            else mixin(code!set);
+            else return mixin(code!set);
 
         enum swizzle_from (string set) = code!set.not!empty;
 
