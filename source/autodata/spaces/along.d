@@ -59,7 +59,7 @@ auto along (uint[] axes, S)(S space)
 ///
 unittest {
     import autodata.spaces.product;
-    import autodata.morphism;
+    import autodata.transform;
 
     auto x = Nat[8..12].map!(x => 2*x)
         .by (Nat[10..13].map!(x => x/2));

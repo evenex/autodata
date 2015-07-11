@@ -7,7 +7,7 @@ private {//import
 	import evx.interval;
 
 	import autodata.traits;
-	import autodata.morphism;
+	import autodata.transform;
 	import autodata.operators;
 	import autodata.list;
 	import autodata.spaces.orthotope;

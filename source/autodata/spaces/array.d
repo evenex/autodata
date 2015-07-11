@@ -4,7 +4,7 @@ private {//import
 	import std.range.primitives: front, back, popFront, popBack, empty;
 	import std.conv: to;
 
-	import autodata.morphism;
+	import autodata.transform;
 	import autodata.operators;
 	import autodata.list;
 	import autodata.traits;

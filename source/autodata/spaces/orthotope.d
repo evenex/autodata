@@ -89,7 +89,7 @@ if (All!(is_interval, Intervals))
 }
 ///
 unittest {
-	import autodata.morphism;
+	import autodata.transform;
 
 	assert (
 		ortho (interval (3.9, 10.9), interval (10, 14))[5.6, ~$..$]

@@ -1,7 +1,7 @@
 /**
     provides higher-order functions which consume a list
 */
-module autodata.morphism.cata;
+module autodata.transform.cata;
 
 private {//
 	import std.typecons: Tuple, tuple;

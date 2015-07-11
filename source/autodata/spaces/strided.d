@@ -77,7 +77,7 @@ body {
 }
 ///
 unittest {
-	import autodata.morphism;
+	import autodata.transform;
 	import autodata.list;
 	import autodata.spaces.product;
 

@@ -1,7 +1,7 @@
 module autodata.spaces.product;
 
 private {/*import}*/
-	import autodata.morphism;
+	import autodata.transform;
 	import autodata.operators;
 	import autodata.traits;
 	import autodata.functor.tuple;
@@ -62,7 +62,7 @@ auto product_space (S,R...)(S left, R right)
 }
 ///
 unittest {
-	import autodata.morphism; 
+	import autodata.transform; 
 
 	int[3] x = [1,2,3];
 	int[3] y = [4,5,6];

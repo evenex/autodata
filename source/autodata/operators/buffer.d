@@ -112,7 +112,7 @@ template BufferOps (alias allocate, alias pull, alias access, LimitsAndExtension
 ///
 unittest {
 	import autodata.operators;
-	import autodata.morphism;
+	import autodata.transform;
 	import evx.interval;
 	import evx.meta;
 

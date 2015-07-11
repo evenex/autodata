@@ -1,4 +1,4 @@
-module autodata.morphism.zip;
+module autodata.transform.zip;
 
 private {//import
     import std.range.primitives: front, back, popFront, popBack, empty;
@@ -7,7 +7,7 @@ private {//import
     import evx.interval;
     import evx.infinity;
     import evx.meta;
-    import autodata.morphism.iso;
+    import autodata.transform.iso;
     import autodata.list.arithmetic: min, max;
     import autodata.traits;
     import autodata.functor.tuple;

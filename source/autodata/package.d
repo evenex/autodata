@@ -1,7 +1,7 @@
 module autodata;
 
 public:
-import autodata.morphism;
+import autodata.transform;
 import autodata.functor;
 import autodata.operators;
 import autodata.spaces;

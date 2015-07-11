@@ -5,7 +5,7 @@ private {// imports
     import evx.meta;
     import evx.infinity;
     import autodata.traits;
-    import autodata.morphism;
+    import autodata.transform;
     import autodata.list;
     import autodata.spaces.embedded;
     import autodata.spaces.orthotope;

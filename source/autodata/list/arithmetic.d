@@ -7,7 +7,7 @@ module autodata.list.arithmetic;
 private {//import
 	import std.range.primitives: front, back, popFront, popBack, empty;
 
-	import autodata.morphism;
+	import autodata.transform;
 	import autodata.traits;
 
 	import evx.meta;

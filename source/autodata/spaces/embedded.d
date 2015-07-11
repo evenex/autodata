@@ -55,7 +55,7 @@ auto embedded_in (Inner, Outer)(Inner inner, Outer outer)
 }
 ///
 unittest {
-	import autodata.morphism;
+	import autodata.transform;
 
 	auto x = ortho (interval (-1f, 1f), interval (-1f, 1f))
 		.embed (

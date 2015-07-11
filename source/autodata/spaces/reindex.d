@@ -4,7 +4,7 @@ private { // import
     import std.conv;
     import evx.meta;
     import evx.interval;
-    import autodata.morphism;
+    import autodata.transform;
     import autodata.traits;
     import autodata.operators;
     import autodata.functor.tuple;

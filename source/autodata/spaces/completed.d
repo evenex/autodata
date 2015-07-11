@@ -6,7 +6,7 @@ private {//imports
 	import autodata.functor.maybe;
 	import autodata.traits;
 	import autodata.operators;
-	import autodata.morphism;
+	import autodata.transform;
 	import std.range.primitives: front, back;
 	import std.algorithm: max, min;
 	import std.traits: KeyType, ValueType;

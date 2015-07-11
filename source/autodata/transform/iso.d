@@ -1,7 +1,7 @@
 /**
     provides higher order functions which produce a space or range which is structurally isomorphic to the original
 */
-module autodata.morphism.iso;
+module autodata.transform.iso;
 
 private {//import
 	import std.range.primitives: front, back, popFront, popBack, empty;
