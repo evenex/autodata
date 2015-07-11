@@ -13,7 +13,8 @@ private {//import
 	import evx.meta;
 }
 
-/** get the product of a sequence 
+/**
+    get the product of a sequence 
 */
 auto product (R)(R range)
 if (is_input_range!R)
@@ -42,7 +43,8 @@ unittest {
 	assert (product (1,2,3,4) == 24);
 }
 
-/** get the sum of a sequence 
+/** 
+    get the sum of a sequence 
 */
 auto sum (R)(R range)
 if (is_input_range!R)
@@ -67,7 +69,8 @@ unittest {
 	assert (sum (1,2,3,4) == 10);
 }
 
-/** get the arithmetic mean of a sequence
+/** 
+    get the arithmetic mean of a sequence
 */
 auto mean (R)(R range)
 if (is_input_range!R && has_length!R)
@@ -89,7 +92,8 @@ unittest {
 	assert (mean (1,2,3,4f) == 2.5);
 }
 
-/** get the first-order difference of elements in a range
+/** 
+    get the first-order difference of elements in a range
 */
 auto diff (R)(R range)
 {
@@ -102,16 +106,56 @@ unittest {
 	assert (diff (diff ([1,2,3,4])) == [0,0]);
 }
 
-private enum OptimizedSide {min, max}
-
 /**
 	get the min and max of a range or a set of parameters
 */
-alias min = optimum!(OptimizedSide.min);
+auto min (T...)(T args)
+if (not (Any!(is_input_range, T)))
+{
+    static if (T.length == 0)
+    {}
+    else static if (T.length == 1)
+        return args[0];
+    else
+        return min (
+            args[0] < args[1]?
+                args[0] : args[1],
+            args[2..$]
+        );
+}
 /**
     ditto
 */
-alias max = optimum!(OptimizedSide.max);
+auto min (R)(R range)
+if (is_input_range!R)
+{
+    return range.reduce!(min!(Repeat!(2, ElementType!R)));
+}
+/**
+    ditto
+*/
+auto max (T...)(T args)
+if (not (Any!(is_input_range, T)))
+{
+    static if (T.length == 0)
+    {}
+    else static if (T.length == 1)
+        return args[0];
+    else
+        return max (
+            args[0] > args[1]?
+                args[0] : args[1],
+            args[2..$]
+        );
+}
+/**
+    ditto
+*/
+auto max (R)(R range)
+if (is_input_range!R)
+{
+    return range.reduce!(max!(Repeat!(2, ElementType!R)));
+}
 ///
 unittest {
     alias items = Cons!(4,2,6,7,1,2);
@@ -120,31 +164,6 @@ unittest {
     assert (items.max == 7);
     assert ([items].min == 1);
     assert ([items].max == 7);
-}
-
-template optimum (OptimizedSide side)
-{
-	auto optimum (T...)(T args)
-    if (not (Any!(is_input_range, T)))
-	{
-		enum choice = side == OptimizedSide.min? 1 : 0;
-
-		static if (T.length == 1)
-			return args[0];
-		else
-			return optimum (
-				args[0] > args[1]?
-					args[choice] 
-					: args[(choice + 1)%2]
-				, args[2..$]
-			);
-	}
-
-	auto optimum (R)(R range)
-    if (is_input_range!R)
-	{
-        return range.reduce!(optimum!(Repeat!(2, ElementType!R)));
-	}
 }
 
 private {//impl

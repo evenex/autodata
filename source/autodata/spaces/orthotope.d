@@ -49,12 +49,45 @@ struct Orthotope (Intervals...)
 
 	mixin InOperator;
 	mixin AdaptorOps!(access, Map!(limit, Ordinal!Intervals), RangeExt, InOperator);
+
+    static if (Intervals.length == 1)
+    {
+        auto front ()()
+        {
+            return tuple(bounds[0].left);
+        }
+        auto popFront ()()
+        {
+            ++bounds[0].left;
+        }
+        auto empty ()()
+        {
+            return bounds[0].width == typeof(bounds[0]).Left(0);
+        }
+        auto length ()() const
+        {
+            return limit!0.width;
+        }
+    }
 }
+
+/**
+    construct a space whose limits are given by the supplied intervals.
+
+    the elements of the space are tuples of the coordinates used to access them.
+    
+    in other words, indexing is an identity function.
+
+    they can be useful to form the base of a more complex space,
+
+    and for bounds checking.
+*/
 auto orthotope (Intervals...)(Intervals intervals)
 if (All!(is_interval, Intervals))
 {
 	return Orthotope!Intervals (intervals);
 }
+///
 unittest {
 	import autodata.morphism;
 
@@ -63,12 +96,11 @@ unittest {
 			.map!(x => [x.expand])
 		== [[5.6, 10], [5.6, 11], [5.6, 12], [5.6, 13]]
 	);
-
-	assert (0 in ortho (interval (0,11)));
-	assert (10 in ortho (interval (0,11)));
-	assert (11 !in ortho (interval (0,11)));
-	assert (-1 !in ortho (interval (0,11)));
 }
+
+/**
+    construct an orthotope with the same limits as a given space
+*/
 auto orthotope (S)(S space)
 if (not (is_interval!S))
 {
@@ -76,6 +108,19 @@ if (not (is_interval!S))
 
 	return orthotope (Map!(lim, Iota!(dimensionality!S)));
 }
+///
+unittest {
+    /*
+        orthotopes can be queried for containing a given set of coordinates.
 
+        this can be convenient for bounds checking.
+    */
+	assert (0 in ortho (interval (0,11)));
+	assert (10 in ortho (interval (0,11)));
+	assert (11 !in ortho (interval (0,11)));
+	assert (-1 !in ortho (interval (0,11)));
+}
+
+/**
+*/
 alias ortho = orthotope;
-

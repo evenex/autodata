@@ -333,11 +333,11 @@ struct Sub (Source, Axes...)
 			Source source;
 		}
 		public {//bounds
-			Lens!(q{Interval}, 
+			Extract!(q{Interval}, 
 				SortBy!(λ!q{(T,U) = T.index < U.index},
 					Cons!(
 						FreeAxes,
-						Filter!(λ!q{(Axis) = not (Contains!(Axis.index, Lens!(q{index}, FreeAxes)))},
+						Filter!(λ!q{(Axis) = not (Contains!(Axis.index, Extract!(q{index}, FreeAxes)))},
 							Map!(Axis,
 								Enumerate!(Domain!(typeof(source.opIndex)))
 							),
@@ -402,7 +402,7 @@ struct Sub (Source, Axes...)
 						All!(is_implicitly_convertible,
 							Zip!(
 								Pack!(Map!(Error.Element, Selected)),
-								Pack!(Map!(Error.Element, Lens!(q{Interval}, FreeAxes)))
+								Pack!(Map!(Error.Element, Extract!(q{Interval}, FreeAxes)))
 							)
 						), Error.type_mismatch
 					);
@@ -423,7 +423,7 @@ struct Sub (Source, Axes...)
 
 				auto selection (uint i)()
 				{
-					enum j = IndexOf!(i, Lens!(q{index}, FreeAxes));
+					enum j = IndexOf!(i, Extract!(q{index}, FreeAxes));
 
 					auto inf_check (T)(T value)
 					{

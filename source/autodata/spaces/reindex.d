@@ -11,8 +11,14 @@ private { // import
     import autodata.list;
     import autodata.spaces.orthotope;
     import autodata.functor.vector;
+
+    // REVIEW where is std.range coming through?
+    alias ElementType = autodata.traits.ElementType;
 }
 
+/**
+    use the elements of inner_space to access elements in outer_space
+*/
 auto index_into (R,S)(R inner_space, S outer_space)
 {
     static reindex (ElementType!R index, S into)
@@ -24,6 +30,15 @@ auto index_into (R,S)(R inner_space, S outer_space)
     }
 
     return inner_space.map!reindex (outer_space);
+}
+///
+unittest {
+    auto x = [9,8,7,6,  5,4,3,2,  1,0];
+
+    auto y = ortho (interval (4,8))
+        .index_into (x);
+
+    assert (y == [5,4,3,2]);
 }
 
 struct IndexCast (S,T...)
@@ -52,6 +67,9 @@ struct IndexCast (S,T...)
 
     mixin AdaptorOps!(access, Map!(limit, Iota!(dimensionality!S)), RangeExt);
 }
+/**
+    cast the coordinate type of a space to the given types, or all to the same type if only one type argument is given
+*/
 template cast_index_to (T...)
 {
     auto cast_index_to (S)(S space)
@@ -60,7 +78,11 @@ template cast_index_to (T...)
     }
 }
 
+/**
+    moves the origin of a space so that the 0 point has an equal measure of elements in each direction
+*/
 auto center_origin (S)(S space)
+if (dimensionality!S > 1)
 {
     auto width (uint i)()
     {
@@ -76,4 +98,23 @@ auto center_origin (S)(S space)
         .map!vector
         .map!sum (Map!(width, dims).vector)
         .index_into (space);
+}
+/**
+    ditto
+*/
+auto center_origin (R)(R range)
+if (dimensionality!R == 1)
+{
+    auto limit = range.limit!0;
+
+    return (limit - limit.width/2)
+        .fmap!signed.orthotope
+        .map!sum (limit.width/2)
+        .index_into (range);
+}
+///
+unittest {
+    auto r = [1,2,3,4,5,6,7,8];
+
+    assert (r.center_origin[-4..4] == r[0..8]);
 }

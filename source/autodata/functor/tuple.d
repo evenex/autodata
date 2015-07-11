@@ -43,6 +43,31 @@ unittest {
     assert (y.fmap!(to!int) == tuple(55,55));
 }
 
+/**
+    map a tuple of functions over a tuple
+*/
+template fprod (funcs...)
+{
+    auto fprod (T...)(T values)
+    if (T.length > 1 && not (is (T[0] == Tuple!U, U...)))
+    {
+        return fprod (values.tuple);
+    }
+    auto fprod (T...)(Tuple!T tuple)
+    {
+        auto apply (uint i)()
+        {
+            return funcs[i](tuple[i]);
+        }
+
+        return Map!(apply, Ordinal!T).tuple;
+    }
+}
+///
+unittest {
+    static assert (tuple(1,1,1).fprod!(x => x, y => 2*y, z => 3*z) == tuple(1,2,3));
+}
+
 template Flatten (T...)
 {
 	static if (is (T[0] == Tuple!U, U...))
@@ -73,4 +98,22 @@ unittest {
     assert (x.flatten == y.flatten);
     assert (x.flatten == z.flatten);
     assert (y.flatten == z.flatten);
+}
+
+/**
+    swap the two elements in a tuple indexed by i and j
+*/
+auto swap (uint i, uint j, T...)(Tuple!T args)
+{
+    import std.algorithm: min, max;
+
+    enum a = min (i,j);
+    enum b = max (i,j);
+
+    return tuple (args[0..a], args[b], args[a+1..b], args[a], args[b+1..$]);
+}
+///
+unittest {
+    assert (swap!(0,5)(tuple(0,1,2,3,4,5)) == tuple(5,1,2,3,4,0));
+    assert (swap!(3,2)(tuple(0,1,2,3,4,5)) == tuple(0,1,3,2,4,5));
 }

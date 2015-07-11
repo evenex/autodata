@@ -1,6 +1,6 @@
 module autodata.spaces.embedded;
 
-private { // imports
+private {// imports
 	import autodata.traits;
 	import autodata.operators;
 	import autodata.spaces.orthotope;
@@ -9,7 +9,6 @@ private { // imports
 	import std.traits : CommonType;
 }
 
-// TODO doc
 struct Embedded (Outer, Inner)
 {
 	Outer outer;
@@ -28,6 +27,12 @@ struct Embedded (Outer, Inner)
 
 	mixin AdaptorOps!(access, Map!(limit, Iota!(dimensionality!Outer)));
 }
+/**
+    overlay inner space over outer space.
+
+    indexing the space within the bounds of the inner space will access the inner space,
+    otherwise the outer will be accessed
+*/
 auto embed (Outer, Inner)(Outer outer, Inner inner)
 {
 	foreach (i; Iota!(dimensionality!Outer))
@@ -41,10 +46,14 @@ auto embed (Outer, Inner)(Outer outer, Inner inner)
 	
 	return Embedded!(Outer, Inner)(outer, inner);
 }
+/**
+    ditto
+*/
 auto embedded_in (Inner, Outer)(Inner inner, Outer outer)
 {
 	return outer.embed (inner);
 }
+///
 unittest {
 	import autodata.morphism;
 

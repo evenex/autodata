@@ -11,8 +11,6 @@ private {/*import}*/
 	import evx.interval;
 }
 
-/* reindex a space to skip over a fixed width in the given dimensions
-*/
 struct Stride (S, uint[] strided_dims, Widths...)
 {
 	S space;
@@ -60,6 +58,10 @@ struct Stride (S, uint[] strided_dims, Widths...)
 		mixin RangeOps!(space, length, widths);
 	}
 }
+
+/**
+    reindex a space to skip over a fixed width in the given dimensions
+*/
 auto stride (uint[] strided_dims = [], S, Widths...)(S space, Widths widths)
 in {
 	static assert (Widths.length == strided_dims.length || strided_dims.length == 0, 
@@ -73,6 +75,7 @@ body {
 
 	return Stride!(S, d, Widths)(space, widths);
 }
+///
 unittest {
 	import autodata.morphism;
 	import autodata.list;

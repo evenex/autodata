@@ -15,7 +15,8 @@ private {//import
 
 enum LengthPolicy {strict, trunc}
 
-/** join several spaces together transverse-wise, 
+/** 
+    join several spaces together transverse-wise, 
     into a space of tuples of the elements of the original spaces 
 */
 struct Zipped (LengthPolicy length_policy, Spaces...)
@@ -79,6 +80,7 @@ struct Zipped (LengthPolicy length_policy, Spaces...)
     static if (
         not (Contains!(void, Map!(ElementType, Spaces)))
         && is (typeof(length.identity) : size_t)
+        && All!(λ!q{(uint i) = i == 1}, Map!(dimensionality, Spaces))
     ) // HACK foreach tuple expansion causes compiler segfault on template range ops, opApply is workaround
         int opApply (int delegate(Map!(Compose!(Flatten, ElementType), Spaces)) f)
         {
@@ -141,22 +143,7 @@ struct Zipped (LengthPolicy length_policy, Spaces...)
     }
     auto length ()() const
     {
-        template get_length (uint i)
-        {
-            auto get_length ()()
-            {
-                return spaces[i].length;
-            }
-        }
-
-        alias lengths = Map!(get_length, Ordinal!Spaces);
-
-        auto trunc ()() if (length_policy == LengthPolicy.trunc) 
-            {return min (MatchAll!lengths);}
-        auto strict ()() if (length_policy == LengthPolicy.strict) 
-            {return Match!lengths;}
-
-        return Match!(trunc, strict);
+        return limit!0.width;
     }
     auto limit (uint i)() const
     {
@@ -198,8 +185,6 @@ struct Zipped (LengthPolicy length_policy, Spaces...)
             auto infinite ()()
                 {return interval (-infinity!(ExprType!(left!0)), infinity!(ExprType!(right!0)));}
 
-                r_inf;
-
             return Match!(finite, infinite, r_inf, l_inf);
         }
         else static if (length_policy == LengthPolicy.strict)
@@ -223,7 +208,8 @@ struct Zipped (LengthPolicy length_policy, Spaces...)
     }
 }
 
-/** zip, assuming all of the spaces have equal limits
+/** 
+    zip, assuming all of the spaces have equal limits
 */
 auto zip_strict (Spaces...)(Spaces spaces)
 in {
@@ -359,7 +345,8 @@ unittest {
     }
 }
 
-/** zip, taking the limit of the intersection of the zipped spaces
+/** 
+    zip, taking the limit of the intersection of the zipped spaces
 */
 auto zip_trunc (Spaces...)(Spaces spaces)
 in {
@@ -401,11 +388,13 @@ unittest {
     assert (z3[] == zip (a,a));
 }
 
-/** default zip
+/** 
+    default zip
 */
 alias zip = zip_strict;
 
-/** split a space of tuples into a tuple of spaces 
+/** 
+    split a space of tuples into a tuple of spaces 
 */
 auto unzip (T...)(Zipped!T zipped)
 {

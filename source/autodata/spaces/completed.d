@@ -12,7 +12,7 @@ private {//imports
 	import std.traits: KeyType, ValueType;
 }
 
-auto minimal_increment (T)(T value)
+auto minimal_increment (T)(T value) // REFACTOR
 {
 	import std.math;
 
@@ -23,9 +23,6 @@ auto minimal_increment (T)(T value)
 	return Match!(float_up, func_float_up, int_up);
 }
 
-/*
-	turns a sparse space of T into a dense space of Maybe!T
-*/
 struct Completed (Space)
 {
 	Space space;
@@ -48,13 +45,15 @@ struct Completed (Space)
 
 	mixin SliceOps!(access, limit!0, RangeExt);
 }
-
+/**
+	turns a sparse space of T into a dense space of Maybe!T
+*/
 auto complete (S)(S space)
 {
 	return Completed!S (space);
 }
 
-private void TODO ()
+private void TODO ()() // TODO
 {
 	string[int] x = [1: `one`, 4: `four`, 2: `two`];
 	import std.stdio;

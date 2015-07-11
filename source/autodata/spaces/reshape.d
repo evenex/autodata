@@ -1,4 +1,4 @@
-module autodata.traversal;
+module autodata.spaces.reshape;
 
 private {//import
 	import std.conv: to;
@@ -10,59 +10,15 @@ private {//import
 	import autodata.morphism;
 	import autodata.operators;
 	import autodata.list;
+	import autodata.functor.tuple;
 	import autodata.spaces.orthotope;
+
 }
 
 // REVIEW why are these coming through
 alias min = autodata.list.min;
 alias max = autodata.list.max;
 
-/** 
-    pair each element in a space with its index.
-
-	foreach exploits the automatic tuple foreach index unpacking trick which is obscure and under some controversy
-
-	<a href="https://issues.dlang.org/show_bug.cgi?id=7361">reference</a>
-*/
-auto index (S)(S space)
-{
-    auto space_limit (uint i)()
-    {
-        return space.limit!i;
-    }
-
-	return zip (
-        Map!(space_limit, Iota!(dimensionality!S)).orthotope,
-        space
-    );
-}
-///
-unittest {
-    auto s = [1,2,3,4].laminate (2,2).index;
-
-    assert (s[0,0] == tuple(tuple(0,0), 1));
-    assert (s[1,0] == tuple(tuple(1,0), 2));
-    assert (s[0,1] == tuple(tuple(0,1), 3));
-    assert (s[1,1] == tuple(tuple(1,1), 4));
-}
-
-/**
-    swap the two elements in a tuple indexed by i and j
-*/
-auto swap (uint i, uint j, T...)(Tuple!T args)
-{
-    enum a = min (i,j);
-    enum b = max (i,j);
-
-    return tuple (args[0..a], args[b], args[a+1..b], args[a], args[b+1..$]);
-}
-///
-unittest {
-    assert (swap!(0,5)(tuple(0,1,2,3,4,5)) == tuple(5,1,2,3,4,0));
-    assert (swap!(3,2)(tuple(0,1,2,3,4,5)) == tuple(0,1,3,2,4,5));
-}
-
-// REVIEW SOMEWHERE ELSE
 struct Transposed (uint x, uint y, S)
 {
     S space;
@@ -112,29 +68,6 @@ unittest {
     assert (y[0..2, 1] == [2,4]);
 }
 
-// REVIEW SOMEWHERE ELSE
-/**
-    index, for 1D ranges
-*/
-auto enumerate (R)(R range)
-if (is_input_range!R && has_length!R)
-{
-    return index (range);
-}
-///
-unittest {
-    auto xs = list (1,2,3,4);
-
-    assert (not (__traits(compiles, (){  
-        foreach (i, x; xs)
-            assert (x);
-    })));
-
-    foreach (i, x; enumerate (xs))
-        assert (x + i);
-}
-
-// REVIEW TO RESHAPE
 /** 
     lexicographic traversal
     over n-dimensional spaces indexed by integral types
@@ -227,7 +160,6 @@ unittest {
 	assert (test.lexi[6] == test[2,0]);
 }
 
-// REVIEW TO RESHAPE
 /**
 	reshape a 1D range into an n-dimensional space by breaking it into rows of the given lengths
 */

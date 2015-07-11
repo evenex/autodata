@@ -57,7 +57,7 @@ template WriteOps (alias pull, alias SubOperators, alias access, LimitsAndExtens
 			}
 		}
 		body {
-			alias FreeIndices = Lens!(q{index}, Filter!(λ!q{(Axis) = Axis.is_free}, Axes));
+			alias FreeIndices = Extract!(q{index}, Filter!(λ!q{(Axis) = Axis.is_free}, Axes));
 
 			static if (Selected.length > 0)
 				alias Selection (int i) = Select!(Contains!(i, FreeIndices),

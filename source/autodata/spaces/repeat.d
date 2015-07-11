@@ -59,6 +59,9 @@ struct Repeated (T, Dims...)
 
 	mixin SliceOps!(access, Map!(limit, Ordinal!Dims), RangeExt);
 }
+/**
+    construct a space of a given value repeated lengths[i] times along dimension i
+*/
 auto repeat (T, U...)(T value, U lengths)
 {
 	auto force_length (uint i)()
@@ -81,6 +84,7 @@ auto repeat (T, U...)(T value, U lengths)
 		)
 	);
 }
+///
 unittest {
 	import autodata.morphism;
 

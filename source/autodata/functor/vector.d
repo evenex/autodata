@@ -73,8 +73,7 @@ template vector (size_t n)
     }
 }
 ///
-unittest
-{
+unittest {
     import std.algorithm: equal;
 
     struct Col {int r,g,b,a;}
@@ -115,8 +114,7 @@ auto fmap (alias f, size_t n, T, Args...)(Vector!(n,T) v, Args args)
     return mapped;
 }
 ///
-unittest 
-{
+unittest {
     import std.math;
 
     auto u = [-2, -3, -4, -5].vector;

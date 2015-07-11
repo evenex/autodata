@@ -33,6 +33,7 @@ struct Array (T, uint dimensions = 1)
 
 	mixin MemoryBackedStore!(Pack!(BufferOps, allocate), data, lengths);
 }
+///
 unittest {
 	auto x = Array!int ();
 
@@ -77,7 +78,8 @@ unittest {
 	]);
 }
 
-/* allocate an array from data 
+/**
+    allocate an array from data 
 */
 auto array (S)(S space)
 in {
@@ -91,6 +93,7 @@ body {
 
 	else return Array!(ElementType!S, dimensionality!S)(space);
 }
+///
 unittest {
 	auto x = [1,2,3].array;
 	assert (x[] == [1,2,3]);
@@ -106,7 +109,8 @@ unittest {
 	assert (z[0,0..$] == [1,1]);
 }
 
-/* create an array over a pointer, without allocation 
+/**
+    create an array over a pointer, without allocation 
 */
 auto array_view (T, U...)(T* ptr, U dims)
 {

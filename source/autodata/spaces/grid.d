@@ -32,14 +32,20 @@ struct Grid (S)
 
 	mixin AdaptorOps!(access, Map!(limit, Iota!(dimensionality!S)), RangeExt);
 }
+/**
+    overlay an n-dimensional grid over a space, where cells[i] gives the number of cells in dimension i.
+
+    TODO: let grid take a sampling function; right now its just floor sampling
+*/
 auto grid (S, T...)(S space, T cells)
 {
 	static assert (typeof(cells).length == dimensionality!S,
-		`only ` ~T.length.text~ ` cell given for ` ~dimensionality!S.text~ `D space`
+		`only `~(T.length.text)~` cell given for `~(dimensionality!S.text)~`D space`
 	);
 
 	return Grid!S (space, cells);
 }
+///
 unittest {
 	import std.range;
 

@@ -13,7 +13,8 @@ private {/*import}*/
 	import evx.infinity;
 }
 
-/* traverse a range with elements rotated left by some number of positions 
+/**
+    traverse a range with elements rotated left by some number of positions 
 */
 auto rotate_elements (int dim = -1, R)(R range, int positions = 1)
 in {
@@ -27,6 +28,7 @@ body {
 
 	return range.cycle[n - positions..n + n - positions];
 }
+///
 unittest {
 	assert ([1,2,3,4].rotate_elements[] == [4,1,2,3]);
 	assert ([1,2,3,4].rotate_elements[] == [1,2,3,4].rotate_elements);
@@ -36,12 +38,14 @@ unittest {
 	static assert ([1,2,3,4].rotate_elements (-1) == [1,2,3,4].rotate_elements (3));
 }
 
-/* pair each element with its successor in the range, and the last element with the first 
+/**
+    pair each element with its successor in the range, and the last element with the first 
 */
 auto adjacent_pairs (R)(R range)
 {
 	return zip (range, range.rotate_elements (-1));
 }
+///
 unittest {
 	static assert (
 		[0,1,2,3,4].adjacent_pairs.map!((a,b) => [a,b])
@@ -90,6 +94,9 @@ struct Cycle (S, uint[] cyclic_dims)
 			mixin RangeOps!(space, length);
 		}
 }
+/**
+    repeat a range infinitely along the given dimensions
+*/
 auto cycle (uint[] cyclic_dims = [], S)(S space)
 {
 	static if (cyclic_dims.empty)
@@ -98,6 +105,7 @@ auto cycle (uint[] cyclic_dims = [], S)(S space)
 
 	return Cycle!(S, d)(space);
 }
+///
 unittest {
 	import autodata.spaces.array;
 	import autodata.spaces.product;

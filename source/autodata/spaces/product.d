@@ -48,6 +48,11 @@ struct ProductSpace (Spaces...)
 	mixin AdaptorOps!(access, Map!(limit, Ordinal!(Domain!access)), RangeExt);
 }
 
+/**
+    take the cartesian product of two spaces.
+
+    equivalent to a functional product of the indexing function.
+*/
 auto product_space (S,R...)(S left, R right)
 {
 	static if (is (S == ProductSpace!T, T...))
@@ -55,6 +60,7 @@ auto product_space (S,R...)(S left, R right)
 
 	else return ProductSpace!(S,R)(left, right);
 }
+///
 unittest {
 	import autodata.morphism; 
 
@@ -79,9 +85,16 @@ unittest {
 	assert (p[1,1,0,1] == tuple (10,1,5));
 	assert (p[2,2,2,1] == tuple (18,3,5));
 }
-
+/**
+    ditto
+*/
 alias by = product_space;
 
+/**
+    add a dimension, whose limits are given by "extrusion", to a space.
+
+    each slice along the added dimension is equivalent to the original space.
+*/
 auto extrude (S,T)(S space, T extrusion)
 {
 	auto a ()() if (is_interval!T) {return extrusion;}
@@ -89,4 +102,17 @@ auto extrude (S,T)(S space, T extrusion)
 
 	return space.by (orthotope (Match!(a,b)))
 		.extract!`expand[0]`;
+}
+///
+unittest {
+    auto x = [1,2,3].extrude (5);
+
+    assert (dimensionality!(typeof(x)) == 2);
+    assert (x[~$..$, 0] == x[~$..$, 4]);
+    assert (x[~$..$, 0] == [1,2,3]);
+
+    auto y = "hello".extrude (interval (12f, 15f));
+
+    //assert (y[~$..$, 14.999] == "hello"); // BUG bounds exceeded on dimension 1! 14.999 not in const(Interval!(float, float))(14.999, 14.999)
+    assert (y[~$..$, 14.999f] == "hello"); // BUG OK???
 }
