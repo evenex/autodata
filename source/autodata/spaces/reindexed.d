@@ -3,14 +3,13 @@ module autodata.spaces.reindexed;
 private { // import
     import std.conv;
     import evx.meta;
-    import evx.interval;
     import autodata.transform;
     import autodata.traits;
     import autodata.operators;
-    import autodata.functor.tuple;
+    import autodata.functor;
     import autodata.list;
     import autodata.spaces.orthotope;
-    import autodata.functor.vector;
+    import evx.interval;
 
     // REVIEW where is std.range coming through?
     alias ElementType = autodata.traits.ElementType;
