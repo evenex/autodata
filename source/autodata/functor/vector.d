@@ -6,7 +6,6 @@ module autodata.functor.vector;
 private {/*import}*/
     import std.conv: to, text;
     import std.range.primitives: empty;
-    import std.algorithm: count_until = countUntil;
     import std.range: join, ElementType;
     import std.traits: CommonType;
     import evx.meta;
@@ -320,6 +319,10 @@ struct Vector (size_t n, Component)
     */
     auto ref swizzle (string elements)()
     {
+        import std.algorithm:
+            index_of = countUntil,
+            contains = canFind;
+
         alias Sets = SwizzleSets;
         
         static code (string set)()
@@ -327,8 +330,8 @@ struct Vector (size_t n, Component)
             string[] code;
 
             foreach (component; elements)
-                if (set.count_until (component) >= 0)
-                    code ~= q{components[} ~ set.count_until (component).text ~ q{]};
+                if (set.contains (component))
+                    code ~= q{components[}~(set.index_of (component).text)~q{]};
                 else return ``;
 
             auto indices = code.join (`, `).text;
@@ -339,16 +342,9 @@ struct Vector (size_t n, Component)
                 return q{vector (}~(indices)~q{)}; 
         }
 
-        foreach (i, set; Sets)
-            static if (code!set.empty)
-                continue;
-            else return mixin(code!set);
+        enum is_valid_swizzle_in (string set) = code!set.not!empty;
 
-        enum swizzle_from (string set) = code!set.not!empty;
-
-        static assert (Any!(swizzle_from, Sets), `no property ` ~elements~ ` for ` ~typeof(this).stringof);
-
-        assert (0);
+        return mixin(code!(Filter!(is_valid_swizzle_in, Sets)[0]));
     }
     /**
         ditto
