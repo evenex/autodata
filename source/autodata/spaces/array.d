@@ -228,6 +228,28 @@ private {/*impl}*/
 
 		alias Ops = OpsPack.Unpack[0];
 
-		mixin Ops!(OpsPack.Unpack[1..$], pull, access, lengths, RangeExt);
+        template DSliceExt ()
+        {
+            import autodata.traits: dimensionality, ElementType;
+
+            ElementType!(typeof(this))* ptr ()()
+            if (dimensionality!(typeof(this)) == 1)
+            {
+                return &this[0];
+            }
+
+            typeof(*ptr)[] slice ()()
+            {
+                return this.ptr[0..this.length];
+            }
+        }
+
+        auto slice ()()
+        if (dimensionality!(typeof(this)) == 1)
+        {
+            return ptr[0..length!0];
+        }
+
+		mixin Ops!(OpsPack.Unpack[1..$], pull, access, lengths, RangeExt, DSliceExt);
 	}
 }

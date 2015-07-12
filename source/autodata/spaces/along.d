@@ -7,6 +7,7 @@ private {//imports
     import std.conv;
     import std.range;
     import evx.meta;
+    import evx.interval;
 
     alias ElementType = autodata.traits.ElementType;
 }
@@ -44,8 +45,14 @@ struct Along (uint[] axes, S)
         return space.limit!(axes[i]);
     }
 
+    auto length ()() const
+    if (axes.length == 1)
+    {
+        return limit!0.width;
+    }
+
     mixin AdaptorOps!(access, Map!(limit, Ordinal!Axes), RangeExt);
-    mixin RangeOps!(opIndex, limit!0);
+    mixin RangeOps!(opIndex, length);
 }
 
 /**
