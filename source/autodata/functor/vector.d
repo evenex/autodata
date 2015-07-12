@@ -334,12 +334,12 @@ struct Vector (size_t n, Component)
                     code ~= q{components[}~(set.index_of (component).text)~q{]};
                 else return ``;
 
-            auto indices = code.join (`, `).text;
+            auto selected_elements = code.join (`, `).text;
 
             static if (elements.length == 1)
-                return indices;
+                return selected_elements;
             else 
-                return q{vector (}~(indices)~q{)}; 
+                return q{vector (}~(selected_elements)~q{)}; 
         }
 
         enum is_valid_swizzle_in (string set) = code!set.not!empty;
