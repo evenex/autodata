@@ -147,6 +147,10 @@ private {/*impl}*/
 				stride *= length!i;
 			}
 
+            assert (offset < data.length, 
+                "offset "~(offset.text)~" exceeded "~(data.length.text)
+            );
+
 			return data[offset];
 		}
 		void pull (S, U...)(S space, U region)
