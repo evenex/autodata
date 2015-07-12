@@ -17,7 +17,7 @@ struct Repeated (T, Dims...)
 		Enumerate!Dims
 	);
 
-	Map!(Second, FiniteDims) lengths;
+	Map!(Compose!(Unqual, Second), FiniteDims) lengths;
 
 	auto limit (size_t d)() const
 	{

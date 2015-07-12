@@ -9,6 +9,9 @@ private {//import
 	import evx.interval;
 	import evx.meta;
 	import autodata.traits;
+	import autodata.functor;
+
+	import autodata.traits: ElementType;
 }
 
 /**
@@ -39,13 +42,24 @@ unittest {
 */
 auto ref each (alias f, R, Partial...)(auto ref R range, Partial args)
 {
-    foreach (ref item; range)
+    void apply_to (T)(ref T item)
     {
         auto value ()() {cast(void) f (item, args);}
         auto tuple ()() {cast(void) f (item.expand, args);}
 
         Match!(value, tuple);
     }
+
+    auto by_ref ()() {
+        foreach (ref item; range)
+            apply_to (item);
+    }
+    auto by_val ()() {
+        foreach (item; range)
+            apply_to (item);
+    }
+
+    Match!(by_ref, by_val);
 
     return range;
 }
@@ -149,9 +163,10 @@ struct Mapped (Domain, alias f, Parameters...)
 		{
 			auto tuple ()() {return f (point.expand, parameters);}
 			auto value ()() {return f (point, parameters);}
-			auto error ()() {pragma(msg, `error: type mismatch, `, __traits(identifier, f), ` is not a function of `, Cons!(typeof(point), typeof(parameters)));}
+			auto flat  ()() {return f (point.flatten.expand, parameters);}
+			auto error ()() {pragma(msg, `map error: type mismatch, `, __traits(identifier, f), ` is not a function of `, Cons!(typeof(point), typeof(parameters)));}
 
-			return Match!(tuple, value, error);
+			return Match!(tuple, value, flat, error);
 		}
 		auto map_remap (Subdomain...)(Subdomain subdomain)
 		{

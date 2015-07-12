@@ -10,6 +10,7 @@ private {//import
 	import autodata.transform;
 	import autodata.operators;
 	import autodata.list;
+	import autodata.functor;
 	import autodata.spaces.orthotope;
 }
 

@@ -82,7 +82,16 @@ struct Zipped (LengthPolicy length_policy, Spaces...)
         && is (typeof(length.identity) : size_t)
         && All!(λ!q{(uint i) = i == 1}, Map!(dimensionality, Spaces))
     ) // HACK foreach tuple expansion causes compiler segfault on template range ops, opApply is workaround
+    {
         int opApply (int delegate(Map!(Compose!(Flatten, ElementType), Spaces)) f)
+        {
+            return apply (f);
+        }
+        int opApply (int delegate(Tuple!(Map!(Compose!(Flatten, ElementType), Spaces))) f)
+        {
+            return apply (f);
+        }
+        int apply (F)(F f)
         {
             int result = 0;
 
@@ -91,8 +100,11 @@ struct Zipped (LengthPolicy length_policy, Spaces...)
                 int closed ()() {return result = f(this[i]);}
                 int expand ()() {return result = f(this[i].expand);}
                 int flat   ()() {return result = f(this[i].flatten.expand);}
+                int tuple  ()() {return result = f(this[i].flatten.expand.tuple);}
 
-                alias applied = Match!(expand, closed, flat);
+                int error  ()() {pragma(msg, `could not flatten `, typeof(this[i]), ` for `, typeof(f)); assert (0);}
+
+                alias applied = Match!(expand, flat, closed, tuple, error);
 
                 if (applied)
                     break;
@@ -100,6 +112,7 @@ struct Zipped (LengthPolicy length_policy, Spaces...)
 
             return result;
         }
+    }
 
     @property:
 
@@ -215,6 +228,7 @@ auto zip_strict (Spaces...)(Spaces spaces)
 in {
     alias Dimensionalities = Map!(dimensionality, Spaces);
 
+    try
     foreach (d; Iota!(Dimensionalities[0]))
         foreach (i; Ordinal!Spaces)
             {//bounds check
@@ -242,6 +256,7 @@ in {
                     ~ ` in ` ~Spaces[i].stringof
                 );
             }
+    catch (Exception e) {}
 }
 body {
     return Zipped!(LengthPolicy.strict, Spaces)(spaces);
